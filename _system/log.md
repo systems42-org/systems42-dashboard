@@ -57,3 +57,8 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
   - Q4: G32 becomes [[CON-002-dashboard-never-writes-to-the-wiki]]. The dashboard writes only `_system/dashboard.yaml` (checked in `app.py`).
   - Q6: workshops are covered by CON-001, GOAL-002 and GOAL-003. No change to the vision and no extra goal.
 - Created: GOAL-003 to GOAL-007, CON-002, SRC-004. Updated: `_system/index.md`, and the `related:` lists of STK-003, STK-006, STK-023 and GOAL-001 (links to CON-002).
+
+## [2026-11-10] decision | DR-001 English, brief and plain
+- Decided by Gernot Starke in a working session. Recorded as accepted on branch `decisions`, for review by PR.
+- Created: [[DR-001-english-brief-plain-writing]]. Updated: `_system/index.md`.
+- No source record: the decision came as a direct instruction, so the page shows as unsourced.

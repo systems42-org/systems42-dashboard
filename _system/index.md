@@ -62,6 +62,8 @@ every capture (`_system/workflows/capture.md`, step 7).
 
 ## Decisions
 
+- [[DR-001-english-brief-plain-writing]] Write all documentation in brief, plain English (accepted)
+
 ## Issues
 
 - [[ISS-001-who-holds-the-keys-in-parallel-work]] Who holds the keys when two people work in parallel (open)
