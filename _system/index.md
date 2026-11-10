@@ -7,6 +7,9 @@ every capture (`_system/workflows/capture.md`, step 7).
 
 ## Goals
 
+- [[GOAL-001-trusted-answers]] Trusted answers about requirements and architecture (vision, draft)
+- [[GOAL-002-show-what-systems42-can-do]] Show what Systems42 can do (objective, draft)
+
 ## Stakeholders
 
 - [[STK-001-product-owners]] Product owners (draft)
@@ -61,3 +64,4 @@ every capture (`_system/workflows/capture.md`, step 7).
 
 - [[SRC-001-stakeholders-of-the-systems42-dashboard]] Stakeholders of the Systems42 dashboard (document)
 - [[SRC-002-grilling-session-on-stakeholders]] Grilling session on stakeholders (interview)
+- [[SRC-003-vision-of-the-systems42-dashboard]] Vision of the Systems42 dashboard (interview)

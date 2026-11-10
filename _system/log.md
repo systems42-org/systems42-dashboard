@@ -35,3 +35,14 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Issues: ISS-001 (open). Gernot Starke asked for it as a reminder.
 - Parked: rename "facilitator" to "Keyholder" in the dashboard (`README.md`, `help.md`, the `dashboard.yaml` header comment, `app.py`, `tests/test_presence.py`). It needs a PR. The README also says the role "passes once", but the code passes it every time the holder leaves.
 - Parked: the stakeholder template's `nature` has no value for systems such as AI agents (noted on STK-006). That is a schema change and needs a PR.
+
+## [2026-11-10] capture | Vision of the Systems42 dashboard
+- Source: `raw/02-vision.md`, personal communication of the Systems42 team, now [[SRC-003-vision-of-the-systems42-dashboard]] in `raw/ingested/`.
+- Grill gate: the wiki had no goal, so nothing clashed. Gernot Starke answered Q1 to Q6 one at a time, so no Issue was needed.
+- Decisions:
+  - Q1: a Moore sentence on top of the unchanged paragraph. The category is "read-only view of the Systems42 wiki", naming requirements and architecture equally, as the session systems42-dashboard-c2 proposed. No "Unlike" clause.
+  - Q2: the beneficiaries are the Reader group and the Keyholder, summarised in the text.
+  - Q3: the title is "Trusted answers about requirements and architecture".
+  - Q4: the vision was chosen on 2026-11-10 from three alternatives (all three in the git history of `raw/02-vision.md`). No decision record, because rewording a vision is cheap.
+  - Q5 and Q6: a new objective, "Show what Systems42 can do", under the vision. It has no metric yet, and no open point is wanted.
+- Created: [[GOAL-001-trusted-answers]], [[GOAL-002-show-what-systems42-can-do]], SRC-003. Updated: `_system/index.md`.
