@@ -39,7 +39,7 @@ SRC_ROOT="$(cd "$HERE/../.." && pwd)"
 
 # --- the product allow-list ---------------------------------------------------
 # Single files, copied as-is.
-PRODUCT_FILES=(AGENTS.md CLAUDE.md README.md CHANGELOG.md Makefile dashboard.sh .gitignore _system/README.md)
+PRODUCT_FILES=(AGENTS.md CLAUDE.md README.md CHANGELOG.md Makefile dashboard.sh .gitignore _system/README.md _system/writing-style.md)
 # Directories owned entirely by the product: mirrored, stale files removed on sync.
 PRODUCT_DIRS_MIRROR=(_templates _system/anchors _system/metamodel _system/workflows _system/scripts _system/apps raw/examples)
 # Directories the product ships but a project may add to: merged, nothing removed.

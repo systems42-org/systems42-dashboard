@@ -77,6 +77,10 @@ never block or silently rewrite. The human decides.
   human English: no machine jargon, no marketing words. You may converse in any
   language the human prefers. `_system/`, `_templates/`, anchors, the metamodel
   and decision records are English as well.
+- **Writing style**: `_system/writing-style.md` is binding for every text you
+  write here: wiki pages, docs, decision records, changelog, log, commit
+  messages. Read it before you write. Its first aim is text short enough for a
+  human to review completely.
 - **Grill before capture** (formerly "ingest"): Every capture is gated by a grilling pass. Before writing
   any page from a new source you **must** activate the `grill-requirements` skill
   to stress-test the material first. A second, different grill closes the capture:
