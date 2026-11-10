@@ -46,3 +46,14 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
   - Q4: the vision was chosen on 2026-11-10 from three alternatives (all three in the git history of `raw/02-vision.md`). No decision record, because rewording a vision is cheap.
   - Q5 and Q6: a new objective, "Show what Systems42 can do", under the vision. It has no metric yet, and no open point is wanted.
 - Created: [[GOAL-001-trusted-answers]], [[GOAL-002-show-what-systems42-can-do]], SRC-003. Updated: `_system/index.md`.
+
+## [2026-11-10] capture | Goals of the Systems42 dashboard
+- Source: `raw/goals2.md`, written by the session systems42-dashboard-c2 with Gernot Starke, now [[SRC-004-goals-of-the-systems42-dashboard]] in `raw/ingested/`.
+- Grill gate: checked against GOAL-001, GOAL-002, CON-001 and the stakeholders. Gernot Starke answered Q1 to Q6 one at a time, so no Issue was needed.
+- Decisions:
+  - Q1: O1 to O5 become GOAL-003 to GOAL-007 under the vision. Targets are proposals, and no baseline has been measured.
+  - Q2: O3's metric is now the share of `drivers:` links shown on both linked pages, target 100 %, checkable by a test. It replaces the page count, which presupposed one chain view.
+  - Q3 and Q5: the old goals G01 to G36 and their gap lines are removed completely. No G numbers in the wiki and no later capture from them. `raw/03-goals.md` stays deleted (it is in git history).
+  - Q4: G32 becomes [[CON-002-dashboard-never-writes-to-the-wiki]]. The dashboard writes only `_system/dashboard.yaml` (checked in `app.py`).
+  - Q6: workshops are covered by CON-001, GOAL-002 and GOAL-003. No change to the vision and no extra goal.
+- Created: GOAL-003 to GOAL-007, CON-002, SRC-004. Updated: `_system/index.md`, and the `related:` lists of STK-003, STK-006, STK-023 and GOAL-001 (links to CON-002).

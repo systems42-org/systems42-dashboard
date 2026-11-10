@@ -9,6 +9,11 @@ every capture (`_system/workflows/capture.md`, step 7).
 
 - [[GOAL-001-trusted-answers]] Trusted answers about requirements and architecture (vision, draft)
 - [[GOAL-002-show-what-systems42-can-do]] Show what Systems42 can do (objective, draft)
+- [[GOAL-003-answers-without-asking-a-colleague]] Answers without asking a colleague (objective, draft)
+- [[GOAL-004-requirements-with-reasons-and-checks]] Requirements with their reasons and their checks (objective, draft)
+- [[GOAL-005-architecture-traced-to-requirements]] Architecture and decisions traced to requirements (objective, draft)
+- [[GOAL-006-source-and-status-on-every-statement]] Source and status on every statement (objective, draft)
+- [[GOAL-007-readers-who-come-back]] Readers who come back (objective, draft)
 
 ## Stakeholders
 
@@ -53,6 +58,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 ## Constraints
 
 - [[CON-001-proof-of-concept-not-production-ready]] The dashboard is a proof of concept, not production-ready for every environment (draft)
+- [[CON-002-dashboard-never-writes-to-the-wiki]] The dashboard never writes to the wiki (draft)
 
 ## Decisions
 
@@ -65,3 +71,4 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-001-stakeholders-of-the-systems42-dashboard]] Stakeholders of the Systems42 dashboard (document)
 - [[SRC-002-grilling-session-on-stakeholders]] Grilling session on stakeholders (interview)
 - [[SRC-003-vision-of-the-systems42-dashboard]] Vision of the Systems42 dashboard (interview)
+- [[SRC-004-goals-of-the-systems42-dashboard]] Goals of the Systems42 dashboard (document)

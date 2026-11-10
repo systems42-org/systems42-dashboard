@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-10
 updated: 2026-11-10
 sources: ["[[SRC-001-stakeholders-of-the-systems42-dashboard]]", "[[SRC-002-grilling-session-on-stakeholders]]"]
-related: []
+related: ["[[CON-002-dashboard-never-writes-to-the-wiki]]"]
 tags: ["stakeholder"]
 aliases: []
 role: AI agent that writes the wiki files

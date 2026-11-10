@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-10
 updated: 2026-11-10
 sources: ["[[SRC-003-vision-of-the-systems42-dashboard]]"]
-related: ["[[CON-001-proof-of-concept-not-production-ready]]"]
+related: ["[[CON-001-proof-of-concept-not-production-ready]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]"]
 tags: [goal]
 stereotype: vision
 parent: []

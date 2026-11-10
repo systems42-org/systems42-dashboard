@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-10
 updated: 2026-11-10
 sources: ["[[SRC-001-stakeholders-of-the-systems42-dashboard]]", "[[SRC-002-grilling-session-on-stakeholders]]"]
-related: ["[[STK-007-workshop-facilitators]]", "[[STK-010-people-who-run-the-dashboard]]", "[[CON-001-proof-of-concept-not-production-ready]]", "[[ISS-001-who-holds-the-keys-in-parallel-work]]"]
+related: ["[[STK-007-workshop-facilitators]]", "[[STK-010-people-who-run-the-dashboard]]", "[[CON-001-proof-of-concept-not-production-ready]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[ISS-001-who-holds-the-keys-in-parallel-work]]"]
 tags: ["stakeholder"]
 aliases: ["Jedi Master"]
 role: Person who started the dashboard app
