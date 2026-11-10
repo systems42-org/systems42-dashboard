@@ -19,6 +19,9 @@ Unreleased changes sit at the top until the next Starter Kit release.
   not a limit.
 
 ### Changed
+- `grilling` skill: brought up to date with upstream `mattpocock/skills`. Each
+  question is now worded so that "yes" accepts the recommended answer, and
+  fact-finding sub-agents start with a fresh context window.
 - Make `AGENTS.md` the shared source for schema and project rules. `CLAUDE.md`
   imports it for Claude Code; skills live canonically under `.agents/skills/`
   with `.claude/skills/` compatibility symlinks. Preserve Atrium's project
