@@ -2,8 +2,9 @@
 
 Everything that makes the dashboard look like one particular product lives here,
 plus one optional template. Replace these files to rebrand it; nothing else needs
-to change. The current files are a placeholder: three tiles in the home page's
-layout (Requirements and Architecture side by side, Commons below).
+to change. The current files are the Peaks mark: two peaks (Requirements and Architecture)
+over a broad ground (Commons), the home page's layout as a picture. Its
+description is in `docs/brand/README.md`.
 
 ## Marks (required)
 

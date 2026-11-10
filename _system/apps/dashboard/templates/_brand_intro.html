@@ -1,0 +1,48 @@
+{# Brand intro: the Peaks mark builds itself. Ground first, then the
+   Requirements peak, then the Architecture peak, so the three areas of the
+   home page arrive in the order you read them. About 2 s in all.
+   Contract: static/brand/README.md. #}
+<div id="brand-intro" hidden aria-hidden="true">
+  <svg viewBox="0 0 48 48" width="160" height="160" focusable="false">
+    <rect class="bi-ground" x="3" y="33" width="42" height="12" rx="4"/>
+    <polygon class="bi-peak bi-req" points="3,29 12.5,6 22,29"/>
+    <polygon class="bi-peak bi-arc" points="26,29 35.5,6 45,29"/>
+  </svg>
+</div>
+<style>
+  #brand-intro { position: fixed; inset: 0; z-index: 10000; background: var(--bg);
+    place-items: center; opacity: 1; transition: opacity .3s ease; }
+  #brand-intro:not([hidden]) { display: grid; }
+  #brand-intro.bi-out { opacity: 0; }
+  #brand-intro svg { width: min(160px, 40vw); height: auto; overflow: visible; }
+  #brand-intro .bi-ground { fill: var(--area-org); transform-box: fill-box; transform-origin: 50% 100%;
+    transform: scaleY(0); animation: bi-grow .45s cubic-bezier(.2,.8,.2,1) .0s forwards; }
+  #brand-intro .bi-peak { transform-box: fill-box; transform-origin: 50% 100%;
+    transform: scaleY(0); animation: bi-grow .55s cubic-bezier(.2,.8,.2,1) forwards; }
+  #brand-intro .bi-req { fill: var(--area-req); animation-delay: .4s; }
+  #brand-intro .bi-arc { fill: var(--area-arc); animation-delay: .7s; }
+  @keyframes bi-grow { to { transform: scaleY(1); } }
+  @media (prefers-reduced-motion: reduce) { #brand-intro { display: none !important; } }
+</style>
+<script>
+(function () {
+  var el = document.getElementById('brand-intro');
+  if (!el) return;
+  var KEY = 'brand-intro-seen';
+  function done() {
+    if (!el) return;
+    document.removeEventListener('click', done, true);
+    document.removeEventListener('keydown', done, true);
+    clearTimeout(t1); clearTimeout(t2);
+    el.remove(); el = null;
+  }
+  var t1, t2;
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) { el.remove(); return; }
+  try { if (sessionStorage.getItem(KEY)) { el.remove(); return; } sessionStorage.setItem(KEY, '1'); } catch (e) { /* storage blocked: show every time */ }
+  el.hidden = false;
+  document.addEventListener('click', done, true);
+  document.addEventListener('keydown', done, true);
+  t1 = setTimeout(function () { if (el) el.classList.add('bi-out'); }, 1700);
+  t2 = setTimeout(done, 2000);
+})();
+</script>

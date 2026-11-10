@@ -53,11 +53,37 @@ def test_marks_are_square_and_text_free():
         assert "<text" not in svg and "gradient" not in svg.lower(), name
 
 
-def test_no_intro_file_means_no_intro():
-    assert not (_HERE / "templates" / "_brand_intro.html").exists(), \
-        "a brand intro ships now: replace this test with one for its contract"
+INTRO = (_HERE / "templates" / "_brand_intro.html").read_text(encoding="utf-8")
+
+
+def test_intro_is_hidden_until_the_script_shows_it():
+    assert re.search(r'<div id="brand-intro" hidden', INTRO)
+    assert "el.hidden = false" in INTRO
+
+
+def test_intro_is_placed_before_the_hero_on_the_home_page():
     home = client.get("/").get_data(as_text=True)
-    assert "splash" not in home and "intro.js" not in home
+    assert 'id="brand-intro"' in home
+    assert home.index('id="brand-intro"') < home.index('class="hero"')
+    assert 'id="brand-intro"' not in client.get("/glossary").get_data(as_text=True)
+
+
+def test_intro_shows_once_per_tab_and_not_under_reduced_motion():
+    assert "sessionStorage" in INTRO and "catch" in INTRO          # blocked storage shows it every time
+    assert "prefers-reduced-motion: reduce" in INTRO
+    assert INTRO.index("prefers-reduced-motion: reduce)').matches") < INTRO.index("el.hidden = false")
+
+
+def test_intro_ends_on_click_or_key_and_within_two_seconds():
+    assert "'click'" in INTRO and "'keydown'" in INTRO
+    assert "setTimeout(done, 2000)" in INTRO
+
+
+def test_intro_covers_the_page_with_bg_uses_tokens_and_stays_offline():
+    assert "background: var(--bg)" in INTRO
+    assert not re.search(r"#[0-9a-fA-F]{3,8}\b", INTRO), "colours must be theme tokens"
+    for bad in ("http://", "https://", "fetch(", "XMLHttpRequest", "gradient", "defer"):
+        assert bad not in INTRO, bad
 
 
 def test_an_intro_file_is_included_before_the_hero():
@@ -85,7 +111,11 @@ def test_no_atrium_branding_left():
 if __name__ == "__main__":
     test_marks_and_favicon_come_from_the_brand_slot()
     test_marks_are_square_and_text_free()
-    test_no_intro_file_means_no_intro()
+    test_intro_is_hidden_until_the_script_shows_it()
+    test_intro_is_placed_before_the_hero_on_the_home_page()
+    test_intro_shows_once_per_tab_and_not_under_reduced_motion()
+    test_intro_ends_on_click_or_key_and_within_two_seconds()
+    test_intro_covers_the_page_with_bg_uses_tokens_and_stays_offline()
     test_an_intro_file_is_included_before_the_hero()
     test_no_atrium_branding_left()
     print("OK: brand slot")
