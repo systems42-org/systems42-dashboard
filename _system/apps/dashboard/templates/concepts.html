@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% from "_maturity.html" import maturity_bar %}
+{% block title %}{{ block.title }} · arc42{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>/</span> {% endif %}{{ block.id }} {{ block.title }}</nav>{% endblock %}
+{% macro row_head(r) %}<a class="wl" href="{{ r.url }}"><code>{{ r.id }}</code> {{ r.title }}</a>{% if r.status %} <span class="status status-{{ r.status }}">{{ r.status }}</span>{% endif %} <span class="state-badge state-{{ r.state }}">{{ r.state }}</span>{% endmacro %}
+{% macro links(groups) %}{% for g in groups %}{% for l in g.links %}<a class="wl" href="{{ l.url }}"><code>{{ l.id }}</code> {{ l.label }}</a>{% endfor %}{% endfor %}{% endmacro %}
+{% block content %}
+<h1 class="page-h1"><span class="req42-num">{{ block.id }}</span> {{ block.title }} <span class="count-pill">{{ total }}</span></h1>
+{{ maturity_bar(maturity) }}
+<p class="lead">Practices, patterns and rules that several building blocks or nodes follow (arc42 section 8). Each concept names what it applies to; empty means the whole system.</p>
+{% for g in groups %}
+<h2 class="mm-h2">{{ g.label }}</h2>
+<ul class="arc-list">
+  {% for r in g.rows %}
+  <li>{{ row_head(r) }}
+    <span class="arc-sub">Applies to: {% if r.applies_to %}{{ links(r.applies_to) }}{% else %}whole system{% endif %}</span>{% if r.unknown_category %}
+    <span class="arc-sub">Unknown category: {{ r.unknown_category }}</span>{% endif %}</li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="muted">No concepts yet. Add pages under <code>wiki/concepts/</code> from <code>_templates/concept.md</code>.</p>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "_maturity.html" import maturity_bar %}
+{% block title %}{{ block.title }} · arc42{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>/</span> {% endif %}{{ block.id }} {{ block.title }}</nav>{% endblock %}
+{% macro bb_tree(nodes) %}
+<ul class="bb-tree">
+  {% for n in nodes %}
+  <li><a class="wl" href="{{ n.url }}"><code>{{ n.id }}</code> {{ n.title }}</a>{% if n.status %} <span class="status status-{{ n.status }}">{{ n.status }}</span>{% endif %} <span class="state-badge state-{{ n.state }}">{{ n.state }}</span>
+    {% if n.children %}{{ bb_tree(n.children) }}{% endif %}</li>
+  {% endfor %}
+</ul>
+{% endmacro %}
+{% block content %}
+<h1 class="page-h1"><span class="req42-num">{{ block.id }}</span> {{ block.title }} <span class="count-pill">{{ total }}</span></h1>
+{{ maturity_bar(maturity) }}
+<p class="lead">The static decomposition of {{ system_name }} into building blocks (arc42 section 5). Levels come from each block's <code>parent:</code>; every white box is projected from the children and their <code>uses:</code>.</p>
+
+{% if whitebox %}
+<figure class="ctx-diagram">
+  <figcaption>Level 1 · white box of {{ system_name }}, projected live</figcaption>
+  <pre class="mermaid">{{ whitebox }}</pre>
+  {% include "_lifecycle_legend.html" %}
+</figure>
+{% endif %}
+
+{% if tree %}
+<section class="bb-levels">{{ bb_tree(tree) }}</section>
+{% else %}
+<p class="muted">No building blocks yet. Add pages under <code>wiki/building-blocks/</code> from <code>_templates/building-block.md</code>.</p>
+{% endif %}
+{% endblock %}
+{% block scripts %}{% if whitebox %}{% include "_mermaid.html" %}{% endif %}{% endblock %}

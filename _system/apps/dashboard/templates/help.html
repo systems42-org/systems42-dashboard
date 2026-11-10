@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Help{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> Help</nav>{% endblock %}
+{% block content %}
+<article class="help-prose">{{ html | safe }}</article>
+{% endblock %}

@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% from "_maturity.html" import maturity_bar, maturity_legend %}
+{% from "_macros.html" import plural, noun %}
+{% from "_empty.html" import empty_state %}
+{% from "_atrium_lockup.html" import atrium_lockup %}
+{% block content %}
+{# Splash: the atrium logo flies together, once per browser tab; hidden until
+   atrium-intro.js (loaded right below, not deferred) decides to show it. #}
+<div class="atrium-splash" id="atrium-splash" aria-hidden="true" hidden>{{ atrium_lockup(system_name) }}</div>
+<script src="{{ static_url('atrium-intro.js') }}"></script>
+<header class="hero">
+  <div class="hero-row">
+    {% if about_href %}<a class="hero-mark-link" href="{{ about_href }}" title="{{ about_label }}">{% endif %}
+    <img class="hero-mark mark-on-dark" src="{{ url_for('static', filename='atrium-mark-dark.svg') }}"
+         alt="{{ system_name }}">
+    <img class="hero-mark mark-on-light" src="{{ url_for('static', filename='atrium-mark-light.svg') }}"
+         alt="{{ system_name }}">
+    {% if about_href %}</a>{% endif %}
+    <div class="hero-text">
+      <h1 class="hero-title">{{ system_name }}</h1>
+      {% if tagline %}<p class="lead">{{ tagline }}</p>{% endif %}
+      {% if about_href %}<p class="hero-about"><a href="{{ about_href }}">{{ about_label }} →</a></p>{% endif %}
+    </div>
+    <a class="hero-join" href="/join" title="Show a big code to project">
+      <span class="hero-qr" aria-hidden="true">{{ join_qr | safe }}</span>
+      <span class="hero-join-text"><strong>Scan to open on your device</strong><code>{{ join_url }}</code></span>
+    </a>
+  </div>
+  {% if not system_name_set %}
+  <p class="lead empty-hint">This vault has no name yet — run the bootstrap
+    workflow, or set <code>system_name</code> in <code>_system/wiki.yaml</code>.</p>
+  {% endif %}
+</header>
+
+{% for w in valley.warnings %}<p class="config-warning">{{ w }} — see <code>_system/dashboard.yaml</code>.</p>{% endfor %}
+{{ maturity_legend() }}
+
+{% macro area_tile(a, wide=False) %}
+<section class="area-tile area-tile-{{ a.key }}{% if wide %} area-tile-wide{% endif %}{% for c in a.colors %} area-{{ c }}{% endfor %}">
+  {# the whole upper block — eyebrow, title, subtitle, issue flag, count, maturity — is one link #}
+  <a class="area-tile-top" href="{{ a.href }}">
+  <div class="tile-head">
+    <span class="tile-eyebrow{% for c in a.colors %} eyebrow-{{ c }}{% endfor %}">{{ a.key }}</span>
+    <h2 class="tile-title">{{ a.label }}</h2>
+    <p class="area-subtitle">{{ a.subtitle }}</p>
+    {% if a.open_issues %}<span class="tile-flag" title="Open issues that point at pages of this area">{{ a.open_issues }} open {{ noun(a.open_issues, 'issue') }}</span>{% endif %}
+  </div>
+  {% if a.planned %}
+  <p class="empty-state empty-state-tight">Not captured yet{% if a.key == 'architecture' %} — arc42 content types are a planned extension{% endif %}.</p>
+  {% else %}
+  <div class="tile-count"><span class="num">{{ a.count }}</span><span class="unit">{{ noun(a.count, 'page') }}</span></div>
+  {{ maturity_bar(a.maturity) }}
+  {% endif %}
+  </a>
+  <ul class="area-sections">
+    {# a section with a page of its own links there; one without (R2, A1-A5) links to its tile on the area page #}
+    {% for s in a.sections %}<li class="area-section{% if s.scope != 'in' %} is-out{% endif %}"><a class="area-section-link" href="{{ s.href or (a.href ~ '#tile-' ~ s.id|lower) }}"><code class="ml-id">{{ s.id }}</code> {{ s.title }}</a></li>{% endfor %}
+  </ul>
+  <a class="tile-cta" href="{{ a.href }}">Open {{ a.label }} →</a>
+</section>
+{% endmacro %}
+
+<section class="home-grid">
+  {% if areas.requirements %}{{ area_tile(areas.requirements) }}{% endif %}
+  <div class="valley">
+    <p class="vault-status">
+      <span><strong>{{ valley.status.pages }}</strong> {{ noun(valley.status.pages, 'page') }}</span>
+      <span><strong>{{ valley.status.open_issues }}</strong> open {{ noun(valley.status.open_issues, 'issue') }}</span>
+      <span><strong>{{ valley.status.sources }}</strong> {{ noun(valley.status.sources, 'source') }} ingested</span>
+      <span>last change <strong>{{ valley.status.last_change }}</strong></span>
+    </p>
+    <div class="valley-block">
+      <h2 class="valley-h">Latest changes</h2>
+      {% if valley.changes %}
+      <ul class="mini-list">
+        {% for r in valley.changes %}
+        <li><a class="ml-hit" href="{{ r.url }}"><code class="ml-id">{{ r.id }}</code> <span class="ml-title">{{ r.title }}</span> <span class="ml-when">{{ r.when }}</span></a></li>
+        {% endfor %}
+      </ul>
+      {% else %}{{ empty_state("pages") }}{% endif %}
+    </div>
+    <div class="valley-block">
+      <h2 class="valley-h"><a href="{{ '/issues?filter=open' if valley.open_total else '/issues' }}">Open issues</a> <span class="count-pill">{{ valley.open_total }}</span></h2>
+      {% if valley.open_issues %}
+      <ul class="mini-list">
+        {% for i in valley.open_issues %}
+        <li><a class="ml-hit" href="{{ i.url }}"><code class="ml-id">{{ i.id }}</code> <span class="ml-title">{{ i.title }}</span>{% if i.severity %} <span class="ml-count">{{ i.severity }}</span>{% endif %}</a></li>
+        {% endfor %}
+      </ul>
+      {% else %}<p class="empty-state empty-state-tight">No open issues.</p>{% endif %}
+    </div>
+    <p class="valley-foot"><a href="/decisions">{{ plural(valley.decision_count, 'decision') }}</a> · <a href="/help">Help</a></p>
+  </div>
+  {% if areas.architecture %}{{ area_tile(areas.architecture) }}{% endif %}
+  {% if areas.commons %}{{ area_tile(areas.commons, wide=True) }}{% endif %}
+</section>
+{% endblock %}

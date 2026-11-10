@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% from "_atrium_lockup.html" import atrium_lockup %}
+{% block title %}{{ title }}{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> {{ title }}</nav>{% endblock %}
+{% block content %}
+<article class="help-prose about-prose">{{ html | safe }}</article>
+{# atrium-intro.js swaps the page's lockup image for this, animated #}
+<template id="atrium-lockup-tpl">{{ atrium_lockup(title) }}</template>
+{% endblock %}
+{% block scripts %}<script src="{{ static_url('atrium-intro.js') }}"></script>{% endblock %}

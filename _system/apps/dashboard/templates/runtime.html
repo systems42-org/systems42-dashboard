@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "_maturity.html" import maturity_bar %}
+{% block title %}{{ block.title }} · arc42{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>/</span> {% endif %}{{ block.id }} {{ block.title }}</nav>{% endblock %}
+{% macro row_head(r) %}<a class="wl" href="{{ r.url }}"><code>{{ r.id }}</code> {{ r.title }}</a>{% if r.status %} <span class="status status-{{ r.status }}">{{ r.status }}</span>{% endif %} <span class="state-badge state-{{ r.state }}">{{ r.state }}</span>{% endmacro %}
+{% macro links(groups) %}{% for g in groups %}{% for l in g.links %}<a class="wl" href="{{ l.url }}"><code>{{ l.id }}</code> {{ l.label }}</a>{% endfor %}{% endfor %}{% endmacro %}
+{% block content %}
+<h1 class="page-h1"><span class="req42-num">{{ block.id }}</span> {{ block.title }} <span class="count-pill">{{ total }}</span></h1>
+{{ maturity_bar(maturity) }}
+<p class="lead">Concrete flows through the system (arc42 section 6). Each scenario's sequence diagram is projected from its <code>steps:</code> on its own page.</p>
+{% if rows %}
+<ul class="arc-list">
+  {% for r in rows %}
+  <li>{{ row_head(r) }} <span class="muted">· {{ r.steps }} step{{ '' if r.steps == 1 else 's' }}</span>
+    {% if r.drivers %}<span class="arc-sub">Realises: {{ links(r.drivers) }}</span>{% endif %}</li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="muted">No runtime scenarios yet. Add pages under <code>wiki/runtime-scenarios/</code> from <code>_templates/runtime-scenario.md</code>.</p>
+{% endif %}
+{% endblock %}

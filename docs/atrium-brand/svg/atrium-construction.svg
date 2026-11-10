@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 400" width="700" height="400" role="img" font-family="'Open Sans', Arial, sans-serif">
+  <title>atrium mark: construction and meaning — four rooms (access points) around the iSAQB courtyard</title>
+  <!-- Own light plate, so the diagram reads the same on light and dark pages
+       (dashboard, Obsidian, GitHub). Scale: 1 grid unit = 6 px; mark at (32,44). -->
+  <rect width="700" height="400" rx="16" fill="#faf8f4"/>
+
+  <!-- 48 × 48 grid, three fields of 16 -->
+  <g stroke="#c9c4bb" stroke-width="1" stroke-dasharray="4 4" fill="none">
+    <rect x="32" y="44" width="288" height="288"/>
+    <line x1="128" y1="44" x2="128" y2="332"/><line x1="224" y1="44" x2="224" y2="332"/>
+    <line x1="32" y1="140" x2="320" y2="140"/><line x1="32" y1="236" x2="320" y2="236"/>
+  </g>
+
+  <!-- rooms (navy) and courtyard (orange), exact construction coordinates × 6 -->
+  <g fill="#1b2438">
+    <rect x="32"  y="44"  width="186" height="90"  rx="6"/>
+    <rect x="230" y="44"  width="90"  height="186" rx="6"/>
+    <rect x="134" y="242" width="186" height="90"  rx="6"/>
+    <rect x="32"  y="146" width="90"  height="186" rx="6"/>
+  </g>
+  <rect x="134" y="146" width="84" height="84" rx="6" fill="#f29400"/>
+
+  <g fill="#ffffff" font-size="30" font-weight="700" text-anchor="middle" dominant-baseline="central">
+    <text x="125" y="89">1</text><text x="275" y="137">2</text>
+    <text x="227" y="287">3</text><text x="77" y="239">4</text>
+  </g>
+  <text x="176" y="188" fill="#1b2438" font-size="15" font-weight="700" text-anchor="middle" dominant-baseline="central">iSAQB</text>
+
+
+  <text x="176" y="362" fill="#767a7d" font-size="12" text-anchor="middle">grid 48 × 48 · fields of 16 · joint 2 · corner radius 1</text>
+  <text x="176" y="380" fill="#767a7d" font-size="12" text-anchor="middle">no room is the main entrance — new rooms can be added</text>
+
+  <!-- legend -->
+  <text x="376" y="58" fill="#1b2438" font-size="17" font-weight="700">Four rooms around one courtyard</text>
+  <g font-size="14">
+    <rect x="376" y="84" width="28" height="28" rx="2" fill="#1b2438"/>
+    <text x="390" y="98" fill="#fff" font-weight="700" text-anchor="middle" dominant-baseline="central">1</text>
+    <text x="416" y="94" fill="#1b2438" font-weight="700">Public website</text>
+    <text x="416" y="112" fill="#767a7d" font-size="13">interested parties, members, companies</text>
+
+    <rect x="376" y="144" width="28" height="28" rx="2" fill="#1b2438"/>
+    <text x="390" y="158" fill="#fff" font-weight="700" text-anchor="middle" dominant-baseline="central">2</text>
+    <text x="416" y="154" fill="#1b2438" font-weight="700">Provider app</text>
+    <text x="416" y="172" fill="#767a7d" font-size="13">training providers, with login and review</text>
+
+    <rect x="376" y="204" width="28" height="28" rx="2" fill="#1b2438"/>
+    <text x="390" y="218" fill="#fff" font-weight="700" text-anchor="middle" dominant-baseline="central">3</text>
+    <text x="416" y="214" fill="#1b2438" font-weight="700">Contact and newsletter</text>
+    <text x="416" y="232" fill="#767a7d" font-size="13">questions and news</text>
+
+    <rect x="376" y="264" width="28" height="28" rx="2" fill="#1b2438"/>
+    <text x="390" y="278" fill="#fff" font-weight="700" text-anchor="middle" dominant-baseline="central">4</text>
+    <text x="416" y="274" fill="#1b2438" font-weight="700">Data repository and feeds</text>
+    <text x="416" y="292" fill="#767a7d" font-size="13">machines: dates, providers, modules</text>
+
+    <rect x="376" y="324" width="28" height="28" rx="2" fill="#f29400"/>
+    <text x="416" y="334" fill="#1b2438" font-weight="700">Courtyard = iSAQB</text>
+    <text x="416" y="352" fill="#767a7d" font-size="13">association, curricula, certification</text>
+  </g>
+</svg>

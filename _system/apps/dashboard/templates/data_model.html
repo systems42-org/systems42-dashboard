@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Data model · req42{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>/</span> {% endif %}<a href="/req42/models">R4 Supporting Models</a> <span>/</span> Data model</nav>{% endblock %}
+{% from "_empty.html" import empty_state %}
+{% block content %}
+<h1 class="page-h1">Data model</h1>
+<p class="lead">A class diagram projected from <code>wiki/data-models/</code>
+  ({{ entities|length }} entities), plus any glossary term marked as data that
+  no DM page models yet. A multiplicity sits at the end it describes; a hollow
+  diamond is aggregation, a filled one composition, a hollow triangle
+  inheritance. Relationships come from each page's <code>relationships:</code>
+  frontmatter (DR-027).</p>
+
+{% if nodes %}
+<nav class="dm-filters" aria-label="Diagram filters">
+  <span class="dm-filter-label">Context</span>
+  <a class="dm-chip{% if not context %} is-on{% endif %}"
+     href="/data-model{% if focus %}?focus={{ focus }}{% endif %}">All</a>
+  {% for c in contexts %}
+  <a class="dm-chip{% if context == c %} is-on{% endif %}"
+     href="/data-model?context={{ c | urlencode }}{% if focus %}&amp;focus={{ focus }}{% endif %}">{{ c }}</a>
+  {% endfor %}
+
+  <span class="dm-filter-label">Focus</span>
+  <a class="dm-chip{% if not focus %} is-on{% endif %}"
+     href="/data-model{% if context %}?context={{ context | urlencode }}{% endif %}">Whole model</a>
+  {% for n in nodes %}
+  <a class="dm-chip{% if focus == n.key %} is-on{% endif %}{% if n.stub %} is-stub{% endif %}"
+     href="/data-model?focus={{ n.key }}{% if context %}&amp;context={{ context | urlencode }}{% endif %}">{{ n.label }}</a>
+  {% endfor %}
+</nav>
+{% endif %}
+
+{% if diagram %}
+<figure class="goals-diagram dm-diagram">
+  <pre class="mermaid">{{ diagram }}</pre>
+  <figcaption>
+    {% if focus %}{{ nodes | selectattr("key", "equalto", focus) | map(attribute="label") | first }}
+      and its direct neighbours{% elif context %}Bounded context: {{ context }}{% else %}The whole model{% endif %}.
+    {% if stubs %}A <code>&lt;&lt;term&gt;&gt;</code> box is a glossary term marked as data with no DM page yet
+      ({{ stubs | length }}){% endif %}
+  </figcaption>
+</figure>
+{% endif %}
+
+{% if entities %}
+<section class="dm-overview">
+  <h2>Entity types at a glance</h2>
+  <p class="lead">A quick overview of every entity with its attribute names.
+    Sortable per column; ID and name link down to the detail block below.</p>
+
+  <nav class="dm-toc" aria-label="Jump links to entities">
+    {% for e in entities %}
+    <a href="#{{ e.id }}"><code>{{ e.id }}</code> {{ e.title }}</a>
+    {% endfor %}
+  </nav>
+
+  <div class="table-card dm-summary">
+  <table class="dm-summary-table" id="dm-summary-table">
+    <thead>
+      <tr>
+        <th class="c-id" data-sort="text" aria-sort="ascending">ID</th>
+        <th class="dm-col-name" data-sort="text">Entity</th>
+        <th class="dm-col-attrs" data-sort="numeric" title="Number of attributes">Attributes</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in entities %}
+      <tr>
+        <td class="c-id" data-sort-value="{{ e.id }}"><a href="#{{ e.id }}" class="dm-jump"><code>{{ e.id }}</code></a></td>
+        <td class="dm-col-name" data-sort-value="{{ e.title|lower }}"><a href="#{{ e.id }}" class="dm-jump"><span class="term">{{ e.title }}</span></a>{% if e.stereotype %} <span class="dm-stereo-inline">{{ e.stereotype }}</span>{% endif %}</td>
+        <td class="dm-col-attrs" data-sort-value="{{ e.attributes|length }}">
+          {% if e.attributes %}
+            {% for a in e.attributes %}<code>{{ a }}</code>{% if not loop.last %}, {% endif %}{% endfor %}
+          {% else %}<span class="muted">—</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="dm-catalog">
+  <h2>Entities in detail</h2>
+  <p class="lead">Per entity: purpose, identity, attributes, relationships,
+    invariants, and deferred points — extracted from the respective DM pages.</p>
+
+  {% for e in entities %}
+  <article id="{{ e.id }}" class="dm-entity">
+    <header class="dm-entity-head">
+      <code class="ml-id">{{ e.id }}</code>
+      <h3>{{ e.title }}</h3>
+      {% if e.stereotype %}<span class="stereo">{{ e.stereotype }}</span>{% endif %}
+      {% if e.source_of_truth and system_name.lower() not in e.source_of_truth.lower() %}
+      <span class="dm-sot" title="Source of Truth">SoT: {{ e.source_of_truth }}</span>
+      {% endif %}
+    </header>
+
+    {% for label, html in e.sections %}
+    {% if html %}
+    <div class="dm-section">
+      <h4 class="dm-section-label">{{ label }}</h4>
+      <div class="dm-section-body">{{ html | safe }}</div>
+    </div>
+    {% endif %}
+    {% endfor %}
+
+    {% if e.notes %}
+    <div class="dm-notes">
+      {% for n in e.notes %}
+      <details class="dm-note-block">
+        <summary>{{ n.title }}</summary>
+        <div class="dm-section-body">{{ n.html | safe }}</div>
+      </details>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </article>
+  {% endfor %}
+</section>
+{% else %}
+{{ empty_state("data-model entities") }}
+{% endif %}
+{% endblock %}
+{% block scripts %}{% if needs_mermaid %}{% include "_mermaid.html" %}{% endif %}{% endblock %}

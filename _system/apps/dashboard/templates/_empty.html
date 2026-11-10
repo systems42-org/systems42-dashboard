@@ -1,0 +1,21 @@
+{% macro empty_state(what) %}
+<p class="empty-state">
+  No {{ what }} yet — drop a source into <code>raw/</code> and ask the agent:
+  <em>“capture the new file in raw/”</em>.
+</p>
+{% endmacro %}
+
+{% macro empty_bootstrap(what) %}
+<p class="empty-state">
+  No {{ what }} yet — ask the agent: <em>“run the bootstrap workflow”</em>,
+  or drop a source into <code>raw/</code> to start from material.
+</p>
+{% endmacro %}
+
+{% macro empty_decisions() %}
+<p class="empty-state">
+  No decisions yet — the agent records one in <code>wiki/decisions/</code> when a
+  choice is cross-cutting, hard to reverse and weighed against alternatives; you can
+  also ask: <em>“record the decision to …”</em>.
+</p>
+{% endmacro %}

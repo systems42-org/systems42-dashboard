@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Glossary{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>/</span> {% endif %}Glossary</nav>{% endblock %}
+{% from "_empty.html" import empty_state %}
+{% from "_maturity.html" import maturity_bar %}
+{% from "_macros.html" import status_rank %}
+{% block content %}
+<h1 class="page-h1">Glossary <span class="count-pill">{{ total }} terms</span></h1>
+{{ maturity_bar(maturity) }}
+<p class="lead">Ubiquitous language of {{ system_name }} — one canonical meaning per term.</p>
+
+<div class="filterbar" role="tablist" id="glossary-sort">
+  <span class="fbar-label">Sort:</span>
+  <button class="fbtn active" data-sort="alpha">Alpha</button>
+  <button class="fbtn" data-sort="newest">Newest</button>
+  <button class="fbtn" data-sort="oldest">Oldest</button>
+  <button class="fbtn" data-sort="relations">Connections</button>
+  <a class="fbtn fbtn-link" href="/graph/glossary" title="The same terms as an interactive network">Term network →</a>
+</div>
+
+{% if rows %}
+<div class="table-card">
+<table>
+  <thead>
+    <tr>
+      <th class="c-id" data-sort="text">ID</th>
+      <th class="c-term" data-sort="text" aria-sort="ascending">Term</th>
+      <th class="c-def">Definition</th>
+      <th class="c-rel" data-sort="numeric" data-sort-first="desc">Links</th>
+      <th class="c-status" data-sort="numeric">Status</th>
+    </tr>
+  </thead>
+  <tbody id="glossary-body">
+    {% for r in rows %}
+    <tr data-title="{{ r.title|lower }}" data-created="{{ r.created }}" data-relations="{{ r.relations }}">
+      <td class="c-id"><code>{{ r.id }}</code></td>
+      <td class="c-term" data-sort-value="{{ r.title }}">
+        <a class="term term-link" href="/page/glossary/{{ r.stem }}">{{ r.title }}</a>
+        {% if r.assumption %}<span class="badge badge-assume" title="Definition is an unconfirmed assumption">Assumption</span>{% endif %}
+        {% if r.aliases %}<span class="aliases">alias: {{ r.aliases | join(", ") }}</span>{% endif %}
+      </td>
+      <td class="c-def">{{ r.definition | safe }}</td>
+      <td class="c-rel"><span class="rel-pill">{{ r.relations }}</span></td>
+      <td class="c-status" data-sort-value="{{ status_rank(r.status) }}"><span class="status status-{{ r.status }}">{{ r.status }}</span></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+{{ empty_state("glossary terms") }}
+{% endif %}
+
+<script>
+  const body = document.getElementById('glossary-body');
+  const sortButtons = document.querySelectorAll('#glossary-sort .fbtn');
+  const comparators = {
+    alpha:     (a, b) => a.dataset.title.localeCompare(b.dataset.title, 'en'),
+    newest:    (a, b) => b.dataset.created.localeCompare(a.dataset.created) || a.dataset.title.localeCompare(b.dataset.title, 'en'),
+    oldest:    (a, b) => a.dataset.created.localeCompare(b.dataset.created) || a.dataset.title.localeCompare(b.dataset.title, 'en'),
+    relations: (a, b) => (+b.dataset.relations) - (+a.dataset.relations) || a.dataset.title.localeCompare(b.dataset.title, 'en'),
+  };
+  function sortBy(mode) {
+    Array.from(body.querySelectorAll('tr'))
+      .sort(comparators[mode])
+      .forEach(tr => body.appendChild(tr));
+  }
+  // The buttons and the column headers set the same row order, so only the
+  // one used last may look active.
+  sortButtons.forEach(b => b.addEventListener('click', () => {
+    sortButtons.forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    sortBy(b.dataset.sort);
+    window.S42TableSort.clear(body.closest('table'));
+  }));
+  if (body) body.closest('table').addEventListener('tablesort', () => {
+    sortButtons.forEach(x => x.classList.remove('active'));
+  });
+</script>
+{% endblock %}

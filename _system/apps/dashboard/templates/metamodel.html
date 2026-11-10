@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+{% block title %}Metamodel{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> <a href="/help">Help</a> <span>/</span> Metamodel</nav>{% endblock %}
+{% block content %}
+<h1 class="page-h1">The metamodel <span class="count-pill">{{ types|length }} types · {{ relations|length }} relations</span></h1>
+<p class="lead">What kinds of pages this wiki holds, how they point at each other, and what
+is only ever <em>projected</em> from them. Every cell below is read live from
+<code>_system/metamodel/</code> (DR-035); the examples are real pages of this vault.
+Two levels: the <a href="#language">language</a> a metamodel is written in — seven constructs,
+framework-agnostic — and the req42 instances, which is everything else on this page.</p>
+
+{% if not present %}
+<p class="empty-state">No metamodel found — expected one page per type under
+<code>_system/metamodel/types/</code> (DR-035).</p>
+{% else %}
+
+<nav class="mm-toc" aria-label="On this page">
+  <a href="#graph">Graph</a>
+  <a href="#types">Types</a>
+  <a href="#relations">Relations</a>
+  <a href="#projections">Projections</a>
+  <a href="#altitude">Granularity</a>
+  <a href="#rules">Rules</a>
+  <a href="#language">Language</a>
+</nav>
+
+{# ---------------------------------------------------------------- graph #}
+<section class="mm-section" id="graph">
+<h2 class="mm-h2">Types and relations as a network</h2>
+<p class="mm-lead">One box per content type, framed in the type's colour and grouped by
+its section. An arrow is a frontmatter field that carries wikilinks, labelled
+with the field name; a loop is a hierarchy inside one type. Hover a node to see
+its neighbours, tap it to jump to its row below. Drag freely; <strong>Layout</strong>
+re-arranges.</p>
+
+<div class="graph-toolbar" id="mm-layout">
+  <span class="fbar-label">Layout:</span>
+  <button class="layer-btn lay-btn" data-lay="fcose">fcose</button>
+  <button class="layer-btn lay-btn" data-lay="cola">cola</button>
+  <button class="layer-btn" id="mm-fit">Fit</button>
+  <label class="mm-toggle"><input type="checkbox" id="mm-edge-labels" checked> field names</label>
+</div>
+
+<div class="graph-legend">
+  <div class="lg-row"><span class="lg-label">Type</span>
+    {% for t in types %}<span class="lg-item"><span class="lg-dot mm-dot-{{ t.prefix|lower }}"></span>{{ t.label }}</span>{% endfor %}
+  </div>
+  <div class="lg-row"><span class="lg-label">Edge</span>
+    <span class="lg-item"><span class="mm-edge-sample mm-edge-directed"></span>directed relation (arrow at the target)</span>
+    <span class="lg-item"><span class="mm-edge-sample mm-edge-hierarchy"></span>hierarchy, <code>parent</code> (dashed)</span>
+    <span class="lg-item"><span class="mm-edge-sample mm-edge-block"></span>section (group frame)</span>
+  </div>
+</div>
+
+<div id="mm-cy" class="graph-canvas mm-canvas" role="img" aria-label="Metamodel: content types and their relations"></div>
+
+{% if universal %}
+<p class="mm-universal">Not drawn, because they connect <em>every</em> page:
+{% for u in universal %}<span class="mm-universal-item"><code>{{ u.field }}</code>
+{% if u.direction == 'symmetric' %}between any two pages, symmetric{% else %}from {{ 'any page' if u.from == 'any' else u.from }} to {{ 'any page' if u.to == 'any' else u.to }}{% endif %}{% if u.cardinality %} ({{ u.cardinality }}){% endif %}</span>{% if not loop.last %} · {% endif %}{% endfor %}.</p>
+{% endif %}
+</section>
+
+{# ---------------------------------------------------------------- types #}
+<section class="mm-section" id="types">
+<h2 class="mm-h2">Content types <span class="count-pill">{{ types|length }}</span></h2>
+<p class="mm-lead">One folder, one template, one ID prefix each. The <em>definition</em> is
+the type page's own first paragraph; the <em>example</em> is the most mature page of
+that type in this wiki ({{ n_examples }} of {{ types|length }} types have one so far).</p>
+<div class="table-card mm-table mm-table-types">
+<table>
+  <thead><tr>
+    <th class="c-term">Type</th>
+    <th class="mm-c-block">Block</th>
+    <th class="c-def">Definition</th>
+    <th class="mm-c-structure">Structure</th>
+    <th class="mm-c-example">Example</th>
+  </tr></thead>
+  <tbody>
+  {% for t in types %}
+  <tr id="{{ t.anchor }}" class="mm-row">
+    <td class="c-term">
+      <span class="mm-type"><span class="lg-dot mm-dot-{{ t.prefix|lower }}"></span>
+        <span class="term">{{ t.label }}</span></span>
+      <span class="aliases">{{ t.label_de }} · <code class="mm-id">{{ t.prefix }}-NNN</code></span>
+      <span class="aliases"><code>{{ t.folder }}/</code></span>
+    </td>
+    <td class="mm-c-block">{% if t.block %}<span class="mm-block-chip">{{ t.block }}</span> <span class="mm-block-title">{{ t.block_title }}</span>{% else %}<span class="muted">provenance layer</span>{% endif %}
+      <span class="aliases">lifecycle: {{ t.lifecycle }}</span></td>
+    <td class="c-def">{{ t.summary_html | safe }}
+      {% if t.naming %}<span class="mm-naming">Title: {{ t.naming }}</span>{% endif %}</td>
+    <td class="mm-c-structure">
+      {% if t.stereotypes %}<div class="mm-stereos">{% for s in t.stereotypes %}<span class="badge mm-stereo">{{ s }}</span>{% endfor %}</div>{% endif %}
+      <details class="mm-fields">
+        <summary>{{ t.fields|length }} field{{ 's' if t.fields|length != 1 }}{% if t.universal %} + universal{% endif %}</summary>
+        <dl class="mm-field-list">
+        {% for f in t.fields %}
+          <dt><code>{{ f.name }}</code>{% if f.required %}<span class="mm-req" title="required">*</span>{% endif %}
+            <span class="mm-kind">{{ f.kind }}{% if f.relation %} → <a class="wl" href="#rel-{{ f.relation }}">{{ f.relation }}</a>{% endif %}</span></dt>
+          <dd>{% if f['values'] %}<span class="mm-values">{{ f['values']|join(' | ') }}</span>{% endif %}{% if f.doc %} {{ f.doc | safe }}{% endif %}</dd>
+        {% endfor %}
+        </dl>
+        {% if t.anchors %}<p class="mm-small">Standards: {% for a in t.anchors %}<span class="mm-anchor">{{ a }}</span>{% endfor %}</p>{% endif %}
+        {% if t.projections %}<p class="mm-small">Read by: {% for p in t.projections %}<a class="wl" href="#proj-{{ p }}">{{ p }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+      </details>
+    </td>
+    <td class="mm-c-example">
+      {% if t.example.count %}
+      <a class="term term-link" href="{{ t.example.url }}"><code>{{ t.example.id }}</code> {{ t.example.title }}</a>
+      <span class="aliases">{% if t.example.stereotype %}{{ t.example.stereotype }} · {% endif %}<span class="status status-{{ t.example.status }}">{{ t.example.status }}</span> · {{ t.example.count }} page{{ 's' if t.example.count != 1 }}</span>
+      {% else %}<span class="muted">none yet</span>{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+</section>
+
+{# ------------------------------------------------------------ relations #}
+<section class="mm-section" id="relations">
+<h2 class="mm-h2">Relations <span class="count-pill">{{ relations|length }}</span></h2>
+<p class="mm-lead">A relation is a frontmatter field that carries wikilinks. Direction,
+meaning and whether the reverse side is <em>stored</em> or only <em>projected</em> are
+declared per relation — which is why the relations linter repairs a missing
+<code>related:</code> back-link and never touches a directed field.</p>
+<div class="table-card mm-table mm-table-relations">
+<table>
+  <thead><tr>
+    <th class="c-term">Field</th>
+    <th>Connects</th>
+    <th class="mm-c-meaning">Meaning</th>
+    <th class="mm-c-inverse">Reverse side</th>
+  </tr></thead>
+  <tbody>
+  {% for r in relations %}
+  <tr id="{{ r.anchor }}" class="mm-row">
+    <td class="c-term"><code class="mm-field">{{ r.field }}</code>
+      <span class="aliases">{{ r.direction }}</span></td>
+    <td>
+      {% for e in r.edges %}
+      <div class="mm-edge">
+        {% if e.from_anchor %}<a class="wl" href="#{{ e.from_anchor }}">{{ e.from }}</a>{% else %}{{ e.from }}{% endif %}
+        <span class="mm-arrow">{{ '⟷' if r.direction == 'symmetric' else '→' }}</span>
+        {% if e.to_anchor %}<a class="wl" href="#{{ e.to_anchor }}">{{ e.to }}</a>{% else %}{{ e.to }}{% endif %}
+        {% if e.cardinality %}<span class="mm-cardinality">{{ e.cardinality }}</span>{% endif %}
+        {% if e.note %}<span class="mm-note">{{ e.note | safe }}</span>{% endif %}
+      </div>
+      {% endfor %}
+    </td>
+    <td class="mm-c-meaning"><span class="badge mm-sem">{{ r.semantics }}</span> {{ r.summary_html | safe }}</td>
+    <td class="mm-c-inverse"><em>{{ r.inverse }}</em>
+      <span class="aliases">{% if r.inverse_stored %}stored as <code>{{ r.inverse_field }}</code>{% else %}projected, not stored{% endif %}{% if r.reciprocity == 'enforced' %} · reciprocity enforced{% endif %}</span></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+</section>
+
+{# ---------------------------------------------------------- projections #}
+<section class="mm-section" id="projections">
+<h2 class="mm-h2">Projections <span class="count-pill">{{ projections|length }}</span></h2>
+<p class="mm-lead">Derived views, never stored. Each declares which fields it reads, so
+"no drift by construction" is something the lint can check. A projection that
+got persisted would have become a type.</p>
+<div class="table-card mm-table mm-table-projections">
+<table>
+  <thead><tr>
+    <th class="c-term">Projection</th>
+    <th>Reads</th>
+    <th class="c-def">What it shows</th>
+    <th class="mm-c-where">Where</th>
+  </tr></thead>
+  <tbody>
+  {% for p in projections %}
+  <tr id="{{ p.anchor }}" class="mm-row">
+    <td class="c-term"><span class="term">{{ p.name }}</span><span class="aliases">{{ p.output }}{% if p.anchor_ref %} · <span class="mm-anchor">{{ p.anchor_ref }}</span>{% endif %}</span></td>
+    <td>{% for rd in p.reads %}<div class="mm-reads"><a class="wl" href="#{{ rd.type_anchor }}">{{ rd.type }}</a> <span class="mm-reads-fields">{% for f in rd.fields %}<code>{{ f }}</code>{% endfor %}</span></div>{% endfor %}</td>
+    <td class="c-def">{{ p.summary_html | safe }}{% if p.decisions_html %}<span class="aliases">{{ p.decisions_html | safe }}</span>{% endif %}</td>
+    <td class="mm-c-where">{% if p.href %}<a class="wl" href="{{ p.href }}">{{ p.implemented }}</a>{% else %}<span class="muted">not rendered yet</span>{% endif %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+</section>
+
+{# ------------------------------------------------------------- altitude #}
+<section class="mm-section" id="altitude">
+<h2 class="mm-h2">Granularity</h2>
+{% if altitude %}
+<p class="mm-lead">One scale, coarse to fine, so that items of different types can be
+compared — once their assignments are agreed.</p>
+<ol class="mm-rungs">
+  {% for r in altitude.rungs %}<li><span class="mm-rung">{{ r }}</span>
+    {% for a in altitude.assignments if a.rung == r %}<span class="mm-assign mm-assign-{{ a.status }}"><a class="wl" href="#{{ a.type_anchor }}">{{ a.type }}</a>{% if a.stereotype %} · {{ a.stereotype }}{% endif %} <span class="mm-assign-status">{{ a.status }}</span></span>{% endfor %}
+  </li>{% endfor %}
+</ol>
+{% set open = altitude.assignments | selectattr('status', 'equalto', 'open') | list %}
+{% if open %}
+<p class="mm-small">Not placed yet: {% for a in open %}<span class="mm-assign mm-assign-open"><a class="wl" href="#{{ a.type_anchor }}">{{ a.type }}</a>{% if a.field %} · by its <code>{{ a.field }}</code>{% endif %} <span class="mm-assign-status">open</span></span>{% endfor %}</p>
+{% endif %}
+<div class="mm-prose">{{ altitude.body_html | safe }}</div>
+{% else %}
+<p class="muted">No altitude scale declared.</p>
+{% endif %}
+</section>
+
+{# ---------------------------------------------------------------- rules #}
+<section class="mm-section" id="rules">
+<h2 class="mm-h2">Rules <span class="count-pill">{{ rules|length }}</span></h2>
+<p class="mm-lead">The checks inspect and relations run, as data: where a rule applies,
+what it tests, and what the agent may do about it. Enforcement is advisory —
+<em>ask</em> and <em>issue</em> leave the decision to the human.</p>
+<div class="table-card mm-table mm-table-rules">
+<table>
+  <thead><tr>
+    <th class="c-term">Rule</th>
+    <th class="mm-c-applies">Applies to</th>
+    <th class="c-def">Check</th>
+    <th class="mm-c-action">Action</th>
+  </tr></thead>
+  <tbody>
+  {% for r in rules %}
+  <tr id="{{ r.anchor }}" class="mm-row">
+    <td class="c-term"><span class="term">{{ r.name }}</span><span class="aliases">{{ r.source }}</span></td>
+    <td class="mm-c-applies">{% if r.applies_anchor %}<a class="wl" href="#{{ r.applies_anchor }}">{{ r.applies_type }}</a>{% else %}{{ r.applies_type }}{% endif %}{% if r.applies_stereotype %}<span class="aliases">{{ r.applies_stereotype }}</span>{% endif %}</td>
+    <td class="c-def">{{ r.check | safe }}{% if r.summary_html %}<span class="aliases">{{ r.summary_html | safe }}</span>{% endif %}</td>
+    <td class="mm-c-action"><span class="badge mm-action mm-action-{{ r.action }}">{{ r.action }}</span><span class="aliases">confidence {{ r.confidence }}</span></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+</section>
+
+{# ------------------------------------------------------------- language #}
+<section class="mm-section" id="language">
+<h2 class="mm-h2">The language it is written in</h2>
+<p class="mm-lead">Everything above is an instance of one of <strong>{{ constructs|length }} constructs</strong>.
+They know nothing about req42; adding arc42 later adds instances, never constructs.</p>
+<div class="mm-constructs">
+  {% for c in constructs %}<span class="mm-construct">{{ c }}</span>{% endfor %}
+</div>
+<div class="mm-language-grid">
+  <div class="mm-card">
+    <h3 class="mm-h3">Universal fields</h3>
+    <p class="mm-small">Every type carries these and its page lists only its own fields, except a type marked not universal (Source), which lists all its fields itself.</p>
+    <dl class="mm-field-list">
+      {% for f in universal_fields %}<dt><code>{{ f.name }}</code> <span class="mm-kind">{{ f.kind }}{% if f.relation %} → <a class="wl" href="#rel-{{ f.relation }}">{{ f.relation }}</a>{% endif %}</span></dt><dd>{{ f.doc_html | safe }}</dd>{% endfor %}
+    </dl>
+  </div>
+  <div class="mm-card">
+    <h3 class="mm-h3">Lifecycles</h3>
+    <p class="mm-small">Which <code>status</code> values a type may take.</p>
+    <dl class="mm-field-list">
+      {% for name, states in lifecycles.items() %}<dt><code>{{ name }}</code></dt><dd>{{ states|join(' → ') }}</dd>{% endfor %}
+    </dl>
+    <h3 class="mm-h3">Field kinds</h3>
+    <p class="mm-small">{% for k in field_kinds %}<code>{{ k }}</code>{% if not loop.last %} · {% endif %}{% endfor %}</p>
+    <h3 class="mm-h3">Frameworks</h3>
+    <p class="mm-small">{% for fw in frameworks %}<strong>{{ fw.name }}</strong> ({{ fw.blocks|length }} blocks){% if not loop.last %} · {% endif %}{% endfor %} — {{ n_blocks_in }} of {{ n_blocks }} blocks are captured in wiki folders.</p>
+  </div>
+</div>
+<p class="mm-small">Source: <code>_system/metamodel/</code>, checked by <code>_system/scripts/metamodel-lint.py</code>. Decision: {{ decision_html | safe }}.</p>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if present %}
+<script src="{{ url_for('static', filename='vendor/cytoscape.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/layout-base.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/cose-base.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/cytoscape-fcose.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/cola.min.js') }}"></script>
+<script>window.webcola = window.webcola || window.cola;</script>
+<script src="{{ url_for('static', filename='vendor/cytoscape-cola.js') }}"></script>
+<script src="{{ url_for('static', filename='glossary-graph.js') }}"></script>
+<script src="{{ static_url('metamodel-graph.js') }}"></script>
+<script id="mm-graph-data" type="application/json">{{ graph | tojson }}</script>
+<script>
+  (function () {
+    if (!window.AQ_METAMODEL_GRAPH) return;
+    AQ_METAMODEL_GRAPH.mount({
+      container: document.getElementById('mm-cy'),
+      data: JSON.parse(document.getElementById('mm-graph-data').textContent),
+      layoutSelector: '#mm-layout', fitButton: '#mm-fit', edgeLabelToggle: '#mm-edge-labels'
+    });
+  })();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Search{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> Search</nav>{% endblock %}
+{% block content %}
+<h1 class="page-h1">Search <span class="count-pill" id="search-total" data-total="{{ total }}">{{ total }}</span></h1>
+<p class="lead">Full-text search across all content — terms, stakeholders, issues, decisions, and more.</p>
+
+<div class="toolbar">
+  <input type="search" id="search-box" class="search-input" placeholder="Enter a search term…"
+         autocomplete="off" spellcheck="false" autofocus aria-label="Search the wiki">
+  <div class="filterbar" role="tablist">
+    <button class="fbtn active" data-type="all" data-total="{{ total }}">All <span class="fnum">{{ total }}</span></button>
+    {% for type, count in facets %}
+    <button class="fbtn" data-type="{{ type }}" data-total="{{ count }}">{{ type }} <span class="fnum">{{ count }}</span></button>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="table-card">
+  <ul class="search-results" id="search-results">
+    {% for r in records %}
+    <li class="sresult" data-type="{{ r.type }}" data-id="{{ r.id|lower }}" data-title="{{ r.title|lower }}" data-text="{{ r.text }}" hidden>
+      <a class="sresult-link" href="{{ r.url }}">
+        <span class="badge kind-badge">{{ r.type }}</span>
+        <code class="sresult-id">{{ r.id }}</code>
+        <span class="sresult-title">{{ r.title }}</span>
+        {% if r.status %}<span class="status status-{{ r.status }}">{{ r.status }}</span>{% endif %}
+        <span class="sresult-score" title="Relevance" hidden>
+          <span class="score-track"><span class="score-fill"></span></span>
+          <span class="score-pct"></span>
+        </span>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+  <p class="empty-hint" id="search-empty" hidden>No matches.</p>
+  <p class="search-hint" id="search-prompt">Start typing to search — or choose a type filter.</p>
+</div>
+
+<script>
+// runs after the deferred static/search-rank.js (base.html) has defined S42Search
+document.addEventListener('DOMContentLoaded', () => {
+  const box = document.getElementById('search-box');
+  const list = document.getElementById('search-results');
+  const allResults = Array.from(list.querySelectorAll('.sresult'));  // original order
+  const buttons = document.querySelectorAll('.fbtn');
+  const empty = document.getElementById('search-empty');
+  const prompt = document.getElementById('search-prompt');
+  let activeType = 'all';
+  let query = '';
+
+  // Ranking lives in static/search-rank.js, shared with the nav search popup.
+  const allRecs = allResults.map(el => ({
+    id: el.dataset.id, title: el.dataset.title, type: el.dataset.type, text: el.dataset.text, el: el,
+  }));
+
+  function setScore(el, pct) {
+    const box = el.querySelector('.sresult-score');
+    box.querySelector('.score-fill').style.width = pct + '%';
+    box.querySelector('.score-pct').textContent = pct + '%';
+    box.dataset.band = S42Search.band(pct);
+    box.hidden = false;
+  }
+
+  const totalEl = document.getElementById('search-total');
+  function updateCounts(perType) {
+    // perType == null → back to corpus totals (no query)
+    let all = 0;
+    buttons.forEach(b => {
+      const t = b.dataset.type;
+      if (t === 'all') return;
+      const n = perType ? (perType[t] || 0) : parseInt(b.dataset.total, 10);
+      b.querySelector('.fnum').textContent = n;
+      all += n;
+    });
+    const allBtn = document.querySelector('.fbtn[data-type="all"]');
+    const total = perType ? all : parseInt(allBtn.dataset.total, 10);
+    allBtn.querySelector('.fnum').textContent = total;
+    totalEl.textContent = total;
+  }
+
+  function apply() {
+    const browsing = query !== '' || activeType !== 'all';
+    let shown = 0;
+
+    if (query) {
+      const ranked = S42Search.rank(allRecs, query);
+      const perType = {};
+      ranked.forEach(({rec}) => { perType[rec.type] = (perType[rec.type] || 0) + 1; });
+      updateCounts(perType);
+      allResults.forEach(el => { el.hidden = true; });
+      ranked.forEach(({rec, score}) => {
+        if (activeType !== 'all' && rec.type !== activeType) return;
+        rec.el.hidden = false; setScore(rec.el, score); list.appendChild(rec.el); shown++;
+      });
+    } else if (browsing) {                               // facet browse, no query
+      updateCounts(null);
+      allResults.forEach(el => {
+        const show = activeType === 'all' || el.dataset.type === activeType;
+        el.hidden = !show;
+        if (show) { el.querySelector('.sresult-score').hidden = true; list.appendChild(el); shown++; }
+      });
+    } else {
+      updateCounts(null);
+      allResults.forEach(el => { el.hidden = true; });
+    }
+
+    prompt.hidden = browsing;
+    empty.hidden = !(browsing && shown === 0);
+  }
+
+  buttons.forEach(b => b.addEventListener('click', () => {
+    buttons.forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    activeType = b.dataset.type;
+    apply();
+  }));
+  box.addEventListener('input', () => { query = box.value.trim().toLowerCase(); apply(); });
+
+  // prefill from ?q= (when arriving from the home search tile)
+  const q = new URLSearchParams(location.search).get('q');
+  if (q) { box.value = q; query = q.trim().toLowerCase(); }
+  apply();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "_context_flows.html" import context_flow_table %}
+{% block title %}{{ block.title }} · req42{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>/</span> {% endif %}{{ block.id }} {{ block.title }}</nav>{% endblock %}
+{% from "_maturity.html" import maturity_bar %}
+{% from "_macros.html" import status_rank %}
+{% block content %}
+<h1 class="page-h1"><span class="req42-num">{{ block.id }}</span> {{ block.title }} <span class="count-pill">{{ total }}</span></h1>
+{{ maturity_bar(maturity) }}
+<p class="lead">{{ block.title }} — section {{ block.id }}.{% if block.note %} {{ block.note }}{% endif %}</p>
+
+{% if context_diagram %}
+<figure class="ctx-diagram">
+  <figcaption>System context · projected live from interfaces &amp; data flows (DR-013)</figcaption>
+  <pre class="mermaid">{{ context_diagram }}</pre>
+  <figcaption class="ctx-legend">One line per neighbour; both directions are listed below.</figcaption>
+</figure>
+{{ context_flow_table(context_flows) }}
+{% endif %}
+
+<div class="table-card">
+<table>
+  <thead>
+    <tr>
+      <th class="c-id" data-sort="text" aria-sort="ascending">ID</th>
+      {# a block of one type has a constant Type column: nothing to sort by #}
+      <th class="c-status"{% if block.folders|length > 1 %} data-sort="text"{% endif %}>Type</th>
+      <th class="c-title" data-sort="text">Title</th>
+      <th class="c-status" data-sort="numeric">Status</th>
+      <th class="c-rel" data-sort="numeric" data-sort-first="desc">Links</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in rows %}
+    <tr>
+      <td class="c-id"><code>{{ r.id }}</code></td>
+      <td class="c-status"><span class="badge kind-badge">{{ r.type }}</span></td>
+      <td class="c-title" data-sort-value="{{ r.title }}">
+        <a class="term term-link" href="{{ r.url }}">{{ r.title }}</a>
+        {% if r.attribute or r.priority %}<div class="qr-meta">
+          {% if r.attribute %}<span class="badge kind-badge">{{ r.attribute }}</span>{% endif %}
+          {% if r.priority %}<span class="badge badge-prio">{{ r.priority }}</span>{% endif %}
+        </div>{% endif %}
+        {% if r.scenario %}<dl class="qr-scenario">
+          {% for label, html in r.scenario %}<dt{% if label == "Measure" %} class="qr-measure"{% endif %}>{{ label }}</dt><dd{% if label == "Measure" %} class="qr-measure"{% endif %}>{{ html | safe }}</dd>
+          {% endfor %}
+        </dl>{% endif %}
+      </td>
+      <td class="c-status" data-sort-value="{{ status_rank(r.status) }}">{% if r.status %}<span class="status status-{{ r.status }}">{{ r.status }}</span>{% endif %}</td>
+      <td class="c-rel"><span class="rel-pill">{{ r.relations }}</span></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% if not rows %}<p class="empty-hint">No entries captured in this req42 section yet.</p>{% endif %}
+</div>
+{% endblock %}
+{% block scripts %}{% if needs_mermaid %}{% include "_mermaid.html" %}{% endif %}{% endblock %}

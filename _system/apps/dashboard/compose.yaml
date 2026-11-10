@@ -1,0 +1,40 @@
+# Explicit project name. Without it, Compose derives the project from this
+# file's directory (`dashboard`), which collides with any other vault that
+# keeps its dashboard at the same path — bringing this one up would then
+# recreate (and thereby destroy) the other vault's container.
+name: systems42-dashboard
+
+services:
+  dashboard:
+    build: .
+    container_name: systems42-dashboard-dashboard
+    environment:
+      # timezone for the "last refreshed" footer
+      TZ: "${TZ:-UTC}"
+      WIKI_CONFIG: "/config/wiki.yaml"
+      DASHBOARD_CONFIG: "/config/dashboard.yaml"
+      # LAN address the QR code / /join page point at; dashboard.sh exports it
+      DASH_PUBLIC_URL: "${DASH_PUBLIC_URL:-}"
+    ports:
+      - "8080:8000"
+    volumes:
+      # The wiki layer, mounted read-only. WIKI_DIR is exported by dashboard.sh;
+      # the fallback resolves wiki/ relative to this compose file for direct use.
+      - "${WIKI_DIR:-../../../wiki}:/wiki:ro"
+      # Provenance records (raw/sources/) — counted on the home status strip.
+      - "${SOURCES_DIR:-../../../raw/sources}:/sources:ro"
+      # Project docs (docs/) — only the page `about:` in wiki.yaml names, and the
+      # files beside it, are served (/about). Read-only.
+      - "${DOCS_DIR:-../../../docs}:/docs:ro"
+      # The explicit metamodel (_system/metamodel/) — the /metamodel help page reads it.
+      - "${METAMODEL_DIR:-../../metamodel}:/metamodel:ro"
+      # Project identity (_system/wiki.yaml), read-only like the rest.
+      - "${CONFIG_FILE:-../../wiki.yaml}:/config/wiki.yaml:ro"
+      # Dashboard settings — the ONE read-write mount: the Configure dialog
+      # rewrites this file in place (DR-033).
+      - "${DASHBOARD_CONFIG:-../../dashboard.yaml}:/config/dashboard.yaml"
+    # No auto-restart: the dashboard is an on-demand viewer that stops itself
+    # (stop button or last-tab-closed) and must then stay down. A restart
+    # policy would fight the self-shutdown and bring the container back up.
+    # See DR-022.
+    restart: "no"

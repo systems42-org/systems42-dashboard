@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Issues{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>/</span> {% endif %}Issues</nav>{% endblock %}
+{% from "_empty.html" import empty_state %}
+{% from "_maturity.html" import maturity_bar %}
+{% block content %}
+<h1 class="page-h1">Issues <span class="count-pill">{{ total }}</span></h1>
+{{ maturity_bar(maturity) }}
+<p class="lead">Open questions, contradictions, and gaps — cutting across every content type.</p>
+
+{% if items %}
+<div class="filterbar" role="tablist">
+  <button class="fbtn active" data-filter="all">All <span class="fnum">{{ total }}</span></button>
+  <button class="fbtn" data-filter="open">Open <span class="fnum">{{ open_count }}</span></button>
+  <button class="fbtn" data-filter="closed">Closed <span class="fnum">{{ closed_count }}</span></button>
+</div>
+
+<div class="table-card">
+<table id="issues-table">
+  <thead>
+    <tr>
+      <th class="c-id">ID</th>
+      <th>Title</th>
+      <th class="c-status">Kind</th>
+      <th class="c-status">Severity</th>
+      <th class="c-status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for it in items %}
+    <tr class="issue-row" data-id="{{ it.id }}" data-open="{{ 'true' if it.is_open else 'false' }}" tabindex="0">
+      <td class="c-id"><code>{{ it.id }}</code></td>
+      <td class="c-term"><span class="term">{{ it.title }}</span></td>
+      <td class="c-status">{% if it.kind %}<span class="badge kind-badge">{{ it.kind }}</span>{% endif %}</td>
+      <td class="c-status">{% if it.severity %}<span class="badge sev-badge">{{ it.severity }}</span>{% endif %}</td>
+      <td class="c-status"><span class="status status-{{ it.status }}">{{ it.status }}</span></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<p class="empty-hint" id="empty-hint" hidden>No issues in this view.</p>
+</div>
+
+<section id="issue-detail" class="detail-pane" aria-live="polite">
+  <p class="detail-placeholder">Click an issue in the list to see the details here.</p>
+</section>
+
+{# hidden store of pre-rendered issue bodies, pulled into the detail pane on click #}
+<div id="issue-store" hidden>
+  {% for it in items %}<div data-id="{{ it.id }}"><div class="detail-head pane-head"><a href="{{ it.url }}" title="Open as its own page"><code class="detail-id">{{ it.id }}</code></a> <span class="status status-{{ it.status }}">{{ it.status }}</span></div>{{ it.html | safe }}</div>{% endfor %}
+</div>
+{% else %}
+{{ empty_state("issues") }}
+{% endif %}
+
+<script>
+  const buttons = document.querySelectorAll('.fbtn');
+  const rows = document.querySelectorAll('#issues-table tbody tr');
+  const hint = document.getElementById('empty-hint');
+  const detail = document.getElementById('issue-detail');
+  const store = document.getElementById('issue-store');
+
+  function apply(filter) {
+    let shown = 0;
+    rows.forEach(r => {
+      const isOpen = r.dataset.open === 'true';
+      const show = filter === 'all' || (filter === 'open' && isOpen) || (filter === 'closed' && !isOpen);
+      r.hidden = !show;
+      if (show) shown++;
+    });
+    hint.hidden = shown !== 0;
+  }
+  buttons.forEach(b => b.addEventListener('click', () => {
+    buttons.forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    apply(b.dataset.filter);
+  }));
+
+  const want = new URLSearchParams(location.search).get('filter');
+  const pre = want && document.querySelector('.fbtn[data-filter="' + want + '"]');
+  if (pre) pre.click();
+
+  function showDetail(row) {
+    rows.forEach(r => r.classList.remove('selected'));
+    row.classList.add('selected');
+    const src = store.querySelector('[data-id="' + row.dataset.id + '"]');
+    detail.innerHTML = src ? src.innerHTML : '';
+    detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  rows.forEach(r => {
+    r.addEventListener('click', () => showDetail(r));
+    r.addEventListener('keydown', e => { if (e.key === 'Enter') showDetail(r); });
+  });
+</script>
+{% endblock %}

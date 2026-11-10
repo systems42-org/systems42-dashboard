@@ -1,0 +1,18 @@
+{% macro maturity_bar(m) %}
+{% if m and m.total %}
+<div class="maturity" role="img" aria-label="Maturity: {{ m.label }}" title="{{ m.label }}">
+  {% for s in m.segments %}<span class="maturity-seg maturity-{{ s.status }}" style="flex-basis: {{ s.pct }}%"></span>{% endfor %}
+</div>
+{% endif %}
+{% endmacro %}
+{% macro maturity_legend() %}
+{# Each swatch and its word are one inline-flex item: the gap between them is
+   then a fixed .35rem, not whatever the template's own whitespace collapses
+   to next to the wider gap that separates the four keys from each other. #}
+<p class="maturity-legend" aria-hidden="true">
+  {% for cls, label in [('accepted', 'accepted'), ('review', 'in review'),
+                        ('draft', 'draft'), ('deprecated', 'deprecated')] %}
+  <span class="maturity-legend-item"><span class="maturity-key maturity-{{ cls }}"></span>{{ label }}</span>
+  {% endfor %}
+</p>
+{% endmacro %}

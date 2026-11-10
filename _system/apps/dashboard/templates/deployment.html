@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% from "_maturity.html" import maturity_bar %}
+{% block title %}{{ block.title }} · arc42{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>/</span> {% endif %}{{ block.id }} {{ block.title }}</nav>{% endblock %}
+{% macro row_head(r) %}<a class="wl" href="{{ r.url }}"><code>{{ r.id }}</code> {{ r.title }}</a>{% if r.status %} <span class="status status-{{ r.status }}">{{ r.status }}</span>{% endif %} <span class="state-badge state-{{ r.state }}">{{ r.state }}</span>{% endmacro %}
+{% macro node_tree(nodes) %}<ul class="bb-tree">{% for n in nodes %}<li>{{ row_head(n) }}{% if n.children %}{{ node_tree(n.children) }}{% endif %}</li>{% endfor %}</ul>{% endmacro %}
+{% macro links(groups) %}{% for g in groups %}{% for l in g.links %}<a class="wl" href="{{ l.url }}"><code>{{ l.id }}</code> {{ l.label }}</a>{% endfor %}{% endfor %}{% endmacro %}
+{% block content %}
+<h1 class="page-h1"><span class="req42-num">{{ block.id }}</span> {{ block.title }} <span class="count-pill">{{ total }}</span></h1>
+{{ maturity_bar(maturity) }}
+<p class="lead">The technical infrastructure and which building blocks run where (arc42 section 7). One diagram of everything relevant today, projected from each node's <code>parent:</code>, <code>hosts:</code> and <code>connects:</code>.</p>
+{% if diagram %}
+<figure class="ctx-diagram">
+  <figcaption>Deployment · outdated, current, planned and target, projected live</figcaption>
+  <pre class="mermaid">{{ diagram }}</pre>
+  {% include "_lifecycle_legend.html" %}
+</figure>
+{% endif %}
+{% if hints %}
+<aside class="arc-hints" aria-label="Consistency hints">
+  <strong>Not drawn, check against the rest of the wiki</strong>
+  <ul>{% for h in hints %}<li>{{ h }}</li>{% endfor %}</ul>
+</aside>
+{% endif %}
+{% if tree %}
+<section class="bb-levels">{{ node_tree(tree) }}</section>
+{% else %}
+<p class="muted">No deployment nodes yet. Add pages under <code>wiki/deployment-nodes/</code> from <code>_templates/deployment-node.md</code>.</p>
+{% endif %}
+{% endblock %}
+{% block scripts %}{% if diagram %}{% include "_mermaid.html" %}{% endif %}{% endblock %}

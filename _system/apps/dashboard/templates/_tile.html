@@ -1,0 +1,88 @@
+{% from "_empty.html" import empty_state, empty_bootstrap %}
+{% from "_maturity.html" import maturity_bar %}
+{% from "_macros.html" import plural, noun %}
+{# One section tile. `t` is a dict from app.build_section_tile. Used by the
+   area pages (and, in the interim, the home page). #}
+{% macro section_tile(t) %}
+  {% set inner %}
+    <div class="tile-head">
+      <span class="tile-eyebrow{% for c in t.colors %} eyebrow-{{ c }}{% endfor %}">{{ t.eyebrow }}</span>
+      <h2 class="tile-title">{% if t.href and t.links %}<a class="tile-stretch" href="{{ t.href }}">{{ t.label }}</a>{% else %}{{ t.label }}{% endif %}</h2>
+      {% if t.open_issues %}<span class="tile-flag" title="Open issues that point at pages of this type">{{ t.open_issues }} open {{ noun(t.open_issues, 'issue') }}</span>{% endif %}
+    </div>
+    {% if t.scope == 'out' %}
+    <p class="tile-note">{{ t.note }}</p>
+    {% elif t.scope == 'planned' %}
+    <p class="empty-state empty-state-tight">Not captured yet — arc42 content types are a planned extension.</p>
+    {% if t.note %}<p class="tile-note">{{ t.note }}</p>{% endif %}
+    {% elif t.id == 'R1' and t.active %}
+    {{ maturity_bar(t.maturity) }}
+    {% if t.claim %}<p class="tile-vision-claim">{{ t.claim }}</p>{% endif %}
+    {% if t.objective_rows %}
+    <ul class="mini-list mini-list-vision">
+      {% for o in t.objective_rows %}
+      <li>
+        <span class="ml-title"><code class="ml-id">{{ o.id }}</code> {{ o.title }}</span>
+        <span class="ml-count" title="covering epics and use cases">{{ plural(o.epics, 'requirement') }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="empty-state empty-state-tight">No objectives yet — ask the agent:
+      <em>“derive objectives from the vision”</em>.</p>
+    {% endif %}
+    {% elif t.id == 'R1' %}
+    {# day one: no vision page yet. Same shape as every other empty tile —
+       heading + next step, no "Demo" chip, no placeholder counter. #}
+    {{ maturity_bar(t.maturity) }}
+    {{ empty_bootstrap("vision") }}
+    {% else %}
+    <div class="tile-count"><span class="num">{{ t.count }}</span><span class="unit">{{ noun(t.count, t.unit, t.unit_many) }}{% for u in t.sub_units or [] %} · {{ plural(u.n, u.one, u.many) }}{% endfor %}{% if t.sub %} · {{ t.sub }}{% endif %}</span></div>
+    {{ maturity_bar(t.maturity) }}
+    {% if t.id == 'R3' and (t.epic_rows or t.uc_rows) %}
+    <ul class="mini-list">
+      {% for e in t.epic_rows %}
+      <li>
+        <span class="ml-title"><code class="ml-id">{{ e.id }}</code> {{ e.title }}</span>
+        <span class="ml-count{% if e.n_features == 0 and e.n_stories == 0 %} ml-out{% endif %}">{{ plural(e.n_stories, 'story', 'stories') }} · {{ plural(e.n_features, 'feature') }}</span>
+      </li>
+      {% endfor %}
+      {% for u in t.uc_rows %}
+      <li>
+        <span class="ml-title"><code class="ml-id">{{ u.id }}</code> {{ u.title }}</span>
+        <span class="ml-count">use case{% if u.level %} · {{ u.level }}{% endif %}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% elif t.rows %}
+    <ul class="mini-list">
+      {% for r in t.rows %}
+      <li>
+        <span class="ml-title">{% if r.id %}<code class="ml-id">{{ r.id }}</code> {% endif %}{{ r.title }}</span>
+        {% if r.severity is defined %}<span class="ml-count">{{ r.severity }}</span>
+        {% elif r.pages is defined %}<span class="ml-count" title="pages of this type">{{ plural(r.pages, 'page') }}</span>
+        {% elif r.relations is defined %}<span class="ml-count" title="linked wiki pages">{{ plural(r.relations, 'link') }}</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% elif t.count == 0 %}
+      {# the empty state names what is missing, so it needs the noun, not the
+         counter's label: the Issues tile counts "open", not "issues". #}
+      {% if t.id == 'C6' and t.total %}<p class="empty-state empty-state-tight">No open issues — all {{ t.total }} resolved.</p>
+      {% elif t.id == 'C6' %}{{ empty_state("issues") }}
+      {% else %}{{ empty_state(noun(0, t.unit, t.unit_many)) }}{% endif %}
+    {% endif %}
+    {% endif %}
+    {% if t.links %}
+    <div class="tile-ctas">{% for l in t.links %}<a class="tile-cta" href="{{ l.href }}">{{ l.label }} →</a>{% endfor %}</div>
+    {% elif t.href %}<span class="tile-cta">View details →</span>{% endif %}
+  {% endset %}
+  {% if t.href and not t.links %}
+    <a id="tile-{{ t.key }}" class="tile tile-link tile-{{ t.key }}{% if t.scope != 'in' %} is-out{% endif %}{% if t.span == 2 %} tile-span-2{% endif %}" href="{{ t.href }}">{{ inner }}</a>
+  {% else %}
+    {# multiple CTAs (glossary) → no whole-tile anchor, an <a> may not nest inside
+       another one. With an href the title's .tile-stretch link covers the tile
+       instead, so it clicks like every other; the CTAs sit above that link. #}
+    <div id="tile-{{ t.key }}" class="tile{% if t.href %} tile-link{% endif %} tile-{{ t.key }}{% if t.scope != 'in' %} is-out{% endif %}{% if t.span == 2 %} tile-span-2{% endif %}">{{ inner }}</div>
+  {% endif %}
+{% endmacro %}

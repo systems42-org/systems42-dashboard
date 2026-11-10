@@ -1,0 +1,9 @@
+{# `noun` is the word alone, `plural` the number and the word. Two macros, one
+   rule: nothing in a template may spell a plural with an inline ternary, so
+   "1 Features" cannot happen again. `words` overrides the default -s. #}
+{% macro noun(n, word, words=None) %}{{ word if n == 1 else (words or word ~ 's') }}{% endmacro %}
+{% macro plural(n, word, words=None) %}{{ n }} {{ noun(n, word, words) }}{% endmacro %}
+{# Sort keys for columns whose meaning is an order, not an alphabet (see
+   static/table-sort.js). Unknown values rank empty, which sorts last. #}
+{% macro status_rank(s) %}{{ {'draft': 1, 'review': 2, 'accepted': 3, 'deprecated': 4}.get(s, '') }}{% endmacro %}
+{% macro level_rank(l) %}{{ {'low': 1, 'medium': 2, 'high': 3}.get(l, '') }}{% endmacro %}

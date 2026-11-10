@@ -1,0 +1,15 @@
+{
+  "userIgnoreFilters": [
+    "raw/",
+    "_system/",
+    "_templates/",
+    "docs/",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "README.md"
+  ],
+  "showUnsupportedFiles": false,
+  "spellcheck": false,
+  "defaultViewMode": "preview",
+  "livePreview": false
+}

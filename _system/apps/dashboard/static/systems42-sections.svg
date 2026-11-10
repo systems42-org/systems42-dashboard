@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 608" width="660" height="608" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" role="img" aria-labelledby="dia-title dia-desc">
+  <title id="dia-title">systems42 sections: req42, arc42 and common sections</title>
+  <desc id="dia-desc">Three cabinets of sections. req42 (top left): R1 Vision &amp; Goals, R2 Resources &amp; Staff, R3 Functional Requirements, R4 Supporting Models, R5 Team Structure, R6 Roadmap. arc42 (top right): A1 Solution Strategy, A2 Building Block View, A3 Deployment View, A4 Runtime View, A5 Crosscutting Concepts, A6 Architecture Decisions. Common (bottom): C1 Quality Requirements, C2 Constraints, C3 Scope &amp; Context, C4 Stakeholders, C5 Domain Terms, C6 Risks &amp; Assumptions. Color: red = organization and project, blue = requirements (problem space), green = architecture (solution space), gradient = section shared by two areas.</desc>
+  <defs>
+    <linearGradient id="bg-light" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#b9d4f7"/><stop offset="1" stop-color="#bfe8bf"/></linearGradient>
+    <linearGradient id="bg-top-light" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#d1e3f9"/><stop offset="1" stop-color="#d5f0d5"/></linearGradient>
+    <linearGradient id="bg-side-light" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8194ac"/><stop offset="1" stop-color="#85a285"/></linearGradient>
+    <linearGradient id="rg-light" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f6b5b5"/><stop offset="1" stop-color="#bfe8bf"/></linearGradient>
+    <linearGradient id="rg-top-light" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f9cece"/><stop offset="1" stop-color="#d5f0d5"/></linearGradient>
+    <linearGradient id="rg-side-light" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ac7e7e"/><stop offset="1" stop-color="#85a285"/></linearGradient>
+  </defs>
+  <rect width="660" height="608" fill="#ffffff"/>
+  <text x="16" y="22" font-size="17" fill="#333">req42</text>
+  <text x="354" y="22" font-size="17" fill="#333">arc42</text>
+  <text x="318" y="500" font-size="17" fill="#333" text-anchor="middle">Common</text>
+  <!-- req42 -->
+  <g>
+    <polygon points="12,44 34,30 324,30 302,44" fill="#f7f8fa" stroke="#b9c1cb" stroke-width="1" stroke-linejoin="round"/>
+    <polygon points="302,44 324,30 324,333 302,347" fill="#cfd5dd" stroke="#b9c1cb" stroke-width="1" stroke-linejoin="round"/>
+    <rect x="12" y="44" width="290" height="303" fill="#e9ecf0" stroke="#b9c1cb"/>
+  </g>
+  <g>
+    <rect x="24" y="56" width="118" height="62" rx="5" fill="#c4cbd4"/>
+    <polygon points="19,60 24,56 142,56 137,60" fill="#f9cece" stroke="#936c6c" stroke-width="0.8" stroke-linejoin="round"/>
+    <polygon points="137,60 142,56 142,118 137,122" fill="#ac7e7e" stroke="#936c6c" stroke-width="0.8" stroke-linejoin="round"/>
+    <rect x="19" y="60" width="118" height="62" rx="5" fill="#f6b5b5" stroke="#936c6c" stroke-width="1.2"/>
+    <rect x="25" y="66" width="30" height="16" rx="3" fill="rgba(255,255,255,0.65)"/>
+    <text x="40" y="78" font-size="11" font-weight="bold" fill="#7a1c1c" text-anchor="middle">R1</text>
+    <text x="78" y="104.7" font-size="13" font-weight="bold" fill="#7a1c1c" text-anchor="middle">
+      <tspan x="78">Vision &amp; Goals</tspan>
+    </text>
+  </g>
+  <g>
+    <rect x="24" y="127" width="118" height="62" rx="5" fill="#c4cbd4"/>
+    <polygon points="19,131 24,127 142,127 137,131" fill="#f9cece" stroke="#936c6c" stroke-width="0.8" stroke-linejoin="round"/>
+    <polygon points="137,131 142,127 142,189 137,193" fill="#ac7e7e" stroke="#936c6c" stroke-width="0.8" stroke-linejoin="round"/>
+    <rect x="19" y="131" width="118" height="62" rx="5" fill="#f6b5b5" stroke="#936c6c" stroke-width="1.2"/>
+    <rect x="25" y="137" width="30" height="16" rx="3" fill="rgba(255,255,255,0.65)"/>
+    <text x="40" y="149" font-size="11" font-weight="bold" fill="#7a1c1c" text-anchor="middle">R2</text>
+    <text x="78" y="167.7" font-size="13" font-weight="bold" fill="#7a1c1c" text-anchor="middle">
+      <tspan x="78">Resources &amp;</tspan>
+      <tspan x="78" dy="16">Staff</tspan>
+    </text>
+  </g>
+  <g>
+    <rect x="24" y="198" width="118" height="62" rx="5" fill="#c4cbd4"/>
+    <polygon points="19,202 24,198 142,198 137,202" fill="#f9cece" stroke="#936c6c" stroke-width="0.8" stroke-linejoin="round"/>
+    <polygon points="137,202 142,198 142,260 137,264" fill="#ac7e7e" stroke="#936c6c" stroke-width="0.8" stroke-linejoin="round"/>
+    <rect x="19" y="202" width="118" height="62" rx="5" fill="#f6b5b5" stroke="#936c6c" stroke-width="1.2"/>
+    <rect x="25" y="208" width="30" height="16" rx="3" fill="rgba(255,255,255,0.65)"/>
+    <text x="40" y="220" font-size="11" font-weight="bold" fill="#7a1c1c" text-anchor="middle">R5</text>
+    <text x="78" y="238.7" font-size="13" font-weight="bold" fill="#7a1c1c" text-anchor="middle">
+      <tspan x="78">Team</tspan>
+      <tspan x="78" dy="16">Structure</tspan>
+    </text>
+  </g>
+  <g>
+    <rect x="24" y="269" width="118" height="62" rx="5" fill="#c4cbd4"/>
+    <polygon points="19,273 24,269 142,269 137,273" fill="#f9cece" stroke="#936c6c" stroke-width="0.8" stroke-linejoin="round"/>
+    <polygon points="137,273 142,269 142,331 137,335" fill="#ac7e7e" stroke="#936c6c" stroke-width="0.8" stroke-linejoin="round"/>
+    <rect x="19" y="273" width="118" height="62" rx="5" fill="#f6b5b5" stroke="#936c6c" stroke-width="1.2"/>
+    <rect x="25" y="279" width="30" height="16" rx="3" fill="rgba(255,255,255,0.65)"/>
+    <text x="40" y="291" font-size="11" font-weight="bold" fill="#7a1c1c" text-anchor="middle">R6</text>
+    <text x="78" y="317.7" font-size="13" font-weight="bold" fill="#7a1c1c" text-anchor="middle">
+      <tspan x="78">Roadmap</tspan>
+    </text>
+  </g>
+  <g>
+    <rect x="151" y="56" width="139" height="204" rx="5" fill="#c4cbd4"/>
+    <polygon points="146,60 151,56 290,56 285,60" fill="#d1e3f9" stroke="#6f7f94" stroke-width="0.8" stroke-linejoin="round"/>
+    <polygon points="285,60 290,56 290,260 285,264" fill="#8194ac" stroke="#6f7f94" stroke-width="0.8" stroke-linejoin="round"/>
+    <rect x="146" y="60" width="139" height="204" rx="5" fill="#b9d4f7" stroke="#6f7f94" stroke-width="1.2"/>
+    <rect x="152" y="66" width="30" height="16" rx="3" fill="rgba(255,255,255,0.65)"/>
+    <text x="167" y="78" font-size="11" font-weight="bold" fill="#14396f" text-anchor="middle">R3</text>
+    <text x="215.5" y="167.7" font-size="13" font-weight="bold" fill="#14396f" text-anchor="middle">
+      <tspan x="215.5">Functional</tspan>
+      <tspan x="215.5" dy="16">Requirements</tspan>
+    </text>
+  </g>
+  <g>
+    <rect x="151" y="269" width="139" height="62" rx="5" fill="#c4cbd4"/>
+    <polygon points="146,273 151,269 290,269 285,273" fill="#d1e3f9" stroke="#6f7f94" stroke-width="0.8" stroke-linejoin="round"/>
+    <polygon points="285,273 290,269 290,331 285,335" fill="#8194ac" stroke="#6f7f94" stroke-width="0.8" stroke-linejoin="round"/>
+    <rect x="146" y="273" width="139" height="62" rx="5" fill="#b9d4f7" stroke="#6f7f94" stroke-width="1.2"/>
+    <rect x="152" y="279" width="30" height="16" rx="3" fill="rgba(255,255,255,0.65)"/>
+    <text x="167" y="291" font-size="11" font-weight="bold" fill="#14396f" text-anchor="middle">R4</text>
+    <text x="215.5" y="309.7" font-size="13" font-weight="bold" fill="#14396f" text-anchor="middle">
+      <tspan x="215.5">Supporting</tspan>
+      <tspan x="215.5" dy="16">Models</tspan>
+    </text>
+  </g>
+  <!-- arc42 -->
+  <g>
+    <polygon points="350,44 372,30 646,30 624,44" fill="#f7f8fa" stroke="#b9c1cb" stroke-width="1" stroke-linejoin="round"/>
+    <polygon points="624,44 646,30 646,333 624,347" fill="#cfd5dd" stroke="#b9c1cb" stroke-width="1" stroke-linejoin="round"/>
+    <rect x="350" y="44" width="274" height="303" fill="#e9ecf0" stroke="#b9c1cb"/>
+  </g>
+  <g>
+    <rect x="362" y="56" width="250" height="62" rx="5" fill="#c4cbd4"/>
+    <polygon points="357,60 362,56 612,56 607,60" fill="#d5f0d5" stroke="#728b72" stroke-width="0.8" stroke-linejoin="round"/>
+    <polygon points="607,60 612,56 612,118 607,122" fill="#85a285" stroke="#728b72" stroke-width="0.8" stroke-linejoin="round"/>
+    <rect x="357" y="60" width="250" height="62" rx="5" fill="#bfe8bf" stroke="#728b72" stroke-width="1.2"/>
+    <rect x="363" y="66" width="30" height="16" rx="3" fill="rgba(255,255,255,0.65)"/>
+    <text x="378" y="78" font-size="11" font-weight="bold" fill="#175417" text-anchor="middle">A1</text>
+    <text x="482" y="104.7" font-size="13" font-weight="bold" fill="#175417" text-anchor="middle">
+      <tspan x="482">Solution Strategy</tspan>
+    </text>
+  </g>
+  <g>
+    <rect x="362" y="127" width="120.5" height="62" rx="5" fill="#c4cbd4"/>
+    <polygon points="357,131 362,127 482.5,127 477.5,131" fill="#d5f0d5" stroke="#728b72" stroke-width="0.8" stroke-linejoin="round"/>
+    <polygon points="477.5,131 482.5,127 482.5,189 477.5,193" fill="#85a285" stroke="#728b72" stroke-width="0.8" stroke-linejoin="round"/>
+    <rect x="357" y="131" width="120.5" height="62" rx="5" fill="#bfe8bf" stroke="#728b72" stroke-width="1.2"/>
+    <rect x="363" y="137" width="30" height="16" rx="3" fill="rgba(255,255,255,0.65)"/>
+    <text x="378" y="149" font-size="11" font-weight="bold" fill="#175417" text-anchor="middle">A2</text>
+    <text x="417.2" y="167.7" font-size="13" font-weight="bold" fill="#175417" text-anchor="middle">
+      <tspan x="417.2">Building Block</tspan>
+      <tspan x="417.2" dy="16">View</tspan>
+    </text>
+  </g>
+  <g>
+    <rect x="362" y="198" width="120.5" height="62" rx="5" fill="#c4cbd4"/>
+    <polygon points="357,202 362,198 482.5,198 477.5,202" fill="#d5f0d5" stroke="#728b72" stroke-width="0.8" stroke-linejoin="round"/>
+    <polygon points="477.5,202 482.5,198 482.5,260 477.5,264" fill="#85a285" stroke="#728b72" stroke-width="0.8" stroke-linejoin="round"/>
+    <rect x="357" y="202" width="120.5" height="62" rx="5" fill="#bfe8bf" stroke="#728b72" stroke-width="1.2"/>
+    <rect x="363" y="208" width="30" height="16" rx="3" fill="rgba(255,255,255,0.65)"/>
+    <text x="378" y="220" font-size="11" font-weight="bold" fill="#175417" text-anchor="middle">A3</text>
+    <text x="417.2" y="238.7" font-size="13" font-weight="bold" fill="#175417" text-anchor="middle">
+      <tspan x="417.2">Deployment</tspan>
+      <tspan x="417.2" dy="16">View</tspan>
+    </text>
+  </g>
+  <g>
+    <rect x="362" y="269" width="120.5" height="62" rx="5" fill="#c4cbd4"/>
+    <polygon points="357,273 362,269 482.5,269 477.5,273" fill="#d5f0d5" stroke="#728b72" stroke-width="0.8" stroke-linejoin="round"/>
+    <polygon points="477.5,273 482.5,269 482.5,331 477.5,335" fill="#85a285" stroke="#728b72" stroke-width="0.8" stroke-linejoin="round"/>
+    <rect x="357" y="273" width="120.5" height="62" rx="5" fill="#bfe8bf" stroke="#728b72" stroke-width="1.2"/>
+    <rect x="363" y="279" width="30" height="16" rx="3" fill="rgba(255,255,255,0.65)"/>
+    <text x="378" y="291" font-size="11" font-weight="bold" fill="#175417" text-anchor="middle">A4</text>
+    <text x="417.2" y="317.7" font-size="13" font-weight="bold" fill="#175417" text-anchor="middle">
+      <tspan x="417.2">Runtime View</tspan>
+    </text>
+  </g>
+  <g>
+    <rect x="491.5" y="127" width="120.5" height="133" rx="5" fill="#c4cbd4"/>
+    <polygon points="486.5,131 491.5,127 612,127 607,131" fill="#d5f0d5" stroke="#728b72" stroke-width="0.8" stroke-linejoin="round"/>
+    <polygon points="607,131 612,127 612,260 607,264" fill="#85a285" stroke="#728b72" stroke-width="0.8" stroke-linejoin="round"/>
+    <rect x="486.5" y="131" width="120.5" height="133" rx="5" fill="#bfe8bf" stroke="#728b72" stroke-width="1.2"/>
+    <rect x="492.5" y="137" width="30" height="16" rx="3" fill="rgba(255,255,255,0.65)"/>
+    <text x="507.5" y="149" font-size="11" font-weight="bold" fill="#175417" text-anchor="middle">A5</text>
+    <text x="546.8" y="203.2" font-size="13" font-weight="bold" fill="#175417" text-anchor="middle">
+      <tspan x="546.8">Crosscutting</tspan>
+      <tspan x="546.8" dy="16">Concepts</tspan>
+    </text>
+  </g>
+  <g>
+    <rect x="491.5" y="269" width="120.5" height="62" rx="5" fill="#c4cbd4"/>
+    <polygon points="486.5,273 491.5,269 612,269 607,273" fill="#d5f0d5" stroke="#728b72" stroke-width="0.8" stroke-linejoin="round"/>
+    <polygon points="607,273 612,269 612,331 607,335" fill="#85a285" stroke="#728b72" stroke-width="0.8" stroke-linejoin="round"/>
+    <rect x="486.5" y="273" width="120.5" height="62" rx="5" fill="#bfe8bf" stroke="#728b72" stroke-width="1.2"/>
+    <rect x="492.5" y="279" width="30" height="16" rx="3" fill="rgba(255,255,255,0.65)"/>
+    <text x="507.5" y="291" font-size="11" font-weight="bold" fill="#175417" text-anchor="middle">A6</text>
+    <text x="546.8" y="309.7" font-size="13" font-weight="bold" fill="#175417" text-anchor="middle">
+      <tspan x="546.8">Architecture</tspan>
+      <tspan x="546.8" dy="16">Decisions</tspan>
+    </text>
+  </g>
+  <!-- common -->
+  <g>
+    <polygon points="12,363 34,349 646,349 624,363" fill="#f7f8fa" stroke="#b9c1cb" stroke-width="1" stroke-linejoin="round"/>
+    <polygon points="624,363 646,349 646,466 624,480" fill="#cfd5dd" stroke="#b9c1cb" stroke-width="1" stroke-linejoin="round"/>
+    <rect x="12" y="363" width="612" height="117" fill="#e9ecf0" stroke="#b9c1cb"/>
+  </g>
+  <g>
+    <rect x="24" y="375" width="190" height="40" rx="5" fill="#c4cbd4"/>
+    <polygon points="19,379 24,375 214,375 209,379" fill="#d1e3f9" stroke="#6f7f94" stroke-width="0.8" stroke-linejoin="round"/>
+    <polygon points="209,379 214,375 214,415 209,419" fill="#8194ac" stroke="#6f7f94" stroke-width="0.8" stroke-linejoin="round"/>
+    <rect x="19" y="379" width="190" height="40" rx="5" fill="#b9d4f7" stroke="#6f7f94" stroke-width="1.2"/>
+    <rect x="25" y="391" width="30" height="16" rx="3" fill="rgba(255,255,255,0.65)"/>
+    <text x="40" y="403" font-size="11" font-weight="bold" fill="#14396f" text-anchor="middle">C1</text>
+    <text x="132" y="403.7" font-size="13" font-weight="bold" fill="#14396f" text-anchor="middle">
+      <tspan x="132">Quality Requirements</tspan>
+    </text>
+  </g>
+  <g>
+    <rect x="24" y="424" width="190" height="40" rx="5" fill="#c4cbd4"/>
+    <polygon points="19,428 24,424 214,424 209,428" fill="#d1e3f9" stroke="#6f7f94" stroke-width="0.8" stroke-linejoin="round"/>
+    <polygon points="209,428 214,424 214,464 209,468" fill="#8194ac" stroke="#6f7f94" stroke-width="0.8" stroke-linejoin="round"/>
+    <rect x="19" y="428" width="190" height="40" rx="5" fill="#b9d4f7" stroke="#6f7f94" stroke-width="1.2"/>
+    <rect x="25" y="440" width="30" height="16" rx="3" fill="rgba(255,255,255,0.65)"/>
+    <text x="40" y="452" font-size="11" font-weight="bold" fill="#14396f" text-anchor="middle">C2</text>
+    <text x="132" y="452.7" font-size="13" font-weight="bold" fill="#14396f" text-anchor="middle">
+      <tspan x="132">Constraints</tspan>
+    </text>
+  </g>
+  <g>
+    <rect x="223" y="375" width="190" height="40" rx="5" fill="#c4cbd4"/>
+    <polygon points="218,379 223,375 413,375 408,379" fill="url(#bg-top-light)" stroke="#7889a0" stroke-width="0.8" stroke-linejoin="round"/>
+    <polygon points="408,379 413,375 413,415 408,419" fill="url(#bg-side-light)" stroke="#7889a0" stroke-width="0.8" stroke-linejoin="round"/>
+    <rect x="218" y="379" width="190" height="40" rx="5" fill="url(#bg-light)" stroke="#7889a0" stroke-width="1.2"/>
+    <rect x="224" y="391" width="30" height="16" rx="3" fill="rgba(255,255,255,0.65)"/>
+    <text x="239" y="403" font-size="11" font-weight="bold" fill="#2b2b2b" text-anchor="middle">C3</text>
+    <text x="331" y="403.7" font-size="13" font-weight="bold" fill="#2b2b2b" text-anchor="middle">
+      <tspan x="331">Scope &amp; Context</tspan>
+    </text>
+  </g>
+  <g>
+    <rect x="223" y="424" width="190" height="40" rx="5" fill="#c4cbd4"/>
+    <polygon points="218,428 223,424 413,424 408,428" fill="url(#bg-top-light)" stroke="#7889a0" stroke-width="0.8" stroke-linejoin="round"/>
+    <polygon points="408,428 413,424 413,464 408,468" fill="url(#bg-side-light)" stroke="#7889a0" stroke-width="0.8" stroke-linejoin="round"/>
+    <rect x="218" y="428" width="190" height="40" rx="5" fill="url(#bg-light)" stroke="#7889a0" stroke-width="1.2"/>
+    <rect x="224" y="440" width="30" height="16" rx="3" fill="rgba(255,255,255,0.65)"/>
+    <text x="239" y="452" font-size="11" font-weight="bold" fill="#2b2b2b" text-anchor="middle">C4</text>
+    <text x="331" y="452.7" font-size="13" font-weight="bold" fill="#2b2b2b" text-anchor="middle">
+      <tspan x="331">Stakeholders</tspan>
+    </text>
+  </g>
+  <g>
+    <rect x="422" y="375" width="190" height="40" rx="5" fill="#c4cbd4"/>
+    <polygon points="417,379 422,375 612,375 607,379" fill="#d1e3f9" stroke="#6f7f94" stroke-width="0.8" stroke-linejoin="round"/>
+    <polygon points="607,379 612,375 612,415 607,419" fill="#8194ac" stroke="#6f7f94" stroke-width="0.8" stroke-linejoin="round"/>
+    <rect x="417" y="379" width="190" height="40" rx="5" fill="#b9d4f7" stroke="#6f7f94" stroke-width="1.2"/>
+    <rect x="423" y="391" width="30" height="16" rx="3" fill="rgba(255,255,255,0.65)"/>
+    <text x="438" y="403" font-size="11" font-weight="bold" fill="#14396f" text-anchor="middle">C5</text>
+    <text x="530" y="403.7" font-size="13" font-weight="bold" fill="#14396f" text-anchor="middle">
+      <tspan x="530">Domain Terms</tspan>
+    </text>
+  </g>
+  <g>
+    <rect x="422" y="424" width="190" height="40" rx="5" fill="#c4cbd4"/>
+    <polygon points="417,428 422,424 612,424 607,428" fill="url(#rg-top-light)" stroke="#9f7575" stroke-width="0.8" stroke-linejoin="round"/>
+    <polygon points="607,428 612,424 612,464 607,468" fill="url(#rg-side-light)" stroke="#9f7575" stroke-width="0.8" stroke-linejoin="round"/>
+    <rect x="417" y="428" width="190" height="40" rx="5" fill="url(#rg-light)" stroke="#9f7575" stroke-width="1.2"/>
+    <rect x="423" y="440" width="30" height="16" rx="3" fill="rgba(255,255,255,0.65)"/>
+    <text x="438" y="452" font-size="11" font-weight="bold" fill="#2b2b2b" text-anchor="middle">C6</text>
+    <text x="530" y="452.7" font-size="13" font-weight="bold" fill="#2b2b2b" text-anchor="middle">
+      <tspan x="530">Risks &amp; Assumptions</tspan>
+    </text>
+  </g>
+  <!-- legend -->
+  <g font-size="12" fill="#333">
+    <rect x="12" y="516" width="634" height="80" rx="6" fill="#ffffff" stroke="#b9c1cb" stroke-width="1"/>
+    <text x="24" y="536" font-size="13" font-weight="bold">Legend</text>
+    <text x="634" y="536" fill="#555" text-anchor="end">IDs: R = req42 &#8226; A = arc42 &#8226; C = common</text>
+    <rect x="24" y="548" width="18" height="13" rx="2" fill="#f6b5b5" stroke="#936c6c" stroke-width="1"/>
+    <text x="50" y="559">Organization &amp; project (req42 only)</text>
+    <rect x="312" y="548" width="18" height="13" rx="2" fill="#b9d4f7" stroke="#6f7f94" stroke-width="1"/>
+    <text x="338" y="559">Requirements (problem space)</text>
+    <rect x="24" y="572" width="18" height="13" rx="2" fill="#bfe8bf" stroke="#728b72" stroke-width="1"/>
+    <text x="50" y="583">Architecture (solution space)</text>
+    <text x="338" y="583">Color gradient: shared by two areas (C3, C4, C6)</text>
+  </g>
+</svg>

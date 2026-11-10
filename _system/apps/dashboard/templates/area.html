@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% from "_tile.html" import section_tile %}
+{% from "_maturity.html" import maturity_bar, maturity_legend %}
+{% from "_macros.html" import plural %}
+{% block title %}{{ area.label }}{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> {{ area.label }}</nav>{% endblock %}
+{% block content %}
+<header class="area-head{% for c in area.colors %} area-head-{{ c }}{% endfor %}">
+  <h1 class="page-h1">{{ area.label }}</h1>
+  <p class="lead">{{ area.subtitle }}{% if count %} · {{ plural(count, 'page') }}{% endif %}</p>
+  {{ maturity_bar(maturity) }}
+</header>
+{{ maturity_legend() }}
+<section class="tiles">
+  {% for t in tiles %}{{ section_tile(t) }}{% endfor %}
+</section>
+{% if not tiles %}
+<p class="empty-hint">Every section of this area is hidden — open Configure in the menu to show some.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,5 @@
+# Dashboard settings — written by the dashboard's Configure dialog (facilitator
+# only); hand-editable too. Everything is visible unless listed here.
+# `hidden` takes area keys (requirements | architecture | commons) and/or
+# section IDs (R1-R6, A1-A5, C1-C7) from the Systems42 sections diagram.
+hidden: []

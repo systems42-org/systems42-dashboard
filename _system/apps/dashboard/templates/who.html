@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Who's here{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> Who's here</nav>{% endblock %}
+{% block content %}
+<div class="who-hero">
+  <img class="who-mark" src="{{ url_for('static', filename='yoda.jpg') }}" alt="Yoda, the facilitator" width="480" height="468">
+  <div class="who-hero-text">
+    <h1 class="page-h1">Who's here <span class="count-pill" id="who-count">0 clients</span></h1>
+    <p><a class="whos-here" href="/join">Show the join code →</a></p>
+  </div>
+</div>
+
+<p class="empty-state" id="who-empty" hidden>Nobody yet — the list fills in with the first heartbeat, a few seconds after a page opens.</p>
+<div class="who-grid" id="who-grid"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var grid = document.getElementById("who-grid");
+  var empty = document.getElementById("who-empty");
+  var countEl = document.getElementById("who-count");
+
+  function fmtDuration(sec) {
+    if (sec < 60) { return sec + "s"; }
+    var m = Math.floor(sec / 60), s = sec % 60;
+    if (m < 60) { return m + "m " + s + "s"; }
+    var h = Math.floor(m / 60);
+    return h + "h " + (m % 60) + "m";
+  }
+
+  function render(clients) {
+    countEl.textContent = clients.length + (clients.length === 1 ? " client" : " clients");
+    empty.hidden = clients.length > 0;
+    grid.innerHTML = "";
+    clients.forEach(function (p) {
+      var card = document.createElement("div");
+      card.className = "who-card" + (p.is_facilitator ? " who-card-facilitator" : "");
+      var meta = p.browser + (p.os ? " · " + p.os : "");
+      card.innerHTML =
+        '<div class="who-name">' + p.nickname +
+          (p.is_facilitator ? ' <span class="who-role">facilitator</span>' : '') + '</div>' +
+        '<div class="who-meta">' + meta + '</div>' +
+        '<div class="who-duration">connected ' + fmtDuration(p.connected_seconds) + '</div>';
+      grid.appendChild(card);
+    });
+  }
+
+  function refresh() {
+    fetch("/presence/list").then(function (r) { return r.json(); }).then(function (d) {
+      render(d.clients || []);
+    }).catch(function () {});
+  }
+  refresh();
+  setInterval(refresh, 4000);
+})();
+</script>
+{% endblock %}

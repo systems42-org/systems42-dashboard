@@ -1,0 +1,7 @@
+# Project identity for this requirements wiki.
+#
+# The dashboard reads this file live; edit it and refresh the browser.
+system_name: "Systems42 Dashboard"  # the system whose requirements this vault holds
+tagline: "Requirements for the Systems42 dashboard"  # one line, shown under the name in the dashboard hero
+# about: docs/<folder>/README.md  # optional: a page under docs/ shown at /about (hero mark + link)
+# about_label: ""                  # optional: link text and page title; empty → "About <system_name>"

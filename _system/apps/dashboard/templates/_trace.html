@@ -1,0 +1,35 @@
+{# Typed link groups (drivers, shaped by, used by, addressed by, realized by, the arc42
+   view links and supersession) in the look of
+   the relations panel: one block per heading, one group per page type. #}
+{% macro link_groups(heading, groups) %}
+{% if groups %}
+<section class="rel-block">
+  <h2 class="rel-h">{{ heading }}</h2>
+  {% for grp in groups %}
+  <div class="rel-group">
+    <span class="rel-type">{{ grp.label }}</span>
+    <ul>{% for it in grp.links %}<li><a class="wl" href="{{ it.url }}"><code>{{ it.id }}</code> {{ it.label }}</a></li>{% endfor %}</ul>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+{% endmacro %}
+
+{% macro trace_panel(trace) %}
+{% if trace and (trace.values() | select | list) %}
+<nav class="detail-relations detail-trace" aria-label="Traceability">
+  {{ link_groups("Replaced by", trace.replaced_by) }}
+  {{ link_groups("Replaces", trace.replaces) }}
+  {{ link_groups("Drivers", trace.drivers) }}
+  {{ link_groups("Shaped by", trace.shaped_by) }}
+  {{ link_groups("Applies to", trace.applies_to) }}
+  {{ link_groups("Hosts", trace.hosts) }}
+  {{ link_groups("Used by", trace.used_by) }}
+  {{ link_groups("Deployed on", trace.deployed_on) }}
+  {{ link_groups("Governed by", trace.governed_by) }}
+  {{ link_groups("Takes part in", trace.takes_part_in) }}
+  {{ link_groups("Realized by", trace.realized_by) }}
+  {{ link_groups("Addressed by", trace.addressed_by) }}
+</nav>
+{% endif %}
+{% endmacro %}
