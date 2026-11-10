@@ -95,19 +95,12 @@ def test_symlinks_out_of_docs_are_refused():
     assert client.get("/about").status_code == 404
 
 
-def test_home_splash_and_about_carry_the_animated_lockup():
-    """The atrium logo intro: the home page holds the hidden splash and loads
-    atrium-intro.js before the hero (no flash of the page under it); /about
-    ships the lockup as a template for the script to swap in."""
+def test_about_page_carries_no_brand_animation():
+    """/about shows the project's own page as written; the intro animation, if
+    a brand ships one, belongs to the home page only (static/brand/README.md)."""
     configure("about: docs/brand/README.md\n")
-    home = client.get("/").get_data(as_text=True)
-    splash = home.index('id="atrium-splash"')
-    assert 'aria-hidden="true" hidden>' in home[splash:splash + 80]
-    assert splash < home.index("atrium-intro.js") < home.index('class="hero"')
-    assert home.count('class="intro-piece"') == 12
     about = client.get("/about").get_data(as_text=True)
-    assert '<template id="atrium-lockup-tpl">' in about and "atrium-intro.js" in about
-    assert about.count('class="intro-piece"') == 12
+    assert "intro.js" not in about and "<template" not in about
 
 
 if __name__ == "__main__":
@@ -117,5 +110,5 @@ if __name__ == "__main__":
     test_label_override()
     test_paths_outside_docs_are_refused()
     test_symlinks_out_of_docs_are_refused()
-    test_home_splash_and_about_carry_the_animated_lockup()
+    test_about_page_carries_no_brand_animation()
     print("ok")

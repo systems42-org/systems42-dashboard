@@ -2,18 +2,16 @@
 {% from "_maturity.html" import maturity_bar, maturity_legend %}
 {% from "_macros.html" import plural, noun %}
 {% from "_empty.html" import empty_state %}
-{% from "_atrium_lockup.html" import atrium_lockup %}
 {% block content %}
-{# Splash: the atrium logo flies together, once per browser tab; hidden until
-   atrium-intro.js (loaded right below, not deferred) decides to show it. #}
-<div class="atrium-splash" id="atrium-splash" aria-hidden="true" hidden>{{ atrium_lockup(system_name) }}</div>
-<script src="{{ static_url('atrium-intro.js') }}"></script>
+{# Optional intro animation, before the hero so it covers the page from the
+   first paint. No file, no intro. Contract: static/brand/README.md. #}
+{% include "_brand_intro.html" ignore missing %}
 <header class="hero">
   <div class="hero-row">
     {% if about_href %}<a class="hero-mark-link" href="{{ about_href }}" title="{{ about_label }}">{% endif %}
-    <img class="hero-mark mark-on-dark" src="{{ url_for('static', filename='atrium-mark-dark.svg') }}"
+    <img class="hero-mark mark-on-dark" src="{{ static_url('brand/mark-dark.svg') }}"
          alt="{{ system_name }}">
-    <img class="hero-mark mark-on-light" src="{{ url_for('static', filename='atrium-mark-light.svg') }}"
+    <img class="hero-mark mark-on-light" src="{{ static_url('brand/mark-light.svg') }}"
          alt="{{ system_name }}">
     {% if about_href %}</a>{% endif %}
     <div class="hero-text">

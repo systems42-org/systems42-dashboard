@@ -22,6 +22,12 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - `grilling` skill: brought up to date with upstream `mattpocock/skills`. Each
   question is now worded so that "yes" accepts the recommended answer, and
   fact-finding sub-agents start with a fresh context window.
+- Dashboard brand: the atrium mark, favicon, logo animation and brand guide are
+  gone. Mark, favicon and an optional home-page intro now sit in one slot,
+  `static/brand/` (contract in its README) plus an optional
+  `templates/_brand_intro.html`, so a rebrand replaces files and touches no
+  template. The mark is a placeholder for now: the home page's three areas as
+  tiles. `/about` no longer animates anything.
 - Make `AGENTS.md` the shared source for schema and project rules. `CLAUDE.md`
   imports it for Claude Code; skills live canonically under `.agents/skills/`
   with `.claude/skills/` compatibility symlinks. Preserve Atrium's project
