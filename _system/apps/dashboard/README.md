@@ -85,6 +85,11 @@ the same four steps. Counts are always spelled out in words ("3 stories · 1
 feature", "4 links"), never bare letters or glyphs, via the single `plural()`
 macro in `templates/_macros.html`.
 
+The mark, the favicon and an optional intro animation on the home page are the
+only product-specific look, and they live in one slot: `static/brand/` plus, if
+present, `templates/_brand_intro.html`. Rebranding means replacing those files;
+`static/brand/README.md` states what they must do.
+
 ## Home, areas and tiles
 
 The section structure follows the Systems42 sections diagram and lives in one
@@ -255,6 +260,9 @@ _system/apps/dashboard/
   static/settings.js   the Configure dialog
   static/systems42-sections.svg   the sections diagram shown on /help
   static/systems42-logo.svg, systems42-favicon.png   the Systems42 mark
+  static/brand/      this dashboard's mark (dark, light), favicon and the brand
+                     contract (README.md); templates/_brand_intro.html, if
+                     present, is the home page's intro animation
   static/vendor/     vendored mermaid + cytoscape + fonts (offline, no CDN)
   tests/             plain-assert test scripts (no pytest) + a fixture vault
   Dockerfile         python:3.12-slim + gunicorn

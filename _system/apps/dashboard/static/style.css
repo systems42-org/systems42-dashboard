@@ -80,8 +80,6 @@
   --area-req: #7fd4a0;
   --area-arc: #7fb3f0;
   --area-org: #f09a9a;
-  --brand-ink: #efe9df;        /* atrium lockup, dark variant (docs/atrium-brand) */
-  --brand-orange: #f29400;
   /* home peak tints: the systems42 logo's green (#4fdcb9) and blue (#3ea6ff),
      dimmed to a wash over --card; Commons stays untinted */
   --tint-req: rgba(79,220,185,.10);
@@ -147,8 +145,6 @@
   --area-req: #1f7a46;
   --area-arc: #1d5fb0;
   --area-org: #b03a3a;
-  --brand-ink: #767a7d;        /* atrium lockup, grey */
-  --brand-orange: #f29400;
   --tint-req: rgba(46,190,150,.11);
   --tint-arc: rgba(62,140,255,.10);
   --on-area: #ffffff;          /* the light theme's area colours are deep, so
@@ -1117,10 +1113,9 @@ html.etsu-disconnected {
 .hero-text { min-width: 0; }
 .hero-title { font-size: var(--step-3); line-height: 1.15; margin: 0; letter-spacing: -0.01em; }
 .hero-text .lead { margin: var(--space-1) 0 0; }
-/* atrium mark (static/atrium-mark-{dark,light}.svg, from docs/atrium-brand/).
-   Transparent artwork in two colourings, so the theme picks the variant:
-   light rooms on the dark default, navy rooms once data-theme="light".
-   Mark only, no wordmark — the brand rules allow text only from 120 px wide.
+/* The mark (static/brand/mark-{dark,light}.svg, contract in static/brand/README.md).
+   Transparent artwork in two colourings, so the theme picks the variant.
+   Mark only, no wordmark: the system name stands next to it.
    Square, sized in rem so it scales with a projector's zoom. */
 .hero-mark {
   display: block; flex: none; width: 5.2rem; height: 5.2rem; margin: 0;
@@ -1136,23 +1131,6 @@ html.etsu-disconnected {
 .mark-on-light { display: none !important; }
 :root[data-theme="light"] .mark-on-light { display: block !important; }
 :root[data-theme="light"] .mark-on-dark { display: none !important; }
-/* atrium logo intro (static/atrium-intro.js, templates/_atrium_lockup.html):
-   the lockup's pieces fly together — as the home splash, once per tab, and
-   in place of the lockup image on /about. Pieces stay invisible while armed,
-   so nothing shows in its final place before the animation starts. */
-.atrium-intro { display: block; width: 100%; height: auto; overflow: hidden; }
-.atrium-intro .intro-ink { fill: var(--brand-ink); }
-.atrium-intro .intro-orange { fill: var(--brand-orange); }
-.atrium-intro.is-armed .intro-piece { opacity: 0; }
-.atrium-intro-frame { margin: var(--space-4) 0; background: var(--card); border-radius: var(--radius); overflow: hidden; cursor: pointer; }
-.atrium-splash {
-  position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center;
-  background: var(--bg); cursor: pointer; transition: opacity .4s ease;
-}
-.atrium-splash[hidden] { display: none; }
-.atrium-splash.is-leaving { opacity: 0; pointer-events: none; }
-/* on the splash the pieces enter from the window's edges, not the logo's box */
-.atrium-splash .atrium-intro { width: min(80vw, 760px); overflow: visible; }
 @media (max-width: 640px) { .hero-row { flex-direction: column; align-items: flex-start; gap: var(--space-3); } }
 
 /* scan-to-join: the hero's QR link, and the /join page it opens onto */
