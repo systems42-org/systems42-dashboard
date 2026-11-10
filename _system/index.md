@@ -9,6 +9,30 @@ every capture (`_system/workflows/capture.md`, step 7).
 
 ## Stakeholders
 
+- [[STK-001-product-owners]] Product owners (draft)
+- [[STK-002-business-analysts]] Business analysts (draft)
+- [[STK-003-requirements-engineers]] Requirements engineers (draft)
+- [[STK-004-development-teams]] Development teams (draft)
+- [[STK-005-testers]] Testers (draft)
+- [[STK-006-ai-agents]] AI agents, hidden from the context diagram (draft)
+- [[STK-007-workshop-facilitators]] Workshop facilitators (draft)
+- [[STK-008-workshop-participants]] Workshop participants (draft)
+- [[STK-009-software-architects]] Software architects (draft)
+- [[STK-010-people-who-run-the-dashboard]] People who run the dashboard (draft)
+- [[STK-011-people-who-set-up-a-project-wiki]] People who set up a new project wiki (draft)
+- [[STK-012-maintainers]] Maintainers of the dashboard and the Systems42 method (draft)
+- [[STK-013-people-learning-or-presenting-systems42]] People learning or presenting Systems42 (draft)
+- [[STK-014-domain-experts]] Domain experts (draft)
+- [[STK-015-newcomers]] Newcomers to a project (draft)
+- [[STK-016-ux-designers]] UX designers, an assumption (draft)
+- [[STK-017-operations-staff]] Operations and infrastructure staff, an assumption (draft)
+- [[STK-018-owners-of-neighbouring-systems]] Owners of neighbouring systems, an assumption (draft)
+- [[STK-019-auditors-and-quality-assurance]] Auditors and quality assurance (draft)
+- [[STK-020-data-protection-and-security-officers]] Data protection and security officers (draft)
+- [[STK-021-builders-of-project-specific-dashboards]] Builders of project-specific dashboards, an assumption (draft)
+- [[STK-022-prospective-adopters]] Prospective adopters of Systems42, an assumption (draft)
+- [[STK-023-keyholder]] Keyholder, the person who started the dashboard app (draft)
+
 ## Context
 
 ## External interfaces
@@ -25,8 +49,15 @@ every capture (`_system/workflows/capture.md`, step 7).
 
 ## Constraints
 
+- [[CON-001-proof-of-concept-not-production-ready]] The dashboard is a proof of concept, not production-ready for every environment (draft)
+
 ## Decisions
 
 ## Issues
 
+- [[ISS-001-who-holds-the-keys-in-parallel-work]] Who holds the keys when two people work in parallel (open)
+
 ## Sources
+
+- [[SRC-001-stakeholders-of-the-systems42-dashboard]] Stakeholders of the Systems42 dashboard (document)
+- [[SRC-002-grilling-session-on-stakeholders]] Grilling session on stakeholders (interview)
