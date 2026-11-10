@@ -12,6 +12,8 @@ Internal machinery for the wiki. Not requirements content — this is *about* th
 - `anchors/` — reusable methodological standards (SMART, PAM, user-story-format,
   INVEST, MoSCoW) cited across content types. Method, not domain knowledge; see its
   own README.
+- `writing-style.md`: the binding style guide for every text in the repository.
+  `AGENTS.md` points to it and `CLAUDE.md` imports it.
 - `wiki.yaml` — project identity (system name, tagline). Filled in during
   bootstrap; the dashboard reads it live.
 - `scripts/` — standalone maintenance scripts: `new-project.sh` (create a fresh

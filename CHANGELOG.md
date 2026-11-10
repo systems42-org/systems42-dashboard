@@ -12,6 +12,12 @@ Unreleased changes sit at the top until the next Starter Kit release.
 
 ## [Unreleased]
 
+### Added
+- Writing style guide: `_system/writing-style.md` is binding for every text in
+  the repository. `AGENTS.md` points to it, `CLAUDE.md` imports it, and
+  `new-project.sh` ships it. The page size of about 300 words is a suggestion,
+  not a limit.
+
 ### Changed
 - Make `AGENTS.md` the shared source for schema and project rules. `CLAUDE.md`
   imports it for Claude Code; skills live canonically under `.agents/skills/`

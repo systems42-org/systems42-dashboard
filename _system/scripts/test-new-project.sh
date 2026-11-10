@@ -31,7 +31,7 @@ echo "== new"
   || { cat "$TMP/new.out"; echo "new-project.sh new failed"; exit 1; }
 
 # product shipped
-for p in AGENTS.md CLAUDE.md README.md CHANGELOG.md Makefile dashboard.sh .gitignore _system/README.md \
+for p in AGENTS.md CLAUDE.md README.md CHANGELOG.md Makefile dashboard.sh .gitignore _system/README.md _system/writing-style.md \
          _templates/goal.md _system/anchors/req42.md _system/workflows/bootstrap.md \
          _system/workflows/capture.md _system/apps/dashboard/app.py \
          _system/scripts/new-project.sh .agents/skills/capture/SKILL.md \
