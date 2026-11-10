@@ -18,6 +18,13 @@ Unreleased changes sit at the top until the next Starter Kit release.
   `new-project.sh` ships it. The page size of about 300 words is a suggestion,
   not a limit.
 
+### Fixed
+- `/goals`: the vision card showed only the first paragraph under `## Vision`,
+  so a vision that opened with a note (`> …`) showed the note and nothing else.
+  It now shows every prose paragraph and skips notes, comments and the
+  template's hints. Each goal title links to its page, and the Vision node of
+  the goal tree is clickable. `tests/test_vision_card.py`.
+
 ### Changed
 - `grilling` skill: brought up to date with upstream `mattpocock/skills`. Each
   question is now worded so that "yes" accepts the recommended answer, and

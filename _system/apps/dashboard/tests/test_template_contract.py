@@ -177,7 +177,7 @@ def test_goal_template_body_markers_are_extractable():
             data = app.load_goals()
             titles = app.title_index()
             assert data["vision"] is not None, "the template's vision is not recognised"
-            para = app._vision_full_paragraph(data["vision"], titles)
+            para = " ".join(app._vision_paragraphs(data["vision"], titles))
             assert "System X" in para, f"`## Vision` did not parse: {para!r}"
             tile = app.build_vision_tile(data, titles)
             assert tile["claim"].startswith("System X, without"), tile["claim"]

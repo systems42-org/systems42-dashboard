@@ -1262,20 +1262,30 @@ def _goal_maturity(p: Page) -> str:
 _VISION_SECTION_RE = re.compile(r"##\s+Vision\b[^\n]*\n+(.+?)(?=\n##\s|\Z)", re.DOTALL)
 
 
-def _vision_full_paragraph(page: Page, titles: dict[str, str],
-                           links: dict[str, tuple[str, str]] | None = None) -> str:
-    """First paragraph under `## Vision` in the Vision page; inline markdown
-    (`**bold**`, wikilinks) is rendered, no <p> wrapper. Pass `links` to emit
-    real hyperlinks for resolvable targets."""
+def _vision_paragraphs(page: Page, titles: dict[str, str],
+                       links: dict[str, tuple[str, str]] | None = None) -> list[str]:
+    """Every prose paragraph under `## Vision` in the Vision page, inline
+    markdown (`**bold**`, wikilinks) rendered, no <p> wrapper. Pass `links` to
+    emit real hyperlinks for resolvable targets.
+
+    Skipped: notes and callouts (`> …`), HTML comments, and the template's
+    `*Optional:*` hint and `**Objectives.**` pointer. Only the first paragraph used to be shown, so a
+    vision that opened with "> follows the Geoffrey Moore format" showed that
+    note and nothing else."""
     if not page:
-        return ""
+        return []
     m = _VISION_SECTION_RE.search(page.body)
     if not m:
-        return ""
-    para = m.group(1).split("\n\n")[0]
-    para = re.sub(r"\s+", " ", para).strip()
-    para = render_wikilinks(para, titles, links)
-    return re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", para)
+        return []
+    out = []
+    for para in m.group(1).split("\n\n"):
+        para = para.strip()
+        if not para or para.startswith((">", "<!--", "**Objectives.**", "*Optional:*")):
+            continue
+        para = re.sub(r"\s+", " ", para)
+        para = render_wikilinks(para, titles, links)
+        out.append(re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", para))
+    return out
 
 
 def load_goals() -> dict:
@@ -2735,7 +2745,8 @@ def _mermaid_goal_tree(vision: Page, objectives: list[Page]) -> str | None:
     if not vision or not objectives:
         return None
     root = _clean_label(wiki_config()["system_name"], drop_parenthetical=False)
-    lines = ["graph TD", f'  V["Vision {root}"]:::vision']
+    lines = ["graph TD", f'  V["Vision {root}"]:::vision',
+             f'  click V "/goals#{vision.id}"']
     for o in objectives:
         nid = _diagram_node_id(o.id)
         label = _clean_label(_short_title(o))
@@ -3141,17 +3152,17 @@ def goals_view():
             out.append(alias.strip() if alias else titles.get(base, base))
         return out
 
-    vision_narrative = _vision_full_paragraph(vision, titles, links)
     vision_card = {
         "id": vision.id,
         "title": vision.title,
+        "url": _page_url(vision.folder, vision.stem),
         "stereotype": "Vision",
         "maturity": None,
         "beneficiary": _wikilink_list(vision.meta.get("beneficiary")),
-        # Vision card shows just the Moore-style narrative paragraph — the
+        # Vision card shows the prose of the `## Vision` section — the
         # objectives list and impact block from the wiki page are projected
         # below as separate objective cards and the coverage matrix.
-        "html": f"<p>{vision_narrative}</p>" if vision_narrative else "",
+        "html": "".join(f"<p>{p}</p>" for p in _vision_paragraphs(vision, titles, links)),
     }
 
     coverage = data["coverage"]
@@ -3165,6 +3176,7 @@ def goals_view():
         objective_cards.append({
             "id": o.id,
             "title": o.title,
+            "url": _page_url(o.folder, o.stem),
             "stereotype": "Goal",
             "purpose": extract_pam_bullet(o, "Purpose", titles, links),
             "advantage": extract_pam_bullet(o, "Advantage", titles, links),

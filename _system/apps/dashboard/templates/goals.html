@@ -15,7 +15,7 @@
 <section id="{{ vision.id }}" class="goal-card goal-vision">
   <header class="goal-card-head">
     <code class="ml-id">{{ vision.id }}</code>
-    <h2>{{ vision.title }}</h2>
+    <h2>{% if vision.url %}<a href="{{ vision.url }}">{{ vision.title }}</a>{% else %}{{ vision.title }}{% endif %}</h2>
     <span class="stereo stereo-vision">Vision</span>
   </header>
   <div class="goal-prose">{{ vision.html | safe }}</div>
@@ -26,7 +26,7 @@
 <section id="{{ o.id }}" class="goal-card">
   <header class="goal-card-head">
     <code class="ml-id">{{ o.id }}</code>
-    <h2>{{ o.title }}</h2>
+    <h2><a href="{{ o.url }}">{{ o.title }}</a></h2>
     <span class="stereo">Goal</span>
   </header>
 
