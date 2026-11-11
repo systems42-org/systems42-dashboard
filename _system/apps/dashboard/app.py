@@ -565,7 +565,9 @@ def render_wikilinks(text: str, titles: dict[str, str],
     return WIKILINK_RE.sub(repl, text)
 
 
-CALLOUT_RE = re.compile(r"^>\s*\[!(\w+)\]\s*(.*)$", re.MULTILINE)
+# `[ \t]*`, not `\s*`, after the marker: `\s` would cross the line break and
+# take the callout's first text line as its title (`> [!note]` alone on a line)
+CALLOUT_RE = re.compile(r"^>[ \t]*\[!(\w+)\][ \t]*(.*)$", re.MULTILINE)
 
 # Lines that START a markdown block. A prose line that follows one of these
 # is left for Markdown's own lazy-continuation rules; a prose line that

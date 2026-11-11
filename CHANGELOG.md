@@ -24,6 +24,11 @@ Unreleased changes sit at the top until the next Starter Kit release.
   It now shows every prose paragraph and skips notes, comments and the
   template's hints. Each goal title links to its page, and the Vision node of
   the goal tree is clickable. `tests/test_vision_card.py`.
+- Callouts with no title on the marker line (`> [!note]` followed by the
+  text) showed their first text line as a bold label with a stray `>`. They
+  now show the type as the label ("Note", "Assumption") and the text below.
+  This affected GOAL-003 to GOAL-007, CON-001 and five stakeholder pages.
+  `tests/test_callouts.py`.
 
 ### Changed
 - `grilling` skill: brought up to date with upstream `mattpocock/skills`. Each
