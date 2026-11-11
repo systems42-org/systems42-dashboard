@@ -7,12 +7,12 @@ created: 2026-11-11
 updated: 2026-11-11
 tags: [source]
 source-type: interview
-origin: "Gernot Starke, chat session of 2026-11-11 (fr-13 questions Q1 to Q4)"
+origin: "Gernot Starke, chat session of 2026-11-11 (fr-13 questions Q1 to Q4, then fr-14 questions Q1 to Q4)"
 captured: 2026-11-11
 sha256: n/a (no file, the answers were given in chat)
-ingested-pages: ["[[FR-010-show-the-method]]", "[[FR-011-explain-the-three-loops]]", "[[ISS-002-define-the-clarify-loop]]"]
+ingested-pages: ["[[FR-010-show-the-method]]", "[[FR-011-explain-the-three-loops]]", "[[ISS-002-define-the-clarify-loop]]", "[[FR-012-guided-path-through-the-wiki]]"]
 ---
 
 # Grilling session on showing the method
 
-Gernot Starke's answers on structure, the clarify loop, the test and the priority of showing the method. The decisions are listed in `_system/log.md`.
+Gernot Starke's answers on structure, the clarify loop, the test and the priority of showing the method, and on the guided path. The decisions are listed in `_system/log.md`.

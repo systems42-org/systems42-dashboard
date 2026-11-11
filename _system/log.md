@@ -91,3 +91,13 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Rule from Gernot Starke: requirements state the need, never how the dashboard looks today, because nobody will remember "today" later. The "Today" mentions in FR-001 to FR-004, FR-006, FR-007 and FR-009 were rewritten as needs.
 - Created: FR-010, FR-011, ISS-002, SRC-007, SRC-008. Updated: FR-001 to FR-004, FR-006, FR-007, FR-009, `_system/index.md`.
 - Open: ISS-002, decided by Gernot Starke and the Systems42 team.
+
+## [2026-11-11] capture | Guided path through the wiki
+- Source: `raw/fr-14-guided-path.md`, proposed by Claude at Gernot Starke's request, now [[SRC-009-guided-path-through-the-wiki]] in `raw/ingested/`. The answers are in [[SRC-008-grilling-session-on-showing-the-method]].
+- Grill gate: checked against FR-010, FR-011, GOAL-002, GOAL-003 and the Keyholder. Gernot Starke answered Q1 to Q4 one at a time, so no Issue was needed.
+- Decisions:
+  - Q1: one path for newcomers and presenters.
+  - Q2: fixed order set by the method, content from the wiki, empty steps and sections hidden in Configure left out.
+  - Q3: each step has one or two fixed sentences on what the reader sees and why, next and back, the position, and a way back after looking around.
+  - Q4: 4 of 5 test readers walk the path in 10 minutes and answer three orientation questions. Should, under FR-010. A Must would need its own epic under GOAL-003.
+- Created: [[FR-012-guided-path-through-the-wiki]], SRC-009. Updated: FR-010 (children), SRC-008, `_system/index.md`.

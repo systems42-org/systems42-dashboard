@@ -34,7 +34,7 @@ A presenter needs to show that a raw source becomes typed, linked pages with sou
 ## Hierarchy
 
 - **Parent:** none (epic).
-- **Children:** projected from the `parent:` backlinks: [[FR-011-explain-the-three-loops]].
+- **Children:** projected from the `parent:` backlinks: [[FR-011-explain-the-three-loops]], [[FR-012-guided-path-through-the-wiki]].
 
 > [!note] Open points
 > The metric of GOAL-002 is a proposal. Nobody has agreed it yet.

@@ -64,6 +64,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-009-more-filters-on-the-full-results-page]] More filters on the full results page (feature, Could, draft)
 - [[FR-010-show-the-method]] Show the method (epic, Should, draft)
 - [[FR-011-explain-the-three-loops]] Explain the three loops (feature, Should, draft)
+- [[FR-012-guided-path-through-the-wiki]] Guided path through the wiki (feature, Should, draft)
 
 ## Quality requirements
 
@@ -91,3 +92,4 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-006-grilling-session-on-search]] Grilling session on search (interview)
 - [[SRC-007-show-the-method]] Show the method (document)
 - [[SRC-008-grilling-session-on-showing-the-method]] Grilling session on showing the method (interview)
+- [[SRC-009-guided-path-through-the-wiki]] Guided path through the wiki (document)
