@@ -121,3 +121,9 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - GOAL-003: "Proposed target" became "Target", and the note now says only that no baseline has been measured yet.
 - GOAL-002 is accepted without a metric, as decided in its capture.
 - Updated: the three goal pages, `_system/index.md`. Delivered by PR, as the commit policy asks for promotions.
+
+## [2026-11-11] decision | DR-002 tailoring and view
+- Gernot Starke stated that the real Systems42 metamodel is configurable per project and asked how to handle the Configure dialog, which sits between Systems42 and the dashboard. He accepted the split by owner.
+- Created: [[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]], SRC-012. Updated: [[CON-002-dashboard-never-writes-to-the-wiki]] (impact), `_system/index.md`.
+- Follow-ups named in DR-002: where the tailoring sits in the schema, where the view is kept, renaming the dialog, tightening CON-002. Requirements go into fr-02 (tailoring) and fr-12 (view) at their capture.
+- Delivered by PR, because the record is accepted.
