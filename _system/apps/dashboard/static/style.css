@@ -747,10 +747,9 @@ pre.mermaid:not([data-processed]) { color: transparent; min-height: 2rem; }
 .foot-title { color: var(--ink-soft); font-weight: 600; letter-spacing: .02em; }
 .foot-sub { margin-top: .25rem; }
 
-/* small "built with" credit — a bare flask glyph, not a stand-in for either
-   project's actual mark, so it needs no upkeep if either wordmark changes */
-.stack-badge { display: inline-flex; align-items: center; gap: .25rem; }
-.stack-icon { color: var(--ink-dim); vertical-align: -2px; }
+/* small "built with" credit: the two-colour Python mark (static/python-logo.svg) */
+.stack-badge { display: inline-flex; align-items: center; gap: .3rem; vertical-align: bottom; }
+.stack-icon { width: .95rem; height: .95rem; }
 
 /* "N connected" badge — a pulsing dot reads as "live" at a glance from the
    back of the room, without competing with the theme toggle for attention. */
@@ -766,6 +765,8 @@ pre.mermaid:not([data-processed]) { color: transparent; min-height: 2rem; }
   background: var(--accent-2); box-shadow: 0 0 0 rgba(70,211,176,.5);
   animation: presence-pulse 2s ease-out infinite; }
 .presence-count { color: var(--ink); font-weight: 600; }
+/* Connection lost: the dot stops moving and loses its colour. */
+html.etsu-disconnected .presence-dot { animation: none; background: var(--ink-dim); box-shadow: none; }
 @keyframes presence-pulse {
   0%   { box-shadow: 0 0 0 0 rgba(70,211,176,.45); }
   70%  { box-shadow: 0 0 0 .4rem rgba(70,211,176,0); }

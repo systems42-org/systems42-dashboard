@@ -151,7 +151,7 @@ def test_hidden_section_and_area_leave_nav_and_footer():
     finally:
         _cfg.unlink()
     nav = re.search(r'<nav class="mainnav"[^>]*>(.*?)</nav>', html, re.S).group(1)
-    assert re.findall(r">([^<]+)</a>", nav) == ["Goals", "Functional Reqs"], nav
+    assert re.findall(r">([^<]+)</a>", nav) == ["Requirements", "Architecture"], nav
     assert 'href="/commons"' not in html and 'href="/req42"' in html
 
 

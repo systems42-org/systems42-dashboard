@@ -109,7 +109,7 @@ def test_refresh_time_survives_an_unusable_tz():
         for tz in ("Not/AZone", "", "Europe/Berlin"):
             app.DISPLAY_TZ = tz
             stamp = app.inject_refresh_time()["refreshed_at"]
-            assert re.match(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", stamp), (tz, stamp)
+            assert re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}h", stamp), (tz, stamp)
     finally:
         app.DISPLAY_TZ = saved
 

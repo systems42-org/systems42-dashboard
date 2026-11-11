@@ -50,9 +50,7 @@ def test_home_and_join_show_the_code():
     home = c.get("/").get_data(as_text=True)
     assert 'class="hero-join"' in home and "<svg" in home and "192.0.2.7:8080" in home
     join = c.get("/join").get_data(as_text=True)
-    # Exactly one <svg> inside .join-qr — the page-wide count is 2 because
-    # base.html's footer carries its own unrelated "Python/Flask" badge icon
-    # on every page.
+    # Exactly one <svg> inside .join-qr.
     qr_start = join.index('class="join-qr"')
     qr_section = join[qr_start:join.index("</div>", qr_start)]
     assert qr_section.count("<svg") == 1

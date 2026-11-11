@@ -92,7 +92,10 @@ you write below is English throughout (see the Language convention in AGENTS.md)
    same pattern. When a source describes **existing** infrastructure or software,
    set `state: current` (`outdated` if it is no longer in use, `planned` if it is
    decided but not built); naming its technology (Keycloak, LDAP, …) is allowed on
-   architecture pages, never in requirements (DR-004 as amended by DR-010). Fill
+   architecture pages and, as a rule, not in requirements (DR-004 as amended by
+   DR-010). Exceptions are allowed, because requirements and architecture share
+   a grey zone (encryption, deployment and infrastructure technology), and a
+   project whose subject is technology names it in its requirements. Fill
    `drivers:` only with reasons the source gives; an element whose reason nobody
    knows goes to the human as a question (archaeology), not a guess.
 8. **Append to `_system/log.md`.** `## [YYYY-MM-DD] capture | <source title>` followed by a
