@@ -157,7 +157,7 @@ def inject_refresh_time():
             tz = None
     now = datetime.now(tz) if tz else datetime.now().astimezone()   # host's local zone
     # ISO-ish and locale-free: "06.09.2026" reads as 9 June to half the room.
-    return {"refreshed_at": now.strftime("%Y-%m-%d %H:%M:%S %Z").strip()}
+    return {"refreshed_at": now.strftime("%Y-%m-%d %H:%M:%Sh")}
 
 # Root of the wiki layer. In Docker this is a read-only bind mount at /wiki;
 # for local runs it falls back to the repo's wiki/ folder (4 levels up from
@@ -257,22 +257,32 @@ def inject_area():
     return {"current_area": area}
 
 
-# Nav entries tagged with the section each one opens, so a hidden section
-# leaves the nav (spec section 4). Order is the nav order.
-_NAV_ENTRIES = [("R1", "/goals", "Goals"), ("C4", "/stakeholders", "Stakeholders"),
-                ("R3", "/req42/functional-requirements", "Functional Reqs"), ("C1", "/req42/quality", "Quality"),
+# Nav entries tagged with the area or section each one opens, so a hidden one
+# leaves the nav. Order is the nav order. The header carries content only:
+# the two peaks, then the three Commons sections a reader looks up by name.
+_NAV_ENTRIES = [("requirements", "/req42", "Requirements"), ("architecture", "/arc42", "Architecture"),
+                ("C5", "/glossary", "Glossary"), ("C7", "/decisions", "Decisions"),
                 ("C6", "/issues", "Issues")]
+
+
+def _nav_current(key: str, href: str, path: str, area: dict | None) -> bool:
+    """An area entry is current on every page of that area, except on the
+    pages of a section that has its own entry. A section entry is current on
+    its own routes."""
+    if key in catalog.AREA_BY_KEY:
+        own = any(path.startswith(h) for k, h, _ in _NAV_ENTRIES if k not in catalog.AREA_BY_KEY)
+        return bool(area and area["key"] == key and not own)
+    return path.startswith(href)
 
 
 @app.context_processor
 def inject_nav():
-    """`nav_items` (hidden sections dropped) and `footer_areas` (hidden areas
-    dropped) for base.html."""
+    """`nav_items` for base.html: (href, label, current), hidden entries dropped."""
     if not has_request_context():
-        return {"nav_items": [(h, l) for _, h, l in _NAV_ENTRIES],
-                "footer_areas": [(a["href"], a["label"]) for a in catalog.AREAS]}
-    return {"nav_items": [(h, l) for sid, h, l in _NAV_ENTRIES if not is_hidden(sid)],
-            "footer_areas": [(a["href"], a["label"]) for a in visible_areas()]}
+        return {"nav_items": [(h, l, False) for _, h, l in _NAV_ENTRIES]}
+    area = catalog.area_for_path(request.path)
+    return {"nav_items": [(h, l, _nav_current(k, h, request.path, area))
+                          for k, h, l in _NAV_ENTRIES if not is_hidden(k)]}
 
 
 def static_url(filename: str) -> str:

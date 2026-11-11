@@ -25,8 +25,8 @@
   {# One persistent topbar on every page: brand (omitted on the home page,
      where the hero already carries mark and name — showing both stacked was
      a duplicate), a short nav, search, and this tab's own nickname. The nav
-     holds the five sections a workshop keeps returning to (DR-032); the
-     rest of req42's reading order is one click away on the home tiles. Breadcrumbs moved into <main>
+     is content only: the two peaks plus Glossary, Decisions and Issues; the
+     other sections are one click away on the area pages. Breadcrumbs moved into <main>
      (same capture-the-block pattern, one level down) so the nav keeps the top
      row to itself; index.html defines no crumbs block, so the row is absent
      on the home page. #}
@@ -35,8 +35,8 @@
     <a class="brand" href="/"><img class="brand-mark mark-on-dark" src="{{ static_url('brand/mark-dark.svg') }}" alt=""><img class="brand-mark mark-on-light" src="{{ static_url('brand/mark-light.svg') }}" alt=""> {{ system_name }}</a>
     {% endif %}
     <nav class="mainnav" aria-label="Main">
-      {% for href, label in nav_items %}
-      <a href="{{ href }}"{% if request.path.startswith(href) %} aria-current="page"{% endif %}>{{ label }}</a>
+      {% for href, label, current in nav_items %}
+      <a href="{{ href }}"{% if current %} aria-current="page"{% endif %}>{{ label }}</a>
       {% endfor %}
     </nav>
     <form class="nav-search" action="/search" method="get" role="search">
@@ -84,25 +84,21 @@
   <script src="{{ static_url('table-sort.js') }}" defer></script>
   <footer class="foot">
     <div class="foot-line">
-      <span class="foot-title">Live view · {{ system_name }} wiki dashboard</span>
+      <span class="foot-title">Read-only dashboard for Systems42 <a href="/help#llm-wiki">LLM wiki</a></span>
       <span class="presence" id="presence" hidden>
         <span class="presence-dot" aria-hidden="true"></span>
         <span class="presence-count" id="presence-count">0</span>
         <span class="presence-unit" id="presence-unit">clients</span>
       </span>
     </div>
+    {# Formalities only: state of this view, the method behind it, the stack.
+       Content links live in the header and are not repeated here. #}
     <div class="foot-sub">
-      Data last refreshed: {{ refreshed_at }} · wiki read-only · Karpathy LLM-wiki ·
-      {% for href, label in footer_areas %}<a href="{{ href }}">{{ label }}</a> · {% endfor %}<a href="/glossary">Glossary</a> · <a href="/decisions">Decisions</a> · <a href="/metamodel">Metamodel</a> · <a href="/help">Help</a> ·
+      Data last refreshed: {{ refreshed_at }} ·
+      <a href="/metamodel">Metamodel</a> · <a href="/help">Help</a> ·
       <span class="stack-badge" title="Built with Python + Flask">
-        <svg class="stack-icon" viewBox="0 0 24 24" width="13" height="13" fill="none"
-             stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
-             stroke-linejoin="round" aria-hidden="true">
-          <path d="M9 3h6"/>
-          <path d="M10 3v5.6L4.9 18.1A2 2 0 0 0 6.7 21h10.6a2 2 0 0 0 1.8-2.9L14 8.6V3"/>
-          <path d="M7.6 15h8.8"/>
-        </svg>
-        Python/Flask
+        <img class="stack-icon" src="{{ static_url('python-logo.svg') }}" width="14" height="14" alt="" title="Built with Python + Flask">
+        Python
       </span>
     </div>
   </footer>
@@ -150,6 +146,10 @@
       bar.className = "session-ended";
       bar.textContent = "Session ended by the facilitator — this page is no longer live.";
       document.body.appendChild(bar);
+      // The footer dot stops pulsing (CSS, on .etsu-disconnected) and the
+      // count gives way to the word, so the footer does not claim clients.
+      if (presenceCountEl) { presenceCountEl.textContent = ""; }
+      if (presenceUnitEl) { presenceUnitEl.textContent = "offline"; }
       intervalIds.forEach(function (id) { clearInterval(id); });
     }
     function markFailure() {

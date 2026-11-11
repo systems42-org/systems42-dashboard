@@ -51,11 +51,16 @@ def test_footer_lost_its_buttons_and_says_wiki_dashboard():
     body = _get("/issues")
     foot = re.search(r'<footer class="foot">(.*?)</footer>', body, re.S).group(1)
     assert "<button" not in foot, foot
-    assert "wiki dashboard" in foot and "requirements wiki" not in foot
-    assert "wiki read-only" in foot
-    for href in ('href="/req42"', 'href="/arc42"', 'href="/commons"', 'href="/glossary"',
-                 'href="/decisions"', 'href="/help"'):
+    assert "Read-only dashboard for Systems42" in foot and "Karpathy" not in foot
+    assert 'href="/help#llm-wiki"' in foot
+    assert 'id="llm-wiki"' in _get("/help")
+    for href in ('href="/metamodel"', 'href="/help"'):
         assert href in foot, href
+    # Content links belong to the header and are not repeated in the footer.
+    for href in ('href="/req42"', 'href="/arc42"', 'href="/commons"', 'href="/glossary"',
+                 'href="/decisions"'):
+        assert href not in foot, href
+    assert "python-logo.svg" in foot and "Flask" in foot
 
 
 def test_settings_dialog_and_script_are_wired():

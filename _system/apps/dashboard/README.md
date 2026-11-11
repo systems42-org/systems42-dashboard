@@ -58,19 +58,21 @@ network at runtime) and rendered inline as SVG so it follows the theme.
 
 Every page carries the same topbar: the vault name (back to the home page;
 omitted on the home page itself, where the hero already shows mark and name),
-a five-entry nav (Goals · Stakeholders · Functional Reqs · Quality · Issues) with the
-current section marked, a search box and the ≡ menu. Pressing <kbd>⌘K</kbd>
+a five-entry nav (Requirements · Architecture · Glossary · Decisions · Issues) with the
+current entry marked, a search box and the ≡ menu. Pressing <kbd>⌘K</kbd>
 (<kbd>Ctrl K</kbd> elsewhere) anywhere focuses the search box; submitting it
-lands on `/search`, the full-text view. The nav is about frequency, not
-ownership (DR-032, DR-033): Stakeholders, Quality and Issues sit on top
-although they belong to Commons. Breadcrumbs under the bar read
+lands on `/search`, the full-text view. The nav carries content only: the
+two peaks, then Glossary, Decisions and Issues from Commons. Breadcrumbs under the bar read
 `Home › Area › …`, with the area level for pages that belong to an area.
 
 A 3 px bar under the topbar carries the area colour (green Requirements, blue
 Architecture, red organisation) on pages of an area; home, help and
 search have none. The ≡ menu holds Configure · Theme · Who's here · Help ·
-Reload · Disconnect all. The footer is text and links only: "Live view ·
-{system} wiki dashboard" and "wiki read-only".
+Reload · Disconnect all. The footer holds formalities only: "Read-only
+dashboard for Systems42 LLM wiki" (linked to the help section on the LLM
+wiki), the live dot with the client count, the refresh time, Metamodel, Help and the Python
+mark. The dot pulses while the server answers and stops, grey, when the
+connection is lost.
 
 ## Visual identity
 

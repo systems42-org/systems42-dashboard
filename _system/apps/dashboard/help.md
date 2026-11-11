@@ -19,8 +19,8 @@ still draws requirements in blue and architecture in green. A
 section shared by two areas shows two colours. The thin bar under the top
 row tells you which area you are in.
 
-**Nav and search.** The five sections a workshop keeps returning to stay in
-the top row. ⌘K (Ctrl K) jumps to search.
+**Nav and search.** The top row leads to content: Requirements, Architecture,
+Glossary, Decisions and Issues. ⌘K (Ctrl K) jumps to search.
 
 **Menu (≡).** *Configure* opens the visibility dialog; *Theme* switches
 light/dark for this browser; *Who's here* lists connected clients; *Reload*
@@ -33,6 +33,21 @@ Only the **facilitator** — the first connected client, "Yoda" (or, once Yoda
 has left, whoever inherited the role under their own name) — can save; the
 dialog writes `_system/dashboard.yaml`, which you can also edit by hand. It is
 the only file the dashboard ever writes; the wiki itself is read-only here.
+
+## The LLM wiki {: #llm-wiki }
+
+The wiki behind this dashboard is written by an AI agent and curated by
+humans. It has three layers:
+
+- **`raw/`** holds the sources: interview notes, transcripts, specs, tickets.
+  Humans own them and the agent never edits them.
+- **`wiki/`** holds the typed, interlinked pages the agent writes from those
+  sources. Every page names its sources and carries a status.
+- **The schema** (templates, anchors, the [metamodel](/metamodel)) tells the
+  agent which kinds of pages exist and how they link.
+
+The dashboard only reads `wiki/`. To change a page, change the source or ask
+the agent, then reload.
 
 ## The Systems42 model in brief
 

@@ -31,6 +31,16 @@ Unreleased changes sit at the top until the next Starter Kit release.
   `tests/test_callouts.py`.
 
 ### Changed
+- Dashboard: the header nav is now Requirements · Architecture · Glossary ·
+  Decisions · Issues (before: Goals · Stakeholders · Functional Reqs · Quality ·
+  Issues). The footer holds formalities only: "Read-only dashboard for
+  Systems42 LLM wiki", linked to a new help section on the LLM wiki, the
+  refresh time without time zone, the client count, Metamodel, Help and a
+  Python logo. Its content links are gone, because the header has them. The
+  footer dot stops and turns grey when the connection is lost.
+- Capture workflow: a requirement may name a technology where requirements and
+  architecture overlap, or where the project's subject is technology. Before,
+  technology names were allowed on architecture pages only.
 - `grilling` skill: brought up to date with upstream `mattpocock/skills`. Each
   question is now worded so that "yes" accepts the recommended answer, and
   fact-finding sub-agents start with a fresh context window.
