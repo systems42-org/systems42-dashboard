@@ -25,7 +25,7 @@ As a [[STK-003-requirements-engineers]] **requirements engineer** I want **to na
 
 **PROBLEM / GOAL**
 
-Today `/search` offers type facets only. Product owners and requirements engineers want precise lists. A filter syntax in the search box (`status:open`) would serve them, but newcomers and workshop participants don't know such a syntax.
+Product owners and requirements engineers want precise lists. A filter syntax in the search box (`status:open`) would serve them, but newcomers and workshop participants don't know such a syntax.
 
 - `/search` gets filters for status, priority and tag next to the type facets.
 - The search box keeps no filter syntax.

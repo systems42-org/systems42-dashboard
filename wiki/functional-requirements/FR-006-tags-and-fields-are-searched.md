@@ -25,7 +25,7 @@ As a [[STK-001-product-owners]] **product owner** I want **search to find pages 
 
 **PROBLEM / GOAL**
 
-Today search covers ID, title, aliases and body text. Tags and other frontmatter fields are not searched.
+Readers look for pages by their labels, such as a tag or a priority, not only by their wording.
 
 - Searched as plain words: `tags`, `status`, `stereotype`, `priority`, `kind`, `state`, `category` and `attribute` (the quality attribute).
 - Not searched as text: link fields such as `parent:`, `sources:`, `related:` and `drivers:`. Their raw values are file names and only add noise. [[FR-008-related-pages-group]] uses the links instead.

@@ -62,6 +62,8 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-007-highlighted-passage-on-the-results-page]] Highlighted passage on the results page (feature, Should, draft)
 - [[FR-008-related-pages-group]] Related pages group (feature, Should, draft)
 - [[FR-009-more-filters-on-the-full-results-page]] More filters on the full results page (feature, Could, draft)
+- [[FR-010-show-the-method]] Show the method (epic, Should, draft)
+- [[FR-011-explain-the-three-loops]] Explain the three loops (feature, Should, draft)
 
 ## Quality requirements
 
@@ -77,6 +79,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 ## Issues
 
 - [[ISS-001-who-holds-the-keys-in-parallel-work]] Who holds the keys when two people work in parallel (open)
+- [[ISS-002-define-the-clarify-loop]] Define the clarify loop (open)
 
 ## Sources
 
@@ -86,3 +89,5 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-004-goals-of-the-systems42-dashboard]] Goals of the Systems42 dashboard (document)
 - [[SRC-005-search-the-wiki]] Search the wiki (document)
 - [[SRC-006-grilling-session-on-search]] Grilling session on search (interview)
+- [[SRC-007-show-the-method]] Show the method (document)
+- [[SRC-008-grilling-session-on-showing-the-method]] Grilling session on showing the method (interview)

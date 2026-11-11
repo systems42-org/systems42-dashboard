@@ -31,7 +31,7 @@ A reader often names a thing differently from the wiki. The wiki already knows t
 - A glossary term's name and its aliases count as one word for the whole search. A query for an alias also finds every page that uses the term's name.
 - An alias hit ranks below an exact hit for the same query.
 
-The related words come only from the wiki itself, so every hit can be traced. The value grows with the glossary, which is still empty today.
+The related words come only from the wiki itself, so every hit can be traced. The value grows with the glossary.
 
 **Success metric(s).** On a fixed test wiki, each query returns the expected page in the top 3 of the popup:
 

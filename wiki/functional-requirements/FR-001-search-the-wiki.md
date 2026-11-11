@@ -25,9 +25,7 @@ As a **reader** ([[STK-004-development-teams|development team]], [[STK-015-newco
 
 **PROBLEM / GOAL**
 
-Search works today, but it is not yet a "wow". Every page has a search box in the top bar (Cmd K or Ctrl K). While the reader types, a popup lists the best 8 hits. Submitting opens `/search` with all hits and type facets. The index holds ID, title, aliases and body text of every wiki page. A page is a hit only if it contains every query word exactly. Hits rank by where they matched: title, then ID, then page type, then body text.
-
-So a typo, another word form or a word the wiki doesn't use finds nothing. [[GOAL-003-answers-without-asking-a-colleague]] promises an answer "whether they know the right word or not". The features below close that gap with what the wiki itself knows: its aliases, its glossary and its links.
+A reader searches from every page of the dashboard, by ID, title or any word, in a popup while typing and on a full results page. Readers misspell terms, use other word forms and use words the wiki doesn't use. [[GOAL-003-answers-without-asking-a-colleague]] promises an answer "whether they know the right word or not". The features below meet that need with what the wiki itself knows: its aliases, its glossary and its links.
 
 **Success metric(s).**
 

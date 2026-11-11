@@ -25,7 +25,7 @@ As a [[STK-015-newcomers]] **newcomer** I want **search to forgive a typo or ano
 
 **PROBLEM / GOAL**
 
-Today `keyholdr` finds nothing, and `requirement` misses pages that only say `requirements`. The rule:
+Readers misspell terms, such as `keyholdr`, and use other forms of a word, such as `requirement` for `requirements`. The rule:
 
 - Words of 3 letters or fewer, and IDs such as `STK-023`, match exactly or as a prefix. No tolerance.
 - Words of 4 to 7 letters allow one wrong, missing or extra letter.

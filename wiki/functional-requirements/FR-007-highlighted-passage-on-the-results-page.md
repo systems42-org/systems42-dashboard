@@ -25,7 +25,7 @@ As a [[STK-014-domain-experts]] **domain expert** I want **each hit on the resul
 
 **PROBLEM / GOAL**
 
-Today a hit shows its type, ID, title and a relevance band. The reader has to open pages to see whether they answer the question.
+A reader wants to see whether a hit answers the question before opening the page.
 
 - Each hit on `/search` shows the sentence where the query matched, with the matching words highlighted.
 - For a title hit, it shows the first sentence of the page.

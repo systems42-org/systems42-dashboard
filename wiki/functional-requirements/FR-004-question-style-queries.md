@@ -25,7 +25,7 @@ As a [[STK-008-workshop-participants]] **workshop participant** I want **to type
 
 **PROBLEM / GOAL**
 
-Today every query word must appear. `who starts the app` fails on `who` and `the`. The rule:
+Readers often type a question, such as `who starts the app`. Its filler words must not stop the search. The rule:
 
 1. Common English filler words don't count: `who`, `what`, `how`, `the`, `a`, `is`, `does`, `of`, `to` and the like. If a query has nothing but filler words, they count.
 2. Pages containing every remaining word come first, whether exact, as a typo, as a word form or via an alias.
