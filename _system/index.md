@@ -53,6 +53,16 @@ every capture (`_system/workflows/capture.md`, step 7).
 
 ## Functional requirements
 
+- [[FR-001-search-the-wiki]] Search the wiki (epic, Must, draft)
+- [[FR-002-typos-and-word-forms]] Typos and word forms (feature, Must, draft)
+- [[FR-003-related-words-from-aliases-and-glossary]] Related words from aliases and the glossary (feature, Must, draft)
+- [[FR-004-question-style-queries]] Question-style queries (feature, Must, draft)
+- [[FR-005-reason-for-every-non-exact-hit]] Reason for every non-exact hit (feature, Must, draft)
+- [[FR-006-tags-and-fields-are-searched]] Tags and fields are searched (feature, Should, draft)
+- [[FR-007-highlighted-passage-on-the-results-page]] Highlighted passage on the results page (feature, Should, draft)
+- [[FR-008-related-pages-group]] Related pages group (feature, Should, draft)
+- [[FR-009-more-filters-on-the-full-results-page]] More filters on the full results page (feature, Could, draft)
+
 ## Quality requirements
 
 ## Constraints
@@ -74,3 +84,5 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-002-grilling-session-on-stakeholders]] Grilling session on stakeholders (interview)
 - [[SRC-003-vision-of-the-systems42-dashboard]] Vision of the Systems42 dashboard (interview)
 - [[SRC-004-goals-of-the-systems42-dashboard]] Goals of the Systems42 dashboard (document)
+- [[SRC-005-search-the-wiki]] Search the wiki (document)
+- [[SRC-006-grilling-session-on-search]] Grilling session on search (interview)

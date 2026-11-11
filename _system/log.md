@@ -62,3 +62,20 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Decided by Gernot Starke in a working session. Recorded as accepted on branch `decisions`, for review by PR.
 - Created: [[DR-001-english-brief-plain-writing]]. Updated: `_system/index.md`.
 - No source record: the decision came as a direct instruction, so the page shows as unsourced.
+
+## [2026-11-11] capture | Search the wiki
+- Source: `raw/fr-01-search-the-wiki.md`, extracted from the dashboard code on 2026-11-10, now [[SRC-005-search-the-wiki]] in `raw/ingested/`. The grilling answers are [[SRC-006-grilling-session-on-search]].
+- Grill gate: checked against GOAL-003, CON-001, CON-002, DR-001 and the search code. Gernot Starke answered Q1 to Q10 one at a time, so no Issue was needed.
+- Decisions:
+  - Q1: the "wow" is that a reader finds the page without knowing the wiki's word (GOAL-003). Typo tolerance comes with it as a baseline. An answer instead of a list is a later extra.
+  - Q2: related words come only from the wiki (aliases, glossary, links). An embedding model and AI answers are Won't, because they are not affordable for now. "Must be good enough for now."
+  - Q3: typo rule. Up to 3 letters and IDs exact or prefix, 4 to 7 letters one edit, 8 or more two edits, English word forms count as one word, exact hits always rank first.
+  - Q4: tags and the readable fields are searched. Link fields, dates and display fields are not. A field hit ranks between title and body.
+  - Q5: no filter syntax in the search box. Gernot Starke proposed filters on the full results page instead (Could).
+  - Q6: every non-exact hit shows its reason, in the popup and on `/search`. Only `/search` shows the highlighted passage.
+  - Q7: a "Related pages" group holds the one-step neighbours of title or alias hits, at most 5, on `/search` only.
+  - Q8: an automated test on a fixed test wiki with example queries, plus the GOAL-003 workshop check.
+  - Q9: filler words are dropped. Pages with all words come first, pages with most words follow with a note.
+  - Q10: one epic with eight features, one page each, linked to the epic by `parent:` (Gernot Starke's wish). Four Must, three Should, one Could.
+- Created: [[FR-001-search-the-wiki]] (epic), FR-002 to FR-009 (features), SRC-005, SRC-006. Updated: `_system/index.md`.
+- Note: FR-003 depends on the glossary, which is still empty. Its value grows once `raw/fr-10-domain-terms-and-their-network.md` is captured.
