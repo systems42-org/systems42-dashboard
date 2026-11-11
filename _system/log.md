@@ -101,3 +101,17 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
   - Q3: each step has one or two fixed sentences on what the reader sees and why, next and back, the position, and a way back after looking around.
   - Q4: 4 of 5 test readers walk the path in 10 minutes and answer three orientation questions. Should, under FR-010. A Must would need its own epic under GOAL-003.
 - Created: [[FR-012-guided-path-through-the-wiki]], SRC-009. Updated: FR-010 (children), SRC-008, `_system/index.md`.
+
+## [2026-11-11] capture | Header and footer on every page
+- Source: `raw/header-footer.md`, written on 2026-11-11 from a conversation about the page frame, now [[SRC-010-header-and-footer-on-every-page]] in `raw/ingested/`. The grilling answers are [[SRC-011-grilling-session-on-header-and-footer]].
+- Grill gate: checked against the goals, CON-002, FR-001, the inbox sources and `base.html`. Gernot Starke answered Q1 to Q5 one at a time, so no Issue was needed.
+- Decisions:
+  - Q1: one feature with three stories, linked by `parent:`. The phrase "the header links to wiki content only" is dropped, because the header also holds search, the menu and the nickname. Requirements in this project may name a technology, and the capture workflow now allows such exceptions (`CHANGELOG.md`).
+  - Q2: feature and header story serve GOAL-003, the footer story GOAL-006 and GOAL-002, the liveness story GOAL-002.
+  - Q3: Commons has no header entry, by choice. It is reached from the home page.
+  - Q4: on a lost connection the dot stops and turns grey, and "offline" replaces the client count. The banner and the grey page stay.
+  - Q5: feature and header story are Must, footer and liveness stories are Should.
+- Created: [[FR-013-header-and-footer-on-every-page]] (feature), FR-014 to FR-016 (stories), SRC-010, SRC-011. Updated: `_system/index.md`.
+- Inbox sources corrected on Gernot Starke's instruction: `raw/fr-02-browse-by-area-and-section.md` names the new header entries, and `raw/fr-07-find-a-decision-and-its-reasons.md` no longer lists the missing Decisions entry as a gap.
+- Note: the "Open" section of the archived source still lists the Commons entry and the grey dot as open. Q3 and Q4 settled both. `raw/fr-12-shared-session-in-a-workshop.md` also claims the client count, and should link to FR-015 when captured.
+- The dashboard code was changed the same day to match (header nav, footer, help section on the LLM wiki). It goes to review as a PR, with the relaxed rule in the capture workflow.

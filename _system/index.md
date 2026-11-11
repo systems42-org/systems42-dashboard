@@ -65,6 +65,10 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-010-show-the-method]] Show the method (epic, Should, draft)
 - [[FR-011-explain-the-three-loops]] Explain the three loops (feature, Should, draft)
 - [[FR-012-guided-path-through-the-wiki]] Guided path through the wiki (feature, Should, draft)
+- [[FR-013-header-and-footer-on-every-page]] Header and footer on every page (feature, Must, draft)
+- [[FR-014-reach-the-main-content-from-the-header]] Reach the main content from the header (story, Must, draft)
+- [[FR-015-read-the-formalities-in-the-footer]] Read the formalities in the footer (story, Should, draft)
+- [[FR-016-see-whether-the-page-is-still-connected]] See whether the page is still connected (story, Should, draft)
 
 ## Quality requirements
 
@@ -93,3 +97,5 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-007-show-the-method]] Show the method (document)
 - [[SRC-008-grilling-session-on-showing-the-method]] Grilling session on showing the method (interview)
 - [[SRC-009-guided-path-through-the-wiki]] Guided path through the wiki (document)
+- [[SRC-010-header-and-footer-on-every-page]] Header and footer on every page (document)
+- [[SRC-011-grilling-session-on-header-and-footer]] Grilling session on header and footer (interview)
