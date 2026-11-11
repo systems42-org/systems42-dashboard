@@ -7,9 +7,9 @@ every capture (`_system/workflows/capture.md`, step 7).
 
 ## Goals
 
-- [[GOAL-001-trusted-answers]] Trusted answers about requirements and architecture (vision, draft)
-- [[GOAL-002-show-what-systems42-can-do]] Show what Systems42 can do (objective, draft)
-- [[GOAL-003-answers-without-asking-a-colleague]] Answers without asking a colleague (objective, draft)
+- [[GOAL-001-trusted-answers]] Trusted answers about requirements and architecture (vision, accepted)
+- [[GOAL-002-show-what-systems42-can-do]] Show what Systems42 can do (objective, accepted)
+- [[GOAL-003-answers-without-asking-a-colleague]] Answers without asking a colleague (objective, accepted)
 - [[GOAL-004-requirements-with-reasons-and-checks]] Requirements with their reasons and their checks (objective, draft)
 - [[GOAL-005-architecture-traced-to-requirements]] Architecture and decisions traced to requirements (objective, draft)
 - [[GOAL-006-source-and-status-on-every-statement]] Source and status on every statement (objective, draft)

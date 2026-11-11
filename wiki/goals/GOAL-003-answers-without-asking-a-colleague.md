@@ -2,9 +2,9 @@
 id: GOAL-003
 type: goal
 title: Answers without asking a colleague
-status: draft
+status: accepted
 created: 2026-11-10
-updated: 2026-11-10
+updated: 2026-11-11
 sources: ["[[SRC-004-goals-of-the-systems42-dashboard]]"]
 related: []
 tags: ["goal"]
@@ -29,10 +29,10 @@ tile_claim:
 
 - **Purpose.** A reader with a question about the system gets the answer from the dashboard alone, whether they know the right word or not.
 - **Advantage.** Development teams keep working instead of waiting for a reply. Product owners and architects are not interrupted with questions the wiki already answers. A newcomer in month six is productive without a guide.
-- **Metric.** Share of 10 prepared questions that a reader who has never seen the wiki answers correctly within 60 seconds each. Proposed target: 8 of 10.
+- **Metric.** Share of 10 prepared questions that a reader who has never seen the wiki answers correctly within 60 seconds each. Target: 8 of 10.
 
 > [!note]
-> The target is a proposal. Nobody has agreed it yet. No baseline has been measured.
+> No baseline has been measured yet.
 
 **Parent.** [[GOAL-001-trusted-answers]].
 

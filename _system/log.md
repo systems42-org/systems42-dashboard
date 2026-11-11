@@ -115,3 +115,9 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Inbox sources corrected on Gernot Starke's instruction: `raw/fr-02-browse-by-area-and-section.md` names the new header entries, and `raw/fr-07-find-a-decision-and-its-reasons.md` no longer lists the missing Decisions entry as a gap.
 - Note: the "Open" section of the archived source still lists the Commons entry and the grey dot as open. Q3 and Q4 settled both. `raw/fr-12-shared-session-in-a-workshop.md` also claims the client count, and should link to FR-015 when captured.
 - The dashboard code was changed the same day to match (header nav, footer, help section on the LLM wiki). It goes to review as a PR, with the relaxed rule in the capture workflow.
+
+## [2026-11-11] promote | GOAL-001, GOAL-002 and GOAL-003 accepted
+- Gernot Starke accepted the vision [[GOAL-001-trusted-answers]] and the objectives [[GOAL-002-show-what-systems42-can-do]] and [[GOAL-003-answers-without-asking-a-colleague]]. He also agreed GOAL-003's target, 8 of 10.
+- GOAL-003: "Proposed target" became "Target", and the note now says only that no baseline has been measured yet.
+- GOAL-002 is accepted without a metric, as decided in its capture.
+- Updated: the three goal pages, `_system/index.md`. Delivered by PR, as the commit policy asks for promotions.
