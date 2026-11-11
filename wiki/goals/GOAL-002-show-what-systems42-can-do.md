@@ -2,9 +2,9 @@
 id: GOAL-002
 type: goal
 title: Show what Systems42 can do
-status: draft
+status: accepted
 created: 2026-11-10
-updated: 2026-11-10
+updated: 2026-11-11
 sources: ["[[SRC-003-vision-of-the-systems42-dashboard]]", "[[SRC-002-grilling-session-on-stakeholders]]"]
 related: ["[[CON-001-proof-of-concept-not-production-ready]]"]
 tags: [goal]
