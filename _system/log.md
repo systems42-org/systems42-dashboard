@@ -167,3 +167,8 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
   - Q5: Should, testable.
 - Created: [[QR-001-usable-on-phone-and-tablet]], SRC-017, SRC-018. Updated: `_system/index.md`.
 - Parked: the schema change (template, metamodel, Q42 anchor, AGENTS.md, dashboard) and DR-003 go by PR. Until it is merged, the `dimensions:` field is not in the template and the DR-003 links do not resolve.
+
+## [2026-11-12] decision | DR-003 Q42 dimensions
+- Gernot Starke chose Q42 dimensions over one ISO 25010 attribute while capturing [[QR-001-usable-on-phone-and-tablet]]: Q42 allows several dimensions on one requirement, ISO 25010 forces a strict hierarchy and a single attribute.
+- Created: [[DR-003-quality-requirements-are-classified-by-q42-dimensions]]. Updated: QR template and metamodel (`attribute:` → `dimensions:`), Q42 and req42 anchors, `AGENTS.md`, `docs/req42/README.md`, the dashboard's quality list and its test, `CHANGELOG.md`, `_system/index.md`.
+- Delivered by PR, because the record is accepted and the schema changes.

@@ -89,7 +89,7 @@ content units, and uses req42's recommended standards as semantic anchors. It do
 | 03 Scope (Scope & Abgrenzung) | `wiki/context/` + `wiki/external-interfaces/` |
 | 04 Functional Requirements (Funktionale Anforderungen) | `wiki/functional-requirements/` — one type, `stereotype: epic\|feature\|story`; hierarchy via `parent:`, story-mapped + `[[user-story-format]]`, `[[acceptance-criteria]]`, `[[INVEST]]`, `[[MoSCoW]]`; plus `wiki/use-cases/` (use cases are functional requirements, DR-011) |
 | 05 Supporting Models (Modelle zur Unterstützung) | `wiki/activity-models/`, `wiki/data-models/` |
-| 06 Quality Requirements (Qualitätsanforderungen) | `wiki/quality-requirements/` (ISO 25010 + Q42 quality scenarios, [quality.arc42.org](https://quality.arc42.org)) |
+| 06 Quality Requirements (Qualitätsanforderungen) | `wiki/quality-requirements/` (Q42 dimensions + quality scenarios, [quality.arc42.org](https://quality.arc42.org)) |
 | 07 Constraints (Randbedingungen) | `wiki/constraints/` (arc42 categories) |
 | 08 Domain Terminology (Domänenbegriffe) | `wiki/glossary/` |
 | 09 Assets (Betriebsmittel & Personal) | *out of scope* |

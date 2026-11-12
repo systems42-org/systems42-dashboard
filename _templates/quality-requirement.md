@@ -8,14 +8,14 @@ updated: {{date}}
 sources: []
 related: []
 tags: [quality-requirement]
-attribute: performance   # ISO 25010: performance | reliability | security | usability | maintainability | portability | compatibility | functional-suitability
+dimensions: [usable]    # Q42, one or more: reliable | flexible | maintainable | efficient | usable | safe | secure | suitable | operable
 priority: should         # [[MoSCoW]]: must | should | could | wont
 testable: false          # true once the measure is verifiable
 ---
 
 # {{title}}
 
-**Quality attribute.** <e.g. Performance efficiency / Security>
+**Q42 dimensions.** <e.g. Usable, flexible. Every dimension the requirement touches, see https://quality.arc42.org/dimensions/>
 
 **Scenario (Q42 quality scenario).**  <!-- follows [[Q42]], https://quality.arc42.org -->
 - **Source.** <who/what generates the stimulus>

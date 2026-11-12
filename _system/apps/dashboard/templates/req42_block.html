@@ -37,8 +37,8 @@
       <td class="c-status"><span class="badge kind-badge">{{ r.type }}</span></td>
       <td class="c-title" data-sort-value="{{ r.title }}">
         <a class="term term-link" href="{{ r.url }}">{{ r.title }}</a>
-        {% if r.attribute or r.priority %}<div class="qr-meta">
-          {% if r.attribute %}<span class="badge kind-badge">{{ r.attribute }}</span>{% endif %}
+        {% if r.dimensions or r.priority %}<div class="qr-meta">
+          {% for d in r.dimensions %}<span class="badge kind-badge">{{ d }}</span>{% endfor %}
           {% if r.priority %}<span class="badge badge-prio">{{ r.priority }}</span>{% endif %}
         </div>{% endif %}
         {% if r.scenario %}<dl class="qr-scenario">

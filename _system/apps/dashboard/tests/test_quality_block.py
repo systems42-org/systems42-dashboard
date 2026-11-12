@@ -1,5 +1,5 @@
 """The Quality block (/req42/quality) lists each quality requirement with its
-attribute, priority and Q42 quality scenario, and links its title to the page — the
+Q42 dimensions, priority and quality scenario, and links its title to the page — the
 generic block list used to show the bare, unlinked title only. No pytest.
 
 Run from the dashboard dir:
@@ -18,7 +18,7 @@ id: QR-001
 type: quality-requirement
 title: "Filterwechsel ohne Verzögerung"
 status: draft
-attribute: performance
+dimensions: [efficient, usable]
 priority: should
 ---
 
@@ -46,10 +46,10 @@ import app  # noqa: E402
 client = app.app.test_client()
 
 
-def test_quality_rows_carry_link_attribute_priority_and_scenario():
+def test_quality_rows_carry_link_dimensions_priority_and_scenario():
     body = client.get("/req42/quality").get_data(as_text=True)
     assert 'href="/page/quality-requirements/QR-001-fast-filter"' in body
-    assert ">performance<" in body and ">should<" in body
+    assert ">efficient<" in body and ">usable<" in body and ">should<" in body
     for part in ("Stimulus", "ändert einen Filter", "Response", "Normalbetrieb"):
         assert part in body, part
     assert "<em>Normalbetrieb</em>" in body
@@ -59,5 +59,5 @@ def test_quality_rows_carry_link_attribute_priority_and_scenario():
 
 
 if __name__ == "__main__":
-    test_quality_rows_carry_link_attribute_priority_and_scenario()
+    test_quality_rows_carry_link_dimensions_priority_and_scenario()
     print("ok")

@@ -3350,11 +3350,14 @@ _QR_SCENARIO = ("Source", "Stimulus", "Environment", "Response", "Measure")
 def _qr_details(page: Page, titles: dict[str, str],
                 links: dict[str, tuple[str, str]]) -> dict:
     """What a quality requirement needs on the block list besides its title:
-    the ISO 25010 attribute, the priority and its Q42 quality scenario, so the list
-    reads without opening every page. Empty scenario parts are left out."""
+    its Q42 dimensions (DR-003), the priority and its Q42 quality scenario, so
+    the list reads without opening every page. Empty scenario parts are left out."""
     scenario = [(label, re.sub(r"\*(\S[^*]*?)\*", r"<em>\1</em>", html)) for label in _QR_SCENARIO
                 if (html := extract_pam_bullet(page, label, titles, links))]
-    return {"attribute": str(page.meta.get("attribute") or "").strip(),
+    dims = page.meta.get("dimensions") or []
+    if isinstance(dims, str):
+        dims = [dims]
+    return {"dimensions": [str(d).strip() for d in dims if str(d).strip()],
             "priority": str(page.meta.get("priority") or "").strip(),
             "scenario": scenario}
 
