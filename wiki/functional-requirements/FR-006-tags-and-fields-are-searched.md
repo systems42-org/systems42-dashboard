@@ -4,7 +4,7 @@ type: functional-requirement
 title: Tags and fields are searched
 status: draft
 created: 2026-11-11
-updated: 2026-11-11
+updated: 2026-11-12
 sources: ["[[SRC-005-search-the-wiki]]", "[[SRC-006-grilling-session-on-search]]"]
 related: ["[[FR-009-more-filters-on-the-full-results-page]]"]
 tags: ["functional-requirement", "search"]
@@ -27,7 +27,7 @@ As a [[STK-001-product-owners]] **product owner** I want **search to find pages 
 
 Readers look for pages by their labels, such as a tag or a priority, not only by their wording.
 
-- Searched as plain words: `tags`, `status`, `stereotype`, `priority`, `kind`, `state`, `category` and `attribute` (the quality attribute).
+- Searched as plain words: `tags`, `status`, `stereotype`, `priority`, `kind`, `state`, `category` and `dimensions` (the Q42 dimensions of a quality requirement, [[DR-003-quality-requirements-are-classified-by-q42-dimensions]]).
 - Not searched as text: link fields such as `parent:`, `sources:`, `related:` and `drivers:`. Their raw values are file names and only add noise. [[FR-008-related-pages-group]] uses the links instead.
 - Not searched at all: dates, and dashboard display fields such as `short_title` and `tile_claim`.
 - A hit in a field ranks below a title hit and above a body-text hit, because a tag is a deliberate label.
