@@ -127,3 +127,16 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Created: [[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]], SRC-012. Updated: [[CON-002-dashboard-never-writes-to-the-wiki]] (impact), `_system/index.md`.
 - Follow-ups named in DR-002: where the tailoring sits in the schema, where the view is kept, renaming the dialog, tightening CON-002. Requirements go into fr-02 (tailoring) and fr-12 (view) at their capture.
 - Delivered by PR, because the record is accepted.
+
+## [2026-11-12] capture | Browse by area and section
+- Source: `raw/fr-02-browse-by-area-and-section.md`, rewritten as needs on 2026-11-11 at Gernot Starke's request (no "Today" section), now [[SRC-013-browse-by-area-and-section]] in `raw/ingested/`. The answers are [[SRC-014-grilling-session-on-browsing]].
+- Grill gate: checked against GOAL-003 to GOAL-007, FR-001, FR-012, FR-013 and DR-002. Gernot Starke answered Q1 to Q6 one at a time, so no Issue was needed.
+- Decisions:
+  - Q1: one epic with features. "Same name everywhere" is a rule on the epic. The need on empty sections was removed from the source.
+  - Q2: goals per feature. A status filter ("agreed only") was added for GOAL-006.
+  - Q3: the first page shows the vision sentence, the guided path link, the areas, and a center tile with the last 3 to 4 changes (linking to a changes page of the wiki) and the open questions. No page count in the center tile.
+  - Q4: a section shows only its page count and a maturity bar.
+  - Q5: the path follows where a page belongs. List addresses carry sort and filter. "Share" was renamed, because the dashboard sends nothing.
+  - Q6: sorting is Must and works on several columns, with useful sort orders per type from the metamodel. The three areas always exist, only sections inside them can be left out. Four Must, two Should.
+- Created: [[FR-017-browse-by-area-and-section]] (epic), FR-018 to FR-023 (features), SRC-013, SRC-014. Updated: `_system/index.md`.
+- Parked: sort orders per type in the metamodel (schema change, PR) on FR-021. The tailoring format, a follow-up of DR-002, on FR-023. DR-002 came in through PR #10, merged before this commit.

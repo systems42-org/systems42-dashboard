@@ -69,6 +69,13 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-014-reach-the-main-content-from-the-header]] Reach the main content from the header (story, Must, draft)
 - [[FR-015-read-the-formalities-in-the-footer]] Read the formalities in the footer (story, Should, draft)
 - [[FR-016-see-whether-the-page-is-still-connected]] See whether the page is still connected (story, Should, draft)
+- [[FR-017-browse-by-area-and-section]] Browse by area and section (epic, Must, draft)
+- [[FR-018-orientation-on-the-first-page]] Orientation on the first page (feature, Must, draft)
+- [[FR-019-section-at-a-glance]] Section at a glance (feature, Must, draft)
+- [[FR-020-know-where-you-are]] Know where you are (feature, Must, draft)
+- [[FR-021-sort-lists]] Sort lists (feature, Must, draft)
+- [[FR-022-lists-keep-sort-and-filter-in-their-address]] Lists keep sort and filter in their address (feature, Should, draft)
+- [[FR-023-areas-and-sections-follow-the-tailoring]] Areas and sections follow the tailoring (feature, Should, draft)
 
 ## Quality requirements
 
@@ -101,3 +108,5 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-010-header-and-footer-on-every-page]] Header and footer on every page (document)
 - [[SRC-011-grilling-session-on-header-and-footer]] Grilling session on header and footer (interview)
 - [[SRC-012-conversation-on-tailoring-and-the-view]] Conversation on tailoring and the view (interview)
+- [[SRC-013-browse-by-area-and-section]] Browse by area and section (document)
+- [[SRC-014-grilling-session-on-browsing]] Grilling session on browsing (interview)
