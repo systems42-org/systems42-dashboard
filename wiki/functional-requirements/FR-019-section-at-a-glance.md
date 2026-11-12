@@ -5,7 +5,7 @@ title: Section at a glance
 status: draft
 created: 2026-11-12
 updated: 2026-11-12
-sources: ["[[SRC-013-browse-by-area-and-section]]", "[[SRC-014-grilling-session-on-browsing]]"]
+sources: ["[[SRC-013-browse-by-area-and-section]]", "[[SRC-014-grilling-session-on-browsing]]", "[[SRC-015-see-what-is-still-open]]", "[[SRC-016-grilling-session-on-open-issues]]"]
 related: ["[[FR-018-orientation-on-the-first-page]]"]
 tags: ["functional-requirement", "navigation"]
 stereotype: feature
@@ -29,11 +29,12 @@ Each section shows:
 
 - **Count.** How many pages it has, shown prominently.
 - **Maturity.** A small bar showing how its pages split by status (draft, review, accepted).
+- **Open issues.** How many open issues point at its pages. The number opens the issue list, showing only those issues ([[FR-024-see-what-is-still-open]]).
 - **Click.** A click opens the section's list.
 
 Nothing more. The section stays quick to scan.
 
-**Success metric(s).** On a test wiki, each section shows its page count, and the parts of its bar match the status split of its pages. A click opens its list.
+**Success metric(s).** On a test wiki, each section shows its page count, and the parts of its bar match the status split of its pages. Its open issue count matches the open issues that point at its pages, and opens exactly those. A click opens its list.
 
 **Scope.** in: every section of every area · out: page names on the section.
 
@@ -47,4 +48,4 @@ Nothing more. The section stays quick to scan.
 
 ## History
 
-> Shaped in Q4 of [[SRC-014-grilling-session-on-browsing]]. Gernot Starke chose count and bar only, without page names.
+> Shaped in Q4 of [[SRC-014-grilling-session-on-browsing]]. Gernot Starke chose count and bar only, without page names. On 2026-11-12 he added the open issue count, during the capture of "See what is still open".

@@ -76,6 +76,11 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-021-sort-lists]] Sort lists (feature, Must, draft)
 - [[FR-022-lists-keep-sort-and-filter-in-their-address]] Lists keep sort and filter in their address (feature, Should, draft)
 - [[FR-023-areas-and-sections-follow-the-tailoring]] Areas and sections follow the tailoring (feature, Should, draft)
+- [[FR-024-see-what-is-still-open]] See what is still open (epic, Must, draft)
+- [[FR-025-issue-list-with-filters]] Issue list with filters (feature, Must, draft)
+- [[FR-026-issues-carry-a-category]] Issues carry a category (feature, Should, draft)
+- [[FR-027-issues-on-the-page-they-affect]] Issues on the page they affect (feature, Must, draft)
+- [[FR-028-who-answers-an-issue]] Who answers an issue (feature, Should, draft)
 
 ## Quality requirements
 
@@ -110,3 +115,5 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-012-conversation-on-tailoring-and-the-view]] Conversation on tailoring and the view (interview)
 - [[SRC-013-browse-by-area-and-section]] Browse by area and section (document)
 - [[SRC-014-grilling-session-on-browsing]] Grilling session on browsing (interview)
+- [[SRC-015-see-what-is-still-open]] See what is still open (document)
+- [[SRC-016-grilling-session-on-open-issues]] Grilling session on open issues (interview)

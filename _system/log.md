@@ -140,3 +140,14 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
   - Q6: sorting is Must and works on several columns, with useful sort orders per type from the metamodel. The three areas always exist, only sections inside them can be left out. Four Must, two Should.
 - Created: [[FR-017-browse-by-area-and-section]] (epic), FR-018 to FR-023 (features), SRC-013, SRC-014. Updated: `_system/index.md`.
 - Parked: sort orders per type in the metamodel (schema change, PR) on FR-021. The tailoring format, a follow-up of DR-002, on FR-023. DR-002 came in through PR #10, merged before this commit.
+
+## [2026-11-12] capture | See what is still open
+- Source: `raw/fr-09-open-issues-overall-and-per-section.md`, rewritten as needs on 2026-11-12 at Gernot Starke's request (no "Today" section, categories added, "by when" dropped), now [[SRC-015-see-what-is-still-open]] in `raw/ingested/`. The answers are [[SRC-016-grilling-session-on-open-issues]].
+- Grill gate: checked against GOAL-006, FR-001, FR-018, FR-019, FR-021, FR-022 and CON-002. Sort, search and read only were already covered and are linked, not repeated. Gernot Starke answered Q1 to Q4 one at a time, so no Issue was needed.
+- Decisions:
+  - Q1: one epic with four features. FR-019 amended: each section shows its open issue count, which opens the issue list for that section.
+  - Q2: one category per issue from a fixed list (requirements, architecture, shared content, content, orga, systems42). Category is not kind, so a risk stays a kind.
+  - Q3: an `owner:` field, "nobody yet" when empty and filterable. No due dates.
+  - Q4: three Must, two Should. The issue list's own filters go into its address. FR-022 stays limited to the status filter.
+- Created: [[FR-024-see-what-is-still-open]] (epic), FR-025 to FR-028 (features), SRC-015, SRC-016. Updated: [[FR-019-section-at-a-glance]], `_system/index.md`.
+- Parked: `category:` and `owner:` on the issue template and in the metamodel (schema change, one PR with a CHANGELOG entry), noted on FR-026 and FR-028.
