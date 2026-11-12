@@ -151,3 +151,7 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
   - Q4: three Must, two Should. The issue list's own filters go into its address. FR-022 stays limited to the status filter.
 - Created: [[FR-024-see-what-is-still-open]] (epic), FR-025 to FR-028 (features), SRC-015, SRC-016. Updated: [[FR-019-section-at-a-glance]], `_system/index.md`.
 - Parked: `category:` and `owner:` on the issue template and in the metamodel (schema change, one PR with a CHANGELOG entry), noted on FR-026 and FR-028.
+
+## [2026-11-12] update | Issue category and owner
+- PR #11 added `category:` and `owner:` to the issue template and the metamodel (FR-026, FR-028). Gernot Starke asked for it to be opened and merged.
+- Updated: open points of [[FR-026-issues-carry-a-category]] and [[FR-028-who-answers-an-issue]] closed. [[ISS-001-who-holds-the-keys-in-parallel-work]] category requirements, owner nobody yet. [[ISS-002-define-the-clarify-loop]] category systems42, owner Gernot Starke and team, as he said they take over the clarify loop.

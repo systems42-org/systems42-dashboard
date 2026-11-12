@@ -40,7 +40,7 @@ As a [[STK-001-product-owners|product owner]] I want **to see who is expected to
 - **Children:** none.
 
 > [!note] Open points
-> The `owner:` field goes into the issue template and the metamodel in the same PR as `category:` ([[FR-026-issues-carry-a-category]]).
+> None. The `owner:` field is in the issue template and the metamodel since PR #11, together with `category:` ([[FR-026-issues-carry-a-category]]).
 
 ## History
 

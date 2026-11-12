@@ -4,13 +4,15 @@ type: issue
 title: Who holds the keys when two people work in parallel
 status: open
 created: 2026-11-10
-updated: 2026-11-10
+updated: 2026-11-12
 sources: ["[[SRC-002-grilling-session-on-stakeholders]]"]
 related: ["[[STK-023-keyholder]]", "[[STK-007-workshop-facilitators]]", "[[STK-010-people-who-run-the-dashboard]]"]
 tags: [issue]
 severity: minor
 kind: question
+category: requirements
 raised-by: Gernot Starke
+owner:
 resolved: null
 ---
 

@@ -44,7 +44,7 @@ As a [[STK-001-product-owners|product owner]] I want **every issue to show which
 - **Children:** none.
 
 > [!note] Open points
-> The issue template and the metamodel get a `category:` field with the list above. That is a schema change. It needs its own PR and a CHANGELOG entry, together with `owner:` ([[FR-028-who-answers-an-issue]]).
+> None. The `category:` field is in the issue template and the metamodel since PR #11, together with `owner:` ([[FR-028-who-answers-an-issue]]).
 
 ## History
 
