@@ -39,7 +39,7 @@ them in English throughout, per its ubiquitous-language decision.
 | 03 | Scope | `wiki/context/` (boundary, in/out-of-scope) + `wiki/external-interfaces/` (neighbours) |
 | 04 | Functional Requirements (DE: Funktionale Anforderungen; called "Product Backlog" until the 2026 edition) | `wiki/functional-requirements/` — one type, `stereotype: epic\|feature\|story`; **Epic → Feature → Story** via `parent:` links, projected as a [[story-mapping\|story map]]; [[user-story-format]], [[acceptance-criteria]], [[INVEST]], [[MoSCoW]]. Plus `wiki/use-cases/` — use cases are functional requirements too, a parallel form with their own `goal:` list (DR-011) |
 | 05 | Supporting Models | `wiki/activity-models/`, `wiki/data-models/` |
-| 06 | Quality Requirements | `wiki/quality-requirements/` (ISO 25010 + [[Q42]] quality scenarios) |
+| 06 | Quality Requirements | `wiki/quality-requirements/` ([[Q42]] dimensions + quality scenarios) |
 | 07 | Constraints | `wiki/constraints/` (arc42 categories) |
 | 08 | Domain Terminology | `wiki/glossary/` (ubiquitous language) |
 | 09 | Assets | *out of scope* — project resourcing |

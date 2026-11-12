@@ -12,6 +12,15 @@ Unreleased changes sit at the top until the next Starter Kit release.
 
 ## [Unreleased]
 
+### Changed
+- Quality requirements are classified by Q42 dimensions (DR-003): the
+  template and the metamodel replace the single ISO 25010 `attribute:` with
+  `dimensions:`, a list of one or more of reliable, flexible, maintainable,
+  efficient, usable, safe, secure, suitable, operable. The dashboard's quality
+  list shows one badge per dimension. The Q42 and req42 anchors, `AGENTS.md`
+  and `docs/req42/README.md` follow. Projects with `attribute:` move it to
+  `dimensions:` when they sync the method.
+
 ### Added
 - Issue fields `category:` (requirements, architecture, shared-content,
   content, orga, systems42; exactly one) and `owner:` (who is expected to
