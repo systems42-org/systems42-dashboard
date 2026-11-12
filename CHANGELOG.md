@@ -13,6 +13,11 @@ Unreleased changes sit at the top until the next Starter Kit release.
 ## [Unreleased]
 
 ### Added
+- Issue fields `category:` (requirements, architecture, shared-content,
+  content, orga, systems42; exactly one) and `owner:` (who is expected to
+  answer; empty means nobody yet), in the issue template and the metamodel,
+  with the new relation `owner`. No due date field. Asked for by FR-026 and
+  FR-028.
 - Writing style guide: `_system/writing-style.md` is binding for every text in
   the repository. `AGENTS.md` points to it, `CLAUDE.md` imports it, and
   `new-project.sh` ships it. The page size of about 300 words is a suggestion,
