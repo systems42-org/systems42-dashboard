@@ -15,7 +15,7 @@ naming: "the open question in one line"
 fields:
   - {name: severity, kind: enum, values: [blocker, major, minor]}
   - {name: kind, kind: enum, values: [question, contradiction, gap, ambiguity, risk]}
-  - {name: category, kind: enum, values: [requirements, architecture, shared-content, content, orga, systems42], doc: "which part of the work it touches; exactly one"}
+  - {name: category, kind: enum, values: [requirements, architecture, commons, content, orga, systems42], doc: "which part of the work it touches; exactly one"}
   - {name: raised-by, kind: link, relation: raised-by, doc: "`agent` or a stakeholder link"}
   - {name: owner, kind: link, relation: owner, doc: "who is expected to answer: a name or a stakeholder link; empty means nobody yet"}
   - {name: resolved, kind: date, doc: "when status became resolved / wontfix"}

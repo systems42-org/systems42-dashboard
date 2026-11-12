@@ -3,7 +3,7 @@
 {% from "_provenance.html" import provenance_chips %}
 {% from "_trace.html" import trace_panel %}
 {% block title %}{{ id }} · {{ title }}{% endblock %}
-{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>/</span> {% endif %}<a href="{{ crumb_href }}">{{ crumb }}</a> <span>/</span> {{ id }}</nav>{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}{% if crumb %}<a href="{{ crumb_href }}">{{ crumb }}</a> <span>›</span> {% endif %}{{ id }}</nav>{% endblock %}
 {% block content %}
 <div class="detail-head">
   <span class="badge kind-badge">{{ kind }}</span>

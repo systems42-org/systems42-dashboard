@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Functional Requirements{% endblock %}
-{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>/</span> {% endif %}Functional Requirements</nav>{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}Functional Requirements</nav>{% endblock %}
 {% from "_empty.html" import empty_state %}
 {% from "_macros.html" import plural %}
 {% block content %}

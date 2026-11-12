@@ -70,7 +70,7 @@ tags: [{type}]
 """
 
 ORDER = ["area-tile-requirements", "valley", "area-tile-architecture", "area-tile-commons"]
-NAV = ["Requirements", "Architecture", "Glossary", "Decisions", "Issues"]
+NAV = ["Requirements", "Architecture", "Domain Terms", "Decisions", "Issues"]
 
 
 def _home():

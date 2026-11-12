@@ -7,8 +7,8 @@
   {% set inner %}
     <div class="tile-head">
       <span class="tile-eyebrow{% for c in t.colors %} eyebrow-{{ c }}{% endfor %}">{{ t.eyebrow }}</span>
-      <h2 class="tile-title">{% if t.href and t.links %}<a class="tile-stretch" href="{{ t.href }}">{{ t.label }}</a>{% else %}{{ t.label }}{% endif %}</h2>
-      {% if t.open_issues %}<span class="tile-flag" title="Open issues that point at pages of this type">{{ t.open_issues }} open {{ noun(t.open_issues, 'issue') }}</span>{% endif %}
+      <h2 class="tile-title">{% if t.href and (t.links or t.open_issues) %}<a class="tile-stretch" href="{{ t.href }}">{{ t.label }}</a>{% else %}{{ t.label }}{% endif %}</h2>
+      {% if t.open_issues %}<a class="tile-flag tile-flag-link" href="{{ t.open_issues_href }}" title="Show the open issues that point at pages of this section">{{ t.open_issues }} open {{ noun(t.open_issues, 'issue') }}</a>{% endif %}
     </div>
     {% if t.scope == 'out' %}
     <p class="tile-note">{{ t.note }}</p>
@@ -77,10 +77,10 @@
     <div class="tile-ctas">{% for l in t.links %}<a class="tile-cta" href="{{ l.href }}">{{ l.label }} →</a>{% endfor %}</div>
     {% elif t.href %}<span class="tile-cta">View details →</span>{% endif %}
   {% endset %}
-  {% if t.href and not t.links %}
+  {% if t.href and not t.links and not t.open_issues %}
     <a id="tile-{{ t.key }}" class="tile tile-link tile-{{ t.key }}{% if t.scope != 'in' %} is-out{% endif %}{% if t.span == 2 %} tile-span-2{% endif %}" href="{{ t.href }}">{{ inner }}</a>
   {% else %}
-    {# multiple CTAs (glossary) → no whole-tile anchor, an <a> may not nest inside
+    {# multiple CTAs (glossary) or an open-issue link → no whole-tile anchor, an <a> may not nest inside
        another one. With an href the title's .tile-stretch link covers the tile
        instead, so it clicks like every other; the CTAs sit above that link. #}
     <div id="tile-{{ t.key }}" class="tile{% if t.href %} tile-link{% endif %} tile-{{ t.key }}{% if t.scope != 'in' %} is-out{% endif %}{% if t.span == 2 %} tile-span-2{% endif %}">{{ inner }}</div>

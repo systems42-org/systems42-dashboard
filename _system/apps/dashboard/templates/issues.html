@@ -1,12 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Issues{% endblock %}
-{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>/</span> {% endif %}Issues</nav>{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}Issues</nav>{% endblock %}
 {% from "_empty.html" import empty_state %}
 {% from "_maturity.html" import maturity_bar %}
 {% block content %}
 <h1 class="page-h1">Issues <span class="count-pill">{{ total }}</span></h1>
 {{ maturity_bar(maturity) }}
 <p class="lead">Open questions, contradictions, and gaps — cutting across every content type.</p>
+{% if section %}<p class="filter-note">Showing the open issues that point at pages of <strong>{{ section.title }}</strong>. <a href="/issues">Show all issues →</a></p>{% endif %}
 
 {% if items %}
 <div class="filterbar" role="tablist">

@@ -62,7 +62,6 @@
   {% if areas.requirements %}{{ area_tile(areas.requirements) }}{% endif %}
   <div class="valley">
     <p class="vault-status">
-      <span><strong>{{ valley.status.pages }}</strong> {{ noun(valley.status.pages, 'page') }}</span>
       <span><strong>{{ valley.status.open_issues }}</strong> open {{ noun(valley.status.open_issues, 'issue') }}</span>
       <span><strong>{{ valley.status.sources }}</strong> {{ noun(valley.status.sources, 'source') }} ingested</span>
       <span>last change <strong>{{ valley.status.last_change }}</strong></span>
@@ -75,6 +74,7 @@
         <li><a class="ml-hit" href="{{ r.url }}"><code class="ml-id">{{ r.id }}</code> <span class="ml-title">{{ r.title }}</span> <span class="ml-when">{{ r.when }}</span></a></li>
         {% endfor %}
       </ul>
+      <a class="tile-cta" href="/changes">All changes →</a>
       {% else %}{{ empty_state("pages") }}{% endif %}
     </div>
     <div class="valley-block">

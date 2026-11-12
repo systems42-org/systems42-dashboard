@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% from "_empty.html" import empty_state %}
+{% block title %}Changes{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> Changes</nav>{% endblock %}
+{% block content %}
+<h1 class="page-h1">Changes <span class="count-pill">{{ changes | length }}</span></h1>
+<p class="lead">Every page of the wiki, the most recently changed first.</p>
+{% if changes %}
+<ul class="mini-list changes-list">
+  {% for r in changes %}
+  <li><a class="ml-hit" href="{{ r.url }}"><code class="ml-id">{{ r.id }}</code> <span class="ml-title">{{ r.title }}</span> <span class="ml-count">{{ r.kind }}</span> <span class="ml-when">{{ r.when }}</span></a></li>
+  {% endfor %}
+</ul>
+{% else %}{{ empty_state("pages") }}{% endif %}
+{% endblock %}

@@ -3,7 +3,7 @@
 {% from "_macros.html" import plural %}
 {% from "_trace.html" import trace_panel %}
 {% block title %}{{ fr.id }} · {{ fr.title }}{% endblock %}
-{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>/</span> {% endif %}<a href="/req42/functional-requirements">Functional Requirements</a>{% for a in ancestors %} <span>/</span> <a href="{{ a.url }}">{{ a.id }}</a>{% endfor %} <span>/</span> {{ fr.id }}</nav>{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}<a href="/req42/functional-requirements">Functional Requirements</a>{% for a in ancestors %} <span>›</span> <a href="{{ a.url }}">{{ a.id }}</a>{% endfor %} <span>›</span> {{ fr.id }}</nav>{% endblock %}
 {% block content %}
 
 <div class="detail-head">

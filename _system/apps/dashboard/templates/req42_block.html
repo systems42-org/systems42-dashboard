@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_context_flows.html" import context_flow_table %}
 {% block title %}{{ block.title }} · req42{% endblock %}
-{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>/</span> {% endif %}{{ block.id }} {{ block.title }}</nav>{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}{{ block.title }}</nav>{% endblock %}
 {% from "_maturity.html" import maturity_bar %}
 {% from "_macros.html" import status_rank %}
 {% block content %}

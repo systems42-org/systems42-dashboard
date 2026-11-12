@@ -1336,3 +1336,9 @@ html.etsu-disconnected {
 .mm-dot-bb { border-color: var(--layer-bb-ink); }
 .mm-dot-cc { border-color: var(--layer-cc-ink); } .mm-dot-rs { border-color: var(--layer-rs-ink); }
 .mm-dot-dn { border-color: var(--layer-dn-ink); }
+
+/* FR-019: the open-issue count on a section tile links to those issues; it
+   sits above the tile's stretched title link, like the tile CTAs. */
+.tile-flag-link { position: relative; z-index: 1; text-decoration: none; }
+.tile-flag-link:hover { text-decoration: underline; }
+.filter-note { margin: var(--space-2) 0 var(--space-3); }
