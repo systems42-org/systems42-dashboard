@@ -80,6 +80,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 ## Decisions
 
 - [[DR-001-english-brief-plain-writing]] Write all documentation in brief, plain English (accepted)
+- [[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]] Tailoring belongs to Systems42, the view belongs to the dashboard (accepted)
 
 ## Issues
 
@@ -99,3 +100,4 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-009-guided-path-through-the-wiki]] Guided path through the wiki (document)
 - [[SRC-010-header-and-footer-on-every-page]] Header and footer on every page (document)
 - [[SRC-011-grilling-session-on-header-and-footer]] Grilling session on header and footer (interview)
+- [[SRC-012-conversation-on-tailoring-and-the-view]] Conversation on tailoring and the view (interview)
