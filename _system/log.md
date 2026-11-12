@@ -155,3 +155,15 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 ## [2026-11-12] update | Issue category and owner
 - PR #11 added `category:` and `owner:` to the issue template and the metamodel (FR-026, FR-028). Gernot Starke asked for it to be opened and merged.
 - Updated: open points of [[FR-026-issues-carry-a-category]] and [[FR-028-who-answers-an-issue]] closed. [[ISS-001-who-holds-the-keys-in-parallel-work]] category requirements, owner nobody yet. [[ISS-002-define-the-clarify-loop]] category systems42, owner Gernot Starke and team, as he said they take over the clarify loop.
+
+## [2026-11-12] capture | Usable on phone and tablet
+- Source: `raw/qr-01-usable-on-phone-and-tablet.md`, raised by Gernot Starke and drafted by Claude, now [[SRC-017-usable-on-phone-and-tablet]] in `raw/ingested/`. The answers are [[SRC-018-grilling-session-on-phone-and-tablet]]. The first quality requirement of the wiki.
+- Grill gate: checked against the QR template, the Q42 anchor, GOAL-003 and GOAL-007. No overlap or conflict. Gernot Starke answered Q1 to Q5 one at a time, so no Issue was needed.
+- Decisions:
+  - Q1: quality requirements are classified by Q42 dimensions (`dimensions:`, one or more), not by one ISO 25010 attribute. This one is usable and flexible.
+  - Q2: recorded as [[DR-003-quality-requirements-are-classified-by-q42-dimensions]]. Main reason: Q42 allows several dimensions, ISO 25010 forces a strict hierarchy and a single attribute.
+  - Q3: narrowest width 320 CSS pixels, after WCAG 1.4.10 Reflow.
+  - Q4: diagrams are best effort on phone and tablet. Every diagram node is also reachable as a text link.
+  - Q5: Should, testable.
+- Created: [[QR-001-usable-on-phone-and-tablet]], SRC-017, SRC-018. Updated: `_system/index.md`.
+- Parked: the schema change (template, metamodel, Q42 anchor, AGENTS.md, dashboard) and DR-003 go by PR. Until it is merged, the `dimensions:` field is not in the template and the DR-003 links do not resolve.

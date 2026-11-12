@@ -84,6 +84,8 @@ every capture (`_system/workflows/capture.md`, step 7).
 
 ## Quality requirements
 
+- [[QR-001-usable-on-phone-and-tablet]] Usable on phone and tablet (usable, flexible, should, draft)
+
 ## Constraints
 
 - [[CON-001-proof-of-concept-not-production-ready]] The dashboard is a proof of concept, not production-ready for every environment (draft)
@@ -117,3 +119,5 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-014-grilling-session-on-browsing]] Grilling session on browsing (interview)
 - [[SRC-015-see-what-is-still-open]] See what is still open (document)
 - [[SRC-016-grilling-session-on-open-issues]] Grilling session on open issues (interview)
+- [[SRC-017-usable-on-phone-and-tablet]] Usable on phone and tablet (document)
+- [[SRC-018-grilling-session-on-phone-and-tablet]] Grilling session on phone and tablet (interview)
