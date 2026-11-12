@@ -27,7 +27,7 @@ As a [[STK-011-people-who-set-up-a-project-wiki]] **person setting up a project 
 
 In Systems42 the metamodel is configurable. A project adapts it to its needs ([[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]]).
 
-- The three areas (requirements, architecture, shared content) always exist.
+- The three areas (Requirements, Architecture, Commons) always exist.
 - A project may leave out sections inside an area.
 - A left-out section appears nowhere: not on the first page, in the header, in counts, lists or the guided path ([[FR-012-guided-path-through-the-wiki]]).
 - An address that points to a left-out section shows "This part is not used in this project" instead of an error.

@@ -172,3 +172,7 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Gernot Starke chose Q42 dimensions over one ISO 25010 attribute while capturing [[QR-001-usable-on-phone-and-tablet]]: Q42 allows several dimensions on one requirement, ISO 25010 forces a strict hierarchy and a single attribute.
 - Created: [[DR-003-quality-requirements-are-classified-by-q42-dimensions]]. Updated: QR template and metamodel (`attribute:` → `dimensions:`), Q42 and req42 anchors, `AGENTS.md`, `docs/req42/README.md`, the dashboard's quality list and its test, `CHANGELOG.md`, `_system/index.md`.
 - Delivered by PR, because the record is accepted and the schema changes.
+
+## [2026-11-12] update | Area name Commons, section names
+- Gernot Starke chose "Commons" for the third area, the dashboard's name, over "shared content". C5 is "Domain Terms" everywhere, because Systems42 will likely join data-model terms and glossary into a metaclass "domain term". C6 stays "Issues".
+- Updated: [[FR-017-browse-by-area-and-section]], [[FR-018-orientation-on-the-first-page]], [[FR-023-areas-and-sections-follow-the-tailoring]], [[FR-026-issues-carry-a-category]]. The category value `shared-content` becomes `commons`, and DR-002's wording follows, in PR #13 with the dashboard quick wins.

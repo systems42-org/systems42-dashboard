@@ -25,7 +25,7 @@ As a [[STK-015-newcomers|newcomer]] who doesn't know the right word I want **to 
 
 **PROBLEM / GOAL**
 
-Browsing is the second way in, next to search ([[FR-001-search-the-wiki]]). A reader starts on the first page, picks an area (requirements, architecture, shared content), then a section, then a page.
+Browsing is the second way in, next to search ([[FR-001-search-the-wiki]]). A reader starts on the first page, picks an area (Requirements, Architecture, Commons), then a section, then a page.
 
 One rule holds for every feature below: **a section carries the same name wherever it appears**, so the reader recognises the page a link leads to.
 

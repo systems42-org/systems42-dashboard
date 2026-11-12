@@ -29,7 +29,7 @@ The first page shows, from top to bottom:
 
 1. **What this is.** The system's name and its vision in one sentence ([[GOAL-001-trusted-answers]]).
 2. **Start the guided path.** One link for newcomers ([[FR-012-guided-path-through-the-wiki]]).
-3. **The areas.** Requirements, architecture and shared content, each with its sections and their page counts ([[FR-019-section-at-a-glance]]).
+3. **The areas.** Requirements, Architecture and Commons, each with its sections and their page counts ([[FR-019-section-at-a-glance]]).
 4. **The center tile**, in the middle of the areas:
    - the last 3 to 4 changes to the wiki, with a link to the **changes page**, which lists all changes to the wiki (not the dashboard's own `CHANGELOG.md`);
    - the open questions: how many issues are open, and the most important ones by name.

@@ -27,7 +27,7 @@ As a [[STK-001-product-owners|product owner]] I want **every issue to show which
 
 - Every issue has exactly one category. If it touches two, its author picks the one where it has to be answered.
 - The categories are a fixed list:
-  - **requirements**, **architecture**, **shared content**: the three areas ([[FR-017-browse-by-area-and-section]]).
+  - **requirements**, **architecture**, **commons**: the three areas ([[FR-017-browse-by-area-and-section]]).
   - **content**: housekeeping of the wiki itself, such as broken links, duplicates or stale pages.
   - **orga**: who decides, budget, schedule.
   - **systems42**: Systems42 itself, such as its metamodel, templates or loops.
@@ -48,4 +48,4 @@ As a [[STK-001-product-owners|product owner]] I want **every issue to show which
 
 ## History
 
-> Gernot Starke named the categories requirements, architecture, commons, content and orga, and added systems42 ([[SRC-015-see-what-is-still-open]]). "Commons" is written "shared content", the name of the area. One category per issue, Should, in Q2 and Q4 of [[SRC-016-grilling-session-on-open-issues]].
+> Gernot Starke named the categories requirements, architecture, commons, content and orga, and added systems42 ([[SRC-015-see-what-is-still-open]]). "Commons" is the name of the area, kept by Gernot Starke on 2026-11-12. One category per issue, Should, in Q2 and Q4 of [[SRC-016-grilling-session-on-open-issues]].
