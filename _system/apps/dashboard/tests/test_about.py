@@ -98,9 +98,11 @@ def test_symlinks_out_of_docs_are_refused():
 def test_about_page_carries_no_brand_animation():
     """/about shows the project's own page as written; the intro animation, if
     a brand ships one, belongs to the home page only (brands/README.md)."""
-    configure("about: docs/brand/README.md\n")
-    about = client.get("/about").get_data(as_text=True)
-    assert "intro.js" not in about and "<template" not in about
+    for brand, marker in (("systems42", 'id="brand-intro"'), ("atrium", 'id="atrium-splash"')):
+        configure(f"about: docs/brand/README.md\nbrand: {brand}\n")
+        assert marker in client.get("/").get_data(as_text=True), brand   # the marker is real
+        about = client.get("/about").get_data(as_text=True)
+        assert marker not in about, brand
 
 
 if __name__ == "__main__":
