@@ -260,19 +260,22 @@ def inject_area():
 # Nav entries tagged with the area or section each one opens, so a hidden one
 # leaves the nav. Order is the nav order. The header carries content only:
 # the two peaks, then the three Commons sections a reader looks up by name.
-_NAV_ENTRIES = [("requirements", "/req42", "Requirements"), ("architecture", "/arc42", "Architecture"),
-                ("C5", "/glossary", "Glossary"), ("C7", "/decisions", "Decisions"),
-                ("C6", "/issues", "Issues")]
+# Labels come from the catalog, so a section has one name everywhere (FR-017).
+_NAV_ENTRIES = [(a, catalog.AREA_BY_KEY[a]["href"], catalog.AREA_BY_KEY[a]["label"])
+                for a in ("requirements", "architecture")] + \
+               [(s, catalog.SECTION_BY_ID[s]["href"], catalog.SECTION_BY_ID[s]["title"])
+                for s in ("C5", "C7", "C6")]
 
 
 def _nav_current(key: str, href: str, path: str, area: dict | None) -> bool:
     """An area entry is current on every page of that area, except on the
     pages of a section that has its own entry. A section entry is current on
-    its own routes."""
+    every page of that section, its wiki pages included (FR-014)."""
+    here = catalog.section_for_path(path)
     if key in catalog.AREA_BY_KEY:
-        own = any(path.startswith(h) for k, h, _ in _NAV_ENTRIES if k not in catalog.AREA_BY_KEY)
+        own = bool(here) and any(k == here["id"] and not is_hidden(k) for k, _, _ in _NAV_ENTRIES)
         return bool(area and area["key"] == key and not own)
-    return path.startswith(href)
+    return bool(here and here["id"] == key) or path.startswith(href)
 
 
 @app.context_processor
@@ -447,7 +450,7 @@ def _relative_when(ts: float, now: float | None = None) -> str:
     return datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
 
 
-def recent_changes(n: int = 5) -> list[dict]:
+def recent_changes(n: int | None = 5) -> list[dict]:
     """The n most recently modified wiki pages (file mtime — the cheapest
     'what changed' there is; the vault is regenerated a few times per
     workshop, nobody watches it live)."""
@@ -2455,6 +2458,7 @@ def build_section_tile(section: dict) -> dict:
     # union, not sum: an issue linking pages in two of this section's folders
     # must count once, not twice.
     t["open_issues"] = 0 if sid == "C6" else len(set().union(*(flags.get(f, set()) for f in section["folders"])))
+    t["open_issues_href"] = f"/issues?section={sid}"
     return t
 
 
@@ -2486,7 +2490,7 @@ def build_valley() -> dict:
     cfg = dashboard_config()
     return {
         "status": vault_status(),
-        "changes": recent_changes(5),
+        "changes": recent_changes(4),
         "open_issues": [{"id": i.id, "title": i.title, "stem": i.stem,
                          "url": _page_url("issues", i.stem),
                          "severity": str(i.meta.get("severity") or "")} for i in open_issues[:5]],
@@ -2504,6 +2508,20 @@ def index():
     join_url = public_url()
     return render_template("index.html", areas=areas, valley=build_valley(),
                            join_url=join_url, join_qr=qr_svg(join_url))
+
+
+@app.errorhandler(404)
+def not_found(_err):
+    """A missing page keeps the header and footer, so the reader can go on
+    from here (FR-013)."""
+    return render_template("not_found.html"), 404
+
+
+@app.route("/changes")
+def changes_view():
+    """Every wiki page, most recently changed first. The first page shows the
+    last few and links here (FR-018)."""
+    return render_template("changes.html", changes=recent_changes(None))
 
 
 @app.route("/glossary")
@@ -2553,6 +2571,15 @@ def glossary_graph_view():
 def issues_view():
     titles = title_index()
     pages = sorted(load_folder("issues"), key=lambda x: x.id)
+    # ?section=<ID>: only the open issues that point at that section's pages,
+    # the ones its tile counts (FR-019). An unknown section shows every issue.
+    section = catalog.SECTION_BY_ID.get(request.args.get("section", ""))
+    if section and section["folders"] and section["id"] != "C6":
+        flags = open_issue_counts()
+        wanted = set().union(*(flags.get(f, set()) for f in section["folders"]))
+        pages = [p for p in pages if p.id in wanted]
+    else:
+        section = None
     items = []
     for p in pages:
         items.append({
@@ -2567,7 +2594,7 @@ def issues_view():
         })
     open_count = sum(1 for i in items if i["is_open"])
     return render_template(
-        "issues.html", items=items, total=len(items),
+        "issues.html", items=items, total=len(items), section=section,
         open_count=open_count, closed_count=len(items) - open_count,
         maturity=maturity(p.status for p in pages),
     )
@@ -2677,7 +2704,7 @@ def page_detail(folder, stem):
         "detail.html", kind=kind, id=page.id, title=page.title,
         status=page.status, created=str(page.meta.get("created", "")),
         updated=str(page.meta.get("updated", "")), tags=page.meta.get("tags") or [],
-        body_html=body_html, crumb="Search", crumb_href="/search",
+        body_html=body_html, **_section_crumb(folder),
         context_diagram=context_diagram, context_flows=context_flows,
         relations=build_relations_panel(stem, exclude=trace_stems(trace)),
         trace=trace, whitebox=whitebox,
@@ -2689,12 +2716,20 @@ def page_detail(folder, stem):
     )
 
 
+def _section_crumb(folder: str) -> dict:
+    """The section level of a wiki page's path (FR-020): where the page
+    belongs, not how the reader got there. A folder outside the sections
+    gives no section level, so the path reads Home › page."""
+    sec = catalog.section_for_folder(folder)
+    return {"crumb": sec["title"], "crumb_href": catalog.section_href(sec)} if sec else {"crumb": None, "crumb_href": None}
+
+
 @app.route("/source/<stem>")
 def source_detail(stem):
     """Detail page for one raw/sources/ provenance record: what it is, where it
     came from, and which wiki pages it fed (`ingested-pages:`). Reached from a
     provenance chip on any sourced page; no standalone sources list exists yet,
-    so its breadcrumb goes straight back to the home page."""
+    so its path is Home › source (FR-020)."""
     src = source_index().get(stem)
     if not src:
         abort(404)
@@ -2715,7 +2750,7 @@ def source_detail(stem):
     body_html = f'<dl class="source-facts">{facts_html}<dt>Ingested pages</dt><dd>{ingested}</dd></dl>' + render_markdown(body, titles)
     return render_template("detail.html", kind="Source", id=src.id, title=src.title, status=src.status,
                            created=str(src.meta.get("created", "")), updated=str(src.meta.get("updated", "")),
-                           tags=src.meta.get("tags") or [], body_html=body_html, crumb="Sources", crumb_href="/",
+                           tags=src.meta.get("tags") or [], body_html=body_html, crumb=None, crumb_href=None,
                            context_diagram=None, context_flows=None,
                            relations=None, ego_graph=None, ego_layers=None,
                            needs_mermaid=False, sources=None)

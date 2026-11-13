@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Term network{% endblock %}
-{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>/</span> {% endif %}<a href="/glossary">Glossary</a> <span>/</span> Term network</nav>{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}<a href="/glossary">Domain Terms</a> <span>›</span> Term network</nav>{% endblock %}
 {% from "_empty.html" import empty_state %}
 {% block content %}
 <h1 class="page-h1">Term network <span class="count-pill">{{ n_glo }} terms</span></h1>

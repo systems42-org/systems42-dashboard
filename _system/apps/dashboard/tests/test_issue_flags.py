@@ -144,13 +144,13 @@ def test_open_issue_counts_by_folder():
 def test_tile_flag_and_plural():
     body = app.app.test_client().get("/commons").get_data(as_text=True)
     g = body[body.index("tile-c5"):body.index("tile-c6")]
-    assert 'class="tile-flag"' in g and "1 open issue<" in g, g
+    assert 'class="tile-flag tile-flag-link" href="/issues?section=C5"' in g and "1 open issue<" in g, g
     s = body[body.index("tile-c4"):body.index("tile-c5")]
     assert "tile-flag" not in s
     # the same open issue shows as the area-level flag on the home Commons tile
     home = app.app.test_client().get("/").get_data(as_text=True)
     com = home[home.index("area-tile-commons"):]
-    assert 'class="tile-flag"' in com and "1 open issue<" in com, com
+    assert 'class="tile-flag' in com and "1 open issue<" in com, com
 
 
 def test_issues_page_preselects_open_filter():

@@ -20,9 +20,25 @@ Unreleased changes sit at the top until the next Starter Kit release.
   list shows one badge per dimension. The Q42 and req42 anchors, `AGENTS.md`
   and `docs/req42/README.md` follow. Projects with `attribute:` move it to
   `dimensions:` when they sync the method.
+- One name per section everywhere (FR-017): the header, breadcrumbs, headings
+  and the section map take their labels from `catalog.py`. C5 is "Domain
+  Terms" (was "Glossary" in the header), C6 is "Issues" (was "Risks &
+  Assumptions" in the catalog, the metamodel and the section map). The third
+  area is "Commons" in the wiki too.
+- Breadcrumbs follow where a page belongs (FR-020): `Home › Area › Section ›
+  Page`, with `›` as separator. Wiki pages no longer show "Search" as their
+  parent. Sources, the metamodel and the changes page read `Home › Page`.
+- The header marks its entry on every page of that section, wiki pages and the
+  term network included (FR-014).
+- The first page's center tile shows the last 4 changes instead of 5, links to
+  the new changes page and no longer counts pages (FR-018).
 
 ### Added
-- Issue fields `category:` (requirements, architecture, shared-content,
+- `/changes`: every wiki page, most recently changed first (FR-018).
+- `/issues?section=<ID>`: only the open issues that point at that section's
+  pages. A section tile's open issue count links there (FR-019).
+- A 404 page with header and footer (FR-013).
+- Issue fields `category:` (requirements, architecture, commons,
   content, orga, systems42; exactly one) and `owner:` (who is expected to
   answer; empty means nobody yet), in the issue template and the metamodel,
   with the new relation `owner`. No due date field. Asked for by FR-026 and

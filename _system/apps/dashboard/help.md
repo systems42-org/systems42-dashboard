@@ -20,7 +20,7 @@ section shared by two areas shows two colours. The thin bar under the top
 row tells you which area you are in.
 
 **Nav and search.** The top row leads to content: Requirements, Architecture,
-Glossary, Decisions and Issues. ⌘K (Ctrl K) jumps to search.
+Domain Terms, Decisions and Issues. ⌘K (Ctrl K) jumps to search.
 
 **Menu (≡).** *Configure* opens the visibility dialog; *Theme* switches
 light/dark for this browser; *Who's here* lists connected clients; *Reload*
@@ -64,7 +64,7 @@ visible.
 
 **Commons** (C1–C7) are the sections both sides depend on: Quality
 Requirements, Constraints, Scope & Context, Stakeholders, Domain Terms,
-Risks & Assumptions and Decisions. Architecture and business decisions share
+Issues and Decisions. Architecture and business decisions share
 one list there, filterable by kind; the diagram still draws architecture
 decisions as A6.
 

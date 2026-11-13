@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Glossary{% endblock %}
-{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>/</span> {% endif %}Glossary</nav>{% endblock %}
+{% block title %}Domain Terms{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}Domain Terms</nav>{% endblock %}
 {% from "_empty.html" import empty_state %}
 {% from "_maturity.html" import maturity_bar %}
 {% from "_macros.html" import status_rank %}
 {% block content %}
-<h1 class="page-h1">Glossary <span class="count-pill">{{ total }} terms</span></h1>
+<h1 class="page-h1">Domain Terms <span class="count-pill">{{ total }} terms</span></h1>
 {{ maturity_bar(maturity) }}
 <p class="lead">Ubiquitous language of {{ system_name }} — one canonical meaning per term.</p>
 

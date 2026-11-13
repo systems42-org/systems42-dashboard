@@ -58,12 +58,14 @@ network at runtime) and rendered inline as SVG so it follows the theme.
 
 Every page carries the same topbar: the vault name (back to the home page;
 omitted on the home page itself, where the hero already shows mark and name),
-a five-entry nav (Requirements · Architecture · Glossary · Decisions · Issues) with the
+a five-entry nav (Requirements · Architecture · Domain Terms · Decisions · Issues) with the
 current entry marked, a search box and the ≡ menu. Pressing <kbd>⌘K</kbd>
 (<kbd>Ctrl K</kbd> elsewhere) anywhere focuses the search box; submitting it
 lands on `/search`, the full-text view. The nav carries content only: the
-two peaks, then Glossary, Decisions and Issues from Commons. Breadcrumbs under the bar read
-`Home › Area › …`, with the area level for pages that belong to an area.
+two peaks, then Domain Terms, Decisions and Issues from Commons. Every label
+comes from `catalog.py`, so a section has one name everywhere (FR-017).
+Breadcrumbs under the bar read `Home › Area › Section › Page`, following
+where a page belongs (FR-020). Pages outside the sections read `Home › Page`.
 
 A 3 px bar under the topbar carries the area colour (green Requirements, blue
 Architecture, red organisation) on pages of an area; home, help and
@@ -128,7 +130,7 @@ wiki folders), `out` (deliberately not captured, an inactive tile) or `planned`
 | **C3** Scope & Context | Commons | external interfaces; system boundary and context diagram | `/req42/scope` |
 | **C4** Stakeholders | Commons | persona count and list; profile, influence, interest | `/stakeholders` |
 | **C5** Domain Terms | Commons | term count and a per-term relation list; term network at `/graph/glossary` | `/glossary` |
-| **C6** Risks & Assumptions | Commons | open issues, most severe first; filterable All / Open / Closed | `/issues` |
+| **C6** Issues | Commons | open issues, most severe first; filterable All / Open / Closed | `/issues` |
 | **C7** Decisions | Commons | decision records (`wiki/decisions/`, MADR); filterable by kind architecture / business / undefined, expands the full text of a row | `/decisions` |
 
 The sections diagram on `/help` still draws A6 Architecture Decisions; the

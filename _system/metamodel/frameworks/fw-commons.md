@@ -10,7 +10,7 @@ blocks:
   - {id: C3, number: "03", title: "Scope & Context", title_de: "Scope und Kontext", types: [context, external-interface], scope: in}
   - {id: C4, number: "02", title: "Stakeholders", title_de: "Stakeholder", types: [stakeholder], scope: in}
   - {id: C5, number: "08", title: "Domain Terms", title_de: "Domänenterminologie", types: [glossary-term], scope: in}
-  - {id: C6, number: "12", title: "Risks & Assumptions", title_de: "Risiken und Annahmen", types: [issue], scope: in, note: "Issues, especially kind: risk, plus [!assumption] markers"}
+  - {id: C6, number: "12", title: "Issues", title_de: "Offene Punkte", types: [issue], scope: in, note: "Issues, especially kind: risk, plus [!assumption] markers"}
   - {id: C7, title: "Decisions", title_de: "Entscheidungen", types: [decision-record], scope: in, note: "decision records of kind architecture, business or undefined; arc42 section 9 is their architecture slice"}
 ---
 

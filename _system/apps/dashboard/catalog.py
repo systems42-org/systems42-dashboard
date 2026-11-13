@@ -73,7 +73,7 @@ SECTIONS: list[dict] = [
      "href": "/stakeholders", "slug": None, "scope": "in", "colors": ["req", "arc"], "note": ""},
     {"id": "C5", "area": "commons", "title": "Domain Terms", "folders": ["glossary"],
      "href": "/glossary", "slug": None, "scope": "in", "colors": ["req"], "note": ""},
-    {"id": "C6", "area": "commons", "title": "Risks & Assumptions", "folders": ["issues"],
+    {"id": "C6", "area": "commons", "title": "Issues", "folders": ["issues"],
      "href": "/issues", "slug": None, "scope": "in", "colors": ["org", "arc"],
      "note": "Issues (especially kind: risk) plus [!assumption] markers."},
     {"id": "C7", "area": "commons", "title": "Decisions", "folders": ["decisions"],
@@ -92,6 +92,35 @@ _EXTRA_PATH_PREFIXES: dict[str, str] = {
     "/data-model": "requirements",                  # R4 projection
     "/graph/glossary": "commons",                   # C5 term network
 }
+
+
+# Routes that are not a section href but still belong to a section.
+_EXTRA_SECTION_PREFIXES: dict[str, str] = {
+    "/functional-requirements/": "R3",
+    "/data-model": "R4",
+    "/graph/glossary": "C5",
+}
+
+
+def section_href(section: dict) -> str:
+    """Where a link to the section goes: its own page, or its tile on the area
+    page when it has none."""
+    return section["href"] or f"{AREA_BY_KEY[section['area']]['href']}#tile-{section['id'].lower()}"
+
+
+def section_for_path(path: str) -> dict | None:
+    """Which section a request path belongs to (FR-014, FR-020). None for
+    area pages and for pages outside the sections."""
+    if path.startswith("/page/"):
+        parts = path.split("/", 3)          # ['', 'page', folder, stem]
+        return section_for_folder(parts[2]) if len(parts) > 2 else None
+    for prefix, sid in _EXTRA_SECTION_PREFIXES.items():
+        if path.startswith(prefix):
+            return SECTION_BY_ID[sid]
+    for s in sorted((s for s in SECTIONS if s["href"]), key=lambda s: -len(s["href"])):
+        if path == s["href"] or path.startswith(s["href"] + "/") or path.startswith(s["href"] + "?"):
+            return s
+    return None
 
 
 def sections_of(area_key: str) -> list[dict]:

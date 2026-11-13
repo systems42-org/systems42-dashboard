@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Vision & goals{% endblock %}
-{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>/</span> {% endif %}Vision & goals</nav>{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}Vision & Goals</nav>{% endblock %}
 {% from "_empty.html" import empty_state %}
 {% block content %}
 
-<h1 class="page-h1">Vision & goals</h1>
+<h1 class="page-h1">Vision & Goals</h1>
 
 {% if diagram %}
 <figure class="goals-diagram">

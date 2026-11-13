@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_maturity.html" import maturity_bar %}
 {% block title %}{{ block.title }} · arc42{% endblock %}
-{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>/</span> {% endif %}{{ block.id }} {{ block.title }}</nav>{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}{{ block.title }}</nav>{% endblock %}
 {% macro row_head(r) %}<a class="wl" href="{{ r.url }}"><code>{{ r.id }}</code> {{ r.title }}</a>{% if r.status %} <span class="status status-{{ r.status }}">{{ r.status }}</span>{% endif %} <span class="state-badge state-{{ r.state }}">{{ r.state }}</span>{% endmacro %}
 {% macro node_tree(nodes) %}<ul class="bb-tree">{% for n in nodes %}<li>{{ row_head(n) }}{% if n.children %}{{ node_tree(n.children) }}{% endif %}</li>{% endfor %}</ul>{% endmacro %}
 {% macro links(groups) %}{% for g in groups %}{% for l in g.links %}<a class="wl" href="{{ l.url }}"><code>{{ l.id }}</code> {{ l.label }}</a>{% endfor %}{% endfor %}{% endmacro %}

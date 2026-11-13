@@ -3,7 +3,7 @@
 {% from "_maturity.html" import maturity_bar, maturity_legend %}
 {% from "_macros.html" import plural %}
 {% block title %}{{ area.label }}{% endblock %}
-{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> {{ area.label }}</nav>{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {{ area.label }}</nav>{% endblock %}
 {% block content %}
 <header class="area-head{% for c in area.colors %} area-head-{{ c }}{% endfor %}">
   <h1 class="page-h1">{{ area.label }}</h1>

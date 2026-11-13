@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Stakeholders{% endblock %}
-{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>/</span> {% endif %}Stakeholders</nav>{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}Stakeholders</nav>{% endblock %}
 {% set lvl = {'high': 'high', 'medium': 'medium', 'low': 'low'} %}
 {% from "_empty.html" import empty_state %}
 {% from "_maturity.html" import maturity_bar %}

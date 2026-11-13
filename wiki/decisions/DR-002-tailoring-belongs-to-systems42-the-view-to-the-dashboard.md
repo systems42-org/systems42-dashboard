@@ -25,7 +25,7 @@ superseded-by: []
 
 ## Context and Problem Statement
 
-In the real Systems42 the metamodel is configurable. A project or product adapts it to its needs and may leave out parts of requirements, architecture or shared content.
+In the real Systems42 the metamodel is configurable. A project or product adapts it to its needs and may leave out parts of requirements, architecture or commons.
 
 The dashboard's Configure dialog hides areas and sections and saves the choice in `_system/dashboard.yaml`, a file inside the wiki's repository. So a choice made for one workshop lands in the project's history and looks like a project decision.
 

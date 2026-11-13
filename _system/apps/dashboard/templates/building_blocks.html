@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_maturity.html" import maturity_bar %}
 {% block title %}{{ block.title }} · arc42{% endblock %}
-{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>/</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>/</span> {% endif %}{{ block.id }} {{ block.title }}</nav>{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}{{ block.title }}</nav>{% endblock %}
 {% macro bb_tree(nodes) %}
 <ul class="bb-tree">
   {% for n in nodes %}
