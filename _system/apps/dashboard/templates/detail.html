@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "_context_flows.html" import context_flow_table %}
 {% from "_provenance.html" import provenance_chips %}
+{% from "_macros.html" import format_labels %}
 {% from "_trace.html" import trace_panel %}
 {% from "_page_issues.html" import page_issues as page_issues_panel %}
 {% block title %}{{ id }} · {{ title }}{% endblock %}
@@ -11,6 +12,7 @@
   <code class="detail-id">{{ id }}</code>
   {% if status %}<span class="status status-{{ status }}">{{ status }}</span>{% endif %}
   {% if state %}<span class="state-badge state-{{ state }}" title="describes {{ 'today\'s landscape' if state == 'current' else 'the target architecture' }}">{{ state }}</span>{% endif %}
+  {{ format_labels(formats) }}
 </div>
 {% if issue %}
 <dl class="issue-fields">

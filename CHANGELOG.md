@@ -85,8 +85,17 @@ Unreleased changes sit at the top until the next Starter Kit release.
   term network included (FR-014).
 - The first page's center tile shows the last 4 changes instead of 5, links to
   the new changes page and no longer counts pages (FR-018).
+- A page's note that it follows a standard (`> follows [[MADR]]`) shows as a
+  quiet "Format: MADR" label in the page head, no longer as a box before the
+  text. Several notes give one label each, a trailing note such as "section 5,
+  black box" stays beside the label. Wiki files are unchanged (FR-035).
 
 ### Added
+- `/metamodel` has an Anchors section: one entry per file in
+  `_system/anchors/` (`#anchor-madr`) with its name, short definition, the
+  types it applies to and its outside reference. Every wikilink to an anchor's
+  title or alias, in any case, leads to its entry, with the definition as the
+  link's title. On `/metamodel` the "Standards" chips lead there too (FR-035).
 - Branding is configuration. Three optional keys in `_system/wiki.yaml`:
   `brand:` names an example brand (`systems42`, the default, or `atrium`) or a
   folder of the wiki repository such as `brand/`, `intro: off` hides the home

@@ -184,6 +184,96 @@ def type_for_folder(folder: str) -> str | None:
     return None
 
 
+# --- method anchors (meta-metamodel section 5) -------------------------------
+#
+# The anchors are a metamodel construct whose pages live in `_system/anchors/`
+# (frontmatter `type: anchor`), not in this folder. The dashboard shows them on
+# /metamodel and links every `[[MADR]]` there (FR-035); it adds nothing to
+# them (CON-004).
+
+_aenv = os.environ.get("ANCHORS_DIR")
+ANCHORS_DIR = (Path(_aenv) if _aenv
+               else Path(__file__).resolve().parents[2] / "anchors")
+
+_URL = re.compile(r"https?://[^\s<>()\]]+")
+_SLUG = re.compile(r"[^a-z0-9]+")
+# path -> ((mtime_ns, size), parsed anchor or None), like _CACHE
+_ANCHOR_CACHE: dict[Path, tuple[tuple[int, int], dict | None]] = {}
+
+
+def _parse_anchor(path: Path) -> dict | None:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    m = _FM.match(text)
+    if not m:
+        return None
+    try:
+        meta = yaml.safe_load(m.group(1)) or {}
+    except yaml.YAMLError:
+        return None
+    if not isinstance(meta, dict) or meta.get("type") != "anchor":
+        return None
+    body = _H1.sub("", m.group(2).strip(), count=1).strip()
+    slug = _SLUG.sub("-", path.stem.lower()).strip("-")
+    url = _URL.search(body)
+    applies = meta.get("applies-to") or []
+    return {
+        "name": str(meta.get("title") or path.stem),
+        "slug": slug,
+        "id": f"anchor-{slug}",
+        "aliases": [str(a) for a in meta.get("aliases") or [] if a],
+        "applies_to": [str(a) for a in (applies if isinstance(applies, list) else [applies]) if a],
+        "definition": _definition(body),
+        "reference": url.group(0).rstrip(".,;:") if url else "",
+        "file": path.name,
+    }
+
+
+def _definition(body: str) -> str:
+    """The first prose paragraph: a note (`> …`), a list, a table or a heading
+    before it is not the definition."""
+    for para in re.split(r"\n\s*\n", body):
+        head = para.lstrip()
+        if head and not head.startswith((">", "-", "*", "|", "#", "<!--")):
+            return " ".join(line.strip() for line in para.strip().splitlines())
+    return ""
+
+
+def method_anchors() -> list[dict]:
+    """Every anchor page, by name: `name`, `slug`, `id` (`anchor-<slug>`, the
+    entry's id on /metamodel), `aliases`, `applies_to` (as written),
+    `definition` (markdown, first prose paragraph) and `reference` (the first
+    outside URL, or ""). Parsed again only when a file changes."""
+    if not ANCHORS_DIR.is_dir():
+        return []
+    out = []
+    for p in sorted(ANCHORS_DIR.glob("*.md")):
+        try:
+            st = p.stat()
+        except OSError:
+            continue
+        stamp = (st.st_mtime_ns, st.st_size)
+        hit = _ANCHOR_CACHE.get(p)
+        if hit is None or hit[0] != stamp:
+            hit = (stamp, _parse_anchor(p))
+            _ANCHOR_CACHE[p] = hit
+        if hit[1] is not None:
+            out.append(dict(hit[1]))
+    return sorted(out, key=lambda a: a["name"].lower())
+
+
+def anchor_index(found: list[dict]) -> dict[str, dict]:
+    """Lower-cased title, aliases and file name → the anchor, so `[[madr]]`
+    and `[[MADR]]` find the same entry."""
+    idx: dict[str, dict] = {}
+    for a in found:
+        for key in (a["name"], a["slug"], *a["aliases"]):
+            idx.setdefault(str(key).strip().lower(), a)
+    return idx
+
+
 def anchors(mm: dict) -> dict[str, str]:
     """Every page name and alias → the in-page anchor id the `/metamodel` page
     gives that construct (`type-goal`, `rel-goal`, `proj-…`, `rule-…`,

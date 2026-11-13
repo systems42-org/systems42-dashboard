@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Metamodel{% endblock %}
 {% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> Metamodel</nav>{% endblock %}
+{% macro anchor_chip(a) %}{% if a.href %}<a class="mm-anchor" href="{{ a.href }}" title="{{ a.title }}">{{ a.name }}</a>{% else %}<span class="mm-anchor">{{ a.name }}</span>{% endif %}{% endmacro %}
 {% block content %}
 <h1 class="page-h1">The metamodel <span class="count-pill">{{ types|length }} types · {{ relations|length }} relations</span></h1>
 <p class="lead">What kinds of pages this wiki holds, how they point at each other, and what
@@ -21,6 +22,7 @@ framework-agnostic — and the req42 instances, which is everything else on this
   <a href="#projections">Projections</a>
   <a href="#altitude">Granularity</a>
   <a href="#rules">Rules</a>
+  <a href="#anchors">Anchors</a>
   <a href="#language">Language</a>
 </nav>
 
@@ -100,7 +102,7 @@ that type in this wiki ({{ n_examples }} of {{ types|length }} types have one so
           <dd>{% if f['values'] %}<span class="mm-values">{{ f['values']|join(' | ') }}</span>{% endif %}{% if f.doc %} {{ f.doc | safe }}{% endif %}</dd>
         {% endfor %}
         </dl>
-        {% if t.anchors %}<p class="mm-small">Standards: {% for a in t.anchors %}<span class="mm-anchor">{{ a }}</span>{% endfor %}</p>{% endif %}
+        {% if t.anchors %}<p class="mm-small">Standards: {% for a in t.anchors %}{{ anchor_chip(a) }}{% endfor %}</p>{% endif %}
         {% if t.projections %}<p class="mm-small">Read by: {% for p in t.projections %}<a class="wl" href="#proj-{{ p }}">{{ p }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
       </details>
     </td>
@@ -175,7 +177,7 @@ got persisted would have become a type.</p>
   <tbody>
   {% for p in projections %}
   <tr id="{{ p.anchor }}" class="mm-row">
-    <td class="c-term"><span class="term">{{ p.name }}</span><span class="aliases">{{ p.output }}{% if p.anchor_ref %} · <span class="mm-anchor">{{ p.anchor_ref }}</span>{% endif %}</span></td>
+    <td class="c-term"><span class="term">{{ p.name }}</span><span class="aliases">{{ p.output }}{% if p.anchor_ref %} · {{ anchor_chip(p.anchor_ref) }}{% endif %}</span></td>
     <td>{% for rd in p.reads %}<div class="mm-reads"><a class="wl" href="#{{ rd.type_anchor }}">{{ rd.type }}</a> <span class="mm-reads-fields">{% for f in rd.fields %}<code>{{ f }}</code>{% endfor %}</span></div>{% endfor %}</td>
     <td class="c-def">{{ p.summary_html | safe }}{% if p.decisions_html %}<span class="aliases">{{ p.decisions_html | safe }}</span>{% endif %}</td>
     <td class="mm-c-where">{% if p.href %}<a class="wl" href="{{ p.href }}">{{ p.implemented }}</a>{% else %}<span class="muted">not rendered yet</span>{% endif %}</td>
@@ -233,6 +235,35 @@ what it tests, and what the agent may do about it. Enforcement is advisory —
   </tbody>
 </table>
 </div>
+</section>
+
+{# -------------------------------------------------------------- anchors #}
+<section class="mm-section" id="anchors">
+<h2 class="mm-h2">Anchors <span class="count-pill">{{ method_anchors|length }}</span></h2>
+<p class="mm-lead">The method standards pages follow, such as MADR for a decision record.
+Each entry is read from <code>_system/anchors/</code>. A link to a standard on any page leads here.</p>
+{% if method_anchors %}
+<div class="table-card mm-table mm-table-anchors">
+<table>
+  <thead><tr>
+    <th class="c-term">Anchor</th>
+    <th class="c-def">Definition</th>
+    <th class="mm-c-applies">Applies to</th>
+  </tr></thead>
+  <tbody>
+  {% for a in method_anchors %}
+  <tr id="{{ a.id }}" class="mm-row">
+    <td class="c-term"><span class="term">{{ a.name }}</span>{% if a.aliases %}<span class="aliases">{{ a.aliases|join(' · ') }}</span>{% endif %}</td>
+    <td class="c-def">{{ a.definition_html | safe }}{% if a.reference %}<span class="aliases"><a href="{{ a.reference }}" rel="noopener">{{ a.reference }}</a></span>{% endif %}</td>
+    <td class="mm-c-applies">{% for t in a.types %}<a class="wl" href="{{ t.href }}">{{ t.label }}</a>{% if not loop.last %}, {% endif %}{% endfor %}{% if a.other %}<span class="aliases">{{ a.other|join(' · ') }}</span>{% endif %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="muted">No anchors found in <code>_system/anchors/</code>.</p>
+{% endif %}
 </section>
 
 {# ------------------------------------------------------------- language #}

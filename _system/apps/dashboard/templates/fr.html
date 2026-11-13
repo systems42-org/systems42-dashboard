@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_provenance.html" import provenance_chips %}
-{% from "_macros.html" import plural %}
+{% from "_macros.html" import plural, format_labels %}
 {% from "_trace.html" import trace_panel %}
 {% from "_page_issues.html" import page_issues as page_issues_panel %}
 {% block title %}{{ fr.id }} · {{ fr.title }}{% endblock %}
@@ -16,6 +16,7 @@
   {% if fr.stereotype in ('epic', 'feature') and (fr.n_stories or fr.n_features) %}
   <span class="fr-counter">{{ plural(fr.n_stories, 'story', 'stories') }}{% if fr.stereotype == 'epic' %} · {{ plural(fr.n_features, 'feature') }}{% endif %}</span>
   {% endif %}
+  {{ format_labels(formats) }}
 </div>
 {% if sources is not none %}{{ provenance_chips(sources) }}{% endif %}
 <h1 class="page-h1">{{ fr.title }}</h1>

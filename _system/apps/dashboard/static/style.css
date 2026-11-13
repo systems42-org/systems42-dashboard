@@ -604,7 +604,13 @@ tr.list-out { display: none; }
 .issue-row.selected { background: rgba(62,166,255,.12); box-shadow: inset 3px 0 0 var(--accent); }
 
 /* ---- single-unit detail page ---- */
-.detail-head { display: flex; align-items: center; gap: .6rem; margin-bottom: .3rem; }
+.detail-head { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin-bottom: .3rem; }
+/* the standard a page follows ("> follows [[MADR]]"), quiet, at the end of the head (FR-035) */
+.formats { margin-left: auto; display: flex; flex-wrap: wrap; gap: .6rem; }
+.format { font-size: .76rem; color: var(--ink-dim); }
+.format-label { color: var(--ink-soft); text-decoration: none; }
+a.format-label { border-bottom: 1px dotted var(--line); }
+a.format-label:hover { color: var(--accent); border-bottom-color: var(--accent); }
 .detail-id { color: var(--ink-dim); font-size: .85rem; }
 .pane-head { margin: 1.2rem 0 -.6rem; }
 .pane-head a { text-decoration: none; }
@@ -1271,8 +1277,10 @@ html.etsu-disconnected {
 .mm-lead { color: var(--ink-soft); margin: 0 0 var(--space-4); max-width: 60rem; }
 .mm-small { color: var(--ink-soft); font-size: var(--step--1); margin: .4rem 0 0; }
 .muted { color: var(--ink-dim); }
-/* a method anchor (PAM, INVEST, MoSCoW …) cited by a metamodel page: a chip, not a link —
-   the anchors have no dashboard page */
+/* a method anchor (PAM, INVEST, MoSCoW …) cited by a metamodel page: a chip that leads
+   to the anchor's entry further down (FR-035) */
+a.mm-anchor { text-decoration: none; }
+a.mm-anchor:hover { color: var(--accent); border-color: var(--accent); }
 .mm-anchor { display: inline-block; font-size: .72rem; line-height: 1.5; padding: .02rem .45rem; margin: 0 .1rem;
   border-radius: 999px; border: 1px solid var(--line); color: var(--ink-soft); background: var(--card-2); white-space: nowrap; }
 /* graph */
