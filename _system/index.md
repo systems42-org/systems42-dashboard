@@ -84,7 +84,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-028-who-answers-an-issue]] Who answers an issue (feature, Should, draft)
 - [[FR-029-the-dashboard-as-a-product]] The dashboard as a product (epic, Should, draft)
 - [[FR-030-numbered-releases]] Numbered releases (feature, Should, draft)
-- [[FR-031-branding-is-configuration]] Branding is configuration (feature, Should, draft)
+- [[FR-031-branding-is-configuration]] Branding is configuration (feature, Must, draft)
 - [[FR-032-example-brands-to-try]] Example brands to try (feature, Should, draft)
 - [[FR-033-runnable-dashboard-in-the-starter-kit]] Runnable dashboard in the starter kit (feature, Should, draft)
 
