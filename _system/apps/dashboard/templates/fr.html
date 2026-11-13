@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 {% from "_provenance.html" import provenance_chips %}
-{% from "_macros.html" import plural %}
+{% from "_macros.html" import plural, format_labels %}
 {% from "_trace.html" import trace_panel %}
+{% from "_relations.html" import relations_panel %}
 {% from "_page_issues.html" import page_issues as page_issues_panel %}
 {% block title %}{{ fr.id }} · {{ fr.title }}{% endblock %}
 {% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}<a href="/req42/functional-requirements">Functional Requirements</a>{% for a in ancestors %} <span>›</span> <a href="{{ a.url }}">{{ a.id }}</a>{% endfor %} <span>›</span> {{ fr.id }}</nav>{% endblock %}
@@ -16,6 +17,7 @@
   {% if fr.stereotype in ('epic', 'feature') and (fr.n_stories or fr.n_features) %}
   <span class="fr-counter">{{ plural(fr.n_stories, 'story', 'stories') }}{% if fr.stereotype == 'epic' %} · {{ plural(fr.n_features, 'feature') }}{% endif %}</span>
   {% endif %}
+  {{ format_labels(formats) }}
 </div>
 {% if sources is not none %}{{ provenance_chips(sources) }}{% endif %}
 <h1 class="page-h1">{{ fr.title }}</h1>
@@ -93,5 +95,7 @@
 </section>
 {% endif %}
 
+
+{{ relations_panel(relations) }}
 {% endblock %}
 {% block scripts %}{% if needs_mermaid %}{% include "_mermaid.html" %}{% endif %}{% endblock %}

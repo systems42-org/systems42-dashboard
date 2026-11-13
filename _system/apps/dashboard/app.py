@@ -704,18 +704,130 @@ def open_issue_counts() -> dict[str, set[str]]:
 def render_wikilinks(text: str, titles: dict[str, str],
                      links: dict[str, tuple[str, str]] | None = None) -> str:
     """Replace [[..]] with its alias (or resolved title). When `links` is given
-    and the target resolves to a wiki page, emit a real hyperlink; otherwise
-    (inline snippets, or an unresolved/raw target) keep the styled-text span."""
+    and the target resolves to a wiki page, a source record or a method anchor,
+    emit a real hyperlink; otherwise (inline snippets, or an unresolved target)
+    keep the styled-text span."""
     def repl(m: re.Match) -> str:
         target, alias = m.group(1).strip(), m.group(2)
         base = target.split("/")[-1]
         label = alias.strip() if alias else titles.get(base, base)
-        if links and not target.startswith("raw/") and not base.startswith("SRC-"):
+        if links is not None and (target.startswith("raw/") or base.startswith("SRC-")):
+            # a source cited in the text leads to its record (FR-034)
+            if src := source_index().get(base):
+                return f'<a class="wl" href="/source/{src.stem}">{alias.strip() if alias else escape(src.title)}</a>'
+        elif links:
             dest = links.get(base)
             if dest:
                 return f'<a class="wl" href="{_page_url(*dest)}">{label}</a>'
+        if links is not None and (a := anchor_lookup().get(base.lower())):
+            return _anchor_link(a, alias.strip() if alias else str(escape(a["name"])))
         return f'<span class="wl">{label}</span>'
     return WIKILINK_RE.sub(repl, text)
+
+
+# --- method anchors (FR-035) -------------------------------------------------
+#
+# `[[MADR]]` names a method anchor, not a wiki page. It leads to the anchor's
+# entry on /metamodel, with the short definition as the link's title, so a
+# reader learns what the page follows without leaving it.
+
+@_request_cached
+def anchor_lookup() -> dict[str, dict]:
+    """Lower-cased anchor title, alias and file name → the anchor."""
+    return metamodel.anchor_index(metamodel.method_anchors())
+
+
+_PLAIN_MD_RE = re.compile(r"\*\*([^*]+)\*\*|`([^`]+)`|<(https?://[^>]+)>")
+
+
+def anchor_title(a: dict) -> str:
+    """An anchor's definition as plain text, for a `title` attribute."""
+    text = WIKILINK_RE.sub(lambda m: (m.group(2) or m.group(1)).strip(), a.get("definition") or "")
+    return _PLAIN_MD_RE.sub(lambda m: m.group(1) or m.group(2) or m.group(3), text)
+
+
+def anchor_url(a: dict) -> str:
+    return f"/metamodel#{a['id']}"
+
+
+def _anchor_link(a: dict, label: str) -> str:
+    return (f'<a class="wl wl-anchor" href="{anchor_url(a)}" '
+            f'title="{escape(anchor_title(a))}">{label}</a>')
+
+
+# A page's note that it follows a standard, a quote line of its own that
+# starts with a lowercase "follows": "> follows [[MADR]]", "> follows [[arc42]]
+# (section 5, black box)". More than 3 spaces before the ">" is indented code.
+_FOLLOWS_RE = re.compile(r"^ {0,3}>[ \t]*follows[ \t]+(\S.*?)[ \t]*$")
+_FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
+# a note without a link names its format in a few words, not a sentence
+_FOLLOWS_PLAIN_MAX_WORDS = 6
+
+
+def _follows_notes(body: str) -> list[tuple[int, str]]:
+    """(line number, text after "follows") of every "follows" note, outside
+    fenced code. The one test both the page (drop_follows, format_labels) and
+    search (search_plain) use, so both leave out exactly the same lines."""
+    out = []
+    fence = ""
+    for i, line in enumerate(body.split("\n")):
+        f = _FENCE_RE.match(line)
+        if fence:
+            if f and f.group(1)[0] == fence[0] and len(f.group(1)) >= len(fence):
+                fence = ""
+            continue
+        if f:
+            fence = f.group(1)
+            continue
+        m = _FOLLOWS_RE.match(line)
+        if not m:
+            continue
+        text = m.group(1)
+        if not WIKILINK_RE.search(text) and (len(text.split()) > _FOLLOWS_PLAIN_MAX_WORDS
+                                              or re.search(r"[.!?;:]", text)):
+            continue                         # an ordinary sentence in a quote
+        out.append((i, text))
+    return out
+
+
+def drop_follows(body: str) -> str:
+    """The body without its "follows" notes, each line removed with its line
+    break, so a callout around it stays whole. They show as labels in the
+    page head (format_labels), never as a box before the content."""
+    drop = {i for i, _ in _follows_notes(body)}
+    if not drop:
+        return body
+    return "\n".join(line for i, line in enumerate(body.split("\n")) if i not in drop)
+
+
+def format_labels(body: str) -> list[dict]:
+    """The "follows" notes of a page as head labels, one per standard named,
+    deduplicated: `label`, `url` and `title` (empty for a standard that is no
+    anchor) and `note`, the rest of the line such as "section 5, black box"."""
+    titles, links = title_index(), link_index()
+    out: list[dict] = []
+    seen: set[str] = set()
+    for _, line in _follows_notes(body):
+        note = WIKILINK_RE.sub("", line).strip(" ,;.").strip()
+        note = re.sub(r"^\((.*)\)$", r"\1", note).strip()
+        found = []
+        for wm in WIKILINK_RE.finditer(line):
+            base = wm.group(1).strip().split("/")[-1]
+            a = anchor_lookup().get(base.lower())
+            if a:
+                found.append({"label": a["name"], "url": anchor_url(a), "title": anchor_title(a)})
+            elif base in links:
+                found.append({"label": titles.get(base, base), "url": _page_url(*links[base]), "title": ""})
+            else:
+                found.append({"label": (wm.group(2) or base).strip(), "url": "", "title": ""})
+        if not found:
+            found, note = [{"label": re.sub(r"^the\s+", "", line, flags=re.I), "url": "", "title": ""}], ""
+        for i, f in enumerate(found):
+            if f["label"].lower() in seen:
+                continue
+            seen.add(f["label"].lower())
+            out.append({**f, "note": note if i == 0 else ""})
+    return out
 
 
 # `[ \t]*`, not `\s*`, after the marker: `\s` would cross the line break and
@@ -807,6 +919,8 @@ def _unwrap_prose(body: str) -> str:
 
 
 def render_markdown(body: str, titles: dict[str, str]) -> str:
+    # a "follows" note is a head label, never a box in the text (FR-035)
+    body = drop_follows(body)
     # unwrap hard-wrapped prose first — before wikilinks turn a leading
     # [[...]] into an <a>, which would otherwise look like an HTML block start
     body = _unwrap_prose(body)
@@ -1354,7 +1468,8 @@ def build_relations_panel(stem: str, exclude: set[str] | None = None) -> dict:
     backlinks (other pages that reference it), grouped by type, as link dicts.
     A pure projection over the link graph (DR-018) — powers the outbound
     / inbound relations section on a detail page. `exclude` drops stems the
-    page already lists in a typed panel (drivers, addressed by, …)."""
+    page already lists in a typed panel (drivers, addressed by, …). A linked
+    issue carries its `status` and whether it is `closed`."""
     exclude = exclude or set()
     titles = title_index()
     pages = load_all_pages()
@@ -1369,8 +1484,16 @@ def build_relations_panel(stem: str, exclude: set[str] | None = None) -> dict:
             url = f"/page/{folder}/{s}"
         else:
             url = f"/page/{by_stem[s].folder}/{s}"
-        return {"id": by_stem[s].id if s in by_stem else s,
-                "label": titles.get(s, s), "url": url, "type": ntype}
+        item = {"id": by_stem[s].id if s in by_stem else s,
+                "label": titles.get(s, s), "url": url, "type": ntype,
+                "status": "", "closed": False}
+        if s in by_stem and by_stem[s].folder == "issues":
+            # a linked issue says how firm it is, closed the way the issues
+            # panel says it (FR-034, FR-027)
+            st = by_stem[s].status
+            item["status"] = st if st in _issue_vocab()["status"] else ""
+            item["closed"] = not is_open_issue(st)
+        return item
 
     me = by_stem.get(stem)
     outbound = sorted(s for s in (me.link_targets() if me else ())
@@ -2511,10 +2634,10 @@ _MD_LINK_RE = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")
 _HTML_TAG_RE = re.compile(r"<[^>]+>")
 _SOURCE_ID_RE = re.compile(r"[A-Z]+-\d+")
 # Lines that label a page's structure rather than say something: headings,
-# callout titles, bold-only lines such as **PROBLEM / GOAL** and the anchor
-# note "> follows [[MADR]]". A bold lead label such as **Snapshot.** goes too,
-# the text after it stays.
-_HEADING_LINE_RE = re.compile(r"^\s*(?:#{1,6}\s|>\s*\[![\w-]+\]|>\s*follows\s|\*\*[^*]+\*\*\s*$)")
+# callout titles and bold-only lines such as **PROBLEM / GOAL**. A bold lead
+# label such as **Snapshot.** goes too, the text after it stays. The note
+# "> follows [[MADR]]" goes before, by the page's own test (drop_follows).
+_HEADING_LINE_RE = re.compile(r"^\s*(?:#{1,6}\s|>\s*\[![\w-]+\]|\*\*[^*]+\*\*\s*$)")
 _LEAD_LABEL_RE = re.compile(r"^(\s*(?:[-*+]\s+)?)\*\*[^*]{1,60}[.:]\*\*\s+")
 _LINE_MARK_RE = re.compile(r"^\s*(?:#{1,6}\s+|>\s*(?:\[![\w-]+\][-+]?\s*)?|[-*+]\s+(?:\[[ xX]\]\s+)?|\d+[.)]\s+)+")
 _EMPHASIS_RE = re.compile(r"\*\*|__|~~|`|(?<!\w)\*(?=\S)|(?<=\S)\*(?!\w)")
@@ -2524,7 +2647,8 @@ def search_plain(page: Page, titles: dict[str, str]) -> str:
     """A page body as the reader sees it, for search: wikilinks become their
     label (or the target's title), markdown and HTML markup go, hard-wrapped
     prose is joined. One line per paragraph or list item, so the ranker can
-    cut passages. Headings and labels go (`_HEADING_LINE_RE`).
+    cut passages. Headings and labels go (`_HEADING_LINE_RE`), and so do the
+    "follows" notes the page shows as head labels (`drop_follows`).
     An unlabelled provenance link to raw/sources becomes the source's ID
     (`SRC-006`): its file name or title would match words such as
     "grilling" on most pages, and dropping it leaves "came from ." holes."""
@@ -2538,7 +2662,7 @@ def search_plain(page: Page, titles: dict[str, str]) -> str:
             return src.id if src else _SOURCE_ID_RE.match(base).group(0) if _SOURCE_ID_RE.match(base) else ""
         return titles.get(base, target)
 
-    body = _unwrap_prose(page.body)
+    body = _unwrap_prose(drop_follows(page.body))
     body = WIKILINK_RE.sub(link_text, body)
     body = _MD_LINK_RE.sub(lambda m: m.group(1), body)
     body = _HTML_TAG_RE.sub(" ", body)
@@ -3080,6 +3204,7 @@ def page_detail(folder, stem):
         sources=provenance(page),
         issue=issue_fields(page, titles, link_index()) if folder == "issues" else None,
         page_issues=open_issues_for(stem),
+        formats=format_labels(page.body),
     )
 
 
@@ -3782,13 +3907,16 @@ def fr_view(stem):
         fr["n_stories"] = len(fr["stories"])
 
     diagram = _mermaid_fr_subtree(node)
+    trace = build_trace(stem, "functional-requirements")
     return render_template(
         "fr.html", fr=fr, body_html=body_html, diagram=diagram,
         ancestors=_fr_ancestors(stem),
-        trace=build_trace(stem, "functional-requirements"),
+        trace=trace,
+        relations=build_relations_panel(stem, exclude=trace_stems(trace)),
         needs_mermaid=bool(diagram) or "language-mermaid" in body_html,
         sources=provenance(page),
         page_issues=open_issues_for(stem),
+        formats=format_labels(page.body),
     )
 
 
@@ -4386,11 +4514,18 @@ def _mm_dr_link(ref: str, label: str = "") -> str:
 
 def _mm_wikilinks(text: str, anchors: dict[str, str]) -> str:
     """Resolve the wikilinks metamodel pages use among themselves: another
-    metamodel page → an in-page anchor, a decision record → its page, a method
-    anchor (PAM, INVEST, …) → a chip."""
+    metamodel page → an in-page anchor, a method anchor (PAM, INVEST, …) → its
+    entry in the Anchors section, a decision record → its page, anything else
+    → a chip."""
     def repl(m: re.Match) -> str:
         target, alias = m.group(1).strip(), (m.group(2) or "").strip()
         base = target.split("/")[-1]
+        # a framework has no row of its own, so `[[req42]]` means the anchor
+        if base in anchors and not anchors[base].startswith("fw-"):
+            return f'<a class="wl" href="#{anchors[base]}">{escape(alias or base)}</a>'
+        if a := anchor_lookup().get(base.lower()):
+            return (f'<a class="wl wl-anchor" href="#{a["id"]}" '
+                    f'title="{escape(anchor_title(a))}">{escape(alias or a["name"])}</a>')
         if base in anchors:
             return f'<a class="wl" href="#{anchors[base]}">{escape(alias or base)}</a>'
         if _MM_DR_RE.match(base):
@@ -4486,6 +4621,47 @@ def build_metamodel_graph(mm: dict) -> dict:
     return {"nodes": nodes, "edges": edges, "universal": universal}
 
 
+def _mm_anchor_ref(name: object) -> dict:
+    """An anchor a metamodel page names (`anchors:`, `anchor:`): its label and,
+    when `_system/anchors/` has it, the in-page link to its entry."""
+    a = anchor_lookup().get(str(name).strip().lower())
+    if not a:
+        return {"name": str(name), "href": "", "title": ""}
+    return {"name": a["name"], "href": f"#{a['id']}", "title": anchor_title(a)}
+
+
+def build_mm_anchors(mm: dict, anchors: dict[str, str]) -> list[dict]:
+    """One entry per method anchor for /metamodel (FR-035): name, definition,
+    reference and the types it applies to. A type applies when its page lists
+    the anchor under `anchors:` or the anchor's `applies-to` names the type;
+    an `applies-to` entry that is no type is shown as written."""
+    by_name = {t["name"]: t for t in mm["types"]}
+    out = []
+    for a in metamodel.method_anchors():
+        keys = {a["name"].lower(), a["slug"], *(x.lower() for x in a["aliases"])}
+        types = [t["name"] for t in mm["types"]
+                 if keys & {str(x).strip().lower() for x in t.get("anchors") or []}]
+        other = []
+        for entry in a["applies_to"]:
+            ref = anchors.get(entry, "")
+            if ref.startswith("type-"):
+                if ref[5:] not in types:
+                    types.append(ref[5:])
+            else:
+                other.append(entry)
+        out.append({
+            "id": a["id"], "name": a["name"],
+            "aliases": [x for x in a["aliases"] if x.lower() != a["name"].lower()],
+            "definition_html": _mm_inline(a["definition"], anchors),
+            "reference": a["reference"],
+            # a definition that already cites its reference does not repeat it
+            "show_reference": bool(a["reference"]) and a["reference"] not in a["definition"],
+            "types": [{"label": _mm_type_label(n, by_name), "href": f"#type-{n}"} for n in types],
+            "other": other,
+        })
+    return out
+
+
 def _mm_type_label(name: object, by_name: dict) -> str:
     if name == "any":
         return "any page"
@@ -4522,7 +4698,8 @@ def metamodel_view():
             "folder": t.get("folder") or "", "template": t.get("template") or "",
             "lifecycle": t.get("lifecycle") or "", "stereotypes": t.get("stereotypes") or [],
             "naming": t.get("naming") or "", "universal": t.get("universal", True),
-            "fields": fields, "anchors": t.get("anchors") or [], "projections": t.get("projections") or [],
+            "fields": fields, "anchors": [_mm_anchor_ref(a) for a in t.get("anchors") or []],
+            "projections": t.get("projections") or [],
             "summary_html": _mm_inline(t.get("_summary") or "", anchors),
             "example": _mm_example(t),
         })
@@ -4552,7 +4729,7 @@ def metamodel_view():
                        "type_anchor": anchors.get(str(rd.get("type")), ""),
                        "fields": rd.get("fields") or []} for rd in pr.get("reads") or []],
             "implemented": impl, "href": m.group(1) if m else "",
-            "anchor_ref": pr.get("anchor") or "",
+            "anchor_ref": _mm_anchor_ref(pr["anchor"]) if pr.get("anchor") else None,
             "decisions_html": ", ".join(_mm_dr_link(d.strip(), d.strip()[:6])
                                         for d in str(pr.get("decision") or "").split(",") if d.strip()),
             "summary_html": _mm_inline(pr.get("_summary") or "", anchors),
@@ -4591,6 +4768,7 @@ def metamodel_view():
     return render_template(
         "metamodel.html", present=mm["present"], types=types, relations=relations,
         projections=projections, altitude=altitude, rules=rules, graph=graph,
+        method_anchors=build_mm_anchors(mm, anchors),
         universal=graph["universal"], universal_fields=universal_fields,
         lifecycles=meta.get("lifecycles") or {}, constructs=meta.get("constructs") or [],
         field_kinds=meta.get("field_kinds") or [], version=meta.get("version") or "",

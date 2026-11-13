@@ -10,3 +10,6 @@
 {% macro severity_rank(s) %}{{ {'minor': 1, 'major': 2, 'blocker': 3}.get(s, '') }}{% endmacro %}
 {% macro issue_status_rank(s) %}{{ {'open': 1, 'in-progress': 2, 'resolved': 3, 'wontfix': 4}.get(s, '') }}{% endmacro %}
 {% macro priority_rank(p) %}{{ {'must': 1, 'should': 2, 'could': 3, "won't": 4, 'wont': 4}.get((p or '') | lower, '') }}{% endmacro %}
+{# The standards a page follows ("> follows [[MADR]]"), as quiet labels in the
+   page head that lead to the anchor's entry on /metamodel (FR-035). #}
+{% macro format_labels(formats) %}{% if formats %}<span class="formats">{% for f in formats %}<span class="format">{% if f.url %}<a class="format-label" href="{{ f.url }}"{% if f.title %} title="{{ f.title }}"{% endif %}>Format: {{ f.label }}</a>{% else %}<span class="format-label">Format: {{ f.label }}</span>{% endif %}{% if f.note %} <span class="format-note">{{ f.note }}</span>{% endif %}</span>{% endfor %}</span>{% endif %}{% endmacro %}

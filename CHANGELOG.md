@@ -85,8 +85,26 @@ Unreleased changes sit at the top until the next Starter Kit release.
   term network included (FR-014).
 - The first page's center tile shows the last 4 changes instead of 5, links to
   the new changes page and no longer counts pages (FR-018).
+- A page's note that it follows a standard (`> follows [[MADR]]`) shows as a
+  quiet "Format: MADR" label in the page head, no longer as a box before the
+  text. Several notes give one label each, a trailing note such as "section 5,
+  black box" stays beside the label. Only a quote line of its own that starts
+  with a lowercase "follows" counts, and without a link only a few words. Code
+  and ordinary quotes stay as they are, and search leaves out the same lines.
+  Wiki files are unchanged (FR-035).
+- "Links to" and "Linked from" show a linked issue's status, and a resolved
+  or wontfix issue is dimmed as closed, the same as in the issues panel. A
+  functional requirement page now has both lists too (FR-034).
+- A wikilink to a source record in the text (`[[SRC-022-…]]`) leads to its
+  record under `/source/`, titled by the record. It used to be plain text.
+  A link to a source that does not exist stays plain text (FR-034).
 
 ### Added
+- `/metamodel` has an Anchors section: one entry per file in
+  `_system/anchors/` (`#anchor-madr`) with its name, short definition, the
+  types it applies to and its outside reference. Every wikilink to an anchor's
+  title or alias, in any case, leads to its entry, with the definition as the
+  link's title. On `/metamodel` the "Standards" chips lead there too (FR-035).
 - Branding is configuration. Three optional keys in `_system/wiki.yaml`:
   `brand:` names an example brand (`systems42`, the default, or `atrium`) or a
   folder of the wiki repository such as `brand/`, `intro: off` hides the home
@@ -126,6 +144,8 @@ Unreleased changes sit at the top until the next Starter Kit release.
   not a limit.
 
 ### Fixed
+- `/metamodel`: a row opened by its address (`#type-goal`, `#anchor-madr`)
+  stops below the sticky header instead of under it.
 - Vision & Goals: the goal coverage matrix stays inside its card. With many
   functional requirements it scrolls inside the card, the goal column stays put,
   and the page no longer scrolls sideways. Goal titles read in page ink instead

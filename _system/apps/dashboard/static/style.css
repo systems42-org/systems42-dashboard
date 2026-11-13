@@ -604,7 +604,14 @@ tr.list-out { display: none; }
 .issue-row.selected { background: rgba(62,166,255,.12); box-shadow: inset 3px 0 0 var(--accent); }
 
 /* ---- single-unit detail page ---- */
-.detail-head { display: flex; align-items: center; gap: .6rem; margin-bottom: .3rem; }
+.detail-head { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin-bottom: .3rem; }
+/* the standard a page follows ("> follows [[MADR]]"), quiet, at the end of the head (FR-035) */
+.formats { margin-left: auto; display: flex; flex-wrap: wrap; gap: .6rem; }
+.format { font-size: .76rem; color: var(--ink-dim); }
+.format-label { color: var(--ink-soft); text-decoration: none; }
+a.format-label { border-bottom: 1px dotted var(--line); }
+a.format-label:hover { color: var(--accent); border-bottom-color: var(--accent); }
+.format-note { color: var(--ink-dim); }
 .detail-id { color: var(--ink-dim); font-size: .85rem; }
 .pane-head { margin: 1.2rem 0 -.6rem; }
 .pane-head a { text-decoration: none; }
@@ -1139,6 +1146,9 @@ html.etsu-disconnected {
 .rel-group li { margin: .15rem 0; }
 .rel-group li a { font-size: .9rem; }
 .rel-group li code { color: var(--ink-dim); font-size: .78rem; margin-right: .25rem; }
+.rel-group li .status { font-size: .72rem; margin-left: .25rem; }
+/* a closed issue, as in the issues panel (.page-issue-closed) */
+.rel-closed { opacity: .7; }
 
 /* --- term-network legend (types + states) --- */
 .graph-legend { display: flex; flex-direction: column; gap: .35rem; margin: 0 0 .9rem; font-size: .82rem; color: var(--ink-soft); }
@@ -1271,8 +1281,10 @@ html.etsu-disconnected {
 .mm-lead { color: var(--ink-soft); margin: 0 0 var(--space-4); max-width: 60rem; }
 .mm-small { color: var(--ink-soft); font-size: var(--step--1); margin: .4rem 0 0; }
 .muted { color: var(--ink-dim); }
-/* a method anchor (PAM, INVEST, MoSCoW …) cited by a metamodel page: a chip, not a link —
-   the anchors have no dashboard page */
+/* a method anchor (PAM, INVEST, MoSCoW …) cited by a metamodel page: a chip that leads
+   to the anchor's entry further down (FR-035) */
+a.mm-anchor { text-decoration: none; }
+a.mm-anchor:hover { color: var(--accent); border-color: var(--accent); }
 .mm-anchor { display: inline-block; font-size: .72rem; line-height: 1.5; padding: .02rem .45rem; margin: 0 .1rem;
   border-radius: 999px; border: 1px solid var(--line); color: var(--ink-soft); background: var(--card-2); white-space: nowrap; }
 /* graph */
@@ -1302,11 +1314,17 @@ html.etsu-disconnected {
 .mm-table-projections .mm-c-where { width: 14%; }
 .mm-table-rules .c-term { width: 18%; } .mm-table-rules .mm-c-applies { width: 16%; }
 .mm-table-rules .c-def { width: 46%; max-width: none; } .mm-table-rules .mm-c-action { width: 14%; }
+.mm-table-anchors .c-term { width: 18%; } .mm-table-anchors .c-def { width: 58%; max-width: none; }
+.mm-table-anchors .mm-c-applies { width: 24%; }
 @media (max-width: 780px) { .mm-table table { table-layout: auto; } }
 .mm-table .c-term code, .mm-table .aliases code { white-space: normal; word-break: normal; overflow-wrap: break-word; }
 .mm-table .mm-id { white-space: nowrap; }
 .mm-table tbody td { line-height: 1.45; }
+/* a row opened by its address (#anchor-madr) stops below the sticky header and contents bar */
+.mm-row { scroll-margin-top: calc(var(--topbar-h) + 3.2rem); }
 .mm-row:target { background: rgba(62,166,255,.1); }
+/* an outside reference inside an anchor definition reads as a link, not in browser blue */
+.mm-table-anchors a:not(.wl) { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent); overflow-wrap: anywhere; }
 .mm-row:target td { border-top: 1px solid var(--accent); }
 .mm-type { display: inline-flex; align-items: center; gap: .5rem; }
 .mm-type .lg-dot { width: 14px; height: 14px; }
