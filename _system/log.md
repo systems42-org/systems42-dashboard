@@ -192,6 +192,9 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Proposals, not yet agreed: Should for the epic and all four features, the metric and target of GOAL-008.
 - Parked: DR-004 goes by PR. Until it is merged, its links do not resolve.
 
+## [2026-11-13] decision | DR-004 releases as container images
+- Gernot Starke chose container images per release, pinned by `dashboard_version:`, over submodule, copy and package, in question 7 of [[SRC-020-grilling-session-on-the-dashboard-as-a-product]]. Kept short at his request.
+- Created: [[DR-004-releases-are-container-images-pinned-per-wiki]]. Updated: `_system/index.md`. Delivered by PR, because the record is accepted.
 ## [2026-11-13] update | Priorities of the dashboard as a product
 - Gernot Starke agreed Should for [[FR-029-the-dashboard-as-a-product]], FR-030, FR-032 and FR-033, and raised [[FR-031-branding-is-configuration]] to Must.
 - Updated: FR-029 open points closed, FR-031 priority, `_system/index.md`.

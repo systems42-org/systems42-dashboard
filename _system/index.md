@@ -107,6 +107,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[DR-001-english-brief-plain-writing]] Write all documentation in brief, plain English (accepted)
 - [[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]] Tailoring belongs to Systems42, the view belongs to the dashboard (accepted)
 - [[DR-003-quality-requirements-are-classified-by-q42-dimensions]] Quality requirements are classified by Q42 dimensions (accepted)
+- [[DR-004-releases-are-container-images-pinned-per-wiki]] Releases are container images, pinned per wiki (accepted)
 
 ## Issues
 
