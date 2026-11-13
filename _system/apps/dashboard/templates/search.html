@@ -18,8 +18,8 @@
 
 <div class="table-card">
   <ul class="search-results" id="search-results">
-    {% for r in records %}
-    <li class="sresult" data-type="{{ r.type }}" data-id="{{ r.id|lower }}" data-title="{{ r.title|lower }}" data-text="{{ r.text }}" hidden>
+    {% for r in index.records %}
+    <li class="sresult" data-type="{{ r.type }}" hidden>
       <a class="sresult-link" href="{{ r.url }}">
         <span class="badge kind-badge">{{ r.type }}</span>
         <code class="sresult-id">{{ r.id }}</code>
@@ -37,6 +37,7 @@
   <p class="search-hint" id="search-prompt">Start typing to search — or choose a type filter.</p>
 </div>
 
+<script type="application/json" id="search-index">{{ index|tojson }}</script>
 <script>
 // runs after the deferred static/search-rank.js (base.html) has defined S42Search
 document.addEventListener('DOMContentLoaded', () => {
@@ -50,9 +51,10 @@ document.addEventListener('DOMContentLoaded', () => {
   let query = '';
 
   // Ranking lives in static/search-rank.js, shared with the nav search popup.
-  const allRecs = allResults.map(el => ({
-    id: el.dataset.id, title: el.dataset.title, type: el.dataset.type, text: el.dataset.text, el: el,
-  }));
+  // The list items render in index order, so item i shows record i.
+  const index = JSON.parse(document.getElementById('search-index').textContent);
+  const synonyms = index.synonyms;
+  const allRecs = index.records.map((r, i) => Object.assign({el: allResults[i]}, r));
 
   function setScore(el, pct) {
     const box = el.querySelector('.sresult-score');
@@ -84,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let shown = 0;
 
     if (query) {
-      const ranked = S42Search.rank(allRecs, query);
+      const ranked = S42Search.rank(allRecs, query, synonyms);
       const perType = {};
       ranked.forEach(({rec}) => { perType[rec.type] = (perType[rec.type] || 0) + 1; });
       updateCounts(perType);

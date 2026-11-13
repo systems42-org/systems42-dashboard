@@ -2854,12 +2854,12 @@ def search_index():
 def search_view():
     """Global search across all wiki content. Results render once and are
     filtered incrementally client-side; type facets allow browsing by content type."""
-    records = build_search_records()
+    index = build_search_index()
     tally: dict[str, int] = {}
-    for r in records:
+    for r in index["records"]:
         tally[r["type"]] = tally.get(r["type"], 0) + 1
     facets = sorted(tally.items(), key=lambda kv: (-kv[1], kv[0]))
-    return render_template("search.html", records=records, total=len(records), facets=facets)
+    return render_template("search.html", index=index, total=len(index["records"]), facets=facets)
 
 
 def _short_title(p: Page) -> str:

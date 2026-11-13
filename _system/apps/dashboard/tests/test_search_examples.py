@@ -45,6 +45,20 @@ def run_query(q: str) -> list[dict]:
     return json.loads(out)
 
 
+def js(expr: str):
+    """Evaluate `expr` with static/search-rank.js loaded; returns its JSON value."""
+    src = (_DASH / "static" / "search-rank.js").read_text(encoding="utf-8")
+    script = ("var window = {};\n" + src + "\nvar S = window.S42Search;\n"
+              "console.log(JSON.stringify(" + expr + "));")
+    out = subprocess.run(["node", "-e", script], capture_output=True, text=True, check=True).stdout
+    return json.loads(out)
+
+
+def kind(q: str, w: str):
+    m = js(f"S.matchWord({json.dumps(q)}, {json.dumps(w)})")
+    return m and m["kind"]
+
+
 def ids(q: str) -> list[str]:
     return [h["id"] for h in run_query(q)]
 
@@ -80,6 +94,29 @@ def test_fr002_exact_above_typo():
     found = ids("test")
     assert "FR-003" in found and "FR-002" in found, found          # test page, text page
     assert found.index("FR-003") < found.index("FR-002"), found
+
+
+def test_fr002_match_word_rules():
+    assert kind("keyholder", "keyholder") == "exact"
+    assert kind("requirement", "requirements") == "form"
+    assert kind("starts", "started") == "form"
+    assert kind("keyhol", "keyholder") == "prefix"
+    assert kind("keyholdr", "keyholder") == "typo"            # 8 letters: up to 2
+    assert kind("stakholdrs", "stakeholders") == "typo"
+    assert kind("tset", "test") == "typo"                     # swapped letters count once
+    assert kind("tst", "test") is None                        # 3 letters: exact or prefix only
+    assert kind("app", "apple") == "prefix"
+    assert kind("stk-02", "stk-023") == "prefix"
+    assert kind("stk-024", "stk-023") is None                 # IDs: no tolerance
+    assert kind("trainer", "trainers") == "form"
+    assert kind("trainer", "brainer") == "typo"               # 7 letters: 1
+    assert kind("trainer", "bxainer") is None
+    assert kind("ärztn", "ärztin") == "typo"
+
+
+def test_fr002_stem():
+    assert js('["started", "starts", "requirements", "boxes", "uses", "using", "is"].map(S.stem)') == \
+        ["start", "start", "requirement", "box", "use", "using", "is"]
 
 
 def test_fr002_non_ascii_typo():

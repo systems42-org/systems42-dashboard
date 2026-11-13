@@ -13,6 +13,10 @@ Unreleased changes sit at the top until the next Starter Kit release.
 ## [Unreleased]
 
 ### Changed
+- Search forgives typos and word forms (FR-002): `keyholdr` finds Keyholder,
+  `requirement engineer` finds "Requirements engineers". Words of 4 to 7
+  letters allow one wrong letter, longer words two. Short words and IDs match
+  only exactly or as a prefix. An exact hit always ranks above a typo.
 - Quality requirements are classified by Q42 dimensions (DR-003): the
   template and the metamodel replace the single ISO 25010 `attribute:` with
   `dimensions:`, a list of one or more of reliable, flexible, maintainable,

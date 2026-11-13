@@ -80,10 +80,10 @@ def test_ranker_title_before_body():
         print("skip: node not installed")
         return
     recs = [
-        {"id": "ISS-001", "type": "Issue", "title": "Unklar", "text": "iss-001 unklar es geht um training"},
-        {"id": "GLO-001", "type": "Glossary term", "title": "Training", "text": "glo-001 training"},
-        {"id": "UC-001", "type": "Use case", "title": "Trainingstermin einreichen", "text": "uc-001 trainingstermin"},
-        {"id": "STK-001", "type": "Stakeholder", "title": "Anbieter", "text": "stk-001 anbieter"},
+        {"id": "ISS-001", "type": "Issue", "title": "Unklar", "plain": "Es geht um Training."},
+        {"id": "GLO-001", "type": "Glossary term", "title": "Training", "plain": ""},
+        {"id": "UC-001", "type": "Use case", "title": "Trainingstermin einreichen", "plain": ""},
+        {"id": "STK-001", "type": "Stakeholder", "title": "Anbieter", "plain": "Bietet an."},
     ]
     js = (_DASH / "static" / "search-rank.js").read_text(encoding="utf-8")
     script = ("var window = {};\n" + js +
