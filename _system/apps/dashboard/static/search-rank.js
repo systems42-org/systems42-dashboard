@@ -289,6 +289,18 @@
     return out;
   }
 
+  // Narrow hits to a status, a priority and a tag, all lower-case; an empty
+  // value leaves that filter off (FR-009, /search only).
+  function filter(hits, f) {
+    f = f || {};
+    return hits.filter(function (h) {
+      var r = h.rec, fields = r.fields || {};
+      return (!f.status || String(r.status || "").toLowerCase() === f.status)
+        && (!f.priority || (fields.priority || []).indexOf(f.priority) !== -1)
+        && (!f.tag || (fields.tags || []).indexOf(f.tag) !== -1);
+    });
+  }
+
   function band(pct) { return pct >= 80 ? "high" : pct >= 55 ? "mid" : "low"; }
 
   // Rank `records` against query `q`, with the glossary's synonym groups;
@@ -333,5 +345,5 @@
   }
 
   window.S42Search = {rank: rank, band: band, matchWord: matchWord, stem: stem, passage: passage,
-                      related: related, esc: esc};
+                      related: related, filter: filter, esc: esc};
 })();

@@ -14,6 +14,18 @@
     <button class="fbtn" data-type="{{ type }}" data-total="{{ count }}">{{ type }} <span class="fnum">{{ count }}</span></button>
     {% endfor %}
   </div>
+  {% if filters.status or filters.priority or filters.tag %}
+  <div class="search-filters">
+    {% for name, label in [("status", "Status"), ("priority", "Priority"), ("tag", "Tag")] if filters[name] %}
+    <label class="search-filter">{{ label }}
+      <select id="search-{{ name }}" data-filter="{{ name }}">
+        <option value="">Any</option>
+        {% for v in filters[name] %}<option value="{{ v }}">{{ v }}</option>{% endfor %}
+      </select>
+    </label>
+    {% endfor %}
+  </div>
+  {% endif %}
 </div>
 
 <div class="table-card">
@@ -39,7 +51,7 @@
     <ul class="search-results"></ul>
   </section>
   <p class="empty-hint" id="search-empty" hidden>No matches.</p>
-  <p class="search-hint" id="search-prompt">Start typing to search — or choose a type filter.</p>
+  <p class="search-hint" id="search-prompt">Start typing to search, or choose a type or a filter.</p>
 </div>
 
 <script type="application/json" id="search-index">{{ index|tojson }}</script>
@@ -54,6 +66,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const prompt = document.getElementById('search-prompt');
   let activeType = 'all';
   let query = '';
+  // status, priority and tag filters (FR-009); '' leaves a filter off
+  const selects = Array.from(document.querySelectorAll('.search-filters select'));
+  const filters = {};
+  const filtering = () => Object.values(filters).some(Boolean);
 
   // Ranking lives in static/search-rank.js, shared with the nav search popup.
   // The list items render in index order, so item i shows record i.
@@ -69,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // pages linked to the strong hits, below every hit, never mixed in (FR-008)
   const related = document.getElementById('search-related');
   function showRelated(hits) {
-    const rows = hits ? S42Search.related(hits, index.records) : [];
+    const rows = hits ? S42Search.filter(S42Search.related(hits, index.records), filters) : [];
     const e = S42Search.esc;
     related.querySelector('ul').innerHTML = rows.map(({rec, note}) =>
       '<li class="sresult"><a class="sresult-link" href="' + e(rec.url) + '">' +
@@ -113,11 +129,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function apply() {
-    const browsing = query !== '' || activeType !== 'all';
+    const browsing = query !== '' || activeType !== 'all' || filtering();
     let shown = 0;
 
     if (query) {
-      const ranked = S42Search.rank(allRecs, query, synonyms);
+      const ranked = S42Search.filter(S42Search.rank(allRecs, query, synonyms), filters);
       const perType = {};
       ranked.forEach(({rec}) => { perType[rec.type] = (perType[rec.type] || 0) + 1; });
       updateCounts(perType);
@@ -130,10 +146,15 @@ document.addEventListener('DOMContentLoaded', () => {
         list.appendChild(rec.el); shown++;
       });
     } else if (browsing) {                               // facet browse, no query
-      updateCounts(null);
+      const kept = new Set(S42Search.filter(allRecs.map(rec => ({rec})), filters).map(h => h.rec.el));
+      const perType = {};
+      if (filtering()) {
+        kept.forEach(el => { perType[el.dataset.type] = (perType[el.dataset.type] || 0) + 1; });
+      }
+      updateCounts(filtering() ? perType : null);
       showRelated(null);
       allResults.forEach(el => {
-        const show = activeType === 'all' || el.dataset.type === activeType;
+        const show = kept.has(el) && (activeType === 'all' || el.dataset.type === activeType);
         el.hidden = !show;
         if (show) {
           el.querySelector('.sresult-score').hidden = true; setNote(el, null); setPassage(el, null);
@@ -154,6 +175,10 @@ document.addEventListener('DOMContentLoaded', () => {
     buttons.forEach(x => x.classList.remove('active'));
     b.classList.add('active');
     activeType = b.dataset.type;
+    apply();
+  }));
+  selects.forEach(s => s.addEventListener('change', () => {
+    filters[s.dataset.filter] = s.value;
     apply();
   }));
   box.addEventListener('input', () => { query = box.value.trim().toLowerCase(); apply(); });

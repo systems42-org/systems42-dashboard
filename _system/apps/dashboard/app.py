@@ -2850,7 +2850,23 @@ def search_view():
     for r in index["records"]:
         tally[r["type"]] = tally.get(r["type"], 0) + 1
     facets = sorted(tally.items(), key=lambda kv: (-kv[1], kv[0]))
-    return render_template("search.html", index=index, total=len(index["records"]), facets=facets)
+    return render_template("search.html", index=index, total=len(index["records"]), facets=facets,
+                           filters=_search_filters(index["records"]))
+
+
+_PRIORITY_ORDER = ["must", "should", "could", "wont", "won't"]
+
+
+def _search_filters(records: list[dict]) -> dict[str, list[str]]:
+    """The values offered by /search's status, priority and tag filters
+    (FR-009): every value some page carries, lower-case."""
+    def values(key):
+        return {v for r in records for v in r["fields"].get(key, [])}
+    prio = values("priority")
+    return {"status": sorted(values("status")),
+            "priority": sorted(prio, key=lambda v: (v not in _PRIORITY_ORDER,
+                                                    _PRIORITY_ORDER.index(v) if v in _PRIORITY_ORDER else 0, v)),
+            "tag": sorted(values("tags"))}
 
 
 def _short_title(p: Page) -> str:

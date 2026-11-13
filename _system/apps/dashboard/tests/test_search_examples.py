@@ -283,6 +283,43 @@ def test_fr008_only_on_the_results_page():
     assert page.index('id="search-results"') < page.index('class="related-pages"')   # below the hits
 
 
+# --- FR-009 filters on /search -------------------------------------------------
+
+def filtered(q: str, **f) -> list[str]:
+    expr = (f"(function () {{ var ix = {_index_json()};"
+            f" return S.filter(S.rank(ix.records, {json.dumps(q)}, ix.synonyms), {json.dumps(f)})"
+            ".map(function (h) { return [h.rec.id, h.rec.status]; }); })()")
+    return js(expr)
+
+
+def test_fr009_status_filter_leaves_only_that_status():
+    everything = run_query("the")
+    assert {h["id"] for h in everything} > {i for i, _ in filtered("the", status="accepted")}
+    rows = filtered("the", status="accepted")
+    assert rows and all(s == "accepted" for _, s in rows), rows
+
+
+def test_fr009_priority_and_tag_filters():
+    assert sorted(i for i, _ in filtered("the", priority="must")) == ["FR-001", "FR-002"]
+    assert [i for i, _ in filtered("every", tag="navigation")] == ["FR-004"]
+    assert [i for i, _ in filtered("every", tag="navigation", status="accepted")] == []   # filters combine
+    assert len(filtered("the")) == len(run_query("the"))                                  # no filter, no change
+
+
+def test_fr009_filters_sit_next_to_the_type_facets():
+    page = app.app.test_client().get("/search").get_data(as_text=True)
+    bar = page[page.index('class="toolbar"'):page.index('class="table-card"')]
+    for name in ("status", "priority", "tag"):
+        assert f'id="search-{name}"' in bar, name
+    for value in ("accepted", "draft", "open", "must", "should", "could", "navigation"):
+        assert f'<option value="{value}">' in bar, value
+    assert "S42Search.filter(" in page
+
+
+def test_fr009_no_filter_syntax_in_the_box():
+    assert ids("status:draft") == ids("status draft")             # the colon is only a word break
+
+
 TESTS = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
 
 if __name__ == "__main__":

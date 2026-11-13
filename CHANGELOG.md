@@ -38,6 +38,8 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - `/search` lists "Related pages" below the hits (FR-008): up to 5 pages
   one link away from a title or alias hit, each with "linked from <ID>".
   A page that is a hit already is not repeated. The popup shows none.
+- `/search` filters by status, priority and tag next to the type facets
+  (FR-009). The filters combine. The search box keeps no filter syntax.
 - Quality requirements are classified by Q42 dimensions (DR-003): the
   template and the metamodel replace the single ISO 25010 `attribute:` with
   `dimensions:`, a list of one or more of reliable, flexible, maintainable,
