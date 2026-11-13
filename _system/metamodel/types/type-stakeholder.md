@@ -23,6 +23,8 @@ fields:
   - {name: context_role, kind: scalar, doc: "diagram label / merge key; `none` hides the node"}
 anchors: [req42]
 projections: [context-diagram]
+sort_orders:
+  - {label: "Influence › interest", keys: [influence, interest]}
 ---
 
 # Type: stakeholder

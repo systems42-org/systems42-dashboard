@@ -5,27 +5,30 @@
 {% from "_empty.html" import empty_state %}
 {% from "_maturity.html" import maturity_bar %}
 {% from "_macros.html" import status_rank, level_rank %}
+{% from "_list.html" import list_attrs, list_controls, list_empty %}
+{% set spec = list_spec("stakeholder") %}
 {% block content %}
 <h1 class="page-h1">Stakeholders <span class="count-pill">{{ total }} personas</span></h1>
 {{ maturity_bar(maturity) }}
 <p class="lead">Simplified personas: goals, concerns, influence, and interest.</p>
 
 {% if rows %}
+{{ list_controls(spec) }}
 <div class="table-card">
-<table>
+<table{{ list_attrs(spec) }}>
   <thead>
     <tr>
-      <th class="c-id" data-sort="text" aria-sort="ascending">ID</th>
-      <th class="c-term" data-sort="text">Stakeholder</th>
-      <th class="c-def">Snapshot &amp; relations</th>
-      <th class="c-status" data-sort="numeric" data-sort-first="desc">Influence</th>
-      <th class="c-status" data-sort="numeric" data-sort-first="desc">Interest</th>
-      <th class="c-status" data-sort="numeric">Status</th>
+      <th class="c-id" data-sort="text" data-key="id" aria-sort="ascending">ID</th>
+      <th class="c-term" data-sort="text" data-key="title">Stakeholder</th>
+      <th class="c-def" data-sort="text" data-key="snapshot">Snapshot &amp; relations</th>
+      <th class="c-status" data-sort="numeric" data-sort-first="desc" data-key="influence">Influence</th>
+      <th class="c-status" data-sort="numeric" data-sort-first="desc" data-key="interest">Interest</th>
+      <th class="c-status" data-sort="numeric" data-key="status">Status</th>
     </tr>
   </thead>
   <tbody>
     {% for r in rows %}
-    <tr>
+    <tr data-status="{{ r.status }}">
       <td class="c-id"><code>{{ r.id }}</code></td>
       <td class="c-term" data-sort-value="{{ r.title }}">
         <a class="term term-link" href="/page/stakeholders/{{ r.stem }}">{{ r.title }}</a>
@@ -47,6 +50,7 @@
     {% endfor %}
   </tbody>
 </table>
+{{ list_empty() }}
 </div>
 {% else %}
 {{ empty_state("stakeholders") }}

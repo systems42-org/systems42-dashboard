@@ -46,7 +46,46 @@ def test_broken_input_is_a_finding_not_a_crash():
     assert "block R3 is declared by both" in r.stdout, r.stdout
 
 
+def test_sort_order_naming_an_unknown_field_is_a_finding():
+    # FR-021: a type page's `sort_orders` may name only its own fields or the
+    # universal ones, or a list would offer an order nothing can sort by
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for rel in ("_system/metamodel", "_system/anchors", "_templates", "wiki"):
+            shutil.copytree(REPO / rel, root / rel)
+        for rel in (LINT, Path("_system/apps/dashboard/catalog.py")):
+            (root / rel).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(REPO / rel, root / rel)
+        t = root / "_system" / "metamodel" / "types" / "type-issue.md"
+        text = t.read_text(encoding="utf-8")
+        assert "sort_orders:" in text, "type-issue.md declares no sort_orders"
+        t.write_text(text.replace("keys: [status, severity]", "keys: [status, urgency]", 1),
+                     encoding="utf-8")
+        r = subprocess.run([sys.executable, str(root / LINT)], capture_output=True, text=True, cwd=root)
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "sort order" in r.stdout and "urgency" in r.stdout, r.stdout
+
+
+def test_sort_orders_per_type():
+    sys.path.insert(0, str(REPO / "_system" / "apps" / "dashboard"))
+    import metamodel
+    want = {
+        "functional-requirement": [{"label": "Priority › release › order", "keys": ["priority", "release", "order"]}],
+        "issue": [{"label": "Status › severity", "keys": ["status", "severity"]}],
+        "decision-record": [{"label": "Newest first", "keys": ["decided"]}],
+        "glossary-term": [{"label": "A to Z", "keys": ["title"]}],
+        "stakeholder": [{"label": "Influence › interest", "keys": ["influence", "interest"]}],
+        "quality-requirement": [{"label": "Priority", "keys": ["priority"]}],
+    }
+    for name, orders in want.items():
+        assert metamodel.sort_orders(name) == orders, (name, metamodel.sort_orders(name))
+    assert metamodel.sort_orders("constraint") == []
+    assert metamodel.sort_orders("no-such-type") == []
+
+
 if __name__ == "__main__":
     test_metamodel_lint_passes()
     test_broken_input_is_a_finding_not_a_crash()
+    test_sort_order_naming_an_unknown_field_is_a_finding()
+    test_sort_orders_per_type()
     print("ALL PASSED")

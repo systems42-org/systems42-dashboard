@@ -13,6 +13,24 @@ Unreleased changes sit at the top until the next Starter Kit release.
 ## [Unreleased]
 
 ### Changed
+- An issue page shows category, severity, kind and owner under its ID, and
+  "nobody yet" when no one owns it (FR-026, FR-028).
+- The issue list shows category and owner, "nobody yet" for an issue without
+  one (FR-025, FR-026, FR-028). It filters by status, category, severity,
+  section and owner, the filters combine and the address carries them, as
+  `/issues?category=systems42&owner=none`. "Open" means every status except
+  `resolved` and `wontfix`, the same on tiles, the first page, the list and
+  each page, so an issue with a missing or unknown status stays visible. Each
+  row's ID and title open the issue page, the inline
+  pane is gone. `?filter=open` still works and means `?status=open`.
+- Every section list uses the shared list layer (FR-021, FR-022): an order
+  picker with the type's sort orders, "Agreed only", and every column
+  sortable. Functional requirements get a flat list under the hierarchy,
+  Vision & Goals a list of every goal, the arc42 views a list next to their
+  trees. Quality requirements show priority
+  as a column. Domain Terms drop their own sort buttons: "Added" is a column
+  now, and its header gives newest or oldest first. Decision and issue titles
+  link their pages.
 - Search forgives typos and word forms (FR-002): `keyholdr` finds Keyholder,
   `requirement engineer` finds "Requirements engineers". Words of 4 to 7
   letters allow one wrong letter, longer words two. Short words and IDs match
@@ -64,6 +82,19 @@ Unreleased changes sit at the top until the next Starter Kit release.
   the new changes page and no longer counts pages (FR-018).
 
 ### Added
+- Every wiki page lists the issues that link to it, open ones first and then
+  by severity, each with status and severity (FR-027). A page without an open
+  issue says "No open issues point at this page." Functional requirement
+  pages included.
+- The shared list layer `static/list-view.js` replaces `table-sort.js`
+  (FR-021, FR-022). A list sorts by several columns: shift-click a header to
+  add it as the next key. A list can offer its type's sort orders and an
+  "Agreed only" filter. The address keeps both, as `?sort=priority:asc,order:asc`
+  and `?status=accepted`, so a copied link shows the same list.
+- `sort_orders:` on metamodel type pages (FR-021): the useful orders for a
+  list of that type, such as priority › release › order for functional
+  requirements and status › severity for issues. The lint checks that every
+  key is a field of the type.
 - `/changes`: every wiki page, most recently changed first (FR-018).
 - `/issues?section=<ID>`: only the open issues that point at that section's
   pages. A section tile's open issue count links there (FR-019).

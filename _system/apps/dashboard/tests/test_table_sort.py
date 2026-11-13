@@ -1,7 +1,7 @@
 """Sortable table headers and the clickable Domain Terms tile. No pytest.
 
 Two halves: the templates declare which columns sort and by which key (checked
-against the populated fixture vault), and static/table-sort.js does the sorting
+against the populated fixture vault), and static/list-view.js does the sorting
 (checked under node when it is installed, on the same comparator the browser uses).
 
 Run from the dashboard dir:
@@ -43,17 +43,17 @@ def _sortable(path):
     return [label for label, attrs in _headers(path) if "data-sort=" in attrs]
 
 
+# FR-021: every single column sorts, free text included (was: free text stayed out)
 def test_stakeholder_columns():
-    # exactly the columns marked in the request: free text stays out
-    assert _sortable("/stakeholders") == ["ID", "Stakeholder", "Influence", "Interest", "Status"]
+    assert _sortable("/stakeholders") == ["ID", "Stakeholder", "Snapshot & relations", "Influence", "Interest", "Status"]
 
 
 def test_glossary_columns():
-    assert _sortable("/glossary") == ["ID", "Term", "Links", "Status"]
+    assert _sortable("/glossary") == ["ID", "Term", "Definition", "Links", "Added", "Status"]
 
 
 def test_decision_columns():
-    assert _sortable("/decisions") == ["ID", "Title", "Kind", "Decided", "Status"]
+    assert _sortable("/decisions") == ["ID", "Title", "Kind", "Drivers", "Decided", "Status"]
 
 
 def test_decision_titles_wrap():
@@ -64,15 +64,15 @@ def test_decision_titles_wrap():
 
 def test_block_columns():
     # quality and constraints share req42_block.html; a single-type block has a
-    # constant Type column, which would be a sort control that does nothing
-    for path in ("/req42/quality", "/req42/constraints"):
-        assert _sortable(path) == ["ID", "Title", "Status", "Links"], path
+    # constant Type column, so it is left out. Quality adds its priority.
+    assert _sortable("/req42/quality") == ["ID", "Title", "Priority", "Status", "Links"]
+    assert _sortable("/req42/constraints") == ["ID", "Title", "Status", "Links"]
 
 
 def test_block_type_column_sorts_when_it_varies():
     # the scope block lists context pages and external interfaces together
     body = client.get("/req42/scope").get_data(as_text=True)
-    assert re.search(r'<th class="c-status" data-sort="text">Type</th>', body), "Type not sortable on scope"
+    assert re.search(r'<th class="c-status" data-sort="text" data-key="type">Type</th>', body), "Type not sortable on scope"
 
 
 def test_context_flow_table_is_not_sortable():
@@ -93,7 +93,7 @@ def test_ratings_sort_by_rank_not_alphabet():
     body = client.get("/stakeholders").get_data(as_text=True)
     # high > medium > low, and the first click shows the highest first
     for label in ("Influence", "Interest"):
-        assert re.search(r'<th class="c-status" data-sort="numeric" data-sort-first="desc">' + label, body), label
+        assert re.search(r'<th class="c-status" data-sort="numeric" data-sort-first="desc"[^>]*>' + label, body), label
     cells = re.findall(r'<td class="c-status" data-sort-value="([^"]*)"><span class="lvl lvl-(\w+)"', body)
     assert cells, "no rating cells rendered"
     rank = {"low": "1", "medium": "2", "high": "3"}
@@ -121,7 +121,7 @@ def test_title_cells_sort_on_the_title_alone():
 def test_script_comes_from_base_once():
     for path in ("/stakeholders", "/glossary", "/decisions", "/req42/quality", "/data-model"):
         body = client.get(path).get_data(as_text=True)
-        assert len(re.findall(r'<script src="[^"]*table-sort\.js', body)) == 1, path
+        assert len(re.findall(r'<script src="[^"]*list-view\.js', body)) == 1, path
     # the data-model page uses the shared script instead of its former inline copy
     assert "getElementById('dm-summary-table')" not in (_DASH / "templates" / "data_model.html").read_text(encoding="utf-8")
 
@@ -139,7 +139,7 @@ def test_domain_terms_tile_is_clickable():
 
 
 def _run_node(body):
-    js = (_DASH / "static" / "table-sort.js").read_text(encoding="utf-8")
+    js = (_DASH / "static" / "list-view.js").read_text(encoding="utf-8")
     out = subprocess.run(["node", "-e", "var window = {};\n" + js + "\n" + body],
                          capture_output=True, text=True, check=True).stdout
     return json.loads(out)
@@ -151,7 +151,7 @@ def test_comparator():
         return
     def order(values, numeric=False, asc=True):
         return _run_node("var v = " + json.dumps(values) + ";\n"
-                         "v.sort(function (a, b) { return window.S42TableSort.compare(a, b, "
+                         "v.sort(function (a, b) { return window.S42List.compare(a, b, "
                          + json.dumps(numeric) + ", " + json.dumps(asc) + "); });\n"
                          "console.log(JSON.stringify(v));")
     # IDs in natural order, not 1, 10, 2
