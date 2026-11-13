@@ -58,11 +58,13 @@ def test_index_endpoint():
     app._PARSE_CACHE.clear()
     r = app.app.test_client().get("/search.json")
     assert r.status_code == 200 and r.is_json
-    recs = r.get_json()
-    rec = next(x for x in recs if x["id"] == "GLO-001")
-    assert set(rec) == {"id", "type", "title", "status", "url", "text"}, rec
+    data = r.get_json()
+    assert set(data) == {"records", "synonyms"}, set(data)
+    rec = next(x for x in data["records"] if x["id"] == "GLO-001")
+    assert {"id", "type", "title", "status", "url", "aliases", "plain", "fields", "links"} <= set(rec), rec
     assert rec["url"] == "/page/glossary/GLO-001-training"
-    assert "prüfung" in rec["text"]
+    assert "Prüfung" in rec["plain"]
+    assert ["training"] in data["synonyms"]
 
 
 def test_every_page_loads_ranker_and_popup():

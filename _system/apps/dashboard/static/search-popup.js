@@ -10,7 +10,7 @@
   if (!box || !window.S42Search) { return; }
   var form = box.form;
   var MAX = 8;
-  var records = null, loading = null;
+  var records = null, synonyms = [], loading = null;
   var hits = [], active = -1, total = 0;
 
   var pop = document.createElement("div");
@@ -26,7 +26,7 @@
   function load() {
     if (!loading) {
       loading = fetch("/search.json").then(function (r) { return r.json(); })
-        .then(function (data) { records = data; render(); })
+        .then(function (data) { records = data.records; synonyms = data.synonyms || []; render(); })
         .catch(function () { loading = null; });
     }
     return loading;
@@ -63,7 +63,7 @@
   function render() {
     var q = box.value.trim();
     if (!q || !records) { close(); return; }
-    var ranked = window.S42Search.rank(records, q);
+    var ranked = window.S42Search.rank(records, q, synonyms);
     total = ranked.length;
     hits = ranked.slice(0, MAX);
     var html = '<ul class="sp-list" role="listbox" aria-label="Search results">';

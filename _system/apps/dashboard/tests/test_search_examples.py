@@ -34,7 +34,7 @@ def _index_json() -> str:
     global _INDEX
     if _INDEX is None:
         with app.app.test_request_context():
-            _INDEX = json.dumps(app.build_search_records())
+            _INDEX = json.dumps(app.build_search_index())
     return _INDEX
 
 

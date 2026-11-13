@@ -2344,14 +2344,79 @@ def deployment_view():
 
 # --- global search ---------------------------------------------------------
 
+# Frontmatter fields searched as plain words (FR-006). Link fields (parent,
+# sources, related, drivers …) are left out: their values are file names.
+SEARCH_FIELDS = ["tags", "status", "stereotype", "priority", "kind", "state",
+                 "category", "dimensions"]
+
+_MD_LINK_RE = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+_LINE_MARK_RE = re.compile(r"^\s*(?:#{1,6}\s+|>\s*(?:\[![\w-]+\][-+]?\s*)?|[-*+]\s+(?:\[[ xX]\]\s+)?|\d+[.)]\s+)+")
+_EMPHASIS_RE = re.compile(r"\*\*|__|~~|`|(?<!\w)\*(?=\S)|(?<=\S)\*(?!\w)")
+
+
+def search_plain(page: Page, titles: dict[str, str]) -> str:
+    """A page body as the reader sees it, for search: wikilinks become their
+    label (or the target's title), markdown and HTML markup go, hard-wrapped
+    prose is joined. One line per paragraph, heading or list item, so the
+    ranker can cut passages. The H1 that repeats the title is dropped."""
+    body = _unwrap_prose(page.body)
+    body = WIKILINK_RE.sub(lambda m: (m.group(2) or titles.get(m.group(1).strip().split("/")[-1],
+                                                                 m.group(1).strip())).strip(), body)
+    body = _MD_LINK_RE.sub(lambda m: m.group(1), body)
+    body = _HTML_TAG_RE.sub(" ", body)
+    lines = []
+    for line in body.splitlines():
+        if line.strip().startswith("```") or _TABLE_SEP_RE.match(line):
+            continue
+        line = _LINE_MARK_RE.sub("", line)
+        line = _EMPHASIS_RE.sub("", line).replace("|", " ")
+        line = re.sub(r"\s+", " ", line).strip()
+        if line and line != "---":
+            lines.append(line)
+    if lines and lines[0].lower() == str(page.title).strip().lower():
+        lines.pop(0)
+    return "\n".join(lines)
+
+
+def _search_fields(page: Page) -> dict[str, list[str]]:
+    out: dict[str, list[str]] = {}
+    for key in SEARCH_FIELDS:
+        v = page.meta.get(key)
+        vals = v if isinstance(v, list) else [v]
+        vals = [str(x).strip().lower() for x in vals if x is not None and str(x).strip()]
+        if vals:
+            out[key] = vals
+    return out
+
+
+def _search_links(pages: list[Page]) -> dict[str, set[str]]:
+    """page id -> ids one link step away, in either direction (FR-008)."""
+    idx = link_index()
+    by_stem = {p.stem: p for p in pages}
+    out: dict[str, set[str]] = {p.id: set() for p in pages}
+    for p in pages:
+        for t in p.link_targets():
+            dest = idx.get(t)
+            if not dest or dest[1] not in by_stem:
+                continue
+            other = by_stem[dest[1]].id
+            if other != p.id:
+                out[p.id].add(other)
+                out.setdefault(other, set()).add(p.id)
+    return out
+
+
 def build_search_records() -> list[dict]:
-    """A flat, lower-cased index over every wiki page. Each record
-    links to that unit's own detail page and carries both the full searchable
-    text (for the /search page) and a slim title/id key (for the tile preview).
-    Small enough to rank client-side (static/search-rank.js); /search.json
-    serves it to the topbar popup."""
+    """A flat index over every wiki page, ranked client-side by
+    static/search-rank.js. Each record links to that unit's own detail page
+    and carries the reader's text (`plain`), `aliases`, the searched `fields`
+    (lower-cased) and the ids of its neighbours (`links`)."""
+    pages = load_all_pages()
+    titles = title_index()
+    neighbours = _search_links(pages)
     records = []
-    for p in load_all_pages():
+    for p in pages:
         kind = FOLDER_LABELS.get(p.folder, p.folder)
         text = " ".join(filter(None, [p.id, p.title, " ".join(p.aliases), p.body]))
         records.append({
@@ -2362,10 +2427,31 @@ def build_search_records() -> list[dict]:
             "url": (f"/functional-requirements/{p.stem}"
                     if p.folder == "functional-requirements"
                     else f"/page/{p.folder}/{p.stem}"),
+            "aliases": [str(a) for a in p.aliases],
+            "plain": search_plain(p, titles),
+            "fields": _search_fields(p),
+            "links": sorted(neighbours.get(p.id, ())),
             "text": re.sub(r"\s+", " ", text).strip().lower(),
             "key": " ".join([p.id, p.title, " ".join(p.aliases), kind]).strip().lower(),
         })
     return records
+
+
+def search_synonyms() -> list[list[str]]:
+    """Each glossary term's title plus its aliases, lower-cased. The search
+    treats a group as one word (FR-003)."""
+    return [[str(w).strip().lower() for w in [p.title, *p.aliases] if str(w).strip()]
+            for p in load_folder("glossary")]
+
+
+SEARCH_RECORD_KEYS = ("id", "type", "title", "status", "url", "aliases", "plain",
+                      "fields", "links", "text")
+
+
+def build_search_index() -> dict:
+    """What /search.json serves and /search embeds: {records, synonyms}."""
+    return {"records": [{k: r[k] for k in SEARCH_RECORD_KEYS} for r in build_search_records()],
+            "synonyms": search_synonyms()}
 
 
 # --- views -----------------------------------------------------------------
@@ -2761,8 +2847,7 @@ def search_index():
     """The search index for the topbar's incremental search popup
     (static/search-popup.js); ranked client-side by static/search-rank.js,
     the same code the /search page uses."""
-    return jsonify([{k: r[k] for k in ("id", "type", "title", "status", "url", "text")}
-                    for r in build_search_records()])
+    return jsonify(build_search_index())
 
 
 @app.route("/search")
