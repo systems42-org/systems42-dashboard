@@ -400,6 +400,9 @@ h2 { letter-spacing: -.01em; }
 /* why a non-exact hit is in the list (FR-005), popup and /search */
 .hit-note { font-weight: 400; font-style: italic; color: var(--ink-dim); font-size: var(--step--1); margin-left: .4rem; }
 .sresult .badge { min-width: 6.5rem; text-align: center; }
+/* the sentence where the query matched (FR-007), /search only */
+.hit-passage { margin: -.3rem 0 0; padding: 0 1rem .7rem; color: var(--ink-soft); font-size: var(--step--1); }
+.hit-passage mark { background: rgba(62,166,255,.22); color: var(--ink); border-radius: 2px; padding: 0 .1em; }
 .search-hint { color: var(--ink-dim); font-style: italic; padding: 1.2rem 1rem; margin: 0; }
 
 /* per-result relevance meter (% + bar), set by the ranking JS */

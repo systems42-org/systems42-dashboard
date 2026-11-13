@@ -30,6 +30,7 @@
           <span class="score-pct"></span>
         </span>
       </a>
+      <div class="sresult-passage"></div>
     </li>
     {% endfor %}
   </ul>
@@ -55,6 +56,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const index = JSON.parse(document.getElementById('search-index').textContent);
   const synonyms = index.synonyms;
   const allRecs = index.records.map((r, i) => Object.assign({el: allResults[i]}, r));
+
+  // the sentence where the query matched (FR-007); passage() escapes the text
+  function setPassage(el, hit) {
+    el.querySelector('.sresult-passage').innerHTML = hit ? S42Search.passage(hit) : '';
+  }
 
   function setNote(el, note) {
     const span = el.querySelector('.hit-note');
@@ -97,9 +103,10 @@ document.addEventListener('DOMContentLoaded', () => {
       ranked.forEach(({rec}) => { perType[rec.type] = (perType[rec.type] || 0) + 1; });
       updateCounts(perType);
       allResults.forEach(el => { el.hidden = true; });
-      ranked.forEach(({rec, score, note}) => {
+      ranked.forEach(hit => {
+        const {rec, score, note} = hit;
         if (activeType !== 'all' && rec.type !== activeType) return;
-        rec.el.hidden = false; setScore(rec.el, score); setNote(rec.el, note);
+        rec.el.hidden = false; setScore(rec.el, score); setNote(rec.el, note); setPassage(rec.el, hit);
         list.appendChild(rec.el); shown++;
       });
     } else if (browsing) {                               // facet browse, no query
@@ -108,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const show = activeType === 'all' || el.dataset.type === activeType;
         el.hidden = !show;
         if (show) {
-          el.querySelector('.sresult-score').hidden = true; setNote(el, null);
+          el.querySelector('.sresult-score').hidden = true; setNote(el, null); setPassage(el, null);
           list.appendChild(el); shown++;
         }
       });

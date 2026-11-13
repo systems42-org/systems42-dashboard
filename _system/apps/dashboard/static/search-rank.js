@@ -219,6 +219,52 @@
     return null;
   }
 
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c];
+    });
+  }
+
+  function sentences(plain) {
+    return norm(plain).split("\n").reduce(function (acc, line) {
+      return acc.concat(line.split(/(?<=[.!?])\s+/));
+    }, []).filter(function (x) { return x.trim(); });
+  }
+
+  // The sentence where the query matched, with the matching words in <mark>,
+  // for /search (FR-007). A hit with no match in the body shows the page's
+  // first sentence. Empty when the page has no text. Escaped before marking.
+  var PASSAGE_MAX = 240;
+  function passage(hit) {
+    var marks = new Set();
+    hit.matches.forEach(function (m) {
+      if (m.place === "body") { m.lcs.forEach(function (w) { marks.add(w); }); }
+    });
+    var all = sentences(hit.rec.plain);
+    var s = all[0];
+    if (marks.size) {
+      s = all.filter(function (x) {
+        return words(x).some(function (w) { return marks.has(w.toLowerCase()); });
+      })[0] || s;
+    }
+    if (!s) { return ""; }
+    var html = "", last = 0, first = -1, m;
+    var re = new RegExp(WORD_RE.source, "gu");
+    while ((m = re.exec(s)) !== null) {
+      if (!marks.has(m[0].toLowerCase())) { continue; }
+      if (first < 0) { first = m.index; }
+      html += esc(s.slice(last, m.index)) + "<mark>" + esc(m[0]) + "</mark>";
+      last = m.index + m[0].length;
+    }
+    html += esc(s.slice(last));
+    if (s.length > PASSAGE_MAX && first > PASSAGE_MAX / 2) {
+      // keep the first mark in view: cut the start at a word gap before it
+      var cut = s.lastIndexOf(" ", first - 40);
+      html = "…" + html.slice(esc(s.slice(0, cut + 1)).length);
+    }
+    return '<p class="hit-passage">' + html + "</p>";
+  }
+
   function band(pct) { return pct >= 80 ? "high" : pct >= 55 ? "mid" : "low"; }
 
   // Rank `records` against query `q`, with the glossary's synonym groups;
@@ -262,5 +308,5 @@
     return out;
   }
 
-  window.S42Search = {rank: rank, band: band, matchWord: matchWord, stem: stem};
+  window.S42Search = {rank: rank, band: band, matchWord: matchWord, stem: stem, passage: passage};
 })();

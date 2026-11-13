@@ -212,6 +212,44 @@ def test_fr006_tag_between_title_and_body():
     assert title < tag < body, found
 
 
+# --- FR-007 highlighted passage on /search -----------------------------------
+
+def passages(q: str) -> dict[str, str]:
+    """/search's passage per hit: {id: html}."""
+    expr = (f"(function () {{ var ix = {_index_json()}; var o = {{}};"
+            f" S.rank(ix.records, {json.dumps(q)}, ix.synonyms).forEach(function (h) {{"
+            " o[h.rec.id] = S.passage(h); }); return o; })()")
+    return js(expr)
+
+
+def test_fr007_body_hit_shows_marked_sentence():
+    ps = passages("facilitator")
+    assert ps["STK-023"] == ('<p class="hit-passage">Works with the <mark>facilitator</mark>'
+                             ' in every workshop.</p>'), ps["STK-023"]
+    assert "<mark>facilitator</mark>" in ps["FR-001"], ps
+    for q in ("person", "start", "guides session"):                  # body-only queries: every hit is marked
+        for page_id, html in passages(q).items():
+            assert html.startswith('<p class="hit-passage">') and "<mark>" in html, (q, page_id, html)
+
+
+def test_fr007_title_hit_shows_first_sentence():
+    assert passages("facilitator")["GLO-001"] == '<p class="hit-passage">Person who guides a session.</p>'
+
+
+def test_fr007_passage_is_escaped():
+    rec = {"id": "X-1", "type": "Issue", "title": "X", "aliases": [], "fields": {},
+           "plain": "Use <script> & a facilitator."}
+    html = js(f"S.passage(S.rank([{json.dumps(rec)}], 'facilitator', [])[0])")
+    assert "&lt;script&gt; &amp; a <mark>facilitator</mark>." in html, html
+
+
+def test_fr007_only_on_the_results_page():
+    popup = (_DASH / "static" / "search-popup.js").read_text(encoding="utf-8")
+    page = (_DASH / "templates" / "search.html").read_text(encoding="utf-8")
+    assert "passage" not in popup
+    assert "S42Search.passage(" in page
+
+
 TESTS = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
 
 if __name__ == "__main__":
