@@ -6,15 +6,24 @@ Run from the dashboard dir:
     .venv/bin/python tests/test_metamodel_page.py
 
 WIKI_DIR points at tests/fixtures/wiki; the metamodel is the real one, since
-the page's whole point is to agree with it.
+the page's whole point is to agree with it. The anchors are a temporary
+folder of their own (ANCHORS_DIR).
 """
 import os
 import sys
+import tempfile
 from pathlib import Path
 
 _FIXTURE = Path(__file__).resolve().parent / "fixtures" / "wiki"
 os.environ["WIKI_DIR"] = str(_FIXTURE)
 os.environ["DASHBOARD_CONFIG"] = str(_FIXTURE.parent / "dashboard-absent.yaml")
+# the anchors are the test's own, so the page check does not hang on the
+# wording of _system/anchors/
+_ANCHORS = Path(tempfile.mkdtemp())
+(_ANCHORS / "pam.md").write_text(
+    "---\ntype: anchor\ntitle: PAM\naliases: [PAM]\napplies-to: [goal]\n---\n\n# PAM\n\n"
+    "Purpose, Advantage, Metric.\n", encoding="utf-8")
+os.environ["ANCHORS_DIR"] = str(_ANCHORS)
 os.environ["DASH_STARTUP_GRACE"] = "3600"
 os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
