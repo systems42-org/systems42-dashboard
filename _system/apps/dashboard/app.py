@@ -2351,6 +2351,7 @@ SEARCH_FIELDS = ["tags", "status", "stereotype", "priority", "kind", "state",
 
 _MD_LINK_RE = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")
 _HTML_TAG_RE = re.compile(r"<[^>]+>")
+_SOURCE_ID_RE = re.compile(r"[A-Z]+-\d+")
 _LINE_MARK_RE = re.compile(r"^\s*(?:#{1,6}\s+|>\s*(?:\[![\w-]+\][-+]?\s*)?|[-*+]\s+(?:\[[ xX]\]\s+)?|\d+[.)]\s+)+")
 _EMPHASIS_RE = re.compile(r"\*\*|__|~~|`|(?<!\w)\*(?=\S)|(?<=\S)\*(?!\w)")
 
@@ -2359,10 +2360,22 @@ def search_plain(page: Page, titles: dict[str, str]) -> str:
     """A page body as the reader sees it, for search: wikilinks become their
     label (or the target's title), markdown and HTML markup go, hard-wrapped
     prose is joined. One line per paragraph, heading or list item, so the
-    ranker can cut passages. The H1 that repeats the title is dropped."""
+    ranker can cut passages. The H1 that repeats the title is dropped.
+    An unlabelled provenance link to raw/sources becomes the source's ID
+    (`SRC-006`): its file name or title would match words such as
+    "grilling" on most pages, and dropping it leaves "came from ." holes."""
+    def link_text(m: re.Match) -> str:
+        target, label = m.group(1).strip(), m.group(2)
+        base = target.split("/")[-1]
+        if label:
+            return label.strip()
+        if target.startswith("raw/") or base.startswith("SRC-"):
+            src = source_index().get(base)
+            return src.id if src else _SOURCE_ID_RE.match(base).group(0) if _SOURCE_ID_RE.match(base) else ""
+        return titles.get(base, target)
+
     body = _unwrap_prose(page.body)
-    body = WIKILINK_RE.sub(lambda m: (m.group(2) or titles.get(m.group(1).strip().split("/")[-1],
-                                                                 m.group(1).strip())).strip(), body)
+    body = WIKILINK_RE.sub(link_text, body)
     body = _MD_LINK_RE.sub(lambda m: m.group(1), body)
     body = _HTML_TAG_RE.sub(" ", body)
     lines = []

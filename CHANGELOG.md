@@ -32,7 +32,9 @@ Unreleased changes sit at the top until the next Starter Kit release.
   `stereotype`, `priority`, `kind`, `state`, `category` and `dimensions`.
   `Must` finds every page with `priority: Must`. A field hit ranks below a
   title hit and above a hit in the body text. Link fields, dates and raw
-  markdown are no longer searched, so file names in links add no noise.
+  markdown are no longer searched. In the body, a link reads as its label
+  or the page title, and a link to a source as the source's ID
+  (`SRC-006`), so file names add no noise.
 - Each hit on `/search` shows the sentence where the query matched, with
   the matching words highlighted (FR-007). A title hit shows the page's
   first sentence. The popup stays compact and shows no passage.

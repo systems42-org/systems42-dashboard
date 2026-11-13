@@ -42,6 +42,12 @@ def test_plain_drops_link_targets_and_markup():
     assert plain.startswith("The person that started the dashboard app."), plain
 
 
+def test_plain_names_sources_by_id():
+    plain = _rec("FR-007")["plain"]          # body cites ([[SRC-006-grilling-session-on-search]])
+    assert "grilling" not in plain.lower(), plain
+    assert "Readers look from any page (SRC-006)." in plain, plain
+
+
 def test_fields():
     fields = _rec("FR-001")["fields"]
     assert fields["priority"] == ["must"], fields
@@ -75,6 +81,7 @@ def test_search_json_serves_the_index_root():
 
 if __name__ == "__main__":
     test_plain_drops_link_targets_and_markup()
+    test_plain_names_sources_by_id()
     test_fields()
     test_aliases()
     test_links_both_directions()
