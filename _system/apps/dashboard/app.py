@@ -3730,20 +3730,28 @@ def _goal_matrix(data: dict) -> tuple[list[dict], list[dict]]:
             + [col(uc) for uc in data["ucs"]]
             + [col(e) for e in epics if e.id in enabler_ids])
     col_ids = {c["id"] for c in cols}
+
+    def gap_note(serving: list[Page], agreed: bool) -> str:
+        # the features and stories that serve a goal without a column
+        kinds = [k for k in ("feature", "story") if any(
+            p.id not in col_ids and str(p.meta.get("stereotype") or "").strip().lower() == k
+            for p in serving)]
+        a = "agreed " if agreed else ""
+        if not kinds:
+            return f"No {a}epic or use case yet"
+        plural = {"feature": "features", "story": "stories"}
+        return f"No {a}epic yet, served by " + " and ".join(a + plural[k] for k in kinds)
+
     rows = []
     for o in data["objectives"]:
         serving = data["coverage"].get(o.id, [])
         covered = {p.id for p in serving}
         cells = [c["id"] in covered for c in cols]
-        kinds = [k for k in ("feature", "story") if any(
-            p.id not in col_ids and str(p.meta.get("stereotype") or "").strip().lower() == k
-            for p in serving)]
-        note = ("No epic yet, served by " + " and ".join(
-                    {"feature": "features", "story": "stories"}[k] for k in kinds)
-                if kinds else "No epic or use case yet")
         rows.append({"id": o.id, "title": o.title, "url": _page_url(o.folder, o.stem),
                      "status": o.status, "cells": cells, "gap": not any(cells),
-                     "note": note})
+                     "note": gap_note(serving, False),
+                     # for "Agreed only": counts accepted pages only
+                     "note_accepted": gap_note([p for p in serving if p.status == "accepted"], True)})
     return cols, rows
 
 

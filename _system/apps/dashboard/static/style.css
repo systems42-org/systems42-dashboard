@@ -805,8 +805,9 @@ pre.mermaid:not([data-processed]) { color: transparent; min-height: 2rem; }
   text-transform: none; letter-spacing: 0; box-shadow: 0 6px 16px rgba(0,0,0,.4);
   z-index: 20; pointer-events: none;
 }
-.gm-th:nth-last-child(-n+3)[data-tooltip]:hover::after,
-.gm-th:nth-last-child(-n+3)[data-tooltip]:focus-within::after { left: auto; right: 0; transform: none; }
+/* gm-edge: the last three visible columns (goals.html, static/goal-matrix.js) */
+.gm-th.gm-edge[data-tooltip]:hover::after,
+.gm-th.gm-edge[data-tooltip]:focus-within::after { left: auto; right: 0; transform: none; }
 .gm-th[data-tooltip]:hover::before, .gm-th[data-tooltip]:focus-within::before {
   content: ""; position: absolute; top: calc(100% + 2px); left: 50%;
   transform: translateX(-50%); border: 6px solid transparent;

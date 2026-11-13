@@ -214,22 +214,56 @@ def _node(body):
     return json.loads(out)
 
 
+def _gap_notes(gid):
+    tr = re.search(r'<tr[^>]*data-goal="' + gid + r'"[^>]*>', _matrix()).group(0)
+    return (re.search(r'data-gap-note="([^"]*)"', tr).group(1),
+            re.search(r'data-gap-note-accepted="([^"]*)"', tr).group(1))
+
+
+def test_agreed_only_has_its_own_gap_note():
+    # served only by a draft feature: with drafts hidden nothing serves it
+    assert _gap_notes("GOAL-005") == ("No epic yet, served by features",
+                                      "No agreed epic or use case yet")
+    # a draft epic and an agreed feature: a gap only with drafts hidden
+    assert _gap_notes("GOAL-006")[1] == "No agreed epic yet, served by agreed features"
+
+
+def test_tooltips_near_the_right_edge_open_to_the_left():
+    heads = _headers()
+    edge = ["gm-edge" in h.split(">")[0] for h in heads]
+    assert edge == [False] * (len(heads) - 3) + [True] * 3, edge
+    css = (Path(__file__).resolve().parents[1] / "static" / "style.css").read_text(encoding="utf-8")
+    assert ".gm-th.gm-edge[data-tooltip]:hover::after" in css
+    assert "gm-th:nth-last-child" not in css
+
+
+def test_no_agreed_goals_hint_is_ready():
+    m = re.search(r'<p class="empty-hint" data-gm-none hidden>([^<]*)</p>', _matrix())
+    assert m and m.group(1) == "No agreed goals yet.", _matrix()[-600:]
+
+
 def test_agreed_only_hides_drafts_and_finds_new_gaps():
     if not shutil.which("node"):
         print("skip: no node")
         return
-    cols = [{"status": "accepted"}, {"status": "draft"}]
-    rows = [{"status": "accepted", "marks": [True, False]},
-            {"status": "accepted", "marks": [False, True]},
-            {"status": "draft", "marks": [True, True]}]
+    cols = [{"status": "accepted"}, {"status": "draft"}, {"status": "accepted"},
+            {"status": "accepted"}, {"status": "draft"}]
+    rows = [{"status": "accepted", "marks": [True, False, False, False, False], "note": "a", "noteAccepted": "A"},
+            {"status": "accepted", "marks": [False, True, False, False, False], "note": "b", "noteAccepted": "B"},
+            {"status": "draft", "marks": [True, True, False, False, False], "note": "c", "noteAccepted": "C"}]
     call = "console.log(JSON.stringify(window.S42GoalMatrix.view(%s, %s, %s)));"
     every = _node(call % (json.dumps(rows), json.dumps(cols), json.dumps("all")))
-    assert every == {"rows": [True, True, True], "cols": [True, True],
-                     "gaps": [False, False, False]}, every
+    assert every == {"rows": [True, True, True], "cols": [True] * 5,
+                     "gaps": [False, False, False], "notes": ["a", "b", "c"],
+                     "edges": [False, False, True, True, True], "none": False}, every
     agreed = _node(call % (json.dumps(rows), json.dumps(cols), json.dumps("accepted")))
-    # the second goal is served only by a draft, so with drafts hidden it is a gap
-    assert agreed == {"rows": [True, True, False], "cols": [True, False],
-                      "gaps": [False, True, False]}, agreed
+    # the second goal is served only by a draft, so with drafts hidden it is a
+    # gap with the agreed note, and the tooltip flip counts visible columns only
+    assert agreed == {"rows": [True, True, False], "cols": [True, False, True, True, False],
+                      "gaps": [False, True, False], "notes": ["A", "B", "C"],
+                      "edges": [True, False, True, True, False], "none": False}, agreed
+    drafts = [dict(r, status="draft") for r in rows]
+    assert _node(call % (json.dumps(drafts), json.dumps(cols), json.dumps("accepted")))["none"] is True
 
 
 def test_goals_page_loads_the_matrix_script():

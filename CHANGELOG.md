@@ -21,7 +21,8 @@ Unreleased changes sit at the top until the next Starter Kit release.
   group, marked "no goal". A goal that no epic or use case serves gets a quiet
   row and a note, which says so when features or stories serve it. The "Agreed
   only" filter applies to the matrix too, with its own buttons for the same
-  `?status=`. Each goal card's "drives" list still names every requirement that
+  `?status=`. It then counts agreed pages only, also in the notes. A `goal:`
+  counts only when it links an existing objective. Each goal card's "drives" list still names every requirement that
   serves the goal, so every mark is also there as text. On a phone the goal
   column leaves room for the marks. The goal and epic map on the functional requirements page shows epics
   without a goal under "No goal", no longer under "Platform / Enabler".
