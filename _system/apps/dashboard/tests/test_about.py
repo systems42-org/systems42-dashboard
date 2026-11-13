@@ -97,7 +97,7 @@ def test_symlinks_out_of_docs_are_refused():
 
 def test_about_page_carries_no_brand_animation():
     """/about shows the project's own page as written; the intro animation, if
-    a brand ships one, belongs to the home page only (static/brand/README.md)."""
+    a brand ships one, belongs to the home page only (brands/README.md)."""
     configure("about: docs/brand/README.md\n")
     about = client.get("/about").get_data(as_text=True)
     assert "intro.js" not in about and "<template" not in about

@@ -28,6 +28,9 @@ services:
       - "${DOCS_DIR:-../../../docs}:/docs:ro"
       # The explicit metamodel (_system/metamodel/) — the /metamodel help page reads it.
       - "${METAMODEL_DIR:-../../metamodel}:/metamodel:ro"
+      # The wiki repository, read-only. Only a wiki's own brand folder
+      # (`brand:` in wiki.yaml) is read from it: its marks, favicon and intro.
+      - "${REPO_DIR:-../../..}:/repo:ro"
       # Project identity (_system/wiki.yaml), read-only like the rest.
       - "${CONFIG_FILE:-../../wiki.yaml}:/config/wiki.yaml:ro"
       # Dashboard settings — the ONE read-write mount: the Configure dialog

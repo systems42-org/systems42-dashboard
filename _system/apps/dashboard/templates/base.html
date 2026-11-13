@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Dashboard{% endblock %} · {{ system_name }}</title>
-  <link rel="icon" type="image/svg+xml" href="{{ static_url('brand/favicon.svg') }}">
+  <link rel="icon" type="image/svg+xml" href="{{ active_brand.favicon }}">
   <script>
   // Theme, stamped before the stylesheet paints. Inline and in <head> on
   // purpose: an external file is a second round-trip, and the flash of dark
@@ -32,7 +32,7 @@
      on the home page. #}
   <header class="topbar">
     {% if request.path != '/' %}
-    <a class="brand" href="/"><img class="brand-mark mark-on-dark" src="{{ static_url('brand/mark-dark.svg') }}" alt=""><img class="brand-mark mark-on-light" src="{{ static_url('brand/mark-light.svg') }}" alt=""> {{ system_name }}</a>
+    <a class="brand" href="/"><img class="brand-mark mark-on-dark" src="{{ active_brand.mark_dark }}" alt=""><img class="brand-mark mark-on-light" src="{{ active_brand.mark_light }}" alt=""> {{ system_name }}</a>
     {% endif %}
     <nav class="mainnav" aria-label="Main">
       {% for href, label, current in nav_items %}
@@ -96,11 +96,13 @@
     <div class="foot-sub">
       Data last refreshed: {{ refreshed_at }} ·
       <a href="/metamodel">Metamodel</a> · <a href="/help">Help</a> ·
+      {% if dashboard_version_own %}<span class="foot-version">Dashboard {{ dashboard_version_own }}</span> ·{% endif %}
       <span class="stack-badge" title="Built with Python + Flask">
         <img class="stack-icon" src="{{ static_url('python-logo.svg') }}" width="14" height="14" alt="" title="Built with Python + Flask">
         Python
       </span>
     </div>
+    {% if dashboard_version_differs %}<div class="version-mismatch">This wiki asks for dashboard {{ dashboard_version }}. This is {{ dashboard_version_own or "an unnumbered build" }}.</div>{% endif %}
   </footer>
   {% block scripts %}{% endblock %}
   <script>

@@ -27,7 +27,7 @@ import markdown as md
 import yaml
 from flask import (Flask, abort, g, has_request_context, jsonify, redirect,
                    render_template, request, send_file, url_for)
-from markupsafe import escape
+from markupsafe import Markup, escape
 
 import catalog  # the section catalog (DR-033)
 import metamodel  # reader for _system/metamodel/ (DR-035)
@@ -180,6 +180,33 @@ CONFIG_PATH = Path(_env_cfg) if _env_cfg else Path(__file__).resolve().parents[2
 
 DEFAULT_SYSTEM_NAME = "Requirements Wiki"
 
+# Root of the wiki repository. A wiki's own brand folder (`brand:` in
+# wiki.yaml) is a path relative to it. Read-only mount at /repo in Docker.
+_env_repo = os.environ.get("REPO_DIR")
+REPO_DIR = Path(_env_repo) if _env_repo else Path(__file__).resolve().parents[3]
+
+# The dashboard's own release, shown in the footer.
+try:
+    DASHBOARD_VERSION = (Path(__file__).resolve().parent / "VERSION").read_text(encoding="utf-8").strip()
+except OSError:
+    DASHBOARD_VERSION = ""
+
+# Brands: marks, favicon and an optional intro (contract: brands/README.md).
+# The example brands ship in brands/; a wiki may name its own folder instead.
+BRANDS_DIR = Path(__file__).resolve().parent / "brands"
+EXAMPLE_BRANDS = ("systems42", "atrium")
+DEFAULT_BRAND = "systems42"
+BRAND_MARKS = ("mark-dark.svg", "mark-light.svg", "favicon.svg")
+BRAND_INTRO = "intro.html"
+
+
+def _intro_on(value) -> bool:
+    """`intro:` in wiki.yaml. YAML reads a bare `off` as False, a quoted one
+    as a string, so both count. Missing or anything else means on."""
+    if value is False:
+        return False
+    return str(value).strip().lower() not in ("off", "false", "no", "0")
+
 def wiki_config() -> dict:
     """Project identity from `_system/wiki.yaml`.
 
@@ -200,7 +227,11 @@ def wiki_config() -> dict:
         data = {}
     name = str(data.get("system_name") or "").strip()
     about = about_doc(data.get("about"))
+    version = data.get("dashboard_version")
     return {
+        "brand": str(data.get("brand") or "").strip() or DEFAULT_BRAND,
+        "intro": _intro_on(data.get("intro")),
+        "dashboard_version": "" if version is None else str(version).strip(),
         "system_name": name or DEFAULT_SYSTEM_NAME,
         "system_name_set": bool(name),
         "tagline": str(data.get("tagline") or "").strip(),
@@ -238,10 +269,95 @@ def docs_file(rel: str) -> Path | None:
     return path if root in path.parents and path.is_file() else None
 
 
+_brand_warned: set[str] = set()
+
+
+def _brand_warning(message: str) -> None:
+    """Log a brand problem once per process, not on every request."""
+    if message not in _brand_warned:
+        _brand_warned.add(message)
+        app.logger.warning(message)
+
+
+def _inside(root: Path, path: Path) -> bool:
+    return path == root or root in path.parents
+
+
+def brand_dir(value: str) -> Path:
+    """The folder of the brand `brand:` names, resolved and checked.
+
+    An example brand name wins, anything else is a folder relative to the
+    wiki repository root. A folder that leaves the root (`..`, an absolute
+    path, a symlink) or lacks one of the three marks yields the default
+    brand and a log warning. The folder is only ever read (CON-002)."""
+    default = BRANDS_DIR / DEFAULT_BRAND
+    name = str(value or "").strip() or DEFAULT_BRAND
+    if name in EXAMPLE_BRANDS:
+        return BRANDS_DIR / name
+    root = REPO_DIR.resolve()
+    path = (root / name).resolve()
+    if not _inside(root, path):
+        _brand_warning(f"brand: {name!r} is outside the wiki repository, showing {DEFAULT_BRAND}")
+        return default
+    if not path.is_dir():
+        _brand_warning(f"brand: {name!r} is no folder in the wiki repository, showing {DEFAULT_BRAND}")
+        return default
+    missing = [f for f in BRAND_MARKS if _brand_file(path, f) is None]
+    if missing:
+        _brand_warning(f"brand: {name!r} lacks {', '.join(missing)}, showing {DEFAULT_BRAND}")
+        return default
+    return path
+
+
+def _brand_file(folder: Path, name: str) -> Path | None:
+    """`folder/name` if it is a file that stays inside `folder`, else None."""
+    path = (folder / name).resolve()
+    return path if path.parent == folder.resolve() and path.is_file() else None
+
+
+def _brand_url(folder: Path, name: str) -> str:
+    """/brand/<name> with a content checksum, so switching brands or editing
+    a mark changes the URL and the browser cannot show a cached one."""
+    path = _brand_file(folder, name)
+    try:
+        return f"/brand/{name}?v={zlib.crc32(path.read_bytes()):08x}"
+    except (OSError, AttributeError):
+        return f"/brand/{name}"
+
+
 @app.context_processor
 def inject_identity():
-    """Make the project identity available to every template."""
-    return wiki_config()
+    """Make the project identity and the active brand available to every
+    template. `active_brand.intro_html` is the intro fragment, inserted as it
+    is (never rendered as a template), or "" when there is none or `intro: off`."""
+    cfg = wiki_config()
+    folder = brand_dir(cfg["brand"])
+    intro = _brand_file(folder, BRAND_INTRO) if cfg["intro"] else None
+    try:
+        intro_html = Markup(intro.read_text(encoding="utf-8")) if intro else ""
+    except (OSError, UnicodeDecodeError):
+        intro_html = ""
+    cfg["active_brand"] = {
+        "mark_dark": _brand_url(folder, "mark-dark.svg"),
+        "mark_light": _brand_url(folder, "mark-light.svg"),
+        "favicon": _brand_url(folder, "favicon.svg"),
+        "intro_html": intro_html,
+    }
+    cfg["dashboard_version_own"] = DASHBOARD_VERSION
+    cfg["dashboard_version_differs"] = bool(cfg["dashboard_version"]) and \
+        cfg["dashboard_version"] != DASHBOARD_VERSION
+    return cfg
+
+
+@app.route("/brand/<name>")
+def brand_mark(name):
+    """The active brand's marks and favicon. Nothing else in the folder."""
+    if name not in BRAND_MARKS:
+        abort(404)
+    path = _brand_file(brand_dir(wiki_config()["brand"]), name)
+    if path is None:
+        abort(404)
+    return send_file(path, mimetype="image/svg+xml")
 
 
 @app.context_processor
