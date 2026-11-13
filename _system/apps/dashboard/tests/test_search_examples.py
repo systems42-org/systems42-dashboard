@@ -250,6 +250,39 @@ def test_fr007_only_on_the_results_page():
     assert "S42Search.passage(" in page
 
 
+# --- FR-008 related pages on /search -----------------------------------------
+
+def related(q: str) -> list[dict]:
+    """/search's "Related pages" group: [{id, note}]."""
+    expr = (f"(function () {{ var ix = {_index_json()};"
+            f" var hits = S.rank(ix.records, {json.dumps(q)}, ix.synonyms);"
+            " return S.related(hits, ix.records).map(function (r) { return {id: r.rec.id, note: r.note}; });"
+            " })()")
+    return js(expr)
+
+
+def test_fr008_neighbours_of_a_title_hit():
+    rel = related("keyholder")
+    hits = ids("keyholder")
+    assert 1 <= len(rel) <= 5, rel
+    assert not {r["id"] for r in rel} & set(hits), (rel, hits)      # never repeats a hit
+    assert all(r["note"] == "linked from STK-023" for r in rel), rel
+    assert len(rel) == 5                                            # STK-023 has 6 neighbours that are no hit
+
+
+def test_fr008_alias_hit_counts_body_hit_does_not():
+    assert {r["id"] for r in related("jedi master")} >= {"FR-001", "GLO-001"}
+    assert related("ask") == []                                     # ISS-001 says "ask" only in its body
+
+
+def test_fr008_only_on_the_results_page():
+    popup = (_DASH / "static" / "search-popup.js").read_text(encoding="utf-8")
+    page = (_DASH / "templates" / "search.html").read_text(encoding="utf-8")
+    assert "related" not in popup
+    assert 'class="related-pages"' in page and "S42Search.related(" in page
+    assert page.index('id="search-results"') < page.index('class="related-pages"')   # below the hits
+
+
 TESTS = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
 
 if __name__ == "__main__":

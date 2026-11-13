@@ -34,6 +34,10 @@
     </li>
     {% endfor %}
   </ul>
+  <section class="related-pages" id="search-related" aria-labelledby="search-related-h" hidden>
+    <h2 class="related-pages-h" id="search-related-h">Related pages</h2>
+    <ul class="search-results"></ul>
+  </section>
   <p class="empty-hint" id="search-empty" hidden>No matches.</p>
   <p class="search-hint" id="search-prompt">Start typing to search — or choose a type filter.</p>
 </div>
@@ -60,6 +64,21 @@ document.addEventListener('DOMContentLoaded', () => {
   // the sentence where the query matched (FR-007); passage() escapes the text
   function setPassage(el, hit) {
     el.querySelector('.sresult-passage').innerHTML = hit ? S42Search.passage(hit) : '';
+  }
+
+  // pages linked to the strong hits, below every hit, never mixed in (FR-008)
+  const related = document.getElementById('search-related');
+  function showRelated(hits) {
+    const rows = hits ? S42Search.related(hits, index.records) : [];
+    const e = S42Search.esc;
+    related.querySelector('ul').innerHTML = rows.map(({rec, note}) =>
+      '<li class="sresult"><a class="sresult-link" href="' + e(rec.url) + '">' +
+      '<span class="badge kind-badge">' + e(rec.type) + '</span>' +
+      '<code class="sresult-id">' + e(rec.id) + '</code>' +
+      '<span class="sresult-title">' + e(rec.title) + ' <span class="hit-note">' + e(note) + '</span></span>' +
+      (rec.status ? '<span class="status status-' + e(rec.status) + '">' + e(rec.status) + '</span>' : '') +
+      '</a></li>').join('');
+    related.hidden = !rows.length;
   }
 
   function setNote(el, note) {
@@ -103,14 +122,16 @@ document.addEventListener('DOMContentLoaded', () => {
       ranked.forEach(({rec}) => { perType[rec.type] = (perType[rec.type] || 0) + 1; });
       updateCounts(perType);
       allResults.forEach(el => { el.hidden = true; });
-      ranked.forEach(hit => {
+      const visible = ranked.filter(({rec}) => activeType === 'all' || rec.type === activeType);
+      showRelated(ranked);
+      visible.forEach(hit => {
         const {rec, score, note} = hit;
-        if (activeType !== 'all' && rec.type !== activeType) return;
         rec.el.hidden = false; setScore(rec.el, score); setNote(rec.el, note); setPassage(rec.el, hit);
         list.appendChild(rec.el); shown++;
       });
     } else if (browsing) {                               // facet browse, no query
       updateCounts(null);
+      showRelated(null);
       allResults.forEach(el => {
         const show = activeType === 'all' || el.dataset.type === activeType;
         el.hidden = !show;
@@ -121,6 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     } else {
       updateCounts(null);
+      showRelated(null);
       allResults.forEach(el => { el.hidden = true; });
     }
 

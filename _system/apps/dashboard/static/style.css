@@ -403,6 +403,8 @@ h2 { letter-spacing: -.01em; }
 /* the sentence where the query matched (FR-007), /search only */
 .hit-passage { margin: -.3rem 0 0; padding: 0 1rem .7rem; color: var(--ink-soft); font-size: var(--step--1); }
 .hit-passage mark { background: rgba(62,166,255,.22); color: var(--ink); border-radius: 2px; padding: 0 .1em; }
+.related-pages { border-top: 1px solid var(--line); }
+.related-pages-h { margin: 0; padding: .9rem 1rem .3rem; font-size: var(--step-0); color: var(--ink-soft); }
 .search-hint { color: var(--ink-dim); font-style: italic; padding: 1.2rem 1rem; margin: 0; }
 
 /* per-result relevance meter (% + bar), set by the ranking JS */

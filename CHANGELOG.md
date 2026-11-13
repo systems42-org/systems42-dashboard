@@ -35,6 +35,9 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - Each hit on `/search` shows the sentence where the query matched, with
   the matching words highlighted (FR-007). A title hit shows the page's
   first sentence. The popup stays compact and shows no passage.
+- `/search` lists "Related pages" below the hits (FR-008): up to 5 pages
+  one link away from a title or alias hit, each with "linked from <ID>".
+  A page that is a hit already is not repeated. The popup shows none.
 - Quality requirements are classified by Q42 dimensions (DR-003): the
   template and the metamodel replace the single ISO 25010 `attribute:` with
   `dimensions:`, a list of one or more of reliable, flexible, maintainable,

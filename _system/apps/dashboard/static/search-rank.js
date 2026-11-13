@@ -265,6 +265,30 @@
     return '<p class="hit-passage">' + html + "</p>";
   }
 
+  // Pages one link step away from the strong hits, for the "Related pages"
+  // group on /search (FR-008). Strong means every query word matched in the
+  // title or an alias. At most `max` (5), never a page that is a hit already,
+  // each with its reason.
+  function related(hits, records, max) {
+    max = max || 5;
+    var byId = new Map(), seen = new Set(), out = [];
+    records.forEach(function (r) { byId.set(r.id, r); });
+    hits.forEach(function (h) { seen.add(h.rec.id); });
+    hits.forEach(function (h) {
+      var strong = h.full && h.matches.every(function (m) {
+        return m.place === "title" || m.place === "alias";
+      });
+      if (!strong) { return; }
+      (h.rec.links || []).forEach(function (id) {
+        var r = byId.get(id);
+        if (!r || seen.has(id) || out.length >= max) { return; }
+        seen.add(id);
+        out.push({rec: r, note: "linked from " + h.rec.id});
+      });
+    });
+    return out;
+  }
+
   function band(pct) { return pct >= 80 ? "high" : pct >= 55 ? "mid" : "low"; }
 
   // Rank `records` against query `q`, with the glossary's synonym groups;
@@ -308,5 +332,6 @@
     return out;
   }
 
-  window.S42Search = {rank: rank, band: band, matchWord: matchWord, stem: stem, passage: passage};
+  window.S42Search = {rank: rank, band: band, matchWord: matchWord, stem: stem, passage: passage,
+                      related: related, esc: esc};
 })();
