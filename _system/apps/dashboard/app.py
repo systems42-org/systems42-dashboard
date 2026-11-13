@@ -2609,13 +2609,22 @@ def _issue_owner(p: Page, titles: dict[str, str],
 _ISSUE_STATUS_GROUPS = {"open": ("open", "in-progress"), "closed": tuple(sorted(CLOSED_STATUSES))}
 
 
+@_request_cached
+def _issue_vocab() -> dict[str, list[str]]:
+    """The values the metamodel allows for an issue's status and enum fields,
+    read once per request."""
+    return {"status": metamodel.lifecycle("issue"),
+            **{f: metamodel.field_values("issue", f) for f in ("severity", "kind", "category")}}
+
+
 def issue_fields(p: Page, titles: dict[str, str], links: dict[str, tuple[str, str]]) -> dict:
     """An issue's own fields as the list and its page show them (FR-025 to
     FR-028). A value outside the metamodel's list comes back empty."""
+    vocab = _issue_vocab()
     def known(field: str) -> str:
         v = str(p.meta.get(field) or "").strip()
-        return v if v in metamodel.field_values("issue", field) else ""
-    status = p.status if p.status in metamodel.lifecycle("issue") else ""
+        return v if v in vocab[field] else ""
+    status = p.status if p.status in vocab["status"] else ""
     owner = _issue_owner(p, titles, links)
     return {"status": status, "is_open": status in _ISSUE_STATUS_GROUPS["open"],
             "severity": known("severity"), "kind": known("kind"), "category": known("category"),

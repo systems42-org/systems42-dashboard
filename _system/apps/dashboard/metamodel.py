@@ -6,8 +6,8 @@ frontmatter = the contract, body = the explanation) into plain dicts and adds
 nothing of its own. What the dashboard shows on top — colours, example pages
 from the live wiki, the graph — is built in `app.py`.
 
-The folder is read on every call. It is a dozen small files and changes only
-when the schema changes, so no cache is worth its invalidation.
+The folder is listed on every call, but a page is parsed again only when its
+file changes (`_CACHE`): the issue views ask it once per issue.
 """
 from __future__ import annotations
 
@@ -30,7 +30,29 @@ _H2 = re.compile(r"^##\s+(.*)$", re.MULTILINE)
 _FRAMEWORK_ORDER = ["req42", "commons", "arc42"]
 
 
+# path -> ((mtime_ns, size), parsed page or None). The dashboard asks the
+# metamodel per issue on every page view (FR-027), so a parse is kept until
+# its file changes, like the wiki pages in app.py's _PARSE_CACHE.
+_CACHE: dict[Path, tuple[tuple[int, int], dict | None]] = {}
+
+
 def _read(path: Path) -> dict | None:
+    """One metamodel page as a dict (a fresh shallow copy, callers may add
+    keys), or None. Parsed again only when the file's mtime or size changes."""
+    try:
+        st = path.stat()
+    except OSError:
+        _CACHE.pop(path, None)
+        return None
+    stamp = (st.st_mtime_ns, st.st_size)
+    hit = _CACHE.get(path)
+    if hit is None or hit[0] != stamp:
+        hit = (stamp, _parse(path))
+        _CACHE[path] = hit
+    return dict(hit[1]) if hit[1] is not None else None
+
+
+def _parse(path: Path) -> dict | None:
     try:
         text = path.read_text(encoding="utf-8")
     except OSError:
