@@ -262,6 +262,7 @@ h2 { letter-spacing: -.01em; }
 .sp-item.is-active { background: rgba(62,166,255,.12); box-shadow: inset 3px 0 0 var(--accent); }
 .sp-item .badge { min-width: 5.5rem; text-align: center; flex: none; }
 .sp-title { font-weight: 600; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-item .hit-note { flex: 0 1 auto; margin-left: 0; max-width: 45%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sp-empty { margin: 0; padding: .7rem .9rem; color: var(--ink-dim); font-size: var(--step--1); }
 .sp-all { display: flex; justify-content: space-between; align-items: center; padding: .5rem .9rem;
   border-top: 1px solid var(--line); color: var(--accent); text-decoration: none; font-size: var(--step--1); }
@@ -396,7 +397,14 @@ h2 { letter-spacing: -.01em; }
 .sresult-link:hover { background: rgba(62,166,255,.06); }
 .sresult-id { color: var(--ink-dim); font-size: .8em; white-space: nowrap; }
 .sresult-title { font-weight: 600; flex: 1 1 auto; }
+/* why a non-exact hit is in the list (FR-005), popup and /search */
+.hit-note { font-weight: 400; font-style: italic; color: var(--ink-dim); font-size: var(--step--1); margin-left: .4rem; }
 .sresult .badge { min-width: 6.5rem; text-align: center; }
+/* the sentence where the query matched (FR-007), /search only */
+.hit-passage { margin: -.3rem 0 0; padding: 0 1rem .7rem; color: var(--ink-soft); font-size: var(--step--1); }
+.hit-passage mark { background: rgba(62,166,255,.22); color: var(--ink); border-radius: 2px; padding: 0 .1em; }
+.related-pages { border-top: 1px solid var(--line); }
+.related-pages-h { margin: 0; padding: .9rem 1rem .3rem; font-size: var(--step-0); color: var(--ink-soft); }
 .search-hint { color: var(--ink-dim); font-style: italic; padding: 1.2rem 1rem; margin: 0; }
 
 /* per-result relevance meter (% + bar), set by the ranking JS */
@@ -512,6 +520,11 @@ a.wl:hover { border-bottom-style: solid; border-bottom-color: var(--accent); }
 /* ---- search + filter toolbar ---- */
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin: 0 0 var(--space-4); }
 .toolbar .filterbar { margin: 0; }
+/* status, priority and tag filters next to the type facets (FR-009) */
+.search-filters { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); }
+.search-filter { display: inline-flex; align-items: center; gap: var(--space-2); font-size: .85rem; color: var(--ink-soft); }
+.search-filter select { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: .2rem .4rem; min-height: 1.9rem; }
 .search-input { flex: 1 1 240px; min-width: 200px; font: inherit; font-size: .9rem;
   color: var(--ink); background: var(--card); border: 1px solid var(--line);
   border-radius: 999px; padding: .5rem 1rem; transition: border-color .12s ease, box-shadow .12s ease; }
@@ -532,6 +545,40 @@ a.wl:hover { border-bottom-style: solid; border-bottom-color: var(--accent); }
 .fnum { font-variant-numeric: tabular-nums; opacity: .8; }
 .fbtn.active .fnum { opacity: 1; }
 .empty-hint { color: var(--ink-dim); font-style: italic; padding: 1.2rem 1rem; margin: 0; }
+
+/* ---- the shared list layer (static/list-view.js, FR-021, FR-022) ---- */
+.list-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3);
+  margin: 0 0 var(--space-3); }
+.list-controls[hidden] { display: none; }
+.list-controls .filterbar { margin: 0; }
+.list-order { display: inline-flex; align-items: center; gap: .5rem; font-size: .85rem; color: var(--ink-soft); }
+.list-order select { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line);
+  border-radius: 999px; padding: .35rem .8rem; }
+.list-order select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(62,166,255,.15); }
+tr.list-out { display: none; }
+
+/* ---- issue filters (FR-025): run on the server, so the address carries them ---- */
+.issue-counts { margin: 0 0 var(--space-2); color: var(--ink-soft); }
+.issue-filters { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3);
+  margin: 0 0 var(--space-3); }
+.issue-filters label { display: inline-flex; align-items: center; gap: .5rem; font-size: .85rem; color: var(--ink-soft); }
+.issue-filters select { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line);
+  border-radius: 999px; padding: .35rem .8rem; max-width: 16rem; }
+.issue-filters select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(62,166,255,.15); }
+.issue-fields { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: .25rem var(--space-3);
+  margin: var(--space-2) 0 0; font-size: .85rem; }
+.issue-fields dt { color: var(--ink-dim); margin: 0; }
+.issue-fields dd { margin: 0; color: var(--ink); }
+
+/* ---- issues on the page they affect (FR-027) ---- */
+.page-issues { margin: var(--space-3) 0; padding: var(--space-2) var(--space-3); border: 1px solid var(--line);
+  border-radius: var(--radius, 8px); background: var(--card); font-size: .88rem; }
+.page-issues-none { margin: 0; color: var(--ink-dim); }
+.page-issues-h { margin: 0 0 var(--space-1); font-size: .9rem; color: var(--ink-soft); }
+.page-issues-none + .page-issues-h { margin-top: var(--space-2); }
+.page-issues-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .3rem; }
+.page-issue { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+.page-issue-closed { opacity: .7; }
 
 /* ---- influence / interest level badges ---- */
 .lvl { font-size: .75rem; padding: .14rem .55rem; border-radius: 999px; border: 1px solid var(--line);

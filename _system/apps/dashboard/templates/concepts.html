@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_maturity.html" import maturity_bar %}
+{% from "_list.html" import arch_table %}
 {% block title %}{{ block.title }} · arc42{% endblock %}
 {% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}{{ block.title }}</nav>{% endblock %}
 {% macro row_head(r) %}<a class="wl" href="{{ r.url }}"><code>{{ r.id }}</code> {{ r.title }}</a>{% if r.status %} <span class="status status-{{ r.status }}">{{ r.status }}</span>{% endif %} <span class="state-badge state-{{ r.state }}">{{ r.state }}</span>{% endmacro %}
@@ -20,4 +21,8 @@
 {% else %}
 <p class="muted">No concepts yet. Add pages under <code>wiki/concepts/</code> from <code>_templates/concept.md</code>.</p>
 {% endfor %}
+{% if rows %}
+<h2 class="mm-h2">All concepts</h2>
+{{ arch_table(list_spec("concept"), rows, [("Category", "category", "text")]) }}
+{% endif %}
 {% endblock %}

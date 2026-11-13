@@ -22,6 +22,8 @@ fields:
   - {name: goal, kind: link-list, relation: goal, doc: "goals served; [] = explicit enabler"}
 anchors: [user-story-format, acceptance-criteria, INVEST, MoSCoW, story-mapping, req42]
 projections: [story-map, backlog-ranking, goal-coverage]
+sort_orders:
+  - {label: "Priority › release › order", keys: [priority, release, order]}
 ---
 
 # Type: functional requirement

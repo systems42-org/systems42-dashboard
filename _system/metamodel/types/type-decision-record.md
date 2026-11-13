@@ -24,6 +24,8 @@ fields:
   - {name: superseded-by, kind: link-list, relation: superseded-by, doc: "set together with status: deprecated"}
 anchors: [MADR]
 projections: []
+sort_orders:
+  - {label: "Newest first", keys: [decided]}
 ---
 
 # Type: decision record

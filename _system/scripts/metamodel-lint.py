@@ -7,6 +7,7 @@ raises when they drift, so this script diffs them:
 
   * every template has a type page; every `type` page: template exists, its `id:` prefix and `type:` value
     match, its frontmatter keys equal universal + declared fields (exactly),
+    its `sort_orders` name only those fields,
     the wiki folder exists, its block is declared by some framework, its
     anchors exist, its projections exist, every link field names a relation
     whose edges allow this type as `from`;
@@ -155,6 +156,16 @@ def main() -> int:
         for pr in t.get("projections", []):
             if pr not in projections:
                 fail(f"{where}: projection {pr} has no page")
+        for so in t.get("sort_orders") or []:
+            label = so.get("label") if isinstance(so, dict) else None
+            keys = so.get("keys") if isinstance(so, dict) else None
+            if not label or not keys:
+                fail(f"{where}: sort order {so!r} needs a label and keys")
+                continue
+            for k in keys:
+                if k not in expected:
+                    fail(f"{where}: sort order '{label}' names {k}, "
+                         f"which is neither a field of {name} nor universal")
     claimed = {(ROOT / str(t.get("template", ""))).resolve() for t in types.values()}
     for tpl in sorted(TEMPLATES.glob("*.md")):
         if tpl.resolve() not in claimed:

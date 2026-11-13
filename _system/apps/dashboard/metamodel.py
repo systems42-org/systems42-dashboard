@@ -6,8 +6,8 @@ frontmatter = the contract, body = the explanation) into plain dicts and adds
 nothing of its own. What the dashboard shows on top — colours, example pages
 from the live wiki, the graph — is built in `app.py`.
 
-The folder is read on every call. It is a dozen small files and changes only
-when the schema changes, so no cache is worth its invalidation.
+The folder is listed on every call, but a page is parsed again only when its
+file changes (`_CACHE`): the issue views ask it once per issue.
 """
 from __future__ import annotations
 
@@ -30,7 +30,29 @@ _H2 = re.compile(r"^##\s+(.*)$", re.MULTILINE)
 _FRAMEWORK_ORDER = ["req42", "commons", "arc42"]
 
 
+# path -> ((mtime_ns, size), parsed page or None). The dashboard asks the
+# metamodel per issue on every page view (FR-027), so a parse is kept until
+# its file changes, like the wiki pages in app.py's _PARSE_CACHE.
+_CACHE: dict[Path, tuple[tuple[int, int], dict | None]] = {}
+
+
 def _read(path: Path) -> dict | None:
+    """One metamodel page as a dict (a fresh shallow copy, callers may add
+    keys), or None. Parsed again only when the file's mtime or size changes."""
+    try:
+        st = path.stat()
+    except OSError:
+        _CACHE.pop(path, None)
+        return None
+    stamp = (st.st_mtime_ns, st.st_size)
+    hit = _CACHE.get(path)
+    if hit is None or hit[0] != stamp:
+        hit = (stamp, _parse(path))
+        _CACHE[path] = hit
+    return dict(hit[1]) if hit[1] is not None else None
+
+
+def _parse(path: Path) -> dict | None:
     try:
         text = path.read_text(encoding="utf-8")
     except OSError:
@@ -120,6 +142,46 @@ def load() -> dict:
         "rules": _load("rules", "rule"),
         "present": bool(types),
     }
+
+
+def sort_orders(type_name: str) -> list[dict]:
+    """The useful list orders a type page declares (FR-021), as
+    `[{label, keys}]`. A type without any, or an unknown type, has none."""
+    for t in _load("types", "type"):
+        if t.get("name") == type_name:
+            out = []
+            for so in t.get("sort_orders") or []:
+                if isinstance(so, dict) and so.get("label") and so.get("keys"):
+                    out.append({"label": str(so["label"]), "keys": [str(k) for k in so["keys"]]})
+            return out
+    return []
+
+
+def _type_page(type_name: str) -> dict:
+    return next((t for t in _load("types", "type") if t.get("name") == type_name), {})
+
+
+def field_values(type_name: str, field: str) -> list[str]:
+    """The closed list of values a type's enum field allows, or []."""
+    for f in _type_page(type_name).get("fields") or []:
+        if isinstance(f, dict) and f.get("name") == field:
+            return [str(v) for v in f.get("values") or []]
+    return []
+
+
+def lifecycle(type_name: str) -> list[str]:
+    """The status values a type's lifecycle allows, or []."""
+    meta = _read(METAMODEL_DIR / "meta-metamodel.md") or {}
+    name = _type_page(type_name).get("lifecycle")
+    return [str(v) for v in (meta.get("lifecycles") or {}).get(name) or []]
+
+
+def type_for_folder(folder: str) -> str | None:
+    """The type whose pages live in `wiki/<folder>`, or None."""
+    for t in _load("types", "type"):
+        if Path(str(t.get("folder", ""))).name == folder:
+            return str(t.get("name"))
+    return None
 
 
 def anchors(mm: dict) -> dict[str, str]:

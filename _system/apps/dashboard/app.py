@@ -308,6 +308,15 @@ def static_url(filename: str) -> str:
 app.jinja_env.globals["static_url"] = static_url
 
 
+def list_spec(type_name: str) -> dict:
+    """What a section list declares for static/list-view.js (FR-021): its type
+    and the sort orders the metamodel gives that type."""
+    return {"type": type_name, "orders": metamodel.sort_orders(type_name)}
+
+
+app.jinja_env.globals["list_spec"] = list_spec
+
+
 # [[target]] | [[target|alias]] | [[target#heading]] | [[path/target|alias]]
 WIKILINK_RE = re.compile(r"\[\[([^\]\|#]+)(?:#[^\]\|]+)?(?:\|([^\]]+))?\]\]")
 FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n?(.*)$", re.DOTALL)
@@ -467,7 +476,7 @@ def vault_status() -> dict:
     issues = load_folder("issues")
     last = max((p.mtime for p in pages), default=0.0)
     return {"pages": len(pages),
-            "open_issues": sum(1 for i in issues if i.status not in CLOSED_STATUSES),
+            "open_issues": sum(1 for i in issues if is_open_issue(i.status)),
             "sources": len(load_sources()),
             "last_change": _relative_when(last) if last else "—"}
 
@@ -552,7 +561,7 @@ def open_issue_counts() -> dict[str, set[str]]:
     links = link_index()
     out: dict[str, set[str]] = {}
     for iss in load_folder("issues"):
-        if iss.status in CLOSED_STATUSES:
+        if not is_open_issue(iss.status):
             continue
         for folder in {links[t][0] for t in iss.link_targets() if t in links}:
             out.setdefault(folder, set()).add(iss.id)
@@ -711,6 +720,12 @@ def extract_pam_bullet(page: Page, label: str, titles: dict[str, str],
 
 # Status values that count as "closed" for the issues filter.
 CLOSED_STATUSES = {"resolved", "wontfix"}
+
+
+def is_open_issue(status: object) -> bool:
+    """The one meaning of "open" for an issue: every status except resolved
+    and wontfix. A missing or unknown status stays visible as open."""
+    return str(status or "").strip().lower() not in CLOSED_STATUSES
 
 
 # The four-step lifecycle every content type shares (AGENTS.md: draft → review →
@@ -2273,9 +2288,10 @@ def building_blocks_view():
     """A2 Building Block View: the level tree and the level-1 white box."""
     block = catalog.SECTION_BY_SLUG["building-blocks"]
     pages = load_folder("building-blocks")
+    rows = [_arch_row(p, "building-blocks") for p in sorted(pages, key=lambda q: q.id)]
     return render_template(
         "building_blocks.html", block=block, tree=build_bb_tree(), total=len(pages),
-        whitebox=build_whitebox(None), maturity=maturity(p.status for p in pages),
+        whitebox=build_whitebox(None), maturity=maturity(p.status for p in pages), rows=rows,
     )
 
 
@@ -2311,8 +2327,14 @@ def concepts_view():
             rows.append(row)
         if rows:
             groups.append({"label": label, "rows": rows})
+    flat = []
+    for p in pages:
+        row = _arch_row(p, "concepts")
+        raw = str(p.meta.get("category") or "").strip()
+        row["category"] = known.get(raw.lower(), raw)
+        flat.append(row)
     return render_template("concepts.html", block=block, groups=groups, total=len(pages),
-                           maturity=maturity(p.status for p in pages))
+                           rows=flat, maturity=maturity(p.status for p in pages))
 
 
 @app.route("/arc42/runtime")
@@ -2336,36 +2358,136 @@ def deployment_view():
     existing, planned and replaced — and the node levels."""
     block = catalog.SECTION_BY_SLUG["deployment"]
     pages = load_folder("deployment-nodes")
+    rows = []
+    for p in sorted(pages, key=lambda q: q.id):
+        row = _arch_row(p, "deployment-nodes")
+        row["stereotype"] = str(p.meta.get("stereotype") or "").strip()
+        rows.append(row)
     return render_template("deployment.html", block=block, diagram=build_deployment_diagram(),
-                           hints=deployment_hints(),
+                           hints=deployment_hints(), rows=rows,
                            tree=build_node_tree(), total=len(pages),
                            maturity=maturity(p.status for p in pages))
 
 
 # --- global search ---------------------------------------------------------
 
+# Frontmatter fields searched as plain words (FR-006). Link fields (parent,
+# sources, related, drivers …) are left out: their values are file names.
+SEARCH_FIELDS = ["tags", "status", "stereotype", "priority", "kind", "state",
+                 "category", "dimensions"]
+
+_MD_LINK_RE = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+_SOURCE_ID_RE = re.compile(r"[A-Z]+-\d+")
+# Lines that label a page's structure rather than say something: headings,
+# callout titles, bold-only lines such as **PROBLEM / GOAL** and the anchor
+# note "> follows [[MADR]]". A bold lead label such as **Snapshot.** goes too,
+# the text after it stays.
+_HEADING_LINE_RE = re.compile(r"^\s*(?:#{1,6}\s|>\s*\[![\w-]+\]|>\s*follows\s|\*\*[^*]+\*\*\s*$)")
+_LEAD_LABEL_RE = re.compile(r"^(\s*(?:[-*+]\s+)?)\*\*[^*]{1,60}[.:]\*\*\s+")
+_LINE_MARK_RE = re.compile(r"^\s*(?:#{1,6}\s+|>\s*(?:\[![\w-]+\][-+]?\s*)?|[-*+]\s+(?:\[[ xX]\]\s+)?|\d+[.)]\s+)+")
+_EMPHASIS_RE = re.compile(r"\*\*|__|~~|`|(?<!\w)\*(?=\S)|(?<=\S)\*(?!\w)")
+
+
+def search_plain(page: Page, titles: dict[str, str]) -> str:
+    """A page body as the reader sees it, for search: wikilinks become their
+    label (or the target's title), markdown and HTML markup go, hard-wrapped
+    prose is joined. One line per paragraph or list item, so the ranker can
+    cut passages. Headings and labels go (`_HEADING_LINE_RE`).
+    An unlabelled provenance link to raw/sources becomes the source's ID
+    (`SRC-006`): its file name or title would match words such as
+    "grilling" on most pages, and dropping it leaves "came from ." holes."""
+    def link_text(m: re.Match) -> str:
+        target, label = m.group(1).strip(), m.group(2)
+        base = target.split("/")[-1]
+        if label:
+            return label.strip()
+        if target.startswith("raw/") or base.startswith("SRC-"):
+            src = source_index().get(base)
+            return src.id if src else _SOURCE_ID_RE.match(base).group(0) if _SOURCE_ID_RE.match(base) else ""
+        return titles.get(base, target)
+
+    body = _unwrap_prose(page.body)
+    body = WIKILINK_RE.sub(link_text, body)
+    body = _MD_LINK_RE.sub(lambda m: m.group(1), body)
+    body = _HTML_TAG_RE.sub(" ", body)
+    lines = []
+    for line in body.splitlines():
+        if line.strip().startswith("```") or _TABLE_SEP_RE.match(line) or _HEADING_LINE_RE.match(line):
+            continue
+        line = _LEAD_LABEL_RE.sub(r"\1", line)
+        line = _LINE_MARK_RE.sub("", line)
+        line = _EMPHASIS_RE.sub("", line).replace("|", " ")
+        line = re.sub(r"\s+", " ", line).strip()
+        if line and line != "---":
+            lines.append(line)
+    return "\n".join(lines)
+
+
+def _search_fields(page: Page) -> dict[str, list[str]]:
+    out: dict[str, list[str]] = {}
+    for key in SEARCH_FIELDS:
+        v = page.meta.get(key)
+        vals = v if isinstance(v, list) else [v]
+        vals = [str(x).strip().lower() for x in vals if x is not None and str(x).strip()]
+        if vals:
+            out[key] = vals
+    return out
+
+
+def _search_links(pages: list[Page]) -> dict[str, set[str]]:
+    """page id -> ids one link step away, in either direction (FR-008)."""
+    idx = link_index()
+    by_stem = {p.stem: p for p in pages}
+    out: dict[str, set[str]] = {p.id: set() for p in pages}
+    for p in pages:
+        for t in p.link_targets():
+            dest = idx.get(t)
+            if not dest or dest[1] not in by_stem:
+                continue
+            other = by_stem[dest[1]].id
+            if other != p.id:
+                out[p.id].add(other)
+                out.setdefault(other, set()).add(p.id)
+    return out
+
+
 def build_search_records() -> list[dict]:
-    """A flat, lower-cased index over every wiki page. Each record
-    links to that unit's own detail page and carries both the full searchable
-    text (for the /search page) and a slim title/id key (for the tile preview).
-    Small enough to rank client-side (static/search-rank.js); /search.json
-    serves it to the topbar popup."""
+    """A flat index over every wiki page, ranked client-side by
+    static/search-rank.js. Each record links to that unit's own detail page
+    and carries the reader's text (`plain`), `aliases`, the searched `fields`
+    (lower-cased) and the ids of its neighbours (`links`)."""
+    pages = load_all_pages()
+    titles = title_index()
+    neighbours = _search_links(pages)
     records = []
-    for p in load_all_pages():
-        kind = FOLDER_LABELS.get(p.folder, p.folder)
-        text = " ".join(filter(None, [p.id, p.title, " ".join(p.aliases), p.body]))
+    for p in pages:
         records.append({
             "id": p.id,
-            "type": kind,
+            "type": FOLDER_LABELS.get(p.folder, p.folder),
             "title": p.title,
             "status": p.status,
             "url": (f"/functional-requirements/{p.stem}"
                     if p.folder == "functional-requirements"
                     else f"/page/{p.folder}/{p.stem}"),
-            "text": re.sub(r"\s+", " ", text).strip().lower(),
-            "key": " ".join([p.id, p.title, " ".join(p.aliases), kind]).strip().lower(),
+            "aliases": [str(a) for a in p.aliases],
+            "plain": search_plain(p, titles),
+            "fields": _search_fields(p),
+            "links": sorted(neighbours.get(p.id, ())),
         })
     return records
+
+
+def search_synonyms() -> list[list[str]]:
+    """Each glossary term's title plus its aliases, lower-cased. The search
+    treats a group as one word (FR-003)."""
+    return [[str(w).strip().lower() for w in [p.title, *p.aliases] if str(w).strip()]
+            for p in load_folder("glossary")]
+
+
+def build_search_index() -> dict:
+    """What /search.json serves and /search embeds: {records, synonyms}."""
+    return {"records": build_search_records(), "synonyms": search_synonyms()}
 
 
 # --- views -----------------------------------------------------------------
@@ -2443,11 +2565,11 @@ def build_section_tile(section: dict) -> dict:
                             {"label": "Term network", "href": "/graph/glossary"}]})
     elif sid == "C6":
         issues = pages
-        open_issues = [i for i in issues if i.status not in CLOSED_STATUSES]
+        open_issues = [i for i in issues if is_open_issue(i.status)]
         t.update({"count": len(open_issues), "total": len(issues),
                   # "open" is the adjective, not a noun: it never takes an -s
                   "unit": "open", "unit_many": "open",
-                  "href": "/issues?filter=open" if open_issues else "/issues",
+                  "href": "/issues?status=open" if open_issues else "/issues",
                   "sub": f"{len(issues)} in total",
                   "rows": [{"id": i.id, "title": i.title, "severity": str(i.meta.get("severity") or "")}
                            for i in sorted(open_issues,
@@ -2484,7 +2606,7 @@ def build_valley() -> dict:
     """What the agent did: the vault's state, what moved last, what is open.
     Sits between the two peaks on the home page (DR-033)."""
     issues = load_folder("issues")
-    open_issues = sorted((i for i in issues if i.status not in CLOSED_STATUSES),
+    open_issues = sorted((i for i in issues if is_open_issue(i.status)),
                          key=lambda i: ({"blocker": 0, "major": 1, "minor": 2}
                                         .get(str(i.meta.get("severity") or ""), 3), i.id))
     cfg = dashboard_config()
@@ -2567,35 +2689,147 @@ def glossary_graph_view():
                            named_layers=named_layers, rest=rest)
 
 
+def _issue_owner(p: Page, titles: dict[str, str],
+                 links: dict[str, tuple[str, str]]) -> dict:
+    """Who is expected to answer an issue (FR-028): `key` for the filter,
+    `label` to show, `url` when it names a wiki page. An empty owner gives
+    key "" (nobody yet)."""
+    raw = str(_scalar(p.meta.get("owner")) or "").strip()
+    if raw.lower() in ("", "none", "null"):
+        return {"key": "", "label": "", "url": None}
+    # "[[stem|label]]" quoted, or "stem|label" when YAML read the unquoted
+    # form as a nested list (the template writes it unquoted)
+    linked = raw.startswith("[[") and raw.endswith("]]")
+    inner = raw[2:-2] if linked else raw
+    target, _, alias = (part.strip() for part in inner.partition("|"))
+    target = target.split("#")[0].strip()
+    if target in links:
+        folder, stem = links[target]
+        return {"key": stem, "label": alias or titles.get(stem, stem), "url": _page_url(folder, stem)}
+    if linked or alias:
+        return {"key": raw, "label": alias or target, "url": None}
+    return {"key": raw, "label": raw, "url": None}
+
+
+# ?status= on the issue list: a lifecycle value, or one of these groups
+# (open: is_open_issue, closed: the rest)
+_ISSUE_STATUS_GROUPS = ("open", "closed")
+
+
+@_request_cached
+def _issue_vocab() -> dict[str, list[str]]:
+    """The values the metamodel allows for an issue's status and enum fields,
+    read once per request."""
+    return {"status": metamodel.lifecycle("issue"),
+            **{f: metamodel.field_values("issue", f) for f in ("severity", "kind", "category")}}
+
+
+def issue_fields(p: Page, titles: dict[str, str], links: dict[str, tuple[str, str]]) -> dict:
+    """An issue's own fields as the list and its page show them (FR-025 to
+    FR-028). A value outside the metamodel's list comes back empty."""
+    vocab = _issue_vocab()
+    def known(field: str) -> str:
+        v = str(p.meta.get(field) or "").strip()
+        return v if v in vocab[field] else ""
+    status = p.status if p.status in vocab["status"] else ""
+    owner = _issue_owner(p, titles, links)
+    return {"status": status, "is_open": is_open_issue(p.status),
+            "severity": known("severity"), "kind": known("kind"), "category": known("category"),
+            "owner": owner["label"], "owner_key": owner["key"], "owner_url": owner["url"]}
+
+
+_SEVERITY_RANK = {"blocker": 0, "major": 1, "minor": 2}
+
+
+@_request_cached
+def _issue_backlinks() -> dict[str, list[dict]]:
+    """page stem -> the issues that link to it, by frontmatter or body
+    wikilink (FR-027). A mere mention without a link does not count."""
+    titles, links = title_index(), link_index()
+    out: dict[str, list[dict]] = {}
+    for iss in load_folder("issues"):
+        f = issue_fields(iss, titles, links)
+        item = {"id": iss.id, "title": iss.title, "status": f["status"], "severity": f["severity"],
+                "is_open": f["is_open"], "url": _page_url("issues", iss.stem)}
+        for stem in {links[t][1] for t in iss.link_targets() if t in links}:
+            out.setdefault(stem, []).append(item)
+    return out
+
+
+def open_issues_for(stem: str) -> list[dict]:
+    """The issues that link to a page, open ones first, then by severity
+    (blocker first), then by ID (FR-027)."""
+    return sorted(_issue_backlinks().get(stem, []),
+                  key=lambda i: (not i["is_open"], _SEVERITY_RANK.get(i["severity"], 3), i["id"]))
+
+
 @app.route("/issues")
 def issues_view():
-    titles = title_index()
+    """C6: every issue, filtered on the server by status, category, severity,
+    section and owner (FR-025). Filters combine and live in the address, so a
+    copied link shows the same issues. Unknown values are ignored."""
+    titles, links = title_index(), link_index()
     pages = sorted(load_folder("issues"), key=lambda x: x.id)
-    # ?section=<ID>: only the open issues that point at that section's pages,
-    # the ones its tile counts (FR-019). An unknown section shows every issue.
-    section = catalog.SECTION_BY_ID.get(request.args.get("section", ""))
-    if section and section["folders"] and section["id"] != "C6":
-        flags = open_issue_counts()
-        wanted = set().union(*(flags.get(f, set()) for f in section["folders"]))
-        pages = [p for p in pages if p.id in wanted]
-    else:
-        section = None
+    lifecycle_values = metamodel.lifecycle("issue")
+    categories = metamodel.field_values("issue", "category")
+    severities = metamodel.field_values("issue", "severity")
+    folder_section = {f: s["id"] for s in catalog.SECTIONS for f in s["folders"] if s["id"] != "C6"}
+
     items = []
     for p in pages:
-        items.append({
-            "id": p.id,
-            "title": p.title,
-            "status": p.status,
-            "is_open": p.status not in CLOSED_STATUSES,
-            "severity": p.meta.get("severity", ""),
-            "kind": p.meta.get("kind", ""),
-            "url": _page_url("issues", p.stem),
-            "html": render_markdown(p.body, titles),
-        })
+        sections = sorted({folder_section[links[t][0]] for t in p.link_targets()
+                           if t in links and links[t][0] in folder_section})
+        items.append({"id": p.id, "title": p.title, **issue_fields(p, titles, links),
+                      "sections": sections, "url": _page_url("issues", p.stem)})
+
+    # the filters: only known values count, anything else shows every issue
+    # one option per owner: a page by its title, whatever alias an issue uses
+    owners = sorted({i["owner_key"]: titles.get(i["owner_key"], i["owner"]) if i["owner_url"] else i["owner"]
+                     for i in items if i["owner_key"]}.items(), key=lambda o: o[1].lower())
+    sections = [s for s in catalog.SECTIONS if s["folders"] and s["id"] != "C6"]
+    arg = lambda name: request.args.get(name, "").strip()
+    section = catalog.SECTION_BY_ID.get(arg("section"))
+    if section not in sections:
+        section = None
+    status = arg("status") or arg("filter")          # ?filter= was the former name
+    if status not in lifecycle_values and status not in _ISSUE_STATUS_GROUPS and status != "all":
+        status = ""
+    if not status:
+        # a section's open issue count opens the list with its open issues (FR-019)
+        status = "open" if section else "all"
+    chosen = {
+        "status": status,
+        "category": arg("category") if arg("category") in categories else "",
+        "severity": arg("severity") if arg("severity") in severities else "",
+        "section": section["id"] if section else "",
+        "owner": arg("owner") if arg("owner") in {"none"} | {o[0] for o in owners} else "",
+    }
+
+    def keep(i: dict) -> bool:
+        st = chosen["status"]
+        if st == "open" and not i["is_open"] or st == "closed" and i["is_open"]:
+            return False
+        if st not in ("all", "open", "closed") and i["status"] != st:
+            return False
+        if chosen["category"] and i["category"] != chosen["category"]:
+            return False
+        if chosen["severity"] and i["severity"] != chosen["severity"]:
+            return False
+        if chosen["section"] and chosen["section"] not in i["sections"]:
+            return False
+        if chosen["owner"] and i["owner_key"] != ("" if chosen["owner"] == "none" else chosen["owner"]):
+            return False
+        return True
+
+    shown = [i for i in items if keep(i)]
     open_count = sum(1 for i in items if i["is_open"])
+    filtered = any(v for k, v in chosen.items() if k != "status") or chosen["status"] != "all"
     return render_template(
-        "issues.html", items=items, total=len(items), section=section,
-        open_count=open_count, closed_count=len(items) - open_count,
+        "issues.html", items=shown, total=len(items), shown=len(shown), filtered=filtered,
+        open_count=open_count, section=section, chosen=chosen,
+        options={"status": lifecycle_values, "category": categories, "severity": severities,
+                 "section": sections, "owner": owners},
+        sort=arg("sort"),
         maturity=maturity(p.status for p in pages),
     )
 
@@ -2713,6 +2947,8 @@ def page_detail(folder, stem):
         ego_graph=ego_graph, ego_layers=ego_layers,
         needs_mermaid=bool(context_diagram or whitebox or sequence or deployment) or "language-mermaid" in body_html,
         sources=provenance(page),
+        issue=issue_fields(page, titles, link_index()) if folder == "issues" else None,
+        page_issues=open_issues_for(stem),
     )
 
 
@@ -2761,20 +2997,44 @@ def search_index():
     """The search index for the topbar's incremental search popup
     (static/search-popup.js); ranked client-side by static/search-rank.js,
     the same code the /search page uses."""
-    return jsonify([{k: r[k] for k in ("id", "type", "title", "status", "url", "text")}
-                    for r in build_search_records()])
+    return jsonify(build_search_index())
 
 
 @app.route("/search")
 def search_view():
     """Global search across all wiki content. Results render once and are
     filtered incrementally client-side; type facets allow browsing by content type."""
-    records = build_search_records()
+    index = build_search_index()
     tally: dict[str, int] = {}
-    for r in records:
+    for r in index["records"]:
         tally[r["type"]] = tally.get(r["type"], 0) + 1
     facets = sorted(tally.items(), key=lambda kv: (-kv[1], kv[0]))
-    return render_template("search.html", records=records, total=len(records), facets=facets)
+    return render_template("search.html", index=index, total=len(index["records"]), facets=facets,
+                           filters=_search_filters())
+
+
+_PRIORITY_ORDER = ["must", "should", "could", "wont", "won't"]
+
+
+def _search_filters() -> dict[str, list[dict]]:
+    """The values offered by /search's status, priority and tag filters
+    (FR-009): every value some page carries, as {value, label}. The value is
+    lower-case, as the ranker compares it; the label is how the wiki writes
+    it (the first spelling found)."""
+    labels: dict[str, dict[str, str]] = {"status": {}, "priority": {}, "tags": {}}
+    for p in load_all_pages():
+        for key, seen in labels.items():
+            raw = p.meta.get(key)
+            for x in raw if isinstance(raw, list) else [raw]:
+                written = str(x).strip() if x is not None else ""
+                if written:
+                    seen.setdefault(written.lower(), written)   # same value as _search_fields
+
+    def opts(key, order=None):
+        vals = labels[key]
+        rank = (lambda v: (v not in order, order.index(v) if v in order else 0, v)) if order else None
+        return [{"value": v, "label": vals[v]} for v in sorted(vals, key=rank)]
+    return {"status": opts("status"), "priority": opts("priority", _PRIORITY_ORDER), "tag": opts("tags")}
 
 
 def _short_title(p: Page) -> str:
@@ -3112,6 +3372,7 @@ def data_model_entities() -> list[dict]:
             "id": p.id,
             "stem": p.stem,
             "title": p.title,
+            "status": p.status,
             "stereotype": str(p.meta.get("stereotype") or "").strip(),
             "source_of_truth": str(p.meta.get("source-of-truth") or "").strip(),
             "attributes": _extract_dm_attribute_names(p),
@@ -3168,6 +3429,11 @@ def goals_view():
     links = link_index()       # vision/objective prose wikilinks become real links
     data = load_goals()
     vision, objectives = data["vision"], data["objectives"]
+    # the flat, sortable list of every goal page (FR-021)
+    goal_rows = [{"id": g.id, "title": g.title, "url": _page_url(g.folder, g.stem),
+                  "stereotype": str(g.meta.get("stereotype") or "").strip().lower(),
+                  "horizon": str(g.meta.get("horizon") or "").strip(), "status": g.status}
+                 for g in ([vision] if vision else []) + objectives]
     if not vision:
         # Empty vault: no `stereotype: vision` page yet. Render the empty
         # state rather than a 404 — this route must work on workshop day one.
@@ -3184,6 +3450,7 @@ def goals_view():
             fr_cols=[],
             matrix_rows=[],
             needs_mermaid=False,
+            goal_rows=goal_rows,
         )
 
     def _wikilink_list(items) -> list[str]:
@@ -3260,6 +3527,7 @@ def goals_view():
         fr_cols=fr_cols,
         matrix_rows=matrix_rows,
         needs_mermaid=bool(diagram),
+        goal_rows=goal_rows,
     )
 
 
@@ -3278,7 +3546,7 @@ def data_model_view():
     if focus not in {n["key"] for n in nodes}:
         focus = None
     diagram = build_data_model_full_diagram(context=context, focus=focus)
-    return render_template("data_model.html", diagram=diagram,
+    return render_template("data_model.html", diagram=diagram, **_section_crumb("data-models"),
                            entities=data_model_entities(), nodes=nodes,
                            contexts=contexts, context=context, focus=focus,
                            stubs=[n for n in nodes if n["stub"]],
@@ -3323,9 +3591,22 @@ def functional_requirements_view():
         "n_features": uc_kids.get(p.id, {}).get("n_features", 0),
         "n_stories": uc_kids.get(p.id, {}).get("n_stories", 0),
     } for p in goals["ucs"]]
+    # the flat list under the hierarchy (FR-021): every requirement and use
+    # case once, sortable by priority, release and order
+    rows = []
+    for p in sorted(load_folder("functional-requirements"), key=lambda q: q.id):
+        rows.append({"id": p.id, "title": p.title, "url": f"/functional-requirements/{p.stem}",
+                     "kind": _fr_stereotype(p), "priority": str(p.meta.get("priority") or "").strip(),
+                     "release": str(p.meta.get("release") or "").strip(),
+                     "order": str(p.meta.get("order") if p.meta.get("order") is not None else "").strip(),
+                     "status": p.status})
+    for p in goals["ucs"]:
+        rows.append({"id": p.id, "title": p.title, "url": _page_url("use-cases", p.stem),
+                     "kind": "use case", "priority": str(p.meta.get("priority") or "").strip(),
+                     "release": "", "order": "", "status": p.status})
     return render_template(
         "functional-requirements.html", hierarchy=hierarchy, diagram=diagram,
-        block=block, use_cases=use_cases, needs_mermaid=bool(diagram),
+        block=block, use_cases=use_cases, needs_mermaid=bool(diagram), rows=rows,
     )
 
 
@@ -3376,6 +3657,7 @@ def fr_view(stem):
         trace=build_trace(stem, "functional-requirements"),
         needs_mermaid=bool(diagram) or "language-mermaid" in body_html,
         sources=provenance(page),
+        page_issues=open_issues_for(stem),
     )
 
 
@@ -3416,6 +3698,7 @@ def req42_block_view(slug):
     context_flows = build_context_flows() if slug == "scope" else None
     return render_template(
         "req42_block.html", block=block, rows=rows, total=len(rows),
+        list_type=metamodel.type_for_folder(block["folders"][0]) if block["folders"] else "page",
         context_diagram=context_diagram, context_flows=context_flows,
         needs_mermaid=bool(context_diagram),
         maturity=maturity(r["status"] for r in rows),

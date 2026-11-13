@@ -1,7 +1,7 @@
 """Sortable headers on the issues table. No pytest.
 
 Its own temporary vault, because the shared fixture has no issues. The sorting
-itself is static/table-sort.js, covered by test_table_sort.py.
+itself is static/list-view.js, covered by test_table_sort.py.
 
 Run from the dashboard dir:
     .venv/bin/python tests/test_issues_sort.py
@@ -43,11 +43,11 @@ BODY = app.app.test_client().get("/issues").get_data(as_text=True)
 
 def test_every_column_sorts_and_id_is_marked():
     head = BODY[BODY.index("<thead"):BODY.index("</thead>")]
-    assert re.search(r'<th class="c-id" data-sort="text" aria-sort="ascending">ID</th>', head), head
-    assert re.search(r'<th data-sort="text">Title</th>', head), head
-    assert re.search(r'<th class="c-status" data-sort="text">Kind</th>', head), head
-    assert re.search(r'<th class="c-status" data-sort="numeric" data-sort-first="desc">Severity</th>', head), head
-    assert re.search(r'<th class="c-status" data-sort="numeric">Status</th>', head), head
+    assert re.search(r'<th class="c-id" data-sort="text" data-key="id" aria-sort="ascending">ID</th>', head), head
+    assert re.search(r'<th data-sort="text" data-key="title">Title</th>', head), head
+    assert re.search(r'<th class="c-status" data-sort="text" data-key="kind">Kind</th>', head), head
+    assert re.search(r'<th class="c-status" data-sort="numeric" data-sort-first="desc" data-key="severity">Severity</th>', head), head
+    assert re.search(r'<th class="c-status" data-sort="numeric" data-key="status">Status</th>', head), head
 
 
 def _row(issue_id):
@@ -55,8 +55,8 @@ def _row(issue_id):
 
 
 def _cell_keys(row):
-    """The three c-status sort keys: kind (none, its text sorts), severity, status."""
-    return re.findall(r'<td class="c-status" data-sort-value="([^"]*)">', row)
+    """The rank sort keys: severity, status (kind and category sort by text)."""
+    return re.findall(r'<td class="c-status c-(?:severity|istatus)" data-sort-value="([^"]*)">', row)
 
 
 def test_severity_sorts_by_rank():
