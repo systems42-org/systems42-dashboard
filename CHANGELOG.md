@@ -27,6 +27,11 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - Every search hit that isn't an exact match says why it is there (FR-005),
   in the popup and on `/search`: "typo: keyholdr → Keyholder", "word form:
   starts → started", "via alias of Keyholder" or "matches 1 of 2 words".
+- Search finds pages by their labels (FR-006): `tags`, `status`,
+  `stereotype`, `priority`, `kind`, `state`, `category` and `dimensions`.
+  `Must` finds every page with `priority: Must`. A field hit ranks below a
+  title hit and above a hit in the body text. Link fields, dates and raw
+  markdown are no longer searched, so file names in links add no noise.
 - Quality requirements are classified by Q42 dimensions (DR-003): the
   template and the metamodel replace the single ISO 25010 `attribute:` with
   `dimensions:`, a list of one or more of reliable, flexible, maintainable,

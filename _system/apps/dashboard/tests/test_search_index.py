@@ -70,7 +70,7 @@ def test_search_json_serves_the_index_root():
     data = app.app.test_client().get("/search.json").get_json()
     assert set(data) == {"records", "synonyms"}, set(data)
     rec = next(r for r in data["records"] if r["id"] == "STK-023")
-    assert {"id", "type", "title", "status", "url", "aliases", "plain", "fields", "links"} <= set(rec), rec
+    assert set(rec) == {"id", "type", "title", "status", "url", "aliases", "plain", "fields", "links"}, rec
 
 
 if __name__ == "__main__":

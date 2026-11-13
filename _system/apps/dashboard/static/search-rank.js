@@ -3,7 +3,8 @@
 // in app.py: {id, type, title, aliases, plain, fields, links, ...}.
 //
 // Relevance is a 0–100 percentage, decided by *where* and *how* each query
-// word matched. Places, strongest first: id, title, alias, type, body.
+// word matched. Places, strongest first: id, title, alias, field (tags,
+// priority, status and the like, FR-006), type, body.
 // Within a place an exact or prefix hit beats a word form, a word form beats
 // a typo (FR-002), and a typo beats a glossary synonym (FR-003), so a weaker
 // match never pushes a correct one down. The number means
@@ -21,8 +22,8 @@
     "for and or with").split(" "));
 
   // base score per place, and what each kind of match costs within a place
-  var PLACE = {id: 90, title: 80, alias: 70, type: 50, body: 40};
-  var PLACES = ["id", "title", "alias", "type", "body"];
+  var PLACE = {id: 90, title: 80, alias: 70, field: 60, type: 50, body: 40};
+  var PLACES = ["id", "title", "alias", "field", "type", "body"];
   var COST = {exact: 0, prefix: 2, form: 4, typo: 8, synonym: 12};
 
   function norm(s) { return String(s || "").normalize("NFC"); }
@@ -106,6 +107,9 @@
       titleLc: words(rec.title).join(" ").toLowerCase(),
       alias: wordMap((rec.aliases || []).join(" ")),
       aliasLc: (rec.aliases || []).map(function (a) { return words(a).join(" ").toLowerCase(); }),
+      field: wordMap(Object.keys(rec.fields || {}).map(function (k) {
+        return [].concat(rec.fields[k]).join(" ");
+      }).join(" ")),
       type: wordMap(rec.type),
       body: wordMap(rec.plain, freq),
       freq: freq,

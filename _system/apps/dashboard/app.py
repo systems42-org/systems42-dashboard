@@ -2417,11 +2417,9 @@ def build_search_records() -> list[dict]:
     neighbours = _search_links(pages)
     records = []
     for p in pages:
-        kind = FOLDER_LABELS.get(p.folder, p.folder)
-        text = " ".join(filter(None, [p.id, p.title, " ".join(p.aliases), p.body]))
         records.append({
             "id": p.id,
-            "type": kind,
+            "type": FOLDER_LABELS.get(p.folder, p.folder),
             "title": p.title,
             "status": p.status,
             "url": (f"/functional-requirements/{p.stem}"
@@ -2431,8 +2429,6 @@ def build_search_records() -> list[dict]:
             "plain": search_plain(p, titles),
             "fields": _search_fields(p),
             "links": sorted(neighbours.get(p.id, ())),
-            "text": re.sub(r"\s+", " ", text).strip().lower(),
-            "key": " ".join([p.id, p.title, " ".join(p.aliases), kind]).strip().lower(),
         })
     return records
 
@@ -2444,14 +2440,9 @@ def search_synonyms() -> list[list[str]]:
             for p in load_folder("glossary")]
 
 
-SEARCH_RECORD_KEYS = ("id", "type", "title", "status", "url", "aliases", "plain",
-                      "fields", "links", "text")
-
-
 def build_search_index() -> dict:
     """What /search.json serves and /search embeds: {records, synonyms}."""
-    return {"records": [{k: r[k] for k in SEARCH_RECORD_KEYS} for r in build_search_records()],
-            "synonyms": search_synonyms()}
+    return {"records": build_search_records(), "synonyms": search_synonyms()}
 
 
 # --- views -----------------------------------------------------------------
