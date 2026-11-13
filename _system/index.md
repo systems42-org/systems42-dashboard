@@ -87,6 +87,8 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-031-branding-is-configuration]] Branding is configuration (feature, Must, draft)
 - [[FR-032-example-brands-to-try]] Example brands to try (feature, Should, draft)
 - [[FR-033-runnable-dashboard-in-the-starter-kit]] Runnable dashboard in the starter kit (feature, Should, draft)
+- [[FR-034-read-a-page-with-its-links]] Read a page with its links (feature, Must, draft)
+- [[FR-035-method-terms-lead-to-their-definition]] Method terms lead to their definition (feature, Should, draft)
 
 ## Quality requirements
 
@@ -98,6 +100,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[CON-001-proof-of-concept-not-production-ready]] The dashboard is a proof of concept, not production-ready for every environment (draft)
 - [[CON-002-dashboard-never-writes-to-the-wiki]] The dashboard never writes to the wiki (draft)
 - [[CON-003-docker-is-the-supported-way-to-run-it]] Docker is the supported way to run the dashboard (draft)
+- [[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]] The dashboard shows the metamodel, it does not define it (draft)
 
 ## Decisions
 
@@ -132,3 +135,5 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-018-grilling-session-on-phone-and-tablet]] Grilling session on phone and tablet (interview)
 - [[SRC-019-the-dashboard-as-a-product]] The dashboard as a product (document)
 - [[SRC-020-grilling-session-on-the-dashboard-as-a-product]] Grilling session on the dashboard as a product (interview)
+- [[SRC-021-read-a-page-with-its-links]] Read a page with its links (document)
+- [[SRC-022-grilling-session-on-reading-a-page]] Grilling session on reading a page (interview)

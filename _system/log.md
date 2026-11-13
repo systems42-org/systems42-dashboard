@@ -198,3 +198,12 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 
 ## [2026-11-13] update | GOAL-008 without metric
 - Gernot Starke set the proposed counting metric aside. [[GOAL-008-one-way-into-every-systems42-wiki]] has no metric and no target for now.
+
+## [2026-11-13] capture | Read a page with its links
+- Source: `raw/fr-03-read-a-page-with-its-links.md`, extracted from the code on 2026-11-10, now [[SRC-021-read-a-page-with-its-links]] in `raw/ingested/`. Its "Today" part was rewritten as needs. The answers are [[SRC-022-grilling-session-on-reading-a-page]].
+- Trigger: Gernot Starke asked why "follows MADR" shows as a box and that MADR is not explained.
+- Grill gate: anchors are already a metamodel construct (`meta-metamodel.md` section 5, files in `_system/anchors/`), but the dashboard neither links nor shows them. Gernot Starke answered both questions, so no Issue was needed.
+- Decisions:
+  - Q1: dashboard requirements and Systems42 (metamodel) requirements are separated by one test: would it still hold without the dashboard? Recorded as [[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]].
+  - Q2: two features. [[FR-034-read-a-page-with-its-links]] under FR-017, Must. [[FR-035-method-terms-lead-to-their-definition]] under FR-010, Should.
+- Created: FR-034, FR-035, CON-004, SRC-021, SRC-022. Updated: FR-010 and FR-017 child lists, `_system/index.md`.

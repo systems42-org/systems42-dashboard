@@ -36,7 +36,7 @@ One rule holds for every feature below: **a section carries the same name wherev
 ## Hierarchy
 
 - **Parent:** none (epic).
-- **Children:** projected from the `parent:` backlinks: [[FR-018-orientation-on-the-first-page]], [[FR-019-section-at-a-glance]], [[FR-020-know-where-you-are]], [[FR-021-sort-lists]], [[FR-022-lists-keep-sort-and-filter-in-their-address]], [[FR-023-areas-and-sections-follow-the-tailoring]].
+- **Children:** projected from the `parent:` backlinks: [[FR-018-orientation-on-the-first-page]], [[FR-019-section-at-a-glance]], [[FR-020-know-where-you-are]], [[FR-021-sort-lists]], [[FR-022-lists-keep-sort-and-filter-in-their-address]], [[FR-023-areas-and-sections-follow-the-tailoring]], [[FR-034-read-a-page-with-its-links]].
 
 > [!note] Open points
 > None.
