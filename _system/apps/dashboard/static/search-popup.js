@@ -74,6 +74,7 @@
         '<span class="badge kind-badge">' + esc(r.type) + '</span>' +
         '<code class="sresult-id">' + esc(r.id) + '</code>' +
         '<span class="sp-title">' + esc(r.title) + '</span>' +
+        (h.note ? '<span class="hit-note">' + esc(h.note) + '</span>' : '') +
         '<span class="sresult-score" data-band="' + window.S42Search.band(h.score) + '" title="Relevance">' +
         '<span class="score-track"><span class="score-fill" style="width:' + h.score + '%"></span></span>' +
         '<span class="score-pct">' + h.score + '%</span></span></a></li>';

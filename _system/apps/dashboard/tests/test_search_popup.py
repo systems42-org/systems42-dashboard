@@ -95,8 +95,19 @@ def test_ranker_title_before_body():
     assert ranked[0][1] == 100 and ranked[1][1] == 92 and ranked[2][1] < 55, ranked
 
 
+def test_reason_note_rendered_in_popup_and_page():
+    """FR-005: both result lists have a place for the reason of a non-exact hit."""
+    popup = (_DASH / "static" / "search-popup.js").read_text(encoding="utf-8")
+    page = (_DASH / "templates" / "search.html").read_text(encoding="utf-8")
+    assert 'class="hit-note"' in popup, "popup renders no reason note"
+    assert 'class="hit-note"' in page, "/search renders no reason note"
+    css = (_DASH / "static" / "style.css").read_text(encoding="utf-8")
+    assert ".hit-note" in css
+
+
 if __name__ == "__main__":
     test_index_endpoint()
+    test_reason_note_rendered_in_popup_and_page()
     test_every_page_loads_ranker_and_popup()
     test_ranker_title_before_body()
     print("OK: search popup")

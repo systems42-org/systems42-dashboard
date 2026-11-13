@@ -23,7 +23,7 @@
       <a class="sresult-link" href="{{ r.url }}">
         <span class="badge kind-badge">{{ r.type }}</span>
         <code class="sresult-id">{{ r.id }}</code>
-        <span class="sresult-title">{{ r.title }}</span>
+        <span class="sresult-title">{{ r.title }} <span class="hit-note" hidden></span></span>
         {% if r.status %}<span class="status status-{{ r.status }}">{{ r.status }}</span>{% endif %}
         <span class="sresult-score" title="Relevance" hidden>
           <span class="score-track"><span class="score-fill"></span></span>
@@ -55,6 +55,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const index = JSON.parse(document.getElementById('search-index').textContent);
   const synonyms = index.synonyms;
   const allRecs = index.records.map((r, i) => Object.assign({el: allResults[i]}, r));
+
+  function setNote(el, note) {
+    const span = el.querySelector('.hit-note');
+    span.textContent = note || '';
+    span.hidden = !note;
+  }
 
   function setScore(el, pct) {
     const box = el.querySelector('.sresult-score');
@@ -91,16 +97,20 @@ document.addEventListener('DOMContentLoaded', () => {
       ranked.forEach(({rec}) => { perType[rec.type] = (perType[rec.type] || 0) + 1; });
       updateCounts(perType);
       allResults.forEach(el => { el.hidden = true; });
-      ranked.forEach(({rec, score}) => {
+      ranked.forEach(({rec, score, note}) => {
         if (activeType !== 'all' && rec.type !== activeType) return;
-        rec.el.hidden = false; setScore(rec.el, score); list.appendChild(rec.el); shown++;
+        rec.el.hidden = false; setScore(rec.el, score); setNote(rec.el, note);
+        list.appendChild(rec.el); shown++;
       });
     } else if (browsing) {                               // facet browse, no query
       updateCounts(null);
       allResults.forEach(el => {
         const show = activeType === 'all' || el.dataset.type === activeType;
         el.hidden = !show;
-        if (show) { el.querySelector('.sresult-score').hidden = true; list.appendChild(el); shown++; }
+        if (show) {
+          el.querySelector('.sresult-score').hidden = true; setNote(el, null);
+          list.appendChild(el); shown++;
+        }
       });
     } else {
       updateCounts(null);

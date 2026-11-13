@@ -201,6 +201,20 @@
     return Math.round(sum / matches.length);
   }
 
+  // Why a page with every query word is a hit, when it doesn't contain the
+  // words as typed: the first non-exact word decides (FR-005). An exact or
+  // prefix hit has no note.
+  function reason(rec, matches) {
+    for (var i = 0; i < matches.length; i++) {
+      var m = matches[i];
+      if (m.via) { return "via alias of " + m.via; }
+      if (m.place === "alias") { return "via alias of " + rec.title; }
+      if (m.match.kind === "typo") { return "typo: " + m.match.from + " → " + m.match.to; }
+      if (m.match.kind === "form") { return "word form: " + m.match.from + " → " + m.match.to; }
+    }
+    return null;
+  }
+
   function band(pct) { return pct >= 80 ? "high" : pct >= 55 ? "mid" : "low"; }
 
   // Rank `records` against query `q`, with the glossary's synonym groups;
@@ -234,7 +248,7 @@
       out.push({
         rec: rec, matches: matches, freq: freq, full: full,
         score: full ? relevance(p, phrase, matches) : Math.min(20, Math.round(sum / n / 4)),
-        note: full ? null : "matches " + matches.length + " of " + n + " words",
+        note: full ? reason(rec, matches) : "matches " + matches.length + " of " + n + " words",
       });
     });
     out.sort(function (a, b) {

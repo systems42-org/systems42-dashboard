@@ -24,6 +24,9 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - Search takes questions (FR-004): filler words such as `who`, `the` and
   `is` don't count, so `who starts the app` finds the Keyholder. Pages with
   only some of the words now show too, after every page with all of them.
+- Every search hit that isn't an exact match says why it is there (FR-005),
+  in the popup and on `/search`: "typo: keyholdr → Keyholder", "word form:
+  starts → started", "via alias of Keyholder" or "matches 1 of 2 words".
 - Quality requirements are classified by Q42 dimensions (DR-003): the
   template and the metamodel replace the single ISO 25010 `attribute:` with
   `dimensions:`, a list of one or more of reliable, flexible, maintainable,

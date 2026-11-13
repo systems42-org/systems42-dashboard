@@ -262,6 +262,7 @@ h2 { letter-spacing: -.01em; }
 .sp-item.is-active { background: rgba(62,166,255,.12); box-shadow: inset 3px 0 0 var(--accent); }
 .sp-item .badge { min-width: 5.5rem; text-align: center; flex: none; }
 .sp-title { font-weight: 600; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-item .hit-note { flex: 0 1 auto; margin-left: 0; max-width: 45%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sp-empty { margin: 0; padding: .7rem .9rem; color: var(--ink-dim); font-size: var(--step--1); }
 .sp-all { display: flex; justify-content: space-between; align-items: center; padding: .5rem .9rem;
   border-top: 1px solid var(--line); color: var(--accent); text-decoration: none; font-size: var(--step--1); }
@@ -396,6 +397,8 @@ h2 { letter-spacing: -.01em; }
 .sresult-link:hover { background: rgba(62,166,255,.06); }
 .sresult-id { color: var(--ink-dim); font-size: .8em; white-space: nowrap; }
 .sresult-title { font-weight: 600; flex: 1 1 auto; }
+/* why a non-exact hit is in the list (FR-005), popup and /search */
+.hit-note { font-weight: 400; font-style: italic; color: var(--ink-dim); font-size: var(--step--1); margin-left: .4rem; }
 .sresult .badge { min-width: 6.5rem; text-align: center; }
 .search-hint { color: var(--ink-dim); font-style: italic; padding: 1.2rem 1rem; margin: 0; }
 
