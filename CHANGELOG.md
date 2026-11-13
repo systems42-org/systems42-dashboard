@@ -96,9 +96,9 @@ Unreleased changes sit at the top until the next Starter Kit release.
   dashboard container and image, `.venv`, `__pycache__` and `.DS_Store`. It never
   touches `wiki/`, `raw/`, `docs/`, `sandbox/`, settings or harvest patches.
 - Sortable tables: click a column header on Stakeholders, Quality, Constraints,
-  Scope, Glossary and Decisions to sort, click again to flip. IDs sort
-  naturally, influence and interest by rank (first click: high first), status
-  by lifecycle, and empty cells stay last. `static/table-sort.js`, which also
+  Scope, Glossary, Decisions and Issues to sort, click again to flip. IDs sort
+  naturally, influence, interest and severity by rank (first click: highest
+  first), status by lifecycle, and empty cells stay last. `static/table-sort.js`, which also
   replaces the data-model page's own sort script.
 - atrium logo intro: the lockup's twelve pieces (rooms, courtyard, letters,
   i-dot) spiral in from the edges and form the logo in about a second. Shown as
@@ -276,8 +276,8 @@ Unreleased changes sit at the top until the next Starter Kit release.
 ### Fixed
 - The Domain Terms tile in Commons is clickable as a whole, like its neighbours,
   and still offers the term network link.
-- Decision titles wrap, so a long one no longer pushes the Status column out of
-  the table.
+- Decision and issue titles wrap, so a long one no longer pushes the Status
+  column out of the table.
 - Dashboard: the data-model class diagram drew a title with an umlaut as a
   broken identifier (`Durchführungsart` → `DurchfHrungsart`). Identifiers are
   now transliterated (ä→ae, ö→oe, ü→ue, ß→ss, other diacritics stripped) and

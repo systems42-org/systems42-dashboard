@@ -7,3 +7,5 @@
    static/table-sort.js). Unknown values rank empty, which sorts last. #}
 {% macro status_rank(s) %}{{ {'draft': 1, 'review': 2, 'accepted': 3, 'deprecated': 4}.get(s, '') }}{% endmacro %}
 {% macro level_rank(l) %}{{ {'low': 1, 'medium': 2, 'high': 3}.get(l, '') }}{% endmacro %}
+{% macro severity_rank(s) %}{{ {'minor': 1, 'major': 2, 'blocker': 3}.get(s, '') }}{% endmacro %}
+{% macro issue_status_rank(s) %}{{ {'open': 1, 'in-progress': 2, 'resolved': 3, 'wontfix': 4}.get(s, '') }}{% endmacro %}
