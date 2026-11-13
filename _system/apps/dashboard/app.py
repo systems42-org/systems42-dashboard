@@ -1626,26 +1626,30 @@ def load_goals() -> dict:
     ucs = sorted(load_folder("use-cases"), key=lambda p: p.id)
     uc_by_stem = {u.stem: u for u in ucs}
     coverage: dict[str, list[Page]] = {o.id: [] for o in objectives}
+    objective_by_stem = {o.stem: o for o in objectives}
+
+    def served(p: Page) -> list[str]:
+        # only links that resolve to an objective count: the vision, a missing
+        # page or a mangled value serves no goal (rule-fr-traces-to-goal)
+        return [objective_by_stem[s].id for s in links_of(p, "goal") if s in objective_by_stem]
+
     enablers: list[Page] = []
     untraced: list[Page] = []
     for fr in frs:
-        refs = fr.meta.get("goal") or []
-        if not refs:
+        gids = served(fr)
+        if not gids:
             # a feature/story refining a use case serves that use case's goals
             uc = next((uc_by_stem[s] for s in links_of(fr, "parent") if s in uc_by_stem), None)
-            refs = (uc.meta.get("goal") or []) if uc else []
-        if is_enabler(fr, refs):
+            gids = served(uc) if uc else []
+        if is_enabler(fr, gids):
             enablers.append(fr)
-        elif breaks_fr_traces_to_goal(fr, refs):
+        elif breaks_fr_traces_to_goal(fr, gids):
             untraced.append(fr)
-        for ref in refs:
-            gid = _goal_id_from_ref(ref)
-            if gid in coverage:
-                coverage[gid].append(fr)
+        for gid in gids:
+            coverage[gid].append(fr)
     for uc in ucs:
-        for ref in uc.meta.get("goal") or []:
-            gid = _goal_id_from_ref(ref)
-            if gid in coverage and uc not in coverage[gid]:
+        for gid in served(uc):
+            if uc not in coverage[gid]:
                 coverage[gid].append(uc)
     return {"vision": vision, "objectives": objectives,
             "coverage": coverage, "enablers": enablers, "untraced": untraced,
@@ -1894,7 +1898,7 @@ def _mermaid_goal_epic_tree(goals: dict, hierarchy: dict) -> str | None:
     untraced_epics = [epic_by_id[fr.id] for fr in goals.get("untraced") or []
                       if fr.id in epic_by_id and fr.id not in seen]
     if untraced_epics:
-        lines.append('  NOGOAL["No goal"]:::enabler')
+        lines.append('  NOGOAL["No goal"]:::nogoal')
         for e in untraced_epics:
             epic_edge("NOGOAL", e)
 
@@ -1903,6 +1907,8 @@ def _mermaid_goal_epic_tree(goals: dict, hierarchy: dict) -> str | None:
         "  classDef enabler fill:#3a3f4b,stroke:#7a8497,color:#ffffff,font-weight:bold;",
         "  classDef epic fill:#d7dbe3,stroke:#9aa3b2,color:#15202e;",
         "  classDef usecase fill:#eef1f6,stroke:#9aa3b2,color:#15202e,stroke-dasharray:4 3;",
+        # the warning colour of the matrix's "no goal" flag (--warn)
+        "  classDef nogoal fill:#5a3d0c,stroke:#ffb454,color:#ffffff,stroke-width:2px,font-weight:bold;",
     ]
     return "\n".join(lines)
 

@@ -47,6 +47,8 @@ _page("goals", "GOAL-002-served", "Served goal", "accepted", stereotype="objecti
 _page("goals", "GOAL-003-unserved", "Unserved goal", "accepted", stereotype="objective")
 _page("goals", "GOAL-004-draft", "Draft goal", "draft", stereotype="objective")
 _page("goals", "GOAL-005-features-only", "Served by a feature only", "accepted", stereotype="objective")
+_page("goals", "GOAL-006-draft-epic-agreed-feature", "Draft epic, agreed feature", "accepted",
+      stereotype="objective")
 
 _FR = "functional-requirements"
 _page(_FR, "FR-001-served-epic", "Served epic", "accepted",
@@ -69,6 +71,23 @@ _page(_FR, "FR-007-platform-with-goal", "Platform epic with a goal", "draft",
 _page(_FR, "FR-008-feature-only", "Feature for goal five", "draft",
       stereotype="feature", lane="backbone", parent='["[[FR-001-served-epic]]"]',
       goal='["[[GOAL-005-features-only]]"]')
+# goal: values that look truthy but name no objective, and two odd spellings
+# that do: each backbone epic is either marked "no goal" or marks its goal
+_page(_FR, "FR-009-names-the-vision", "Names the vision", "draft",
+      stereotype="epic", lane="backbone", parent="[]", goal='["[[GOAL-001-vision]]"]')
+_page(_FR, "FR-010-names-a-missing-goal", "Names a missing goal", "draft",
+      stereotype="epic", lane="backbone", parent="[]", goal='["[[GOAL-099-x]]"]')
+_page(_FR, "FR-011-unquoted-goal", "Unquoted goal", "draft",
+      stereotype="epic", lane="backbone", parent="[]", goal="[[GOAL-002-served]]")
+_page(_FR, "FR-012-scalar-goal", "Scalar goal", "draft",
+      stereotype="epic", lane="backbone", parent="[]", goal='"[[GOAL-002-served]]"')
+# GOAL-006: a draft epic and an agreed feature
+_page(_FR, "FR-013-draft-epic-for-six", "Draft epic for six", "draft",
+      stereotype="epic", lane="backbone", parent="[]",
+      goal='["[[GOAL-006-draft-epic-agreed-feature]]"]')
+_page(_FR, "FR-014-agreed-feature-for-six", "Agreed feature for six", "accepted",
+      stereotype="feature", lane="backbone", parent='["[[FR-013-draft-epic-for-six]]"]',
+      goal='["[[GOAL-006-draft-epic-agreed-feature]]"]')
 _page("use-cases", "UC-001-borrow", "Borrow", "draft", goal='["[[GOAL-004-draft]]"]')
 
 BODY = app.app.test_client().get("/goals").get_data(as_text=True)
@@ -91,7 +110,9 @@ def _rows():
 def test_rule_helper():
     data = app.load_goals()
     assert [p.id for p in data["enablers"]] == ["FR-003", "FR-005"], data["enablers"]
-    assert [p.id for p in data["untraced"]] == ["FR-002"], data["untraced"]
+    assert [p.id for p in data["untraced"]] == ["FR-002", "FR-009", "FR-010"], data["untraced"]
+    served = [p.id for p in data["coverage"]["GOAL-002"]]
+    assert served == ["FR-001", "FR-004", "FR-006", "FR-011", "FR-012"], served
 
 
 def test_goal_epic_map_keeps_untraced_epics():
@@ -103,11 +124,17 @@ def test_goal_epic_map_keeps_untraced_epics():
     assert re.search(r"NOGOAL --> \w+\[\"FR-002", dia), dia
     assert not re.search(r"ENABLER --> \w+\[\"FR-002", dia), dia
     assert re.search(r"ENABLER --> \w+\[\"FR-003", dia), enabler
+    for fr in ("FR-009", "FR-010"):
+        assert re.search(r"NOGOAL --> \w+\[\"" + fr, dia), (fr, dia)
+    # drawn as a warning, not as an enabler
+    assert re.search(r'NOGOAL\["No goal"\]:::nogoal', dia), dia
+    assert "classDef nogoal" in dia, dia
 
 
 def test_columns_are_epics_and_use_cases_enablers_last():
     ids = [re.search(r">(FR-\d+|UC-\d+)<", h).group(1) for h in _headers()]
-    assert ids == ["FR-001", "FR-002", "FR-006", "FR-007", "UC-001", "FR-003", "FR-005"], ids
+    assert ids == ["FR-001", "FR-002", "FR-006", "FR-007", "FR-009", "FR-010", "FR-011",
+                   "FR-012", "FR-013", "UC-001", "FR-003", "FR-005"], ids
     assert "Epic-0" not in _matrix()
 
 
@@ -169,7 +196,7 @@ def test_drives_lists_every_requirement_and_every_mark():
         drives = re.findall(r'<a href="[^"]+">((?:FR|UC)-\d+) ', card)
         assert set(marked) <= set(drives), (gid, drives, marked)
     card = re.search(r'<section id="GOAL-002" class="goal-card">(.*?)</section>', BODY, re.S).group(1)
-    assert re.findall(r'<a href="[^"]+">((?:FR|UC)-\d+) ', card) == ["FR-001", "FR-004", "FR-006"]
+    assert re.findall(r'<a href="[^"]+">((?:FR|UC)-\d+) ', card) == ["FR-001", "FR-004", "FR-006", "FR-011", "FR-012"]
 
 
 def test_gap_served_by_features_says_so():
