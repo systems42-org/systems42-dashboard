@@ -217,3 +217,7 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Decisions: Q1 serves GOAL-004. Q2 a feature under FR-017, Should. Q3 no counts per row, only on Vision & Goals.
 - Created: [[FR-036-goal-coverage-matrix]], SRC-023, SRC-024. Updated: FR-017 child list, `_system/index.md`.
 - Noticed for Systems42, not filed: `proj-goal-coverage` cites DR-018 and DR-011, which exist only in isaqb-atrium.
+
+## [2026-11-13] issue | Goal coverage projection cites foreign decisions
+- Gernot Starke asked to file what the fr-16 capture noticed for Systems42. Filed here with category systems42, as [[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]] prescribes.
+- Created: [[ISS-003-goal-coverage-projection-cites-decisions-from-another-wiki]]. Updated: `_system/index.md`.
