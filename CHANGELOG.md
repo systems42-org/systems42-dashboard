@@ -21,6 +21,9 @@ Unreleased changes sit at the top until the next Starter Kit release.
   the page, and a glossary term's name and aliases count as one word, so
   searching for an alias also finds pages that use only the term's name.
   Alias hits rank below exact hits.
+- Search takes questions (FR-004): filler words such as `who`, `the` and
+  `is` don't count, so `who starts the app` finds the Keyholder. Pages with
+  only some of the words now show too, after every page with all of them.
 - Quality requirements are classified by Q42 dimensions (DR-003): the
   template and the metamodel replace the single ISO 25010 `attribute:` with
   `dimensions:`, a list of one or more of reliable, flexible, maintainable,

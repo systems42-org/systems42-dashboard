@@ -163,6 +163,22 @@ def test_fr004_partial_below_full():
         assert hit("keyholder workshop", one)["note"] == "matches 1 of 2 words", hits
 
 
+def test_fr004_partial_after_every_full_hit():
+    recs = [{"id": "A-1", "type": "Issue", "title": "Keyholder", "aliases": [], "plain": ""},
+            {"id": "B-1", "type": "Issue", "title": "Other", "aliases": [], "plain": "keyholder and workshop"},
+            {"id": "C-1", "type": "Issue", "title": "Workshop keys", "aliases": [], "plain": ""}]
+    ranked = js(f'S.rank({json.dumps(recs)}, "keyholder workshop", [])'
+                '.map(function (h) { return [h.rec.id, h.score, h.note]; })')
+    assert [r[0] for r in ranked][0] == "B-1", ranked              # both words, in the body only
+    assert all(r[2] == "matches 1 of 2 words" for r in ranked[1:]), ranked
+    assert ranked[0][1] > max(r[1] for r in ranked[1:]), ranked     # the score agrees with the order
+
+
+def test_fr004_filler_words_dropped():
+    assert ids("who starts the app")[:1] == ["STK-023"], ids("who starts the app")
+    assert hit("what is the keyholder", "STK-023")["note"] is None   # filler words don't count as missing
+
+
 def test_fr004_only_filler_words():
     assert run_query("the a"), "a query of filler words alone still finds pages"
 

@@ -8,10 +8,17 @@
 // a typo (FR-002), and a typo beats a glossary synonym (FR-003), so a weaker
 // match never pushes a correct one down. The number means
 // the same thing for every query (no per-query normalisation).
+//
+// Pages that contain every query word come first. Pages that contain only
+// some follow, ranked by how many, with a note such as "matches 1 of 2 words"
+// and a score of at most 20 (FR-004).
 (function () {
   var WORD_RE = /\p{L}+-\d+|[\p{L}\p{N}]+/gu;
   var ID_RE = /^\p{L}+-\d+$/u;
   var SUFFIXES = ["ing", "ed", "es", "s"];
+  // Filler words of a question don't count, unless the query has nothing else (FR-004).
+  var STOP_WORDS = new Set(("who what when where why how the a an is are does do of to in on " +
+    "for and or with").split(" "));
 
   // base score per place, and what each kind of match costs within a place
   var PLACE = {id: 90, title: 80, alias: 70, type: 50, body: 40};
@@ -197,10 +204,13 @@
   function band(pct) { return pct >= 80 ? "high" : pct >= 55 ? "mid" : "low"; }
 
   // Rank `records` against query `q`, with the glossary's synonym groups;
-  // returns [{rec, score}] best first: relevance, then how often the words
+  // returns [{rec, score, note}] best first: pages with every word, then
+  // relevance, then the number of matched words, then how often the words
   // occur in the body, then title.
   function rank(records, q, synonyms) {
     var qwords = words(q).map(function (w) { return w.toLowerCase(); });
+    var content = qwords.filter(function (w) { return !STOP_WORDS.has(w); });
+    if (content.length) { qwords = content; }
     if (!qwords.length) { return []; }
     var titles = new Map();
     records.forEach(function (r) { titles.set(words(r.title).join(" ").toLowerCase(), r.title); });
@@ -211,19 +221,25 @@
     records.forEach(function (rec) {
       var p = prep(rec);
       var matches = [];
-      for (var i = 0; i < qunits.length; i++) {
-        var m = matchUnit(p, qunits[i], memo);
-        if (!m) { return; }                          // every word must match
-        matches.push(m);
-      }
+      qunits.forEach(function (u) {
+        var m = matchUnit(p, u, memo);
+        if (m) { matches.push(m); }
+      });
+      if (!matches.length) { return; }
+      var n = qunits.length, full = matches.length === n;
       var freq = matches.reduce(function (a, m) {
         return a + (m.place === "body" ? p.freq.get(m.match.lc) || 0 : 0);
       }, 0);
-      out.push({rec: rec, score: relevance(p, phrase, matches), freq: freq, matches: matches});
+      var sum = matches.reduce(function (a, m) { return a + m.score; }, 0);
+      out.push({
+        rec: rec, matches: matches, freq: freq, full: full,
+        score: full ? relevance(p, phrase, matches) : Math.min(20, Math.round(sum / n / 4)),
+        note: full ? null : "matches " + matches.length + " of " + n + " words",
+      });
     });
     out.sort(function (a, b) {
-      return b.score - a.score || b.freq - a.freq
-        || a.rec.title.localeCompare(b.rec.title, "en");
+      return (b.full - a.full) || b.score - a.score || b.matches.length - a.matches.length
+        || b.freq - a.freq || a.rec.title.localeCompare(b.rec.title, "en");
     });
     return out;
   }
