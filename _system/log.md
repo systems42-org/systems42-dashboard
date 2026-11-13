@@ -195,3 +195,6 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 ## [2026-11-13] update | Priorities of the dashboard as a product
 - Gernot Starke agreed Should for [[FR-029-the-dashboard-as-a-product]], FR-030, FR-032 and FR-033, and raised [[FR-031-branding-is-configuration]] to Must.
 - Updated: FR-029 open points closed, FR-031 priority, `_system/index.md`.
+
+## [2026-11-13] update | GOAL-008 without metric
+- Gernot Starke set the proposed counting metric aside. [[GOAL-008-one-way-into-every-systems42-wiki]] has no metric and no target for now.
