@@ -110,6 +110,15 @@ def test_one_name_per_section():
     assert _crumbs(body) == "Home › Commons › Domain Terms › Term network", _crumbs(body)
 
 
+def test_data_model_path_names_its_section_from_the_catalog():
+    sec = app.catalog.SECTION_BY_ID["R4"]
+    body = client.get("/data-model").get_data(as_text=True)
+    assert _crumbs(body) == f"Home › Requirements › {sec['title']} › Data model", _crumbs(body)
+    assert f'<a href="{app.catalog.section_href(sec)}">{sec["title"]}</a>' in body
+    tpl = (Path(app.__file__).parent / "templates" / "data_model.html").read_text(encoding="utf-8")
+    assert sec["title"] not in tpl, "section name typed into the template"
+
+
 def test_center_tile_shows_four_changes_and_no_page_count():
     home = client.get("/").get_data(as_text=True)
     valley = re.search(r'<div class="valley">(.*?)<div class="valley-block">\s*<h2 class="valley-h"><a href="/issues',

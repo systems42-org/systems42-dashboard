@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_maturity.html" import maturity_bar %}
+{% from "_list.html" import arch_table %}
 {% block title %}{{ block.title }} · arc42{% endblock %}
 {% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}{{ block.title }}</nav>{% endblock %}
 {% macro bb_tree(nodes) %}
@@ -25,6 +26,10 @@
 
 {% if tree %}
 <section class="bb-levels">{{ bb_tree(tree) }}</section>
+{% endif %}
+{% if rows %}
+<h2 class="mm-h2">All building blocks</h2>
+{{ arch_table(list_spec("building-block"), rows) }}
 {% else %}
 <p class="muted">No building blocks yet. Add pages under <code>wiki/building-blocks/</code> from <code>_templates/building-block.md</code>.</p>
 {% endif %}

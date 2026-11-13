@@ -18,6 +18,54 @@ Unreleased changes sit at the top until the next Starter Kit release.
   brand's intro is now one self-contained `intro.html`, inserted as it is. The
   contract is in `brands/README.md`. An intro may declare its own colours as
   `--brand-*` custom properties, once per theme.
+- An issue page shows category, severity, kind and owner under its ID, and
+  "nobody yet" when no one owns it (FR-026, FR-028).
+- The issue list shows category and owner, "nobody yet" for an issue without
+  one (FR-025, FR-026, FR-028). It filters by status, category, severity,
+  section and owner, the filters combine and the address carries them, as
+  `/issues?category=systems42&owner=none`. "Open" means every status except
+  `resolved` and `wontfix`, the same on tiles, the first page, the list and
+  each page, so an issue with a missing or unknown status stays visible. Each
+  row's ID and title open the issue page, the inline
+  pane is gone. `?filter=open` still works and means `?status=open`.
+- Every section list uses the shared list layer (FR-021, FR-022): an order
+  picker with the type's sort orders, "Agreed only", and every column
+  sortable. Functional requirements get a flat list under the hierarchy,
+  Vision & Goals a list of every goal, the arc42 views a list next to their
+  trees. Quality requirements show priority
+  as a column. Domain Terms drop their own sort buttons: "Added" is a column
+  now, and its header gives newest or oldest first. Decision and issue titles
+  link their pages.
+- Search forgives typos and word forms (FR-002): `keyholdr` finds Keyholder,
+  `requirement engineer` finds "Requirements engineers". Words of 4 to 7
+  letters allow one wrong letter, longer words two. Short words and IDs match
+  only exactly or as a prefix, and an ID's number alone (`023`) finds it.
+  An exact hit, in any place, always ranks above a word form or a typo.
+- Search knows the wiki's other names (FR-003): a page's `aliases:` find
+  the page, and a glossary term's name and aliases count as one word, so
+  searching for an alias also finds pages that use only the term's name.
+  Alias hits rank below exact hits.
+- Search takes questions (FR-004): filler words such as `who`, `the` and
+  `is` don't count, so `who starts the app` finds the Keyholder. Pages with
+  only some of the words now show too, after every page with all of them.
+- Every search hit that isn't an exact match says why it is there (FR-005),
+  in the popup and on `/search`: "typo: keyholdr → Keyholder", "word form:
+  starts → started", "via alias of Keyholder" or "matches 1 of 2 words".
+- Search finds pages by their labels (FR-006): `tags`, `status`,
+  `stereotype`, `priority`, `kind`, `state`, `category` and `dimensions`.
+  `Must` finds every page with `priority: Must`. A field hit ranks below a
+  title hit and above a hit in the body text. Link fields, dates and raw
+  markdown are no longer searched. In the body, a link reads as its label
+  or the page title, and a link to a source as the source's ID
+  (`SRC-006`), so file names add no noise.
+- Each hit on `/search` shows the sentence where the query matched, with
+  the matching words highlighted (FR-007). A title hit shows the page's
+  first sentence. The popup stays compact and shows no passage.
+- `/search` lists "Related pages" below the hits (FR-008): up to 5 pages
+  one link away from a title or alias hit, each with "linked from <ID>".
+  A page that is a hit already is not repeated. The popup shows none.
+- `/search` filters by status, priority and tag next to the type facets
+  (FR-009). The filters combine. The search box keeps no filter syntax.
 - Quality requirements are classified by Q42 dimensions (DR-003): the
   template and the metamodel replace the single ISO 25010 `attribute:` with
   `dimensions:`, a list of one or more of reliable, flexible, maintainable,
@@ -50,6 +98,19 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - The dashboard has a release number, `_system/apps/dashboard/VERSION`
   (0.9.0), shown in the footer. When `dashboard_version:` names another release,
   one footer line says so.
+- Every wiki page lists the issues that link to it, open ones first and then
+  by severity, each with status and severity (FR-027). A page without an open
+  issue says "No open issues point at this page." Functional requirement
+  pages included.
+- The shared list layer `static/list-view.js` replaces `table-sort.js`
+  (FR-021, FR-022). A list sorts by several columns: shift-click a header to
+  add it as the next key. A list can offer its type's sort orders and an
+  "Agreed only" filter. The address keeps both, as `?sort=priority:asc,order:asc`
+  and `?status=accepted`, so a copied link shows the same list.
+- `sort_orders:` on metamodel type pages (FR-021): the useful orders for a
+  list of that type, such as priority › release › order for functional
+  requirements and status › severity for issues. The lint checks that every
+  key is a field of the type.
 - `/changes`: every wiki page, most recently changed first (FR-018).
 - `/issues?section=<ID>`: only the open issues that point at that section's
   pages. A section tile's open issue count links there (FR-019).
@@ -65,6 +126,11 @@ Unreleased changes sit at the top until the next Starter Kit release.
   not a limit.
 
 ### Fixed
+- Vision & Goals: the goal coverage matrix stays inside its card. With many
+  functional requirements it scrolls inside the card, the goal column stays put,
+  and the page no longer scrolls sideways. Goal titles read in page ink instead
+  of the browser's default link blue. The matrix lead no longer cites DR-018
+  and DR-011, which this wiki does not have.
 - `/goals`: the vision card showed only the first paragraph under `## Vision`,
   so a vision that opened with a note (`> …`) showed the note and nothing else.
   It now shows every prose paragraph and skips notes, comments and the

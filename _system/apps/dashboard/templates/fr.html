@@ -2,6 +2,7 @@
 {% from "_provenance.html" import provenance_chips %}
 {% from "_macros.html" import plural %}
 {% from "_trace.html" import trace_panel %}
+{% from "_page_issues.html" import page_issues as page_issues_panel %}
 {% block title %}{{ fr.id }} · {{ fr.title }}{% endblock %}
 {% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}<a href="/req42/functional-requirements">Functional Requirements</a>{% for a in ancestors %} <span>›</span> <a href="{{ a.url }}">{{ a.id }}</a>{% endfor %} <span>›</span> {{ fr.id }}</nav>{% endblock %}
 {% block content %}
@@ -25,6 +26,7 @@
 </figure>
 {% endif %}
 
+{% if page_issues is defined and page_issues is not none %}{{ page_issues_panel(page_issues) }}{% endif %}
 <article class="detail-pane">{{ body_html | safe }}</article>
 
 {{ trace_panel(trace) }}

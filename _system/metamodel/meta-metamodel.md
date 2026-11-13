@@ -49,6 +49,7 @@ A kind of page the wiki stores: one folder, one template, one ID prefix.
 | `fields` | the type-specific frontmatter fields: `{name, kind, values?, required?, relation?, doc}` |
 | `anchors` | the `_system/anchors/` standards applied to instances |
 | `projections` | the projections that read this type |
+| `sort_orders` | optional: the useful orders for a list of this type, `{label, keys}` (FR-021). `keys` are field names, universal or the type's own, most significant first. Each key sorts in its column's natural direction: ranks and dates highest first, text A to Z |
 
 A field whose `kind` is `link` or `link-list` names the `relation` it instantiates.
 Prose wikilinks in the body are untyped edges and are not declared.

@@ -18,6 +18,8 @@ fields:
   - {name: testable, kind: bool, doc: "true once the measure is verifiable; false ⇒ inspect raises an Issue"}
 anchors: [MoSCoW, req42, Q42]
 projections: []
+sort_orders:
+  - {label: "Priority", keys: [priority]}
 ---
 
 # Type: quality requirement

@@ -3,7 +3,10 @@
 {% block title %}{{ block.title }} · req42{% endblock %}
 {% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}{{ block.title }}</nav>{% endblock %}
 {% from "_maturity.html" import maturity_bar %}
-{% from "_macros.html" import status_rank %}
+{% from "_macros.html" import status_rank, priority_rank %}
+{% from "_list.html" import list_attrs, list_controls, list_empty %}
+{% set spec = list_spec(list_type) %}
+{% set quality = "quality-requirements" in block.folders %}
 {% block content %}
 <h1 class="page-h1"><span class="req42-num">{{ block.id }}</span> {{ block.title }} <span class="count-pill">{{ total }}</span></h1>
 {{ maturity_bar(maturity) }}
@@ -18,40 +21,43 @@
 {{ context_flow_table(context_flows) }}
 {% endif %}
 
+{% if rows %}{{ list_controls(spec) }}{% endif %}
 <div class="table-card">
-<table>
+<table{{ list_attrs(spec) }}>
   <thead>
     <tr>
-      <th class="c-id" data-sort="text" aria-sort="ascending">ID</th>
-      {# a block of one type has a constant Type column: nothing to sort by #}
-      <th class="c-status"{% if block.folders|length > 1 %} data-sort="text"{% endif %}>Type</th>
-      <th class="c-title" data-sort="text">Title</th>
-      <th class="c-status" data-sort="numeric">Status</th>
-      <th class="c-rel" data-sort="numeric" data-sort-first="desc">Links</th>
+      <th class="c-id" data-sort="text" data-key="id" aria-sort="ascending">ID</th>
+      {# a block of one type has a constant Type column: left out #}
+      {% if block.folders|length > 1 %}<th class="c-status" data-sort="text" data-key="type">Type</th>{% endif %}
+      <th class="c-title" data-sort="text" data-key="title">Title</th>
+      {% if quality %}<th class="c-status" data-sort="numeric" data-key="priority">Priority</th>{% endif %}
+      <th class="c-status" data-sort="numeric" data-key="status">Status</th>
+      <th class="c-rel" data-sort="numeric" data-sort-first="desc" data-key="links">Links</th>
     </tr>
   </thead>
   <tbody>
     {% for r in rows %}
-    <tr>
+    <tr data-status="{{ r.status }}">
       <td class="c-id"><code>{{ r.id }}</code></td>
-      <td class="c-status"><span class="badge kind-badge">{{ r.type }}</span></td>
+      {% if block.folders|length > 1 %}<td class="c-status"><span class="badge kind-badge">{{ r.type }}</span></td>{% endif %}
       <td class="c-title" data-sort-value="{{ r.title }}">
         <a class="term term-link" href="{{ r.url }}">{{ r.title }}</a>
-        {% if r.dimensions or r.priority %}<div class="qr-meta">
+        {% if r.dimensions %}<div class="qr-meta">
           {% for d in r.dimensions %}<span class="badge kind-badge">{{ d }}</span>{% endfor %}
-          {% if r.priority %}<span class="badge badge-prio">{{ r.priority }}</span>{% endif %}
         </div>{% endif %}
         {% if r.scenario %}<dl class="qr-scenario">
           {% for label, html in r.scenario %}<dt{% if label == "Measure" %} class="qr-measure"{% endif %}>{{ label }}</dt><dd{% if label == "Measure" %} class="qr-measure"{% endif %}>{{ html | safe }}</dd>
           {% endfor %}
         </dl>{% endif %}
       </td>
+      {% if quality %}<td class="c-status" data-sort-value="{{ priority_rank(r.priority) }}">{% if r.priority %}<span class="badge badge-prio">{{ r.priority }}</span>{% endif %}</td>{% endif %}
       <td class="c-status" data-sort-value="{{ status_rank(r.status) }}">{% if r.status %}<span class="status status-{{ r.status }}">{{ r.status }}</span>{% endif %}</td>
       <td class="c-rel"><span class="rel-pill">{{ r.relations }}</span></td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
+{{ list_empty() }}
 {% if not rows %}<p class="empty-hint">No entries captured in this req42 section yet.</p>{% endif %}
 </div>
 {% endblock %}

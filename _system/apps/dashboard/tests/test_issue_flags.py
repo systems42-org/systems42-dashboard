@@ -154,8 +154,9 @@ def test_tile_flag_and_plural():
 
 
 def test_issues_page_preselects_open_filter():
+    # the filter runs on the server now (FR-025); ?filter= is the former name of ?status=
     body = app.app.test_client().get("/issues?filter=open").get_data(as_text=True)
-    assert "URLSearchParams" in body
+    assert '<option value="open" selected>' in body
 
 
 def test_issues_tile_says_no_open_when_all_resolved():

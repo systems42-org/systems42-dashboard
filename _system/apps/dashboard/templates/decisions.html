@@ -4,12 +4,15 @@
 {% from "_empty.html" import empty_decisions %}
 {% from "_maturity.html" import maturity_bar %}
 {% from "_macros.html" import status_rank %}
+{% from "_list.html" import list_attrs, list_controls %}
+{% set spec = list_spec("decision-record") %}
 {% block content %}
 <h1 class="page-h1">Decisions <span class="count-pill">{{ total }}</span></h1>
 {{ maturity_bar(maturity) }}
 <p class="lead">Decision records of kind architecture, business or undefined (<code>wiki/decisions/</code>, MADR).</p>
 
 {% if items %}
+{{ list_controls(spec) }}
 <div class="toolbar">
   <input type="search" id="decision-search" class="search-input" placeholder="Search decisions — title, ID, former ADR number, full text…"
          autocomplete="off" spellcheck="false" aria-label="Search decisions">
@@ -22,22 +25,22 @@
 </div>
 
 <div class="table-card">
-<table id="decisions-table">
+<table id="decisions-table"{{ list_attrs(spec) }}>
   <thead>
     <tr>
-      <th class="c-id" data-sort="text" aria-sort="ascending">ID</th>
-      <th data-sort="text">Title</th>
-      <th class="c-status" data-sort="text">Kind</th>
-      <th class="c-status">Drivers</th>
-      <th class="c-status" data-sort="text" data-sort-first="desc">Decided</th>
-      <th class="c-status" data-sort="numeric">Status</th>
+      <th class="c-id" data-sort="text" data-key="id" aria-sort="ascending">ID</th>
+      <th data-sort="text" data-key="title">Title</th>
+      <th class="c-status" data-sort="text" data-key="kind">Kind</th>
+      <th class="c-status" data-sort="text" data-key="drivers">Drivers</th>
+      <th class="c-status" data-sort="text" data-sort-first="desc" data-key="decided">Decided</th>
+      <th class="c-status" data-sort="numeric" data-key="status">Status</th>
     </tr>
   </thead>
   <tbody>
     {% for a in items %}
-    <tr class="issue-row" data-id="{{ a.id }}" data-kind="{{ a.kind }}" data-aliases="{{ a.aliases | join(' ') }}" tabindex="0">
+    <tr class="issue-row" data-id="{{ a.id }}" data-status="{{ a.status }}" data-kind="{{ a.kind }}" data-aliases="{{ a.aliases | join(' ') }}" tabindex="0">
       <td class="c-id"><code>{{ a.id }}</code></td>
-      <td class="c-title"><span class="term">{{ a.title }}</span></td>
+      <td class="c-title"><span class="term"><a class="term-link" href="{{ a.url }}">{{ a.title }}</a></span></td>
       <td class="c-status">{{ a.kind }}</td>
       <td class="c-status">{% for l in a.drivers %}<a class="wl" href="{{ l.url }}" title="{{ l.label }}"><code>{{ l.id }}</code></a>{% if not loop.last %} {% endif %}{% endfor %}</td>
       <td class="c-status" data-sort-value="{{ '' if a.decided == '—' else a.decided }}">{{ a.decided }}</td>
@@ -46,7 +49,7 @@
     {% endfor %}
   </tbody>
 </table>
-<p class="empty-hint" id="empty-hint" hidden>No decisions in this view.</p>
+<p class="empty-hint list-empty" id="empty-hint" hidden>No decisions in this view.</p>
 </div>
 
 <section id="decision-detail" class="detail-pane" aria-live="polite">
@@ -62,7 +65,7 @@
 {% endif %}
 
 <script>
-  const buttons = document.querySelectorAll('.fbtn');
+  const buttons = document.querySelectorAll('.toolbar .fbtn');
   const rows = document.querySelectorAll('#decisions-table tbody tr');
   const hint = document.getElementById('empty-hint');
   const detail = document.getElementById('decision-detail');
@@ -90,10 +93,13 @@
       const show = matchesFilter(r.dataset.kind) &&
                    (!query || haystack[r.dataset.id].includes(query));
       r.hidden = !show;
-      if (show) shown++;
+      // the list layer's "Agreed only" hides rows by class (static/list-view.js)
+      if (show && !r.classList.contains('list-out')) shown++;
     });
     hint.hidden = shown !== 0;
   }
+  const table = document.getElementById('decisions-table');
+  if (table) table.addEventListener('listfilter', apply);
   buttons.forEach(b => b.addEventListener('click', () => {
     buttons.forEach(x => x.classList.remove('active'));
     b.classList.add('active');
