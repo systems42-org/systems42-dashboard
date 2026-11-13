@@ -228,8 +228,15 @@ def wiki_config() -> dict:
     name = str(data.get("system_name") or "").strip()
     about = about_doc(data.get("about"))
     version = data.get("dashboard_version")
+    if version is not None and not isinstance(version, str):
+        # unquoted, YAML reads 1.10 as the float 1.1
+        _config_warning(f"dashboard_version: {version!r} is not text, quote it, e.g. \"1.10.0\"")
+    brand = data.get("brand")
+    if brand is not None and not isinstance(brand, str):
+        _config_warning(f"brand: {brand!r}: brand must be a name or a folder path, showing {DEFAULT_BRAND}")
+        brand = None
     return {
-        "brand": str(data.get("brand") or "").strip() or DEFAULT_BRAND,
+        "brand": (brand or "").strip() or DEFAULT_BRAND,
         "intro": _intro_on(data.get("intro")),
         "dashboard_version": "" if version is None else str(version).strip(),
         "system_name": name or DEFAULT_SYSTEM_NAME,
@@ -269,13 +276,13 @@ def docs_file(rel: str) -> Path | None:
     return path if root in path.parents and path.is_file() else None
 
 
-_brand_warned: set[str] = set()
+_config_warned: set[str] = set()
 
 
-def _brand_warning(message: str) -> None:
-    """Log a brand problem once per process, not on every request."""
-    if message not in _brand_warned:
-        _brand_warned.add(message)
+def _config_warning(message: str) -> None:
+    """Log a wiki.yaml problem once per process, not on every request."""
+    if message not in _config_warned:
+        _config_warned.add(message)
         app.logger.warning(message)
 
 
@@ -297,14 +304,14 @@ def brand_dir(value: str) -> Path:
     root = REPO_DIR.resolve()
     path = (root / name).resolve()
     if not _inside(root, path):
-        _brand_warning(f"brand: {name!r} is outside the wiki repository, showing {DEFAULT_BRAND}")
+        _config_warning(f"brand: {name!r} is outside the wiki repository, showing {DEFAULT_BRAND}")
         return default
     if not path.is_dir():
-        _brand_warning(f"brand: {name!r} is no folder in the wiki repository, showing {DEFAULT_BRAND}")
+        _config_warning(f"brand: {name!r} is no folder in the wiki repository, showing {DEFAULT_BRAND}")
         return default
     missing = [f for f in BRAND_MARKS if _brand_file(path, f) is None]
     if missing:
-        _brand_warning(f"brand: {name!r} lacks {', '.join(missing)}, showing {DEFAULT_BRAND}")
+        _config_warning(f"brand: {name!r} lacks {', '.join(missing)}, showing {DEFAULT_BRAND}")
         return default
     return path
 
@@ -315,14 +322,18 @@ def _brand_file(folder: Path, name: str) -> Path | None:
     return path if path.parent == folder.resolve() and path.is_file() else None
 
 
+def _brand_checksum(path: Path | None) -> str:
+    try:
+        return f"{zlib.crc32(path.read_bytes()):08x}"
+    except (OSError, AttributeError):
+        return ""
+
+
 def _brand_url(folder: Path, name: str) -> str:
     """/brand/<name> with a content checksum, so switching brands or editing
     a mark changes the URL and the browser cannot show a cached one."""
-    path = _brand_file(folder, name)
-    try:
-        return f"/brand/{name}?v={zlib.crc32(path.read_bytes()):08x}"
-    except (OSError, AttributeError):
-        return f"/brand/{name}"
+    v = _brand_checksum(_brand_file(folder, name))
+    return f"/brand/{name}?v={v}" if v else f"/brand/{name}"
 
 
 @app.context_processor
@@ -357,7 +368,11 @@ def brand_mark(name):
     path = _brand_file(brand_dir(wiki_config()["brand"]), name)
     if path is None:
         abort(404)
-    return send_file(path, mimetype="image/svg+xml")
+    # The page links each mark with its checksum. When ?v= matches, the file
+    # behind this URL never changes, so the browser may keep it for a year.
+    # Any other request revalidates, so a stale ?v= never sticks.
+    fresh = request.args.get("v") == _brand_checksum(path)
+    return send_file(path, mimetype="image/svg+xml", max_age=31536000 if fresh else 0)
 
 
 @app.context_processor

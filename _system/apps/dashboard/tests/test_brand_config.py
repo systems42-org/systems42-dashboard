@@ -220,6 +220,39 @@ def test_wiki_config_reports_the_three_keys():
     assert cfg["brand"] == "atrium" and cfg["intro"] is False and cfg["dashboard_version"] == "0.9"
 
 
+def test_unquoted_dashboard_version_is_warned_about():
+    LOG.messages.clear()
+    configure("dashboard_version: 1.10\n")        # YAML reads a float: 1.1
+    app.wiki_config()
+    assert any("dashboard_version" in m and "quote" in m for m in LOG.messages), LOG.messages
+    LOG.messages.clear()
+    configure('dashboard_version: "1.10"\n')
+    assert app.wiki_config()["dashboard_version"] == "1.10"
+    assert not any("dashboard_version" in m for m in LOG.messages), LOG.messages
+
+
+def test_non_string_brand_is_warned_about_and_falls_back():
+    for value in ("on", "off", "[b]", "42"):
+        LOG.messages.clear()
+        configure(f"brand: {value}\n")
+        assert app.wiki_config()["brand"] == "systems42", value
+        page = home()
+        assert 'id="brand-intro"' in page, value
+        assert any("brand must be a name or a folder path" in m for m in LOG.messages), (value, LOG.messages)
+
+
+def test_marks_are_cached_long_only_when_the_checksum_matches():
+    configure("brand: atrium\n")
+    url = home().split('src="/brand/mark-dark.svg?v=', 1)[1].split('"', 1)[0]
+    fresh = client.get(f"/brand/mark-dark.svg?v={url}")
+    assert fresh.status_code == 200
+    assert fresh.cache_control.max_age and fresh.cache_control.max_age >= 86400, fresh.headers
+    for stale in ("/brand/mark-dark.svg?v=deadbeef", "/brand/mark-dark.svg"):
+        resp = client.get(stale)
+        assert resp.status_code == 200, stale
+        assert not resp.cache_control.max_age, (stale, resp.headers)
+
+
 if __name__ == "__main__":
     test_missing_brand_key_means_systems42()
     test_example_brand_atrium_is_one_key_away()
@@ -237,4 +270,7 @@ if __name__ == "__main__":
     test_matching_dashboard_version_says_nothing_more()
     test_other_dashboard_version_is_named_in_one_line()
     test_wiki_config_reports_the_three_keys()
+    test_unquoted_dashboard_version_is_warned_about()
+    test_non_string_brand_is_warned_about_and_falls_back()
+    test_marks_are_cached_long_only_when_the_checksum_matches()
     print("OK: brand configuration")
