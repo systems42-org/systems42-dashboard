@@ -10,4 +10,4 @@ tags: [functional-requirement]
 
 # Text tools
 
-Format pages for print.
+Format pages for print once searched.

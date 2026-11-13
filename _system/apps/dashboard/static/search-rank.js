@@ -77,8 +77,8 @@
     if (q === w) { return {kind: "exact", from: q, to: w}; }
     var n = len(q);
     var strict = n <= 3 || ID_RE.test(q);
-    if (!strict && stem(q) === stem(w)) { return {kind: "form", from: q, to: w}; }
     if (w.lastIndexOf(q, 0) === 0) { return {kind: "prefix", from: q, to: w}; }
+    if (!strict && stem(q) === stem(w)) { return {kind: "form", from: q, to: w}; }
     if (strict || ID_RE.test(w)) { return null; }
     var d = distance(q, w, tolerance(q));
     if (d > tolerance(q)) {

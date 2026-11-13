@@ -98,7 +98,9 @@ def test_fr002_exact_above_typo():
 
 def test_fr002_match_word_rules():
     assert kind("keyholder", "keyholder") == "exact"
-    assert kind("requirement", "requirements") == "form"
+    assert kind("requirement", "requirements") == "prefix"    # the word as typed comes first
+    assert kind("search", "searched") == "prefix"
+    assert kind("engineers", "engineer") == "form"
     assert kind("starts", "started") == "form"
     assert kind("keyhol", "keyholder") == "prefix"
     assert kind("keyholdr", "keyholder") == "typo"            # 8 letters: up to 2
@@ -108,7 +110,7 @@ def test_fr002_match_word_rules():
     assert kind("app", "apple") == "prefix"
     assert kind("stk-02", "stk-023") == "prefix"
     assert kind("stk-024", "stk-023") is None                 # IDs: no tolerance
-    assert kind("trainer", "trainers") == "form"
+    assert kind("trainers", "trainer") == "form"
     assert kind("trainer", "brainer") == "typo"               # 7 letters: 1
     assert kind("trainer", "bxainer") is None
     assert kind("ärztn", "ärztin") == "typo"
@@ -228,13 +230,14 @@ def test_fr005_notes():
     assert hit("who starts the app", "STK-023")["note"] == "word form: starts → started"
     assert hit("Jedi Master", "STK-023")["note"] == "via alias of Keyholder"
     assert hit("moderator", "FR-001")["note"] == "via alias of Facilitator"
-    assert hit("requirement engineer", "STK-003")["note"].startswith("word form: requirement → ")
 
 
 def test_fr005_no_note_on_exact_hits():
     assert hit("keyholder", "STK-023")["note"] is None
     assert hit("STK-02", "STK-020")["note"] is None
     assert hit("test", "FR-003")["note"] is None
+    assert hit("search", "FR-006")["note"] is None                 # "searched" starts with the word as typed
+    assert hit("requirement engineer", "STK-003")["note"] is None
 
 
 # --- FR-006 tags and fields ----------------------------------------------------
