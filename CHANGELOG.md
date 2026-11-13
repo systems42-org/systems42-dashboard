@@ -110,6 +110,11 @@ Unreleased changes sit at the top until the next Starter Kit release.
   not a limit.
 
 ### Fixed
+- Vision & Goals: the goal coverage matrix stays inside its card. With many
+  functional requirements it scrolls inside the card, the goal column stays put,
+  and the page no longer scrolls sideways. Goal titles read in page ink instead
+  of the browser's default link blue. The matrix lead no longer cites DR-018
+  and DR-011, which this wiki does not have.
 - `/goals`: the vision card showed only the first paragraph under `## Vision`,
   so a vision that opened with a note (`> …`) showed the note and nothing else.
   It now shows every prose paragraph and skips notes, comments and the
