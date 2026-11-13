@@ -2609,6 +2609,19 @@ def _issue_owner(p: Page, titles: dict[str, str],
 _ISSUE_STATUS_GROUPS = {"open": ("open", "in-progress"), "closed": tuple(sorted(CLOSED_STATUSES))}
 
 
+def issue_fields(p: Page, titles: dict[str, str], links: dict[str, tuple[str, str]]) -> dict:
+    """An issue's own fields as the list and its page show them (FR-025 to
+    FR-028). A value outside the metamodel's list comes back empty."""
+    def known(field: str) -> str:
+        v = str(p.meta.get(field) or "").strip()
+        return v if v in metamodel.field_values("issue", field) else ""
+    status = p.status if p.status in metamodel.lifecycle("issue") else ""
+    owner = _issue_owner(p, titles, links)
+    return {"status": status, "is_open": status in _ISSUE_STATUS_GROUPS["open"],
+            "severity": known("severity"), "kind": known("kind"), "category": known("category"),
+            "owner": owner["label"], "owner_key": owner["key"], "owner_url": owner["url"]}
+
+
 @app.route("/issues")
 def issues_view():
     """C6: every issue, filtered on the server by status, category, severity,
@@ -2619,32 +2632,14 @@ def issues_view():
     lifecycle_values = metamodel.lifecycle("issue")
     categories = metamodel.field_values("issue", "category")
     severities = metamodel.field_values("issue", "severity")
-    kinds = metamodel.field_values("issue", "kind")
     folder_section = {f: s["id"] for s in catalog.SECTIONS for f in s["folders"] if s["id"] != "C6"}
 
     items = []
     for p in pages:
-        status = p.status if p.status in lifecycle_values else ""
-        category = str(p.meta.get("category") or "").strip()
-        severity = str(p.meta.get("severity") or "").strip()
-        kind = str(p.meta.get("kind") or "").strip()
         sections = sorted({folder_section[links[t][0]] for t in p.link_targets()
                            if t in links and links[t][0] in folder_section})
-        owner = _issue_owner(p, titles, links)
-        items.append({
-            "id": p.id,
-            "title": p.title,
-            "status": status,
-            "is_open": status in _ISSUE_STATUS_GROUPS["open"],
-            "severity": severity if severity in severities else "",
-            "kind": kind if kind in kinds else "",
-            "category": category if category in categories else "",
-            "owner": owner["label"],
-            "owner_key": owner["key"],
-            "owner_url": owner["url"],
-            "sections": sections,
-            "url": _page_url("issues", p.stem),
-        })
+        items.append({"id": p.id, "title": p.title, **issue_fields(p, titles, links),
+                      "sections": sections, "url": _page_url("issues", p.stem)})
 
     # the filters: only known values count, anything else shows every issue
     owners = sorted({(i["owner_key"], i["owner"]) for i in items if i["owner_key"]}, key=lambda o: o[1].lower())
@@ -2807,6 +2802,7 @@ def page_detail(folder, stem):
         ego_graph=ego_graph, ego_layers=ego_layers,
         needs_mermaid=bool(context_diagram or whitebox or sequence or deployment) or "language-mermaid" in body_html,
         sources=provenance(page),
+        issue=issue_fields(page, titles, link_index()) if folder == "issues" else None,
     )
 
 

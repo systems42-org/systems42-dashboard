@@ -13,6 +13,8 @@ Unreleased changes sit at the top until the next Starter Kit release.
 ## [Unreleased]
 
 ### Changed
+- An issue page shows category, severity, kind and owner under its ID, and
+  "nobody yet" when no one owns it (FR-026, FR-028).
 - The issue list shows category and owner, "nobody yet" for an issue without
   one (FR-025, FR-026, FR-028). It filters by status, category, severity,
   section and owner, the filters combine and the address carries them, as

@@ -11,6 +11,14 @@
   {% if status %}<span class="status status-{{ status }}">{{ status }}</span>{% endif %}
   {% if state %}<span class="state-badge state-{{ state }}" title="describes {{ 'today\'s landscape' if state == 'current' else 'the target architecture' }}">{{ state }}</span>{% endif %}
 </div>
+{% if issue %}
+<dl class="issue-fields">
+  <dt>Category</dt> <dd>{{ issue.category }}</dd>
+  <dt>Severity</dt> <dd>{% if issue.severity %}<span class="badge sev-badge">{{ issue.severity }}</span>{% endif %}</dd>
+  <dt>Kind</dt> <dd>{% if issue.kind %}<span class="badge kind-badge">{{ issue.kind }}</span>{% endif %}</dd>
+  <dt>Owner</dt> <dd>{% if issue.owner_url %}<a class="wl" href="{{ issue.owner_url }}">{{ issue.owner }}</a>{% elif issue.owner %}{{ issue.owner }}{% else %}<span class="muted">nobody yet</span>{% endif %}</dd>
+</dl>
+{% endif %}
 <h1 class="page-h1">{{ title }}</h1>
 <p class="detail-meta">
   {% if created %}<span>created {{ created }}</span>{% endif %}

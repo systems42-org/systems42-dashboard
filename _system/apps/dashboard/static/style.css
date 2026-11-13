@@ -552,6 +552,10 @@ tr.list-out { display: none; }
 .issue-filters select { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line);
   border-radius: 999px; padding: .35rem .8rem; max-width: 16rem; }
 .issue-filters select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(62,166,255,.15); }
+.issue-fields { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: .25rem var(--space-3);
+  margin: var(--space-2) 0 0; font-size: .85rem; }
+.issue-fields dt { color: var(--ink-dim); margin: 0; }
+.issue-fields dd { margin: 0; color: var(--ink); }
 
 /* ---- influence / interest level badges ---- */
 .lvl { font-size: .75rem; padding: .14rem .55rem; border-radius: 999px; border: 1px solid var(--line);
