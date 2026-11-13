@@ -76,6 +76,13 @@ _page("building-blocks", "BB-001-kern", "building-block", "Kern", extra="state: 
 _page("functional-requirements", "FR-001-suche", "functional-requirement", "Suche",
       extra="stereotype: story\n",
       body="## Story\n\n> follows [[user-story-format]]\n\nAs a reader I want to search.\n")
+_page("decisions", "DR-002-nur-text", "decision-record", "Nur Text", extra="kind: business\n",
+      body="## Beispiel\n\n```markdown\n> follows [[MADR]]\n```\n\n"
+           "Eingerückt:\n\n    > follows [[MADR]]\n\n"
+           "> Follows from the interview that users want export.\n\n"
+           "> follows the interview of 2026-11-12, which says that users want an export.\n")
+_page("decisions", "DR-003-im-callout", "decision-record", "Im Callout", extra="kind: business\n",
+      body="> [!note] Hinweis\n> follows [[MADR]]\n> Zweite Zeile.\n")
 
 import app  # noqa: E402
 import metamodel  # noqa: E402
@@ -202,7 +209,50 @@ def test_functional_requirement_page_shows_the_label_too():
 
 def test_decision_list_shows_no_follows_box():
     html = _get("/decisions")
-    assert "<blockquote>" not in html
+    assert not re.search(r"<blockquote>\s*<p>follows\s+<a", html), html
+    assert "Follows from the interview" in html    # an ordinary quote stays
+
+
+def test_follows_in_code_stays_code():
+    html = _get("/page/decisions/DR-002-nur-text")
+    assert _labels(html) == [], _head(html)
+    codes = re.findall(r"<code[^>]*>(.*?)</code>", html.split('class="detail-pane"', 1)[1], re.S)
+    # both code samples keep their line (how a wikilink inside code renders
+    # is another matter, the same for every wikilink)
+    assert sum(c.lstrip().startswith("&gt; follows") for c in codes) == 2, codes
+
+
+def test_an_ordinary_quote_is_no_follows_note():
+    html = _get("/page/decisions/DR-002-nur-text")
+    pane = html.split('class="detail-pane"', 1)[1]
+    # capitalised: an ordinary sentence. Lowercase but a whole sentence without
+    # a link: no short format name either. Both stay quotes in the text.
+    assert "Follows from the interview that users want export." in pane
+    assert "follows the interview of 2026-11-12" in pane
+    quotes = " ".join(re.findall(r"<blockquote>(.*?)</blockquote>", pane, re.S))
+    assert "Follows from the interview" in quotes and "follows the interview" in quotes, pane
+
+
+def test_follows_inside_a_callout_keeps_the_callout_whole():
+    html = _get("/page/decisions/DR-003-im-callout")
+    assert _labels(html) == ["MADR"], _head(html)
+    pane = html.split('class="detail-pane"', 1)[1].split("</article>", 1)[0]
+    with app.app.test_request_context("/"):
+        plain = app.render_markdown("> [!note] Hinweis\n> Zweite Zeile.\n", app.title_index())
+    # the same callout as if the note had never been there
+    assert pane.strip().lstrip(">").strip() == plain.strip(), (pane, plain)
+
+
+def test_search_drops_exactly_the_lines_the_page_drops():
+    with app.app.test_request_context("/"):
+        titles = app.title_index()
+        pages = {p.stem: p for p in app.load_folder("decisions")}
+        kept = app.search_plain(pages["DR-002-nur-text"], titles)
+        dropped = app.search_plain(pages["DR-001-eine-wahl"], titles)
+    assert "Follows from the interview" in kept, kept
+    assert "follows the interview of 2026-11-12" in kept, kept
+    assert kept.count("follows MADR") == 2, kept          # the two code samples
+    assert "follows" not in dropped.lower(), dropped
 
 
 # -- against the real anchors ------------------------------------------------

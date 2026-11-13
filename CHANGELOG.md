@@ -88,7 +88,10 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - A page's note that it follows a standard (`> follows [[MADR]]`) shows as a
   quiet "Format: MADR" label in the page head, no longer as a box before the
   text. Several notes give one label each, a trailing note such as "section 5,
-  black box" stays beside the label. Wiki files are unchanged (FR-035).
+  black box" stays beside the label. Only a quote line of its own that starts
+  with a lowercase "follows" counts, and without a link only a few words. Code
+  and ordinary quotes stay as they are, and search leaves out the same lines.
+  Wiki files are unchanged (FR-035).
 - "Links to" and "Linked from" show a linked issue's status, and a resolved
   or wontfix issue is dimmed as closed, the same as in the issues panel. A
   functional requirement page now has both lists too (FR-034).

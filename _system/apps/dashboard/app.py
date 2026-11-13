@@ -755,15 +755,49 @@ def _anchor_link(a: dict, label: str) -> str:
             f'title="{escape(anchor_title(a))}">{label}</a>')
 
 
-# A page's note that it follows a standard, alone on a quote line:
-# "> follows [[MADR]]", "> follows [[arc42]] (section 5, black box)".
-_FOLLOWS_RE = re.compile(r"^[ \t]*>[ \t]*follows[ \t]+(\S.*?)[ \t]*$", re.MULTILINE | re.IGNORECASE)
+# A page's note that it follows a standard, a quote line of its own that
+# starts with a lowercase "follows": "> follows [[MADR]]", "> follows [[arc42]]
+# (section 5, black box)". More than 3 spaces before the ">" is indented code.
+_FOLLOWS_RE = re.compile(r"^ {0,3}>[ \t]*follows[ \t]+(\S.*?)[ \t]*$")
+_FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
+# a note without a link names its format in a few words, not a sentence
+_FOLLOWS_PLAIN_MAX_WORDS = 6
+
+
+def _follows_notes(body: str) -> list[tuple[int, str]]:
+    """(line number, text after "follows") of every "follows" note, outside
+    fenced code. The one test both the page (drop_follows, format_labels) and
+    search (search_plain) use, so both leave out exactly the same lines."""
+    out = []
+    fence = ""
+    for i, line in enumerate(body.split("\n")):
+        f = _FENCE_RE.match(line)
+        if fence:
+            if f and f.group(1)[0] == fence[0] and len(f.group(1)) >= len(fence):
+                fence = ""
+            continue
+        if f:
+            fence = f.group(1)
+            continue
+        m = _FOLLOWS_RE.match(line)
+        if not m:
+            continue
+        text = m.group(1)
+        if not WIKILINK_RE.search(text) and (len(text.split()) > _FOLLOWS_PLAIN_MAX_WORDS
+                                              or re.search(r"[.!?;:]", text)):
+            continue                         # an ordinary sentence in a quote
+        out.append((i, text))
+    return out
 
 
 def drop_follows(body: str) -> str:
-    """The body without its "follows" notes. They show as labels in the page
-    head (format_labels), never as a box before the content."""
-    return _FOLLOWS_RE.sub("", body)
+    """The body without its "follows" notes, each line removed with its line
+    break, so a callout around it stays whole. They show as labels in the
+    page head (format_labels), never as a box before the content."""
+    drop = {i for i, _ in _follows_notes(body)}
+    if not drop:
+        return body
+    return "\n".join(line for i, line in enumerate(body.split("\n")) if i not in drop)
 
 
 def format_labels(body: str) -> list[dict]:
@@ -773,8 +807,7 @@ def format_labels(body: str) -> list[dict]:
     titles, links = title_index(), link_index()
     out: list[dict] = []
     seen: set[str] = set()
-    for m in _FOLLOWS_RE.finditer(body):
-        line = m.group(1)
+    for _, line in _follows_notes(body):
         note = WIKILINK_RE.sub("", line).strip(" ,;.").strip()
         note = re.sub(r"^\((.*)\)$", r"\1", note).strip()
         found = []
@@ -2601,10 +2634,10 @@ _MD_LINK_RE = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")
 _HTML_TAG_RE = re.compile(r"<[^>]+>")
 _SOURCE_ID_RE = re.compile(r"[A-Z]+-\d+")
 # Lines that label a page's structure rather than say something: headings,
-# callout titles, bold-only lines such as **PROBLEM / GOAL** and the anchor
-# note "> follows [[MADR]]". A bold lead label such as **Snapshot.** goes too,
-# the text after it stays.
-_HEADING_LINE_RE = re.compile(r"^\s*(?:#{1,6}\s|>\s*\[![\w-]+\]|>\s*follows\s|\*\*[^*]+\*\*\s*$)")
+# callout titles and bold-only lines such as **PROBLEM / GOAL**. A bold lead
+# label such as **Snapshot.** goes too, the text after it stays. The note
+# "> follows [[MADR]]" goes before, by the page's own test (drop_follows).
+_HEADING_LINE_RE = re.compile(r"^\s*(?:#{1,6}\s|>\s*\[![\w-]+\]|\*\*[^*]+\*\*\s*$)")
 _LEAD_LABEL_RE = re.compile(r"^(\s*(?:[-*+]\s+)?)\*\*[^*]{1,60}[.:]\*\*\s+")
 _LINE_MARK_RE = re.compile(r"^\s*(?:#{1,6}\s+|>\s*(?:\[![\w-]+\][-+]?\s*)?|[-*+]\s+(?:\[[ xX]\]\s+)?|\d+[.)]\s+)+")
 _EMPHASIS_RE = re.compile(r"\*\*|__|~~|`|(?<!\w)\*(?=\S)|(?<=\S)\*(?!\w)")
@@ -2614,7 +2647,8 @@ def search_plain(page: Page, titles: dict[str, str]) -> str:
     """A page body as the reader sees it, for search: wikilinks become their
     label (or the target's title), markdown and HTML markup go, hard-wrapped
     prose is joined. One line per paragraph or list item, so the ranker can
-    cut passages. Headings and labels go (`_HEADING_LINE_RE`).
+    cut passages. Headings and labels go (`_HEADING_LINE_RE`), and so do the
+    "follows" notes the page shows as head labels (`drop_follows`).
     An unlabelled provenance link to raw/sources becomes the source's ID
     (`SRC-006`): its file name or title would match words such as
     "grilling" on most pages, and dropping it leaves "came from ." holes."""
@@ -2628,7 +2662,7 @@ def search_plain(page: Page, titles: dict[str, str]) -> str:
             return src.id if src else _SOURCE_ID_RE.match(base).group(0) if _SOURCE_ID_RE.match(base) else ""
         return titles.get(base, target)
 
-    body = _unwrap_prose(page.body)
+    body = _unwrap_prose(drop_follows(page.body))
     body = WIKILINK_RE.sub(link_text, body)
     body = _MD_LINK_RE.sub(lambda m: m.group(1), body)
     body = _HTML_TAG_RE.sub(" ", body)
