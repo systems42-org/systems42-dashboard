@@ -129,6 +129,21 @@ def test_fr003_alias():
     assert "STK-023" in ids("Jedi Master")[:3], ids("Jedi Master")
 
 
+def test_fr003_alias_below_exact_title():
+    recs = [{"id": "STK-001", "type": "Stakeholder", "title": "Keyholder", "aliases": ["Jedi Master"], "plain": ""},
+            {"id": "STK-002", "type": "Stakeholder", "title": "Jedi Master", "aliases": [], "plain": ""}]
+    ranked = js(f'S.rank({json.dumps(recs)}, "jedi master", []).map(function (h) {{ return [h.rec.id, h.score]; }})')
+    assert [i for i, _ in ranked] == ["STK-002", "STK-001"], ranked
+    assert ranked[0][1] > ranked[1][1], ranked
+    assert hit("Jedi Master", "STK-023")["score"] < 100
+
+
+def test_fr003_synonym_group_works_both_ways():
+    assert "GLO-001" in ids("moderator")                           # the term's own alias
+    assert "STK-023" in ids("moderator")                           # says "facilitator" in its body
+    assert "GLO-001" in ids("facilitator")
+
+
 def test_fr003_glossary_alias():
     assert "FR-001" in ids("moderator")[:3], ids("moderator")      # FR-001 says only "facilitator"
 

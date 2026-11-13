@@ -17,6 +17,10 @@ Unreleased changes sit at the top until the next Starter Kit release.
   `requirement engineer` finds "Requirements engineers". Words of 4 to 7
   letters allow one wrong letter, longer words two. Short words and IDs match
   only exactly or as a prefix. An exact hit always ranks above a typo.
+- Search knows the wiki's other names (FR-003): a page's `aliases:` find
+  the page, and a glossary term's name and aliases count as one word, so
+  searching for an alias also finds pages that use only the term's name.
+  Alias hits rank below exact hits.
 - Quality requirements are classified by Q42 dimensions (DR-003): the
   template and the metamodel replace the single ISO 25010 `attribute:` with
   `dimensions:`, a list of one or more of reliable, flexible, maintainable,

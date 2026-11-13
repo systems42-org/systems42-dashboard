@@ -3,9 +3,10 @@
 // in app.py: {id, type, title, aliases, plain, fields, links, ...}.
 //
 // Relevance is a 0–100 percentage, decided by *where* and *how* each query
-// word matched. Places, strongest first: id, title, type, body. Within a
-// place an exact or prefix hit beats a word form, and a word form beats a
-// typo (FR-002), so a typo never pushes a correct match down. The number means
+// word matched. Places, strongest first: id, title, alias, type, body.
+// Within a place an exact or prefix hit beats a word form, a word form beats
+// a typo (FR-002), and a typo beats a glossary synonym (FR-003), so a weaker
+// match never pushes a correct one down. The number means
 // the same thing for every query (no per-query normalisation).
 (function () {
   var WORD_RE = /\p{L}+-\d+|[\p{L}\p{N}]+/gu;
@@ -13,8 +14,9 @@
   var SUFFIXES = ["ing", "ed", "es", "s"];
 
   // base score per place, and what each kind of match costs within a place
-  var PLACE = {id: 90, title: 80, type: 50, body: 40};
-  var COST = {exact: 0, prefix: 2, form: 4, typo: 8};
+  var PLACE = {id: 90, title: 80, alias: 70, type: 50, body: 40};
+  var PLACES = ["id", "title", "alias", "type", "body"];
+  var COST = {exact: 0, prefix: 2, form: 4, typo: 8, synonym: 12};
 
   function norm(s) { return String(s || "").normalize("NFC"); }
   function words(s) { return norm(s).match(WORD_RE) || []; }
@@ -95,6 +97,8 @@
       id: wordMap(rec.id),
       title: wordMap(rec.title),
       titleLc: words(rec.title).join(" ").toLowerCase(),
+      alias: wordMap((rec.aliases || []).join(" ")),
+      aliasLc: (rec.aliases || []).map(function (a) { return words(a).join(" ").toLowerCase(); }),
       type: wordMap(rec.type),
       body: wordMap(rec.plain, freq),
       freq: freq,
@@ -117,51 +121,105 @@
     return best;
   }
 
-  // Best place and match for one query word in one record.
-  function matchUnit(p, q, memo) {
+  // The query as units: a single word, or a glossary term's name or alias
+  // that the query contains. A unit carries its alternatives: the words as
+  // typed first, then the other names of the same term (FR-003).
+  function units(qwords, synonyms, titles) {
+    var groups = (synonyms || []).map(function (g) {
+      return g.map(function (s) { return words(s).map(function (w) { return w.toLowerCase(); }); })
+        .filter(function (ws) { return ws.length; });
+    });
+    var out = [], i = 0;
+    while (i < qwords.length) {
+      var found = null;
+      groups.forEach(function (g) {
+        g.forEach(function (ws) {
+          if ((!found || ws.length > found.words.length) && ws.every(function (w, k) {
+            var q = qwords[i + k];
+            return q !== undefined && (q === w || stem(q) === stem(w));
+          })) { found = {words: ws, group: g}; }
+        });
+      });
+      if (found) {
+        var typed = qwords.slice(i, i + found.words.length);
+        var name = found.group[0].join(" ");
+        out.push({words: typed, via: titles.get(name) || name,
+                  alts: [typed].concat(found.group.filter(function (ws) { return ws !== found.words; }))});
+        i += found.words.length;
+      } else {
+        out.push({words: [qwords[i]], alts: [[qwords[i]]], via: null});
+        i += 1;
+      }
+    }
+    return out;
+  }
+
+  // Best place and match for one query unit in one record. Every word of an
+  // alternative must match within the same place.
+  function matchUnit(p, unit, memo) {
     var best = null;
-    ["id", "title", "type", "body"].forEach(function (place) {
-      var m = bestIn(p[place], q, memo);
-      if (!m) { return; }
-      var score = PLACE[place] - COST[m.kind];
-      if (!best || score > best.score) { best = {place: place, score: score, match: m}; }
+    PLACES.forEach(function (place) {
+      unit.alts.forEach(function (alt, ai) {
+        var worst = null, lcs = [];
+        for (var k = 0; k < alt.length; k++) {
+          var m = bestIn(p[place], alt[k], memo);
+          if (!m) { return; }
+          lcs.push(m.lc);
+          if (!worst || COST[m.kind] > COST[worst.kind]) { worst = m; }
+        }
+        var cost = COST[worst.kind] + (ai > 0 ? COST.synonym : 0);
+        var score = PLACE[place] - cost;
+        if (!best || score > best.score) {
+          best = {place: place, score: score, match: worst, lcs: lcs,
+                  via: ai > 0 ? unit.via : null};
+        }
+      });
     });
     return best;
   }
 
-  function relevance(p, qwords, matches) {
-    var exactTitle = matches.every(function (m) {
-      return m.place === "title" && (m.match.kind === "exact" || m.match.kind === "prefix");
-    });
-    var phrase = qwords.join(" ");
-    if (exactTitle && p.titleLc === phrase) { return 100; }                  // exact title
-    if (exactTitle && p.titleLc.lastIndexOf(phrase, 0) === 0) { return 92; } // title prefix
-    if (exactTitle && p.titleLc.indexOf(phrase) !== -1) { return 85; }       // phrase in title
+  function relevance(p, phrase, matches) {
+    function all(place) {
+      return matches.every(function (m) {
+        return m.place === place && !m.via && (m.match.kind === "exact" || m.match.kind === "prefix");
+      });
+    }
+    if (all("title")) {
+      if (p.titleLc === phrase) { return 100; }                      // exact title
+      if (p.titleLc.lastIndexOf(phrase, 0) === 0) { return 92; }     // title prefix
+      if (p.titleLc.indexOf(phrase) !== -1) { return 85; }           // phrase in title
+    }
+    if (all("alias") && p.aliasLc.indexOf(phrase) !== -1) { return 88; }  // an alias, exactly
     var sum = matches.reduce(function (a, m) { return a + m.score; }, 0);
     return Math.round(sum / matches.length);
   }
 
   function band(pct) { return pct >= 80 ? "high" : pct >= 55 ? "mid" : "low"; }
 
-  // Rank `records` against query `q`; returns [{rec, score}] best first:
-  // relevance, then how often the words occur in the body, then title.
-  function rank(records, q) {
+  // Rank `records` against query `q`, with the glossary's synonym groups;
+  // returns [{rec, score}] best first: relevance, then how often the words
+  // occur in the body, then title.
+  function rank(records, q, synonyms) {
     var qwords = words(q).map(function (w) { return w.toLowerCase(); });
     if (!qwords.length) { return []; }
+    var titles = new Map();
+    records.forEach(function (r) { titles.set(words(r.title).join(" ").toLowerCase(), r.title); });
+    var qunits = units(qwords, synonyms, titles);
+    var phrase = qwords.join(" ");
     var memo = new Map();
     var out = [];
     records.forEach(function (rec) {
       var p = prep(rec);
       var matches = [];
-      for (var i = 0; i < qwords.length; i++) {
-        var m = matchUnit(p, qwords[i], memo);
+      for (var i = 0; i < qunits.length; i++) {
+        var m = matchUnit(p, qunits[i], memo);
         if (!m) { return; }                          // every word must match
         matches.push(m);
       }
       var freq = matches.reduce(function (a, m) {
         return a + (m.place === "body" ? p.freq.get(m.match.lc) || 0 : 0);
       }, 0);
-      out.push({rec: rec, score: relevance(p, qwords, matches), freq: freq, matches: matches});
+      out.push({rec: rec, score: relevance(p, phrase, matches), freq: freq, matches: matches});
     });
     out.sort(function (a, b) {
       return b.score - a.score || b.freq - a.freq
