@@ -19,6 +19,8 @@ fields:
   - {name: stereotype, kind: enum, values: [entity, value-object], required: false, doc: "optional: marks the term as data, drawn as a <<term>> stub in the class diagram until a DM page exists (DR-027)"}
 anchors: [req42]
 projections: [data-model-diagram]
+sort_orders:
+  - {label: "A to Z", keys: [title]}
 ---
 
 # Type: glossary term

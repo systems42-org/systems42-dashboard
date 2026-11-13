@@ -34,6 +34,10 @@ Unreleased changes sit at the top until the next Starter Kit release.
   the new changes page and no longer counts pages (FR-018).
 
 ### Added
+- `sort_orders:` on metamodel type pages (FR-021): the useful orders for a
+  list of that type, such as priority › release › order for functional
+  requirements and status › severity for issues. The lint checks that every
+  key is a field of the type.
 - `/changes`: every wiki page, most recently changed first (FR-018).
 - `/issues?section=<ID>`: only the open issues that point at that section's
   pages. A section tile's open issue count links there (FR-019).
