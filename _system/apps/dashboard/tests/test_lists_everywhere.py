@@ -26,6 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # folder -> (prefix, type, extra frontmatter)
 FOLDERS = {
+    "goals": ("GOAL", "goal", "stereotype: objective\nhorizon: 2027\n"),
     "glossary": ("GLO", "glossary-term", ""),
     "stakeholders": ("STK", "stakeholder", "influence: high\ninterest: low\n"),
     "decisions": ("DR", "decision-record", "kind: business\ndecided: 2026-11-01\n"),
@@ -55,6 +56,10 @@ for folder, (prefix, typ, extra) in FOLDERS.items():
             f"created: 2026-11-0{n}\nupdated: 2026-11-0{n}\nsources: []\nrelated: []\ntags: []\n"
             f"{extra}---\n\n# Seite {n}\n", encoding="utf-8")
 
+# one vision, one objective
+_g = _wiki / "goals" / "GOAL-001-page-1.md"
+_g.write_text(_g.read_text(encoding="utf-8").replace("stereotype: objective", "stereotype: vision"), encoding="utf-8")
+
 import app  # noqa: E402
 import metamodel  # noqa: E402
 
@@ -62,6 +67,7 @@ client = app.app.test_client()
 
 # route -> the type its list is declared as
 ROUTES = {
+    "/goals": "goal",
     "/glossary": "glossary-term",
     "/stakeholders": "stakeholder",
     "/decisions": "decision-record",
@@ -141,6 +147,20 @@ def test_agreed_only_filter():
             assert ">Agreed only<" in body, path
 
 
+def test_goal_list_without_a_vision():
+    # no vision yet: the page shows its empty state, and still lists the goals
+    _g.write_text(_g.read_text(encoding="utf-8").replace("stereotype: vision", "stereotype: objective"),
+                  encoding="utf-8")
+    app._PARSE_CACHE.clear()
+    try:
+        _, table = _list_table(_get("/goals"), "/goals")
+        assert "GOAL-001" in table and "GOAL-002" in table
+    finally:
+        _g.write_text(_g.read_text(encoding="utf-8").replace("stereotype: objective", "stereotype: vision"),
+                      encoding="utf-8")
+        app._PARSE_CACHE.clear()
+
+
 def test_bad_query_strings_show_the_list():
     for q in ("?sort=nosuchcol:asc", "?sort=<x>", "?status=bogus", "?sort=title:sideways&status=accepted"):
         _list_table(_get("/req42/quality" + q), q)
@@ -152,5 +172,6 @@ if __name__ == "__main__":
     test_every_header_sorts()
     test_every_row_links_its_page_and_carries_its_status()
     test_agreed_only_filter()
+    test_goal_list_without_a_vision()
     test_bad_query_strings_show_the_list()
     print("OK: lists everywhere")

@@ -25,8 +25,9 @@ Unreleased changes sit at the top until the next Starter Kit release.
   pane is gone. `?filter=open` still works and means `?status=open`.
 - Every section list uses the shared list layer (FR-021, FR-022): an order
   picker with the type's sort orders, "Agreed only", and every column
-  sortable. Functional requirements get a flat list under the hierarchy, the
-  arc42 views a list next to their trees. Quality requirements show priority
+  sortable. Functional requirements get a flat list under the hierarchy,
+  Vision & Goals a list of every goal, the arc42 views a list next to their
+  trees. Quality requirements show priority
   as a column. Domain Terms drop their own sort buttons: "Added" is a column
   now, and its header gives newest or oldest first. Decision and issue titles
   link their pages.

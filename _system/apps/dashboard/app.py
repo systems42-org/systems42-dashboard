@@ -3310,6 +3310,11 @@ def goals_view():
     links = link_index()       # vision/objective prose wikilinks become real links
     data = load_goals()
     vision, objectives = data["vision"], data["objectives"]
+    # the flat, sortable list of every goal page (FR-021)
+    goal_rows = [{"id": g.id, "title": g.title, "url": _page_url(g.folder, g.stem),
+                  "stereotype": str(g.meta.get("stereotype") or "").strip().lower(),
+                  "horizon": str(g.meta.get("horizon") or "").strip(), "status": g.status}
+                 for g in ([vision] if vision else []) + objectives]
     if not vision:
         # Empty vault: no `stereotype: vision` page yet. Render the empty
         # state rather than a 404 — this route must work on workshop day one.
@@ -3326,6 +3331,7 @@ def goals_view():
             fr_cols=[],
             matrix_rows=[],
             needs_mermaid=False,
+            goal_rows=goal_rows,
         )
 
     def _wikilink_list(items) -> list[str]:
@@ -3402,6 +3408,7 @@ def goals_view():
         fr_cols=fr_cols,
         matrix_rows=matrix_rows,
         needs_mermaid=bool(diagram),
+        goal_rows=goal_rows,
     )
 
 
