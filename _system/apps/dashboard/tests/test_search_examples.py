@@ -274,6 +274,11 @@ def test_fr007_title_hit_shows_first_sentence():
     assert passages("facilitator")["GLO-001"] == '<p class="hit-passage">Person who guides a session.</p>'
 
 
+def test_fr007_title_hit_skips_headings():
+    assert passages("search the wiki")["FR-007"] == \
+        '<p class="hit-passage">Readers look from any page (SRC-006).</p>'
+
+
 def test_fr007_passage_is_escaped():
     rec = {"id": "X-1", "type": "Issue", "title": "X", "aliases": [], "fields": {},
            "plain": "Use <script> & a facilitator."}

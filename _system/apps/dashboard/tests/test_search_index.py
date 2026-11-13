@@ -48,6 +48,13 @@ def test_plain_names_sources_by_id():
     assert "Readers look from any page (SRC-006)." in plain, plain
 
 
+def test_plain_has_no_headings_or_labels():
+    plain = _rec("FR-007")["plain"]
+    for label in ("Story", "PROBLEM / GOAL", "Snapshot", "Open points", "follows"):
+        assert label not in plain, (label, plain)
+    assert plain.startswith("Readers look from any page (SRC-006)."), plain
+
+
 def test_fields():
     fields = _rec("FR-001")["fields"]
     assert fields["priority"] == ["must"], fields
@@ -82,6 +89,7 @@ def test_search_json_serves_the_index_root():
 if __name__ == "__main__":
     test_plain_drops_link_targets_and_markup()
     test_plain_names_sources_by_id()
+    test_plain_has_no_headings_or_labels()
     test_fields()
     test_aliases()
     test_links_both_directions()

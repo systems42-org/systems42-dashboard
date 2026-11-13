@@ -10,6 +10,8 @@ tags: [functional-requirement]
 
 # Search the wiki
 
+> follows [[user-story-format]]
+
 ## Story
 
 **PROBLEM / GOAL**

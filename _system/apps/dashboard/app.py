@@ -2352,6 +2352,12 @@ SEARCH_FIELDS = ["tags", "status", "stereotype", "priority", "kind", "state",
 _MD_LINK_RE = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")
 _HTML_TAG_RE = re.compile(r"<[^>]+>")
 _SOURCE_ID_RE = re.compile(r"[A-Z]+-\d+")
+# Lines that label a page's structure rather than say something: headings,
+# callout titles, bold-only lines such as **PROBLEM / GOAL** and the anchor
+# note "> follows [[MADR]]". A bold lead label such as **Snapshot.** goes too,
+# the text after it stays.
+_HEADING_LINE_RE = re.compile(r"^\s*(?:#{1,6}\s|>\s*\[![\w-]+\]|>\s*follows\s|\*\*[^*]+\*\*\s*$)")
+_LEAD_LABEL_RE = re.compile(r"^(\s*(?:[-*+]\s+)?)\*\*[^*]{1,60}[.:]\*\*\s+")
 _LINE_MARK_RE = re.compile(r"^\s*(?:#{1,6}\s+|>\s*(?:\[![\w-]+\][-+]?\s*)?|[-*+]\s+(?:\[[ xX]\]\s+)?|\d+[.)]\s+)+")
 _EMPHASIS_RE = re.compile(r"\*\*|__|~~|`|(?<!\w)\*(?=\S)|(?<=\S)\*(?!\w)")
 
@@ -2359,8 +2365,8 @@ _EMPHASIS_RE = re.compile(r"\*\*|__|~~|`|(?<!\w)\*(?=\S)|(?<=\S)\*(?!\w)")
 def search_plain(page: Page, titles: dict[str, str]) -> str:
     """A page body as the reader sees it, for search: wikilinks become their
     label (or the target's title), markdown and HTML markup go, hard-wrapped
-    prose is joined. One line per paragraph, heading or list item, so the
-    ranker can cut passages. The H1 that repeats the title is dropped.
+    prose is joined. One line per paragraph or list item, so the ranker can
+    cut passages. Headings and labels go (`_HEADING_LINE_RE`).
     An unlabelled provenance link to raw/sources becomes the source's ID
     (`SRC-006`): its file name or title would match words such as
     "grilling" on most pages, and dropping it leaves "came from ." holes."""
@@ -2380,15 +2386,14 @@ def search_plain(page: Page, titles: dict[str, str]) -> str:
     body = _HTML_TAG_RE.sub(" ", body)
     lines = []
     for line in body.splitlines():
-        if line.strip().startswith("```") or _TABLE_SEP_RE.match(line):
+        if line.strip().startswith("```") or _TABLE_SEP_RE.match(line) or _HEADING_LINE_RE.match(line):
             continue
+        line = _LEAD_LABEL_RE.sub(r"\1", line)
         line = _LINE_MARK_RE.sub("", line)
         line = _EMPHASIS_RE.sub("", line).replace("|", " ")
         line = re.sub(r"\s+", " ", line).strip()
         if line and line != "---":
             lines.append(line)
-    if lines and lines[0].lower() == str(page.title).strip().lower():
-        lines.pop(0)
     return "\n".join(lines)
 
 
