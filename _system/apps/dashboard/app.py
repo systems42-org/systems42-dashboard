@@ -476,7 +476,7 @@ def vault_status() -> dict:
     issues = load_folder("issues")
     last = max((p.mtime for p in pages), default=0.0)
     return {"pages": len(pages),
-            "open_issues": sum(1 for i in issues if i.status not in CLOSED_STATUSES),
+            "open_issues": sum(1 for i in issues if is_open_issue(i.status)),
             "sources": len(load_sources()),
             "last_change": _relative_when(last) if last else "—"}
 
@@ -561,7 +561,7 @@ def open_issue_counts() -> dict[str, set[str]]:
     links = link_index()
     out: dict[str, set[str]] = {}
     for iss in load_folder("issues"):
-        if iss.status in CLOSED_STATUSES:
+        if not is_open_issue(iss.status):
             continue
         for folder in {links[t][0] for t in iss.link_targets() if t in links}:
             out.setdefault(folder, set()).add(iss.id)
@@ -720,6 +720,12 @@ def extract_pam_bullet(page: Page, label: str, titles: dict[str, str],
 
 # Status values that count as "closed" for the issues filter.
 CLOSED_STATUSES = {"resolved", "wontfix"}
+
+
+def is_open_issue(status: object) -> bool:
+    """The one meaning of "open" for an issue: every status except resolved
+    and wontfix. A missing or unknown status stays visible as open."""
+    return str(status or "").strip().lower() not in CLOSED_STATUSES
 
 
 # The four-step lifecycle every content type shares (AGENTS.md: draft → review →
@@ -2464,7 +2470,7 @@ def build_section_tile(section: dict) -> dict:
                             {"label": "Term network", "href": "/graph/glossary"}]})
     elif sid == "C6":
         issues = pages
-        open_issues = [i for i in issues if i.status not in CLOSED_STATUSES]
+        open_issues = [i for i in issues if is_open_issue(i.status)]
         t.update({"count": len(open_issues), "total": len(issues),
                   # "open" is the adjective, not a noun: it never takes an -s
                   "unit": "open", "unit_many": "open",
@@ -2505,7 +2511,7 @@ def build_valley() -> dict:
     """What the agent did: the vault's state, what moved last, what is open.
     Sits between the two peaks on the home page (DR-033)."""
     issues = load_folder("issues")
-    open_issues = sorted((i for i in issues if i.status not in CLOSED_STATUSES),
+    open_issues = sorted((i for i in issues if is_open_issue(i.status)),
                          key=lambda i: ({"blocker": 0, "major": 1, "minor": 2}
                                         .get(str(i.meta.get("severity") or ""), 3), i.id))
     cfg = dashboard_config()
@@ -2606,7 +2612,8 @@ def _issue_owner(p: Page, titles: dict[str, str],
 
 
 # ?status= on the issue list: a lifecycle value, or one of these groups
-_ISSUE_STATUS_GROUPS = {"open": ("open", "in-progress"), "closed": tuple(sorted(CLOSED_STATUSES))}
+# (open: is_open_issue, closed: the rest)
+_ISSUE_STATUS_GROUPS = ("open", "closed")
 
 
 @_request_cached
@@ -2626,7 +2633,7 @@ def issue_fields(p: Page, titles: dict[str, str], links: dict[str, tuple[str, st
         return v if v in vocab[field] else ""
     status = p.status if p.status in vocab["status"] else ""
     owner = _issue_owner(p, titles, links)
-    return {"status": status, "is_open": status in _ISSUE_STATUS_GROUPS["open"],
+    return {"status": status, "is_open": is_open_issue(p.status),
             "severity": known("severity"), "kind": known("kind"), "category": known("category"),
             "owner": owner["label"], "owner_key": owner["key"], "owner_url": owner["url"]}
 
@@ -2698,7 +2705,9 @@ def issues_view():
 
     def keep(i: dict) -> bool:
         st = chosen["status"]
-        if st != "all" and i["status"] not in _ISSUE_STATUS_GROUPS.get(st, (st,)):
+        if st == "open" and not i["is_open"] or st == "closed" and i["is_open"]:
+            return False
+        if st not in ("all", "open", "closed") and i["status"] != st:
             return False
         if chosen["category"] and i["category"] != chosen["category"]:
             return False

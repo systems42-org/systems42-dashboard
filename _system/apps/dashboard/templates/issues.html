@@ -21,7 +21,7 @@
 <form class="issue-filters" method="get" action="/issues">
   <label>Status <select name="status">
     {{ opt("all", "All", chosen.status) }}
-    {{ opt("open", "Open or in progress", chosen.status) }}
+    {{ opt("open", "Open", chosen.status) }}
     {{ opt("closed", "Closed", chosen.status) }}
     {% for v in options.status if v != "open" %}{{ opt(v, "Only " ~ v, chosen.status) }}{% endfor %}
   </select></label>

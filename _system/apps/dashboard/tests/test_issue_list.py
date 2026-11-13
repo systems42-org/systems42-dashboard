@@ -96,7 +96,8 @@ def test_each_filter_alone():
     assert _ids("?owner=none") == ["ISS-002", "ISS-004", "ISS-005"]
     assert _ids("?owner=Gernot+Starke") == ["ISS-003"]
     assert _ids("?owner=STK-001-produktverantwortliche") == ["ISS-001"]
-    assert _ids("?status=open") == ["ISS-001", "ISS-002", "ISS-004"]     # open or in progress
+    # open: every status but resolved and wontfix, an unknown one included
+    assert _ids("?status=open") == ["ISS-001", "ISS-002", "ISS-004", "ISS-005"]
     assert _ids("?status=in-progress") == ["ISS-002"]
     assert _ids("?status=closed") == ["ISS-003"]
     assert _ids("?status=all") == ALL
@@ -116,12 +117,12 @@ def test_section_filter_from_pr_13_keeps_working():
 
 
 def test_former_filter_parameter_still_opens_the_open_issues():
-    assert _ids("?filter=open") == ["ISS-001", "ISS-002", "ISS-004"]
+    assert _ids("?filter=open") == ["ISS-001", "ISS-002", "ISS-004", "ISS-005"]
 
 
-def test_open_count_counts_open_and_in_progress_only():
+def test_open_count_counts_every_issue_not_closed():
     body = _body()
-    assert re.search(r'<strong class="issue-open-count">3</strong> open', body), body[:2000]
+    assert re.search(r'<strong class="issue-open-count">4</strong> open', body), body[:2000]
     assert re.search(r"of 5 in total", body)
 
 
@@ -165,7 +166,7 @@ if __name__ == "__main__":
     test_filters_combine()
     test_section_filter_from_pr_13_keeps_working()
     test_former_filter_parameter_still_opens_the_open_issues()
-    test_open_count_counts_open_and_in_progress_only()
+    test_open_count_counts_every_issue_not_closed()
     test_unknown_values_list_with_empty_cells()
     test_bad_query_strings_show_the_unfiltered_list()
     test_rows_link_their_page_and_the_pane_is_gone()
