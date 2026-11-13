@@ -165,6 +165,10 @@ system_name: "$name"  # the system whose requirements this vault holds
 tagline: "$tagline"  # one line, shown under the name in the dashboard hero
 # about: docs/<folder>/README.md  # optional: a page under docs/ shown at /about (hero mark + link)
 # about_label: ""                  # optional: link text and page title; empty → "About <system_name>"
+# Dashboard look. All three keys are optional.
+# brand: systems42  # an example brand (systems42, atrium) or a folder in this repository, e.g. brand/; missing → systems42
+# intro: on  # off: the home page opens without the brand's intro animation
+# dashboard_version: ""  # the dashboard release this wiki uses, quoted (1.10 unquoted reads as 1.1); the footer notes a different one
 EOF
 }
 

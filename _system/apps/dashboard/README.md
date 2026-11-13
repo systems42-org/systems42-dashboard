@@ -72,8 +72,11 @@ Architecture, red organisation) on pages of an area; home, help and
 search have none. The ≡ menu holds Configure · Theme · Who's here · Help ·
 Reload · Disconnect all. The footer holds formalities only: "Read-only
 dashboard for Systems42 LLM wiki" (linked to the help section on the LLM
-wiki), the live dot with the client count, the refresh time, Metamodel, Help and the Python
-mark. The dot pulses while the server answers and stops, grey, when the
+wiki), the live dot with the client count, the refresh time, Metamodel, Help, the
+dashboard's own release (`VERSION`) and the Python mark. When `dashboard_version:`
+in `wiki.yaml` names another release, one more line says so. Quote the value
+(`dashboard_version: "1.10.0"`): unquoted, YAML reads `1.10` as the number 1.1,
+and the dashboard logs a warning. The dot pulses while the server answers and stops, grey, when the
 connection is lost.
 
 ## Visual identity
@@ -90,9 +93,17 @@ feature", "4 links"), never bare letters or glyphs, via the single `plural()`
 macro in `templates/_macros.html`.
 
 The mark, the favicon and an optional intro animation on the home page are the
-only product-specific look, and they live in one slot: `static/brand/` plus, if
-present, `templates/_brand_intro.html`. Rebranding means replacing those files;
-`static/brand/README.md` states what they must do.
+only product-specific look. They form a brand, and a wiki picks one in
+`_system/wiki.yaml`: `brand: systems42` (the default) or `brand: atrium` names an
+example brand shipped in `brands/`, `brand: brand/` names a folder of the wiki
+repository. `intro: off` hides the intro. Switching is one changed key and a
+reload. The dashboard only reads a wiki's brand folder and serves its marks at
+`/brand/<file>`. A folder outside the repository, missing or without all three
+marks falls back to `systems42` with a log warning, as does a `brand:` that is
+not text (`brand: on`). Marks are served with a one-year cache while the URL's
+`?v=` matches the file's checksum. A brand's `intro.html` and marks run in every
+viewer's browser, so review them like code. `brands/README.md` states
+what a brand must contain and what its intro must do.
 
 ## Home, areas and tiles
 
@@ -266,14 +277,15 @@ _system/apps/dashboard/
   static/settings.js   the Configure dialog
   static/systems42-sections.svg   the sections diagram shown on /help
   static/systems42-logo.svg, systems42-favicon.png   the Systems42 mark
-  static/brand/      this dashboard's mark (dark, light), favicon and the brand
-                     contract (README.md); templates/_brand_intro.html, if
-                     present, is the home page's intro animation
+  brands/            the example brands systems42 and atrium (marks, favicon,
+                     intro.html) and the brand contract (README.md)
+  VERSION            the dashboard's own release, shown in the footer
   static/vendor/     vendored mermaid + cytoscape + fonts (offline, no CDN)
   tests/             plain-assert test scripts (no pytest) + a fixture vault
   Dockerfile         python:3.12-slim + gunicorn
   compose.yaml       service def, mounts ${WIKI_DIR}:/wiki:ro,
-                     ${SOURCES_DIR}:/sources:ro, ${DOCS_DIR}:/docs:ro, and the one read-write settings
+                     ${SOURCES_DIR}:/sources:ro, ${DOCS_DIR}:/docs:ro, ${REPO_DIR}:/repo:ro
+                     (for a wiki's own brand folder), and the one read-write settings
                      mount ${DASHBOARD_CONFIG}:/config/dashboard.yaml
 ```
 

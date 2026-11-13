@@ -34,6 +34,10 @@ has left, whoever inherited the role under their own name) — can save; the
 dialog writes `_system/dashboard.yaml`, which you can also edit by hand. It is
 the only file the dashboard ever writes; the wiki itself is read-only here.
 
+**Brand.** The mark, the favicon and the intro animation on the home page come
+from `brand:` in `_system/wiki.yaml`: `systems42`, `atrium` or a folder of the
+wiki repository. `intro: off` turns the intro off. Edit the file and reload.
+
 ## The LLM wiki {: #llm-wiki }
 
 The wiki behind this dashboard is written by an AI agent and curated by

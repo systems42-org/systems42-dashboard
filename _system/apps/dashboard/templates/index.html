@@ -3,15 +3,16 @@
 {% from "_macros.html" import plural, noun %}
 {% from "_empty.html" import empty_state %}
 {% block content %}
-{# Optional intro animation, before the hero so it covers the page from the
-   first paint. No file, no intro. Contract: static/brand/README.md. #}
-{% include "_brand_intro.html" ignore missing %}
+{# The brand's intro (its intro.html, inserted as it is), before the hero so
+   it covers the page from the first paint. Empty when the brand has none or
+   wiki.yaml says `intro: off`. Contract: brands/README.md. #}
+{{ active_brand.intro_html }}
 <header class="hero">
   <div class="hero-row">
     {% if about_href %}<a class="hero-mark-link" href="{{ about_href }}" title="{{ about_label }}">{% endif %}
-    <img class="hero-mark mark-on-dark" src="{{ static_url('brand/mark-dark.svg') }}"
+    <img class="hero-mark mark-on-dark" src="{{ active_brand.mark_dark }}"
          alt="{{ system_name }}">
-    <img class="hero-mark mark-on-light" src="{{ static_url('brand/mark-light.svg') }}"
+    <img class="hero-mark mark-on-light" src="{{ active_brand.mark_light }}"
          alt="{{ system_name }}">
     {% if about_href %}</a>{% endif %}
     <div class="hero-text">

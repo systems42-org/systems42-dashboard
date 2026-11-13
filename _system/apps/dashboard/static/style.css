@@ -798,6 +798,8 @@ pre.mermaid:not([data-processed]) { color: transparent; min-height: 2rem; }
   gap: .85rem; flex-wrap: wrap; }
 .foot-title { color: var(--ink-soft); font-weight: 600; letter-spacing: .02em; }
 .foot-sub { margin-top: .25rem; }
+/* shown only when wiki.yaml names a dashboard_version other than this one */
+.version-mismatch { margin-top: .25rem; color: var(--warn); }
 
 /* small "built with" credit: the two-colour Python mark (static/python-logo.svg) */
 .stack-badge { display: inline-flex; align-items: center; gap: .3rem; vertical-align: bottom; }
@@ -1166,7 +1168,7 @@ html.etsu-disconnected {
 .hero-text { min-width: 0; }
 .hero-title { font-size: var(--step-3); line-height: 1.15; margin: 0; letter-spacing: -0.01em; }
 .hero-text .lead { margin: var(--space-1) 0 0; }
-/* The mark (static/brand/mark-{dark,light}.svg, contract in static/brand/README.md).
+/* The mark (the active brand's mark-{dark,light}.svg, contract in brands/README.md).
    Transparent artwork in two colourings, so the theme picks the variant.
    Mark only, no wordmark: the system name stands next to it.
    Square, sized in rem so it scales with a projector's zoom. */

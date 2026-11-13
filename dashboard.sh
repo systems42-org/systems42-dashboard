@@ -29,6 +29,8 @@ export SOURCES_DIR="$ROOT/raw/sources"
 export DOCS_DIR="$ROOT/docs"
 export METAMODEL_DIR="$ROOT/_system/metamodel"
 export CONFIG_FILE="$ROOT/_system/wiki.yaml"
+# The wiki repository itself: a wiki's own brand folder (`brand:` in wiki.yaml) lives in it.
+export REPO_DIR="$ROOT"
 export DASHBOARD_CONFIG="$ROOT/_system/dashboard.yaml"
 # Docker bind-mounts this single file; if it is missing at `up`, Docker would
 # create a *directory* in its place. Make sure it exists first.
@@ -117,7 +119,7 @@ case "$cmd" in
       python3 -m venv .venv
       .venv/bin/pip install -q --disable-pip-version-check -r requirements.txt
     fi
-    export WIKI_DIR SOURCES_DIR DOCS_DIR METAMODEL_DIR CONFIG_FILE DASHBOARD_CONFIG
+    export WIKI_DIR SOURCES_DIR DOCS_DIR METAMODEL_DIR CONFIG_FILE DASHBOARD_CONFIG REPO_DIR
     export WIKI_CONFIG="$CONFIG_FILE"
     export RAW_SOURCES_DIR="$SOURCES_DIR"
     export DASH_PUBLIC_URL="${DASH_PUBLIC_URL:-http://${LAN_IP:-localhost}:8000}"

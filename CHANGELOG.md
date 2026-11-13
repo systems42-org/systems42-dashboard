@@ -13,6 +13,11 @@ Unreleased changes sit at the top until the next Starter Kit release.
 ## [Unreleased]
 
 ### Changed
+- Dashboard brand: the brand slot moved from `static/brand/` and
+  `templates/_brand_intro.html` to `_system/apps/dashboard/brands/<name>/`. A
+  brand's intro is now one self-contained `intro.html`, inserted as it is. The
+  contract is in `brands/README.md`. An intro may declare its own colours as
+  `--brand-*` custom properties, once per theme.
 - An issue page shows category, severity, kind and owner under its ID, and
   "nobody yet" when no one owns it (FR-026, FR-028).
 - The issue list shows category and owner, "nobody yet" for an issue without
@@ -82,6 +87,17 @@ Unreleased changes sit at the top until the next Starter Kit release.
   the new changes page and no longer counts pages (FR-018).
 
 ### Added
+- Branding is configuration. Three optional keys in `_system/wiki.yaml`:
+  `brand:` names an example brand (`systems42`, the default, or `atrium`) or a
+  folder of the wiki repository such as `brand/`, `intro: off` hides the home
+  page intro, `dashboard_version:` names the dashboard release the wiki uses.
+  Switching brands is one changed key and a reload. The dashboard only reads a
+  wiki's brand folder (mounted at `/repo`, read-only, under Docker). A folder
+  outside the repository, missing or incomplete shows `systems42` and logs a
+  warning.
+- The dashboard has a release number, `_system/apps/dashboard/VERSION`
+  (0.9.0), shown in the footer. When `dashboard_version:` names another release,
+  one footer line says so.
 - Every wiki page lists the issues that link to it, open ones first and then
   by severity, each with status and severity (FR-027). A page without an open
   issue says "No open issues point at this page." Functional requirement

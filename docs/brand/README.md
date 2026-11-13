@@ -23,6 +23,7 @@ outlines, gradients or shadows; do not recolour, reorder, stretch or rotate.
 **Intro:** the ground grows, then the two peaks rise, then a fade; about 2 s,
 once per tab, skipped under reduced motion, any click or key ends it.
 
-**Files:** `static/brand/` holds `mark-dark.svg`, `mark-light.svg` and
-`favicon.svg`; `templates/_brand_intro.html` holds the intro; this folder holds
+**Files:** the dashboard's example brand `systems42`,
+`_system/apps/dashboard/brands/systems42/`, holds `mark-dark.svg`,
+`mark-light.svg`, `favicon.svg` and the intro, `intro.html`. This folder holds
 the PNGs (`mark-dark.png`, `mark-light.png`, `favicon.png`).

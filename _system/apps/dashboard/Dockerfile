@@ -5,7 +5,8 @@ ENV PYTHONUNBUFFERED=1 \
     WIKI_DIR=/wiki \
     RAW_SOURCES_DIR=/sources \
     DOCS_DIR=/docs \
-    METAMODEL_DIR=/metamodel
+    METAMODEL_DIR=/metamodel \
+    REPO_DIR=/repo
 
 WORKDIR /app
 
@@ -16,8 +17,10 @@ COPY app.py .
 COPY catalog.py .
 COPY metamodel.py .
 COPY help.md .
+COPY VERSION .
 COPY templates ./templates
 COPY static ./static
+COPY brands ./brands
 
 EXPOSE 8000
 
