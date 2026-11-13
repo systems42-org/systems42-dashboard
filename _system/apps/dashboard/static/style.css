@@ -1320,7 +1320,11 @@ a.mm-anchor:hover { color: var(--accent); border-color: var(--accent); }
 .mm-table .c-term code, .mm-table .aliases code { white-space: normal; word-break: normal; overflow-wrap: break-word; }
 .mm-table .mm-id { white-space: nowrap; }
 .mm-table tbody td { line-height: 1.45; }
+/* a row opened by its address (#anchor-madr) stops below the sticky header and contents bar */
+.mm-row { scroll-margin-top: calc(var(--topbar-h) + 3.2rem); }
 .mm-row:target { background: rgba(62,166,255,.1); }
+/* an outside reference inside an anchor definition reads as a link, not in browser blue */
+.mm-table-anchors a:not(.wl) { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent); overflow-wrap: anywhere; }
 .mm-row:target td { border-top: 1px solid var(--accent); }
 .mm-type { display: inline-flex; align-items: center; gap: .5rem; }
 .mm-type .lg-dot { width: 14px; height: 14px; }

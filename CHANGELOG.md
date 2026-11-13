@@ -141,6 +141,8 @@ Unreleased changes sit at the top until the next Starter Kit release.
   not a limit.
 
 ### Fixed
+- `/metamodel`: a row opened by its address (`#type-goal`, `#anchor-madr`)
+  stops below the sticky header instead of under it.
 - Vision & Goals: the goal coverage matrix stays inside its card. With many
   functional requirements it scrolls inside the card, the goal column stays put,
   and the page no longer scrolls sideways. Goal titles read in page ink instead
