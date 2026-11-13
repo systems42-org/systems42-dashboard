@@ -9,3 +9,4 @@
 {% macro level_rank(l) %}{{ {'low': 1, 'medium': 2, 'high': 3}.get(l, '') }}{% endmacro %}
 {% macro severity_rank(s) %}{{ {'minor': 1, 'major': 2, 'blocker': 3}.get(s, '') }}{% endmacro %}
 {% macro issue_status_rank(s) %}{{ {'open': 1, 'in-progress': 2, 'resolved': 3, 'wontfix': 4}.get(s, '') }}{% endmacro %}
+{% macro priority_rank(p) %}{{ {'must': 1, 'should': 2, 'could': 3, "won't": 4, 'wont': 4}.get((p or '') | lower, '') }}{% endmacro %}

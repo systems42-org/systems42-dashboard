@@ -2,6 +2,9 @@
 {% block title %}Data model · req42{% endblock %}
 {% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}<a href="/req42/models">Supporting Models</a> <span>›</span> Data model</nav>{% endblock %}
 {% from "_empty.html" import empty_state %}
+{% from "_macros.html" import status_rank %}
+{% from "_list.html" import list_attrs, list_controls, list_empty %}
+{% set spec = list_spec("data-model") %}
 {% block content %}
 <h1 class="page-h1">Data model</h1>
 <p class="lead">A class diagram projected from <code>wiki/data-models/</code>
@@ -47,7 +50,7 @@
 <section class="dm-overview">
   <h2>Entity types at a glance</h2>
   <p class="lead">A quick overview of every entity with its attribute names.
-    Sortable per column; ID and name link down to the detail block below.</p>
+    Sortable per column. The ID opens the entity's page, the name jumps to its detail block below.</p>
 
   <nav class="dm-toc" aria-label="Jump links to entities">
     {% for e in entities %}
@@ -55,29 +58,33 @@
     {% endfor %}
   </nav>
 
+  {{ list_controls(spec) }}
   <div class="table-card dm-summary">
-  <table class="dm-summary-table" id="dm-summary-table">
+  <table class="dm-summary-table" id="dm-summary-table"{{ list_attrs(spec) }}>
     <thead>
       <tr>
-        <th class="c-id" data-sort="text" aria-sort="ascending">ID</th>
-        <th class="dm-col-name" data-sort="text">Entity</th>
-        <th class="dm-col-attrs" data-sort="numeric" title="Number of attributes">Attributes</th>
+        <th class="c-id" data-sort="text" data-key="id" aria-sort="ascending">ID</th>
+        <th class="dm-col-name" data-sort="text" data-key="title">Entity</th>
+        <th class="dm-col-attrs" data-sort="numeric" data-key="attributes" title="Number of attributes">Attributes</th>
+        <th class="c-status" data-sort="numeric" data-key="status">Status</th>
       </tr>
     </thead>
     <tbody>
       {% for e in entities %}
-      <tr>
-        <td class="c-id" data-sort-value="{{ e.id }}"><a href="#{{ e.id }}" class="dm-jump"><code>{{ e.id }}</code></a></td>
+      <tr data-status="{{ e.status }}">
+        <td class="c-id" data-sort-value="{{ e.id }}"><a href="/page/data-models/{{ e.stem }}" title="Open as its own page"><code>{{ e.id }}</code></a></td>
         <td class="dm-col-name" data-sort-value="{{ e.title|lower }}"><a href="#{{ e.id }}" class="dm-jump"><span class="term">{{ e.title }}</span></a>{% if e.stereotype %} <span class="dm-stereo-inline">{{ e.stereotype }}</span>{% endif %}</td>
         <td class="dm-col-attrs" data-sort-value="{{ e.attributes|length }}">
           {% if e.attributes %}
             {% for a in e.attributes %}<code>{{ a }}</code>{% if not loop.last %}, {% endif %}{% endfor %}
           {% else %}<span class="muted">—</span>{% endif %}
         </td>
+        <td class="c-status" data-sort-value="{{ status_rank(e.status) }}"><span class="status status-{{ e.status }}">{{ e.status }}</span></td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
+  {{ list_empty() }}
   </div>
 </section>
 

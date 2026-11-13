@@ -308,6 +308,15 @@ def static_url(filename: str) -> str:
 app.jinja_env.globals["static_url"] = static_url
 
 
+def list_spec(type_name: str) -> dict:
+    """What a section list declares for static/list-view.js (FR-021): its type
+    and the sort orders the metamodel gives that type."""
+    return {"type": type_name, "orders": metamodel.sort_orders(type_name)}
+
+
+app.jinja_env.globals["list_spec"] = list_spec
+
+
 # [[target]] | [[target|alias]] | [[target#heading]] | [[path/target|alias]]
 WIKILINK_RE = re.compile(r"\[\[([^\]\|#]+)(?:#[^\]\|]+)?(?:\|([^\]]+))?\]\]")
 FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n?(.*)$", re.DOTALL)
@@ -2273,9 +2282,10 @@ def building_blocks_view():
     """A2 Building Block View: the level tree and the level-1 white box."""
     block = catalog.SECTION_BY_SLUG["building-blocks"]
     pages = load_folder("building-blocks")
+    rows = [_arch_row(p, "building-blocks") for p in sorted(pages, key=lambda q: q.id)]
     return render_template(
         "building_blocks.html", block=block, tree=build_bb_tree(), total=len(pages),
-        whitebox=build_whitebox(None), maturity=maturity(p.status for p in pages),
+        whitebox=build_whitebox(None), maturity=maturity(p.status for p in pages), rows=rows,
     )
 
 
@@ -2311,8 +2321,14 @@ def concepts_view():
             rows.append(row)
         if rows:
             groups.append({"label": label, "rows": rows})
+    flat = []
+    for p in pages:
+        row = _arch_row(p, "concepts")
+        raw = str(p.meta.get("category") or "").strip()
+        row["category"] = known.get(raw.lower(), raw)
+        flat.append(row)
     return render_template("concepts.html", block=block, groups=groups, total=len(pages),
-                           maturity=maturity(p.status for p in pages))
+                           rows=flat, maturity=maturity(p.status for p in pages))
 
 
 @app.route("/arc42/runtime")
@@ -2336,8 +2352,13 @@ def deployment_view():
     existing, planned and replaced — and the node levels."""
     block = catalog.SECTION_BY_SLUG["deployment"]
     pages = load_folder("deployment-nodes")
+    rows = []
+    for p in sorted(pages, key=lambda q: q.id):
+        row = _arch_row(p, "deployment-nodes")
+        row["stereotype"] = str(p.meta.get("stereotype") or "").strip()
+        rows.append(row)
     return render_template("deployment.html", block=block, diagram=build_deployment_diagram(),
-                           hints=deployment_hints(),
+                           hints=deployment_hints(), rows=rows,
                            tree=build_node_tree(), total=len(pages),
                            maturity=maturity(p.status for p in pages))
 
@@ -3112,6 +3133,7 @@ def data_model_entities() -> list[dict]:
             "id": p.id,
             "stem": p.stem,
             "title": p.title,
+            "status": p.status,
             "stereotype": str(p.meta.get("stereotype") or "").strip(),
             "source_of_truth": str(p.meta.get("source-of-truth") or "").strip(),
             "attributes": _extract_dm_attribute_names(p),
@@ -3323,9 +3345,22 @@ def functional_requirements_view():
         "n_features": uc_kids.get(p.id, {}).get("n_features", 0),
         "n_stories": uc_kids.get(p.id, {}).get("n_stories", 0),
     } for p in goals["ucs"]]
+    # the flat list under the hierarchy (FR-021): every requirement and use
+    # case once, sortable by priority, release and order
+    rows = []
+    for p in sorted(load_folder("functional-requirements"), key=lambda q: q.id):
+        rows.append({"id": p.id, "title": p.title, "url": f"/functional-requirements/{p.stem}",
+                     "kind": _fr_stereotype(p), "priority": str(p.meta.get("priority") or "").strip(),
+                     "release": str(p.meta.get("release") or "").strip(),
+                     "order": str(p.meta.get("order") if p.meta.get("order") is not None else "").strip(),
+                     "status": p.status})
+    for p in goals["ucs"]:
+        rows.append({"id": p.id, "title": p.title, "url": _page_url("use-cases", p.stem),
+                     "kind": "use case", "priority": str(p.meta.get("priority") or "").strip(),
+                     "release": "", "order": "", "status": p.status})
     return render_template(
         "functional-requirements.html", hierarchy=hierarchy, diagram=diagram,
-        block=block, use_cases=use_cases, needs_mermaid=bool(diagram),
+        block=block, use_cases=use_cases, needs_mermaid=bool(diagram), rows=rows,
     )
 
 
@@ -3416,6 +3451,7 @@ def req42_block_view(slug):
     context_flows = build_context_flows() if slug == "scope" else None
     return render_template(
         "req42_block.html", block=block, rows=rows, total=len(rows),
+        list_type=metamodel.type_for_folder(block["folders"][0]) if block["folders"] else "page",
         context_diagram=context_diagram, context_flows=context_flows,
         needs_mermaid=bool(context_diagram),
         maturity=maturity(r["status"] for r in rows),

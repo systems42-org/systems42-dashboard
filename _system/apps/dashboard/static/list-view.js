@@ -154,14 +154,17 @@
       }
       if (!isList) return;
       if (statusButtons.length) {
+        // a class, not `hidden`: a page's own filter (search, kind) owns
+        // `hidden`, and a row shows only when both let it
         var shown = 0;
         serverRows.forEach(function (row) {
           var keep = keepRow(row.dataset.status, state.status);
-          row.hidden = !keep;
-          if (keep) shown++;
+          row.classList.toggle("list-out", !keep);
+          if (keep && !row.hidden) shown++;
         });
         var hint = table.parentNode.querySelector(".list-empty");
         if (hint) hint.hidden = shown !== 0;
+        table.dispatchEvent(new CustomEvent("listfilter"));
       }
       if (picker) {
         var current = formatSort(state.spec);
@@ -225,6 +228,7 @@
     });
 
     if (!isList) return;
+    if (controls) controls.hidden = false;
 
     if (picker) {
       picker.addEventListener("change", function () {

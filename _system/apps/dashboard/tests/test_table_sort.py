@@ -43,17 +43,17 @@ def _sortable(path):
     return [label for label, attrs in _headers(path) if "data-sort=" in attrs]
 
 
+# FR-021: every single column sorts, free text included (was: free text stayed out)
 def test_stakeholder_columns():
-    # exactly the columns marked in the request: free text stays out
-    assert _sortable("/stakeholders") == ["ID", "Stakeholder", "Influence", "Interest", "Status"]
+    assert _sortable("/stakeholders") == ["ID", "Stakeholder", "Snapshot & relations", "Influence", "Interest", "Status"]
 
 
 def test_glossary_columns():
-    assert _sortable("/glossary") == ["ID", "Term", "Links", "Status"]
+    assert _sortable("/glossary") == ["ID", "Term", "Definition", "Links", "Added", "Status"]
 
 
 def test_decision_columns():
-    assert _sortable("/decisions") == ["ID", "Title", "Kind", "Decided", "Status"]
+    assert _sortable("/decisions") == ["ID", "Title", "Kind", "Drivers", "Decided", "Status"]
 
 
 def test_decision_titles_wrap():
@@ -64,15 +64,15 @@ def test_decision_titles_wrap():
 
 def test_block_columns():
     # quality and constraints share req42_block.html; a single-type block has a
-    # constant Type column, which would be a sort control that does nothing
-    for path in ("/req42/quality", "/req42/constraints"):
-        assert _sortable(path) == ["ID", "Title", "Status", "Links"], path
+    # constant Type column, so it is left out. Quality adds its priority.
+    assert _sortable("/req42/quality") == ["ID", "Title", "Priority", "Status", "Links"]
+    assert _sortable("/req42/constraints") == ["ID", "Title", "Status", "Links"]
 
 
 def test_block_type_column_sorts_when_it_varies():
     # the scope block lists context pages and external interfaces together
     body = client.get("/req42/scope").get_data(as_text=True)
-    assert re.search(r'<th class="c-status" data-sort="text">Type</th>', body), "Type not sortable on scope"
+    assert re.search(r'<th class="c-status" data-sort="text" data-key="type">Type</th>', body), "Type not sortable on scope"
 
 
 def test_context_flow_table_is_not_sortable():
@@ -93,7 +93,7 @@ def test_ratings_sort_by_rank_not_alphabet():
     body = client.get("/stakeholders").get_data(as_text=True)
     # high > medium > low, and the first click shows the highest first
     for label in ("Influence", "Interest"):
-        assert re.search(r'<th class="c-status" data-sort="numeric" data-sort-first="desc">' + label, body), label
+        assert re.search(r'<th class="c-status" data-sort="numeric" data-sort-first="desc"[^>]*>' + label, body), label
     cells = re.findall(r'<td class="c-status" data-sort-value="([^"]*)"><span class="lvl lvl-(\w+)"', body)
     assert cells, "no rating cells rendered"
     rank = {"low": "1", "medium": "2", "high": "3"}

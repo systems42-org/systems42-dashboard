@@ -13,6 +13,13 @@ Unreleased changes sit at the top until the next Starter Kit release.
 ## [Unreleased]
 
 ### Changed
+- Every section list uses the shared list layer (FR-021, FR-022): an order
+  picker with the type's sort orders, "Agreed only", and every column
+  sortable. Functional requirements get a flat list under the hierarchy, the
+  arc42 views a list next to their trees. Quality requirements show priority
+  as a column. Domain Terms drop their own sort buttons: "Added" is a column
+  now, and its header gives newest or oldest first. Decision and issue titles
+  link their pages.
 - Quality requirements are classified by Q42 dimensions (DR-003): the
   template and the metamodel replace the single ISO 25010 `attribute:` with
   `dimensions:`, a list of one or more of reliable, flexible, maintainable,

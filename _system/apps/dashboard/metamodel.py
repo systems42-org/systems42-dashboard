@@ -135,6 +135,14 @@ def sort_orders(type_name: str) -> list[dict]:
     return []
 
 
+def type_for_folder(folder: str) -> str | None:
+    """The type whose pages live in `wiki/<folder>`, or None."""
+    for t in _load("types", "type"):
+        if Path(str(t.get("folder", ""))).name == folder:
+            return str(t.get("name"))
+    return None
+
+
 def anchors(mm: dict) -> dict[str, str]:
     """Every page name and alias → the in-page anchor id the `/metamodel` page
     gives that construct (`type-goal`, `rel-goal`, `proj-…`, `rule-…`,

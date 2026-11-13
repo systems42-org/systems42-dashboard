@@ -4,6 +4,8 @@
 {% from "_empty.html" import empty_state %}
 {% from "_maturity.html" import maturity_bar %}
 {% from "_macros.html" import severity_rank, issue_status_rank %}
+{% from "_list.html" import list_attrs, list_controls %}
+{% set spec = list_spec("issue") %}
 {% block content %}
 <h1 class="page-h1">Issues <span class="count-pill">{{ total }}</span></h1>
 {{ maturity_bar(maturity) }}
@@ -17,22 +19,23 @@
   <button class="fbtn" data-filter="closed">Closed <span class="fnum">{{ closed_count }}</span></button>
 </div>
 
+{{ list_controls(spec, status=False) }}
 <div class="table-card">
-<table id="issues-table">
+<table id="issues-table"{{ list_attrs(spec) }}>
   <thead>
     <tr>
-      <th class="c-id" data-sort="text" aria-sort="ascending">ID</th>
-      <th data-sort="text">Title</th>
-      <th class="c-status" data-sort="text">Kind</th>
-      <th class="c-status" data-sort="numeric" data-sort-first="desc">Severity</th>
-      <th class="c-status" data-sort="numeric">Status</th>
+      <th class="c-id" data-sort="text" data-key="id" aria-sort="ascending">ID</th>
+      <th data-sort="text" data-key="title">Title</th>
+      <th class="c-status" data-sort="text" data-key="kind">Kind</th>
+      <th class="c-status" data-sort="numeric" data-sort-first="desc" data-key="severity">Severity</th>
+      <th class="c-status" data-sort="numeric" data-key="status">Status</th>
     </tr>
   </thead>
   <tbody>
     {% for it in items %}
-    <tr class="issue-row" data-id="{{ it.id }}" data-open="{{ 'true' if it.is_open else 'false' }}" tabindex="0">
+    <tr class="issue-row" data-id="{{ it.id }}" data-status="{{ it.status }}" data-open="{{ 'true' if it.is_open else 'false' }}" tabindex="0">
       <td class="c-id"><code>{{ it.id }}</code></td>
-      <td class="c-title"><span class="term">{{ it.title }}</span></td>
+      <td class="c-title"><span class="term"><a class="term-link" href="{{ it.url }}">{{ it.title }}</a></span></td>
       <td class="c-status">{% if it.kind %}<span class="badge kind-badge">{{ it.kind }}</span>{% endif %}</td>
       <td class="c-status" data-sort-value="{{ severity_rank(it.severity) }}">{% if it.severity %}<span class="badge sev-badge">{{ it.severity }}</span>{% endif %}</td>
       <td class="c-status" data-sort-value="{{ issue_status_rank(it.status) }}"><span class="status status-{{ it.status }}">{{ it.status }}</span></td>
@@ -56,7 +59,7 @@
 {% endif %}
 
 <script>
-  const buttons = document.querySelectorAll('.fbtn');
+  const buttons = document.querySelectorAll('.filterbar .fbtn[data-filter]');
   const rows = document.querySelectorAll('#issues-table tbody tr');
   const hint = document.getElementById('empty-hint');
   const detail = document.getElementById('issue-detail');

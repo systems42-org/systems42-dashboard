@@ -43,11 +43,11 @@ BODY = app.app.test_client().get("/issues").get_data(as_text=True)
 
 def test_every_column_sorts_and_id_is_marked():
     head = BODY[BODY.index("<thead"):BODY.index("</thead>")]
-    assert re.search(r'<th class="c-id" data-sort="text" aria-sort="ascending">ID</th>', head), head
-    assert re.search(r'<th data-sort="text">Title</th>', head), head
-    assert re.search(r'<th class="c-status" data-sort="text">Kind</th>', head), head
-    assert re.search(r'<th class="c-status" data-sort="numeric" data-sort-first="desc">Severity</th>', head), head
-    assert re.search(r'<th class="c-status" data-sort="numeric">Status</th>', head), head
+    assert re.search(r'<th class="c-id" data-sort="text" data-key="id" aria-sort="ascending">ID</th>', head), head
+    assert re.search(r'<th data-sort="text" data-key="title">Title</th>', head), head
+    assert re.search(r'<th class="c-status" data-sort="text" data-key="kind">Kind</th>', head), head
+    assert re.search(r'<th class="c-status" data-sort="numeric" data-sort-first="desc" data-key="severity">Severity</th>', head), head
+    assert re.search(r'<th class="c-status" data-sort="numeric" data-key="status">Status</th>', head), head
 
 
 def _row(issue_id):

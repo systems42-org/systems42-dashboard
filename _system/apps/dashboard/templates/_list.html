@@ -1,0 +1,58 @@
+{# The shared list layer's markup (static/list-view.js, FR-021, FR-022).
+   `spec` is list_spec(type): {type, orders}, the orders from the metamodel.
+   The controls stay hidden until the script runs: without it they do nothing. #}
+{% from "_macros.html" import status_rank %}
+{% macro list_attrs(spec) %} data-list="{{ spec.type }}" data-sort-orders='{{ spec.orders | tojson }}'{% endmacro %}
+
+{% macro list_controls(spec, status=True) %}
+<div class="list-controls" data-list-controls="{{ spec.type }}" hidden>
+  {% if spec.orders %}<label class="list-order">Order
+    <select data-list-order>
+      <option value="">As listed</option>
+      {% for o in spec.orders %}<option value="{{ o['keys'] | join(',') }}">{{ o.label }}</option>
+      {% endfor %}
+    </select></label>{% endif %}
+  {% if status %}<span class="filterbar list-status" role="group" aria-label="Status">
+    <button type="button" class="fbtn active" data-list-status="all" aria-pressed="true">All</button>
+    <button type="button" class="fbtn" data-list-status="accepted" aria-pressed="false">Agreed only</button>
+  </span>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro list_empty() %}<p class="empty-hint list-empty" hidden>No agreed pages in this list.</p>{% endmacro %}
+
+{# One table for the arc42 lists: ID, title, extra columns, state, status.
+   `extra` is [(label, key, kind)], kind text | numeric | links (r[key] is then
+   a list of link groups as _link_groups() builds them). #}
+{% macro arch_table(spec, rows, extra=[]) %}
+{{ list_controls(spec) }}
+<div class="table-card">
+<table{{ list_attrs(spec) }}>
+  <thead>
+    <tr>
+      <th class="c-id" data-sort="text" data-key="id" aria-sort="ascending">ID</th>
+      <th class="c-title" data-sort="text" data-key="title">Title</th>
+      {% for label, key, kind in extra %}<th class="c-status" data-sort="{{ 'numeric' if kind == 'numeric' else 'text' }}" data-key="{{ key }}">{{ label }}</th>
+      {% endfor %}
+      <th class="c-status" data-sort="text" data-key="state">State</th>
+      <th class="c-status" data-sort="numeric" data-key="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in rows %}
+    <tr data-status="{{ r.status }}">
+      <td class="c-id"><code>{{ r.id }}</code></td>
+      <td class="c-title" data-sort-value="{{ r.title }}"><a class="term term-link" href="{{ r.url }}">{{ r.title }}</a></td>
+      {% for label, key, kind in extra %}
+      {% if kind == 'links' %}<td class="c-status" data-sort-value="{% for g in r[key] %}{% for l in g.links %}{{ l.id }} {% endfor %}{% endfor %}">{% for g in r[key] %}{% for l in g.links %}<a class="wl" href="{{ l.url }}" title="{{ l.label }}"><code>{{ l.id }}</code></a> {% endfor %}{% endfor %}</td>
+      {% else %}<td class="c-status">{{ r[key] }}</td>{% endif %}
+      {% endfor %}
+      <td class="c-status"><span class="state-badge state-{{ r.state }}">{{ r.state }}</span></td>
+      <td class="c-status" data-sort-value="{{ status_rank(r.status) }}">{% if r.status %}<span class="status status-{{ r.status }}">{{ r.status }}</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{{ list_empty() }}
+</div>
+{% endmacro %}
