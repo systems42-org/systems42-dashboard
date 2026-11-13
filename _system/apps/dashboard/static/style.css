@@ -611,6 +611,7 @@ tr.list-out { display: none; }
 .format-label { color: var(--ink-soft); text-decoration: none; }
 a.format-label { border-bottom: 1px dotted var(--line); }
 a.format-label:hover { color: var(--accent); border-bottom-color: var(--accent); }
+.format-note { color: var(--ink-dim); }
 .detail-id { color: var(--ink-dim); font-size: .85rem; }
 .pane-head { margin: 1.2rem 0 -.6rem; }
 .pane-head a { text-decoration: none; }
@@ -1145,6 +1146,9 @@ html.etsu-disconnected {
 .rel-group li { margin: .15rem 0; }
 .rel-group li a { font-size: .9rem; }
 .rel-group li code { color: var(--ink-dim); font-size: .78rem; margin-right: .25rem; }
+.rel-group li .status { font-size: .72rem; margin-left: .25rem; }
+/* a closed issue, as in the issues panel (.page-issue-closed) */
+.rel-closed { opacity: .7; }
 
 /* --- term-network legend (types + states) --- */
 .graph-legend { display: flex; flex-direction: column; gap: .35rem; margin: 0 0 .9rem; font-size: .82rem; color: var(--ink-soft); }
@@ -1310,6 +1314,8 @@ a.mm-anchor:hover { color: var(--accent); border-color: var(--accent); }
 .mm-table-projections .mm-c-where { width: 14%; }
 .mm-table-rules .c-term { width: 18%; } .mm-table-rules .mm-c-applies { width: 16%; }
 .mm-table-rules .c-def { width: 46%; max-width: none; } .mm-table-rules .mm-c-action { width: 14%; }
+.mm-table-anchors .c-term { width: 18%; } .mm-table-anchors .c-def { width: 58%; max-width: none; }
+.mm-table-anchors .mm-c-applies { width: 24%; }
 @media (max-width: 780px) { .mm-table table { table-layout: auto; } }
 .mm-table .c-term code, .mm-table .aliases code { white-space: normal; word-break: normal; overflow-wrap: break-word; }
 .mm-table .mm-id { white-space: nowrap; }
