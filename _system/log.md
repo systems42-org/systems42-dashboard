@@ -191,3 +191,7 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Created: [[GOAL-008-one-way-into-every-systems42-wiki]], [[FR-029-the-dashboard-as-a-product]] (epic), FR-030 to FR-033 (features), [[CON-003-docker-is-the-supported-way-to-run-it]], [[QR-002-runs-alike-on-linux-and-macos]], SRC-019, SRC-020. Updated: `_system/index.md`.
 - Proposals, not yet agreed: Should for the epic and all four features, the metric and target of GOAL-008.
 - Parked: DR-004 goes by PR. Until it is merged, its links do not resolve.
+
+## [2026-11-13] decision | DR-004 releases as container images
+- Gernot Starke chose container images per release, pinned by `dashboard_version:`, over submodule, copy and package, in question 7 of [[SRC-020-grilling-session-on-the-dashboard-as-a-product]]. Kept short at his request.
+- Created: [[DR-004-releases-are-container-images-pinned-per-wiki]]. Updated: `_system/index.md`. Delivered by PR, because the record is accepted.
