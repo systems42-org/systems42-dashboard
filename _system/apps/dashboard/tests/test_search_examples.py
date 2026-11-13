@@ -200,6 +200,17 @@ def test_fr004_filler_words_dropped():
     assert hit("what is the keyholder", "STK-023")["note"] is None   # filler words don't count as missing
 
 
+def test_fr004_filler_words_still_count_for_an_exact_title():
+    hits = run_query("search the wiki")
+    assert hits[0]["id"] == "FR-007" and hits[0]["score"] == 100, hits   # not tied with "Wiki search tips"
+    assert hit("search the wiki", "FR-008")["score"] < 100
+
+
+def test_fr004_glossary_term_with_a_filler_word():
+    assert hit("definition of done", "FR-008")["note"] == "via alias of Definition of Done"   # says only "DoD"
+    assert hit("dod", "GLO-003")["note"] == "via alias of Definition of Done"
+
+
 def test_fr004_only_filler_words():
     assert run_query("the a"), "a query of filler words alone still finds pages"
 

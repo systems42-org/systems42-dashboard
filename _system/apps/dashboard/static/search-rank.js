@@ -208,7 +208,7 @@
   }
 
   // A page's score: its weakest word's tier decides the band (FR-002).
-  function relevance(p, phrase, matches) {
+  function relevance(p, phrases, matches) {
     var tier = Math.max.apply(null, matches.map(function (m) { return m.tier; }));
     if (tier > 0) {
       var fit = matches.reduce(function (a, m) { return a + m.fit; }, 0) / matches.length;
@@ -219,12 +219,13 @@
         return m.place === place && !m.via && (m.match.kind === "exact" || m.match.kind === "prefix");
       });
     }
+    function each(test) { return phrases.some(test); }
     if (all("title")) {
-      if (p.titleLc === phrase) { return 100; }                      // exact title
-      if (p.titleLc.lastIndexOf(phrase, 0) === 0) { return 92; }     // title prefix
-      if (p.titleLc.indexOf(phrase) !== -1) { return 85; }           // phrase in title
+      if (each(function (ph) { return p.titleLc === ph; })) { return 100; }                  // exact title
+      if (each(function (ph) { return p.titleLc.lastIndexOf(ph, 0) === 0; })) { return 92; } // title prefix
+      if (each(function (ph) { return p.titleLc.indexOf(ph) !== -1; })) { return 85; }       // phrase in title
     }
-    if (all("alias") && p.aliasLc.indexOf(phrase) !== -1) { return 88; }  // an alias, exactly
+    if (all("alias") && each(function (ph) { return p.aliasLc.indexOf(ph) !== -1; })) { return 88; }  // an alias
     var sum = matches.reduce(function (a, m) { return a + m.score; }, 0);
     return sum / matches.length;
   }
@@ -333,13 +334,18 @@
   // occur in the body, then title.
   function rank(records, q, synonyms) {
     var qwords = words(q).map(function (w) { return w.toLowerCase(); });
-    var content = qwords.filter(function (w) { return !STOP_WORDS.has(w); });
-    if (content.length) { qwords = content; }
     if (!qwords.length) { return []; }
     var titles = new Map();
     records.forEach(function (r) { titles.set(words(r.title).join(" ").toLowerCase(), r.title); });
+    // glossary terms are found in the query as typed, filler words included
+    // ("definition of done"); then single filler words drop out
     var qunits = units(qwords, synonyms, titles);
-    var phrase = qwords.join(" ");
+    var content = qunits.filter(function (u) { return u.via || !STOP_WORDS.has(u.words[0]); });
+    if (content.length) { qunits = content; }
+    // a title or alias may contain the filler words too ("search the wiki")
+    var phrases = [qwords.join(" ")];
+    var short = [].concat.apply([], qunits.map(function (u) { return u.words; })).join(" ");
+    if (short !== phrases[0]) { phrases.push(short); }
     var memo = new Map();
     var out = [];
     records.forEach(function (rec) {
@@ -355,7 +361,7 @@
         return a + (m.place === "body" ? p.freq.get(m.match.lc) || 0 : 0);
       }, 0);
       var sum = matches.reduce(function (a, m) { return a + m.score; }, 0);
-      var raw = full ? relevance(p, phrase, matches) : Math.min(20, sum / n / 4);
+      var raw = full ? relevance(p, phrases, matches) : Math.min(20, sum / n / 4);
       out.push({
         rec: rec, matches: matches, freq: freq, full: full, raw: raw, score: Math.round(raw),
         note: full ? reason(rec, matches) : "matches " + matches.length + " of " + n + " words",
