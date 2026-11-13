@@ -74,7 +74,9 @@ Reload · Disconnect all. The footer holds formalities only: "Read-only
 dashboard for Systems42 LLM wiki" (linked to the help section on the LLM
 wiki), the live dot with the client count, the refresh time, Metamodel, Help, the
 dashboard's own release (`VERSION`) and the Python mark. When `dashboard_version:`
-in `wiki.yaml` names another release, one more line says so. The dot pulses while the server answers and stops, grey, when the
+in `wiki.yaml` names another release, one more line says so. Quote the value
+(`dashboard_version: "1.10.0"`): unquoted, YAML reads `1.10` as the number 1.1,
+and the dashboard logs a warning. The dot pulses while the server answers and stops, grey, when the
 connection is lost.
 
 ## Visual identity
@@ -97,7 +99,10 @@ example brand shipped in `brands/`, `brand: brand/` names a folder of the wiki
 repository. `intro: off` hides the intro. Switching is one changed key and a
 reload. The dashboard only reads a wiki's brand folder and serves its marks at
 `/brand/<file>`. A folder outside the repository, missing or without all three
-marks falls back to `systems42` with a log warning. `brands/README.md` states
+marks falls back to `systems42` with a log warning, as does a `brand:` that is
+not text (`brand: on`). Marks are served with a one-year cache while the URL's
+`?v=` matches the file's checksum. A brand's `intro.html` and marks run in every
+viewer's browser, so review them like code. `brands/README.md` states
 what a brand must contain and what its intro must do.
 
 ## Home, areas and tiles

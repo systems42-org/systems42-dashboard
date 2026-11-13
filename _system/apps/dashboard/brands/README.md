@@ -60,6 +60,11 @@ or with `intro: off`, there is no intro. It must:
 
 `systems42/intro.html` and `atrium/intro.html` are worked examples.
 
+`intro.html` and the SVG marks are trusted content. The intro's script runs in
+every viewer's browser with the dashboard's own rights, so it could, for
+example, call the settings endpoint. Review a brand folder like code before you
+commit it.
+
 ## Visual rules that apply here too
 
 Flat shapes, one border radius (`var(--radius)`), no gradients, no glow, no drop

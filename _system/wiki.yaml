@@ -8,4 +8,4 @@ about: docs/brand/README.md  # optional: a page under docs/ shown at /about (her
 # Dashboard look. All three keys are optional.
 brand: systems42  # an example brand (systems42, atrium) or a folder in this repository, e.g. brand/; missing → systems42
 intro: on  # off: the home page opens without the brand's intro animation
-# dashboard_version: "0.9.0"  # the dashboard release this wiki uses; the footer notes a different one
+# dashboard_version: "0.9.0"  # the dashboard release this wiki uses, quoted (1.10 unquoted reads as 1.1); the footer notes a different one

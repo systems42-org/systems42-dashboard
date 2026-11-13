@@ -168,7 +168,7 @@ tagline: "$tagline"  # one line, shown under the name in the dashboard hero
 # Dashboard look. All three keys are optional.
 # brand: systems42  # an example brand (systems42, atrium) or a folder in this repository, e.g. brand/; missing → systems42
 # intro: on  # off: the home page opens without the brand's intro animation
-# dashboard_version: ""  # the dashboard release this wiki uses; the footer notes a different one
+# dashboard_version: ""  # the dashboard release this wiki uses, quoted (1.10 unquoted reads as 1.1); the footer notes a different one
 EOF
 }
 
