@@ -4,7 +4,7 @@
 {% macro noun(n, word, words=None) %}{{ word if n == 1 else (words or word ~ 's') }}{% endmacro %}
 {% macro plural(n, word, words=None) %}{{ n }} {{ noun(n, word, words) }}{% endmacro %}
 {# Sort keys for columns whose meaning is an order, not an alphabet (see
-   static/table-sort.js). Unknown values rank empty, which sorts last. #}
+   static/list-view.js). Unknown values rank empty, which sorts last. #}
 {% macro status_rank(s) %}{{ {'draft': 1, 'review': 2, 'accepted': 3, 'deprecated': 4}.get(s, '') }}{% endmacro %}
 {% macro level_rank(l) %}{{ {'low': 1, 'medium': 2, 'high': 3}.get(l, '') }}{% endmacro %}
 {% macro severity_rank(s) %}{{ {'minor': 1, 'major': 2, 'blocker': 3}.get(s, '') }}{% endmacro %}

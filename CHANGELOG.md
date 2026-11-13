@@ -34,6 +34,11 @@ Unreleased changes sit at the top until the next Starter Kit release.
   the new changes page and no longer counts pages (FR-018).
 
 ### Added
+- The shared list layer `static/list-view.js` replaces `table-sort.js`
+  (FR-021, FR-022). A list sorts by several columns: shift-click a header to
+  add it as the next key. A list can offer its type's sort orders and an
+  "Agreed only" filter. The address keeps both, as `?sort=priority:asc,order:asc`
+  and `?status=accepted`, so a copied link shows the same list.
 - `sort_orders:` on metamodel type pages (FR-021): the useful orders for a
   list of that type, such as priority › release › order for functional
   requirements and status › severity for issues. The lint checks that every

@@ -1,7 +1,7 @@
 """Sortable table headers and the clickable Domain Terms tile. No pytest.
 
 Two halves: the templates declare which columns sort and by which key (checked
-against the populated fixture vault), and static/table-sort.js does the sorting
+against the populated fixture vault), and static/list-view.js does the sorting
 (checked under node when it is installed, on the same comparator the browser uses).
 
 Run from the dashboard dir:
@@ -121,7 +121,7 @@ def test_title_cells_sort_on_the_title_alone():
 def test_script_comes_from_base_once():
     for path in ("/stakeholders", "/glossary", "/decisions", "/req42/quality", "/data-model"):
         body = client.get(path).get_data(as_text=True)
-        assert len(re.findall(r'<script src="[^"]*table-sort\.js', body)) == 1, path
+        assert len(re.findall(r'<script src="[^"]*list-view\.js', body)) == 1, path
     # the data-model page uses the shared script instead of its former inline copy
     assert "getElementById('dm-summary-table')" not in (_DASH / "templates" / "data_model.html").read_text(encoding="utf-8")
 
@@ -139,7 +139,7 @@ def test_domain_terms_tile_is_clickable():
 
 
 def _run_node(body):
-    js = (_DASH / "static" / "table-sort.js").read_text(encoding="utf-8")
+    js = (_DASH / "static" / "list-view.js").read_text(encoding="utf-8")
     out = subprocess.run(["node", "-e", "var window = {};\n" + js + "\n" + body],
                          capture_output=True, text=True, check=True).stdout
     return json.loads(out)
@@ -151,7 +151,7 @@ def test_comparator():
         return
     def order(values, numeric=False, asc=True):
         return _run_node("var v = " + json.dumps(values) + ";\n"
-                         "v.sort(function (a, b) { return window.S42TableSort.compare(a, b, "
+                         "v.sort(function (a, b) { return window.S42List.compare(a, b, "
                          + json.dumps(numeric) + ", " + json.dumps(asc) + "); });\n"
                          "console.log(JSON.stringify(v));")
     # IDs in natural order, not 1, 10, 2

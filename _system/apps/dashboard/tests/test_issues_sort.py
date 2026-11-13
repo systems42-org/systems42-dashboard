@@ -1,7 +1,7 @@
 """Sortable headers on the issues table. No pytest.
 
 Its own temporary vault, because the shared fixture has no issues. The sorting
-itself is static/table-sort.js, covered by test_table_sort.py.
+itself is static/list-view.js, covered by test_table_sort.py.
 
 Run from the dashboard dir:
     .venv/bin/python tests/test_issues_sort.py
