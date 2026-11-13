@@ -13,7 +13,10 @@
 //   <td data-sort-value="…">               the sort key, else the cell's text
 //   <tr data-status="accepted">            the row's status, for the status filter
 //   <div data-list-controls="<type>">      the order picker (select[data-list-order])
-//                                          and the status filter (button[data-list-status])
+//                                          and the status filter (button[data-list-status]),
+//                                          one or more per list
+//
+// A status change fires `listfilter` on the table, detail {status: "all" | "accepted"}.
 //
 // Address: ?sort=<key>:<asc|desc>,<key>:<asc|desc> and ?status=accepted. Read on
 // load, written with history.replaceState on every change. Unknown keys and values
@@ -144,9 +147,15 @@
     var initialSort = table.querySelector("th[aria-sort]");
     var initialState = initialSort ? [initialSort, initialSort.getAttribute("aria-sort")] : null;
     var state = {spec: [], status: "all"};
-    var controls = isList ? document.querySelector('[data-list-controls="' + table.dataset.list + '"]') : null;
-    var picker = controls && controls.querySelector("select[data-list-order]");
-    var statusButtons = controls ? Array.from(controls.querySelectorAll("button[data-list-status]")) : [];
+    // a page may hold several controls for one list, such as a status filter
+    // beside the goal matrix: they share the list's state and address
+    var controls = isList ? Array.from(document.querySelectorAll('[data-list-controls="' + table.dataset.list + '"]')) : [];
+    var picker = null;
+    var statusButtons = [];
+    controls.forEach(function (c) {
+      picker = picker || c.querySelector("select[data-list-order]");
+      statusButtons = statusButtons.concat(Array.from(c.querySelectorAll("button[data-list-status]")));
+    });
     var orders = [];
     try { orders = JSON.parse(table.dataset.sortOrders || "[]"); } catch (e) { orders = []; }
 
@@ -188,7 +197,7 @@
         });
         var hint = table.parentNode.querySelector(".list-empty");
         if (hint) hint.hidden = shown !== 0;
-        table.dispatchEvent(new CustomEvent("listfilter"));
+        table.dispatchEvent(new CustomEvent("listfilter", {detail: {status: state.status}}));
       }
       if (picker) {
         var current = formatSort(state.spec);
@@ -252,7 +261,7 @@
     });
 
     if (!isList) return;
-    if (controls) controls.hidden = false;
+    controls.forEach(function (c) { c.hidden = false; });
 
     if (picker) {
       picker.addEventListener("change", function () {
