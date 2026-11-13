@@ -4,7 +4,7 @@
 // (columns) show, and a goal whose marks are all hidden becomes a gap.
 //
 // Markup (templates/goals.html): <section class="goal-matrix">, rows
-// <tr data-goal data-status>, header and body cells <th|td data-status>, a mark
+// <tr data-goal data-status data-gap-note>, header and body cells <th|td data-status>, a mark
 // is <span class="gm-dot">.
 (function () {
   function keep(status, filter) {
@@ -47,7 +47,7 @@
       if (v.gaps[i] && !note) {
         note = document.createElement("span");
         note.className = "gm-gap-note";
-        note.textContent = "No epic or use case yet";
+        note.textContent = tr.dataset.gapNote || "No epic or use case yet";
         tr.cells[0].appendChild(note);
       }
       if (note) note.hidden = !v.gaps[i];

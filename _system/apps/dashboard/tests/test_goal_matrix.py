@@ -46,6 +46,7 @@ _page("goals", "GOAL-001-vision", "The vision", "accepted", stereotype="vision")
 _page("goals", "GOAL-002-served", "Served goal", "accepted", stereotype="objective")
 _page("goals", "GOAL-003-unserved", "Unserved goal", "accepted", stereotype="objective")
 _page("goals", "GOAL-004-draft", "Draft goal", "draft", stereotype="objective")
+_page("goals", "GOAL-005-features-only", "Served by a feature only", "accepted", stereotype="objective")
 
 _FR = "functional-requirements"
 _page(_FR, "FR-001-served-epic", "Served epic", "accepted",
@@ -64,6 +65,10 @@ _page(_FR, "FR-006-draft-epic", "Draft epic", "draft",
 # lane platform, but it names a goal: no enabler (rel-goal)
 _page(_FR, "FR-007-platform-with-goal", "Platform epic with a goal", "draft",
       stereotype="epic", lane="platform", parent="[]", goal='["[[GOAL-004-draft]]"]')
+# the only requirement serving GOAL-005: a feature, no matrix column
+_page(_FR, "FR-008-feature-only", "Feature for goal five", "draft",
+      stereotype="feature", lane="backbone", parent='["[[FR-001-served-epic]]"]',
+      goal='["[[GOAL-005-features-only]]"]')
 _page("use-cases", "UC-001-borrow", "Borrow", "draft", goal='["[[GOAL-004-draft]]"]')
 
 BODY = app.app.test_client().get("/goals").get_data(as_text=True)
@@ -152,7 +157,9 @@ def test_marks_carry_status_for_the_filter():
     assert 'data-list-controls="goal"' in m
 
 
-def test_drives_lists_match_the_marks():
+def test_drives_lists_every_requirement_and_every_mark():
+    # the cards stay complete (features and stories too), and every matrix
+    # mark is among them, so each mark is reachable as text (FR-036)
     rows = _rows()
     cols = [re.search(r">(FR-\d+|UC-\d+)<", h).group(1) for h in _headers()]
     for gid, row in rows.items():
@@ -160,7 +167,17 @@ def test_drives_lists_match_the_marks():
         marked = [c for c, cell in zip(cols, cells) if "gm-dot" in cell]
         card = re.search(r'<section id="' + gid + r'" class="goal-card">(.*?)</section>', BODY, re.S).group(1)
         drives = re.findall(r'<a href="[^"]+">((?:FR|UC)-\d+) ', card)
-        assert drives == marked, (gid, drives, marked)
+        assert set(marked) <= set(drives), (gid, drives, marked)
+    card = re.search(r'<section id="GOAL-002" class="goal-card">(.*?)</section>', BODY, re.S).group(1)
+    assert re.findall(r'<a href="[^"]+">((?:FR|UC)-\d+) ', card) == ["FR-001", "FR-004", "FR-006"]
+
+
+def test_gap_served_by_features_says_so():
+    row = _rows()["GOAL-005"]
+    assert "gm-dot" not in row
+    assert "No epic yet, served by features" in row, row
+    assert "No epic or use case yet" not in row, row
+    assert "No epic or use case yet" in _rows()["GOAL-003"]
 
 
 def _node(body):

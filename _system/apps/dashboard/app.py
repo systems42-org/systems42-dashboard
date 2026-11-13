@@ -3708,7 +3708,8 @@ def _goal_matrix(data: dict) -> tuple[list[dict], list[dict]]:
     Columns are the epics and use cases: epics that serve a goal or break
     rule-fr-traces-to-goal (`nogoal`), then use cases, then the enabler epics
     as their own group. Rows are the objectives; a row without a mark is a
-    `gap`. Columns and rows carry their status for the "Agreed only" filter."""
+    `gap`, and its `note` says when features or stories serve it all the same.
+    Columns and rows carry their status for the "Agreed only" filter."""
     enabler_ids = {fr.id for fr in data["enablers"]}
     untraced_ids = {fr.id for fr in data["untraced"]}
     epics = [fr for fr in data["frs"]
@@ -3722,12 +3723,21 @@ def _goal_matrix(data: dict) -> tuple[list[dict], list[dict]]:
     cols = ([col(e) for e in epics if e.id not in enabler_ids]
             + [col(uc) for uc in data["ucs"]]
             + [col(e) for e in epics if e.id in enabler_ids])
+    col_ids = {c["id"] for c in cols}
     rows = []
     for o in data["objectives"]:
-        covered = {p.id for p in data["coverage"].get(o.id, [])}
+        serving = data["coverage"].get(o.id, [])
+        covered = {p.id for p in serving}
         cells = [c["id"] in covered for c in cols]
+        kinds = [k for k in ("feature", "story") if any(
+            p.id not in col_ids and str(p.meta.get("stereotype") or "").strip().lower() == k
+            for p in serving)]
+        note = ("No epic yet, served by " + " and ".join(
+                    {"feature": "features", "story": "stories"}[k] for k in kinds)
+                if kinds else "No epic or use case yet")
         rows.append({"id": o.id, "title": o.title, "url": _page_url(o.folder, o.stem),
-                     "status": o.status, "cells": cells, "gap": not any(cells)})
+                     "status": o.status, "cells": cells, "gap": not any(cells),
+                     "note": note})
     return cols, rows
 
 
@@ -3796,7 +3806,6 @@ def goals_view():
         return render_wikilinks(str(s or "").strip(), titles, links)
 
     fr_cols, matrix_rows = _goal_matrix(data)
-    marked = {row["id"]: [c for c, on in zip(fr_cols, row["cells"]) if on] for row in matrix_rows}
 
     objective_cards = []
     for o in objectives:
@@ -3811,8 +3820,10 @@ def goals_view():
             "target": _inline(o.meta.get("target")),
             "baseline": _inline(o.meta.get("baseline")),
             "beneficiary": _wikilink_list(o.meta.get("beneficiary")),
-            # the matrix marks as text, in column order (FR-036)
-            "epics": marked.get(o.id, []),
+            # every requirement that serves the goal, features and stories
+            # too: a superset of its matrix marks, as text (FR-036)
+            "epics": [{"id": p.id, "title": p.title, "url": _page_url(p.folder, p.stem)}
+                      for p in data["coverage"].get(o.id, [])],
         })
 
     diagram = _mermaid_goal_tree(vision, objectives)

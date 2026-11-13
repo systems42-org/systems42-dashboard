@@ -18,11 +18,12 @@ Unreleased changes sit at the top until the next Starter Kit release.
   headed by their real IDs. Each header links its page and shows the title on
   hover or focus. Enablers are epics in lane platform or display that serve no
   goal, grouped on the right. An epic that names no goal stays in the main
-  group, marked "no goal". A goal that no epic or use case serves gets a note
-  and a quiet row. The "Agreed only" filter applies to the matrix too, with its
-  own buttons for the same `?status=`. Each goal card's "drives" list names
-  exactly the matrix marks. On a phone the goal column leaves room for the
-  marks. The goal and epic map on the functional requirements page shows epics
+  group, marked "no goal". A goal that no epic or use case serves gets a quiet
+  row and a note, which says so when features or stories serve it. The "Agreed
+  only" filter applies to the matrix too, with its own buttons for the same
+  `?status=`. Each goal card's "drives" list still names every requirement that
+  serves the goal, so every mark is also there as text. On a phone the goal
+  column leaves room for the marks. The goal and epic map on the functional requirements page shows epics
   without a goal under "No goal", no longer under "Platform / Enabler".
 - Dashboard brand: the brand slot moved from `static/brand/` and
   `templates/_brand_intro.html` to `_system/apps/dashboard/brands/<name>/`. A
