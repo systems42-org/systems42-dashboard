@@ -176,3 +176,18 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 ## [2026-11-12] update | Area name Commons, section names
 - Gernot Starke chose "Commons" for the third area, the dashboard's name, over "shared content". C5 is "Domain Terms" everywhere, because Systems42 will likely join data-model terms and glossary into a metaclass "domain term". C6 stays "Issues".
 - Updated: [[FR-017-browse-by-area-and-section]], [[FR-018-orientation-on-the-first-page]], [[FR-023-areas-and-sections-follow-the-tailoring]], [[FR-026-issues-carry-a-category]]. The category value `shared-content` becomes `commons`, and DR-002's wording follows, in PR #13 with the dashboard quick wins.
+
+## [2026-11-13] capture | The dashboard as a product
+- Source: `raw/fr-15-dashboard-as-a-product.md`, raised by Gernot Starke and drafted by Claude, now [[SRC-019-the-dashboard-as-a-product]] in `raw/ingested/`. The answers are [[SRC-020-grilling-session-on-the-dashboard-as-a-product]].
+- Grill gate: checked against the goals, CON-001, CON-002 and the stakeholders. No conflict. Gernot Starke answered questions 1 to 7 one at a time, so no Issue was needed.
+- Decisions:
+  - Q1: serves GOAL-002 and a new goal, a reusable, consistent and efficient way into any Systems42 wiki. GOAL-006 is more a goal of the Systems42 approach than of the dashboard.
+  - Q2: one epic with four features, plus a constraint (Docker) and a quality requirement (runs alike).
+  - Q3: three keys in `_system/wiki.yaml`: `dashboard_version:`, `brand:`, `intro:`. Implemented in PR #19.
+  - Q4: Windows is ignored for now.
+  - Q5: `./dashboard.sh local` stays as an unsupported developer fallback.
+  - Q6: no offline installation. Participants start once with network before a workshop.
+  - Q7: releases are container images per git tag, pinned by `dashboard_version:`. Recorded short as DR-004.
+- Created: [[GOAL-008-one-way-into-every-systems42-wiki]], [[FR-029-the-dashboard-as-a-product]] (epic), FR-030 to FR-033 (features), [[CON-003-docker-is-the-supported-way-to-run-it]], [[QR-002-runs-alike-on-linux-and-macos]], SRC-019, SRC-020. Updated: `_system/index.md`.
+- Proposals, not yet agreed: Should for the epic and all four features, the metric and target of GOAL-008.
+- Parked: DR-004 goes by PR. Until it is merged, its links do not resolve.

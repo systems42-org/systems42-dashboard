@@ -14,6 +14,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[GOAL-005-architecture-traced-to-requirements]] Architecture and decisions traced to requirements (objective, draft)
 - [[GOAL-006-source-and-status-on-every-statement]] Source and status on every statement (objective, draft)
 - [[GOAL-007-readers-who-come-back]] Readers who come back (objective, draft)
+- [[GOAL-008-one-way-into-every-systems42-wiki]] One way into every Systems42 wiki (objective, draft)
 
 ## Stakeholders
 
@@ -81,15 +82,22 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-026-issues-carry-a-category]] Issues carry a category (feature, Should, draft)
 - [[FR-027-issues-on-the-page-they-affect]] Issues on the page they affect (feature, Must, draft)
 - [[FR-028-who-answers-an-issue]] Who answers an issue (feature, Should, draft)
+- [[FR-029-the-dashboard-as-a-product]] The dashboard as a product (epic, Should, draft)
+- [[FR-030-numbered-releases]] Numbered releases (feature, Should, draft)
+- [[FR-031-branding-is-configuration]] Branding is configuration (feature, Should, draft)
+- [[FR-032-example-brands-to-try]] Example brands to try (feature, Should, draft)
+- [[FR-033-runnable-dashboard-in-the-starter-kit]] Runnable dashboard in the starter kit (feature, Should, draft)
 
 ## Quality requirements
 
 - [[QR-001-usable-on-phone-and-tablet]] Usable on phone and tablet (usable, flexible, should, draft)
+- [[QR-002-runs-alike-on-linux-and-macos]] Runs alike on Linux and macOS (flexible, operable, should, draft)
 
 ## Constraints
 
 - [[CON-001-proof-of-concept-not-production-ready]] The dashboard is a proof of concept, not production-ready for every environment (draft)
 - [[CON-002-dashboard-never-writes-to-the-wiki]] The dashboard never writes to the wiki (draft)
+- [[CON-003-docker-is-the-supported-way-to-run-it]] Docker is the supported way to run the dashboard (draft)
 
 ## Decisions
 
@@ -122,3 +130,5 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-016-grilling-session-on-open-issues]] Grilling session on open issues (interview)
 - [[SRC-017-usable-on-phone-and-tablet]] Usable on phone and tablet (document)
 - [[SRC-018-grilling-session-on-phone-and-tablet]] Grilling session on phone and tablet (interview)
+- [[SRC-019-the-dashboard-as-a-product]] The dashboard as a product (document)
+- [[SRC-020-grilling-session-on-the-dashboard-as-a-product]] Grilling session on the dashboard as a product (interview)
