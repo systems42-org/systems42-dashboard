@@ -3,6 +3,7 @@
 {% from "_provenance.html" import provenance_chips %}
 {% from "_macros.html" import format_labels %}
 {% from "_trace.html" import trace_panel %}
+{% from "_relations.html" import relations_panel %}
 {% from "_page_issues.html" import page_issues as page_issues_panel %}
 {% block title %}{{ id }} · {{ title }}{% endblock %}
 {% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}{% if crumb %}<a href="{{ crumb_href }}">{{ crumb }}</a> <span>›</span> {% endif %}{{ id }}</nav>{% endblock %}
@@ -90,32 +91,7 @@
 
 {{ trace_panel(trace) }}
 
-{% if relations and (relations.outbound or relations.inbound) %}
-<nav class="detail-relations" aria-label="Relations">
-  {% if relations.outbound %}
-  <section class="rel-block">
-    <h2 class="rel-h">Links to</h2>
-    {% for grp in relations.outbound %}
-    <div class="rel-group">
-      <span class="rel-type">{{ grp.label }}</span>
-      <ul>{% for it in grp.links %}<li><a class="wl" href="{{ it.url }}"><code>{{ it.id }}</code> {{ it.label }}</a></li>{% endfor %}</ul>
-    </div>
-    {% endfor %}
-  </section>
-  {% endif %}
-  {% if relations.inbound %}
-  <section class="rel-block">
-    <h2 class="rel-h">Linked from</h2>
-    {% for grp in relations.inbound %}
-    <div class="rel-group">
-      <span class="rel-type">{{ grp.label }}</span>
-      <ul>{% for it in grp.links %}<li><a class="wl" href="{{ it.url }}"><code>{{ it.id }}</code> {{ it.label }}</a></li>{% endfor %}</ul>
-    </div>
-    {% endfor %}
-  </section>
-  {% endif %}
-</nav>
-{% endif %}
+{{ relations_panel(relations) }}
 {% endblock %}
 {% block scripts %}
 {% if needs_mermaid %}{% include "_mermaid.html" %}{% endif %}

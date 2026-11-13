@@ -1,0 +1,20 @@
+{# "Links to" and "Linked from" under the text of a page (FR-034), grouped by
+   type. A linked issue shows its status, and a closed one (resolved, wontfix)
+   is marked the way the issues panel marks it (FR-027). #}
+{% macro relations_panel(relations) %}
+{% if relations and (relations.outbound or relations.inbound) %}
+<nav class="detail-relations" aria-label="Relations">
+  {% for heading, groups in (("Links to", relations.outbound), ("Linked from", relations.inbound)) if groups %}
+  <section class="rel-block">
+    <h2 class="rel-h">{{ heading }}</h2>
+    {% for grp in groups %}
+    <div class="rel-group">
+      <span class="rel-type">{{ grp.label }}</span>
+      <ul>{% for it in grp.links %}<li{% if it.closed %} class="rel-closed"{% endif %}><a class="wl" href="{{ it.url }}"><code>{{ it.id }}</code> {{ it.label }}</a>{% if it.status %} <span class="status status-{{ it.status }}">{{ it.status }}</span>{% endif %}</li>{% endfor %}</ul>
+    </div>
+    {% endfor %}
+  </section>
+  {% endfor %}
+</nav>
+{% endif %}
+{% endmacro %}

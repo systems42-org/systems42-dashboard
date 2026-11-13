@@ -1430,7 +1430,8 @@ def build_relations_panel(stem: str, exclude: set[str] | None = None) -> dict:
     backlinks (other pages that reference it), grouped by type, as link dicts.
     A pure projection over the link graph (DR-018) — powers the outbound
     / inbound relations section on a detail page. `exclude` drops stems the
-    page already lists in a typed panel (drivers, addressed by, …)."""
+    page already lists in a typed panel (drivers, addressed by, …). A linked
+    issue carries its `status` and whether it is `closed`."""
     exclude = exclude or set()
     titles = title_index()
     pages = load_all_pages()
@@ -1445,8 +1446,16 @@ def build_relations_panel(stem: str, exclude: set[str] | None = None) -> dict:
             url = f"/page/{folder}/{s}"
         else:
             url = f"/page/{by_stem[s].folder}/{s}"
-        return {"id": by_stem[s].id if s in by_stem else s,
-                "label": titles.get(s, s), "url": url, "type": ntype}
+        item = {"id": by_stem[s].id if s in by_stem else s,
+                "label": titles.get(s, s), "url": url, "type": ntype,
+                "status": "", "closed": False}
+        if s in by_stem and by_stem[s].folder == "issues":
+            # a linked issue says how firm it is, closed the way the issues
+            # panel says it (FR-034, FR-027)
+            st = by_stem[s].status
+            item["status"] = st if st in _issue_vocab()["status"] else ""
+            item["closed"] = not is_open_issue(st)
+        return item
 
     me = by_stem.get(stem)
     outbound = sorted(s for s in (me.link_targets() if me else ())
@@ -3859,10 +3868,12 @@ def fr_view(stem):
         fr["n_stories"] = len(fr["stories"])
 
     diagram = _mermaid_fr_subtree(node)
+    trace = build_trace(stem, "functional-requirements")
     return render_template(
         "fr.html", fr=fr, body_html=body_html, diagram=diagram,
         ancestors=_fr_ancestors(stem),
-        trace=build_trace(stem, "functional-requirements"),
+        trace=trace,
+        relations=build_relations_panel(stem, exclude=trace_stems(trace)),
         needs_mermaid=bool(diagram) or "language-mermaid" in body_html,
         sources=provenance(page),
         page_issues=open_issues_for(stem),
