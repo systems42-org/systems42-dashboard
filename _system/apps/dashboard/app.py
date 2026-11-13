@@ -704,13 +704,18 @@ def open_issue_counts() -> dict[str, set[str]]:
 def render_wikilinks(text: str, titles: dict[str, str],
                      links: dict[str, tuple[str, str]] | None = None) -> str:
     """Replace [[..]] with its alias (or resolved title). When `links` is given
-    and the target resolves to a wiki page, emit a real hyperlink; otherwise
-    (inline snippets, or an unresolved/raw target) keep the styled-text span."""
+    and the target resolves to a wiki page, a source record or a method anchor,
+    emit a real hyperlink; otherwise (inline snippets, or an unresolved target)
+    keep the styled-text span."""
     def repl(m: re.Match) -> str:
         target, alias = m.group(1).strip(), m.group(2)
         base = target.split("/")[-1]
         label = alias.strip() if alias else titles.get(base, base)
-        if links and not target.startswith("raw/") and not base.startswith("SRC-"):
+        if links is not None and (target.startswith("raw/") or base.startswith("SRC-")):
+            # a source cited in the text leads to its record (FR-034)
+            if src := source_index().get(base):
+                return f'<a class="wl" href="/source/{src.stem}">{alias.strip() if alias else escape(src.title)}</a>'
+        elif links:
             dest = links.get(base)
             if dest:
                 return f'<a class="wl" href="{_page_url(*dest)}">{label}</a>'
@@ -4615,6 +4620,8 @@ def build_mm_anchors(mm: dict, anchors: dict[str, str]) -> list[dict]:
             "aliases": [x for x in a["aliases"] if x.lower() != a["name"].lower()],
             "definition_html": _mm_inline(a["definition"], anchors),
             "reference": a["reference"],
+            # a definition that already cites its reference does not repeat it
+            "show_reference": bool(a["reference"]) and a["reference"] not in a["definition"],
             "types": [{"label": _mm_type_label(n, by_name), "href": f"#type-{n}"} for n in types],
             "other": other,
         })

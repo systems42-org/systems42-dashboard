@@ -92,6 +92,9 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - "Links to" and "Linked from" show a linked issue's status, and a resolved
   or wontfix issue is dimmed as closed, the same as in the issues panel. A
   functional requirement page now has both lists too (FR-034).
+- A wikilink to a source record in the text (`[[SRC-022-…]]`) leads to its
+  record under `/source/`, titled by the record. It used to be plain text.
+  A link to a source that does not exist stays plain text (FR-034).
 
 ### Added
 - `/metamodel` has an Anchors section: one entry per file in

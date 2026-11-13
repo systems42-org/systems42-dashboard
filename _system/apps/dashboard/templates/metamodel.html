@@ -254,7 +254,7 @@ Each entry is read from <code>_system/anchors/</code>. A link to a standard on a
   {% for a in method_anchors %}
   <tr id="{{ a.id }}" class="mm-row">
     <td class="c-term"><span class="term">{{ a.name }}</span>{% if a.aliases %}<span class="aliases">{{ a.aliases|join(' · ') }}</span>{% endif %}</td>
-    <td class="c-def">{{ a.definition_html | safe }}{% if a.reference %}<span class="aliases"><a href="{{ a.reference }}" rel="noopener">{{ a.reference }}</a></span>{% endif %}</td>
+    <td class="c-def">{{ a.definition_html | safe }}{% if a.show_reference %}<span class="aliases"><a href="{{ a.reference }}" rel="noopener">{{ a.reference }}</a></span>{% endif %}</td>
     <td class="mm-c-applies">{% for t in a.types %}<a class="wl" href="{{ t.href }}">{{ t.label }}</a>{% if not loop.last %}, {% endif %}{% endfor %}{% if a.other %}<span class="aliases">{{ a.other|join(' · ') }}</span>{% endif %}</td>
   </tr>
   {% endfor %}

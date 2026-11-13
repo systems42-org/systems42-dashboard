@@ -48,6 +48,13 @@ _page("issues", "ISS-003-verworfen", "issue", "Verworfen", "wontfix", "severity:
 _page("issues", "ISS-004-ohne-status", "issue", "Ohne Status", "", "severity: minor\n",
       '"[[STK-001-leserin]]"')
 
+(_tmp / "sources").mkdir()
+(_tmp / "sources" / "SRC-001-gespraech.md").write_text(
+    "---\nid: SRC-001\ntype: source\ntitle: Ein Gespräch\nstatus: ingested\n"
+    "created: 2026-11-13\nupdated: 2026-11-13\ntags: [source]\n---\n\nKurz.\n", encoding="utf-8")
+_page("stakeholders", "STK-002-quelle", "stakeholder", "Quelle", "draft",
+      body="Aus [[SRC-001-gespraech]], nicht aus [[SRC-009-fehlt]] oder [[DR-009-fehlt]].")
+
 import app  # noqa: E402
 
 client = app.app.test_client()
@@ -117,6 +124,15 @@ def test_a_functional_requirement_page_has_links_to_and_linked_from():
     inbound = _block(_relations("/functional-requirements/FR-001-suche"), "Linked from")
     assert "<code>STK-001</code>" in inbound, inbound
     assert ">open<" in _item(inbound, "ISS-001")
+
+
+def test_a_wikilink_to_a_source_leads_to_its_record():
+    html = client.get("/page/stakeholders/STK-002-quelle").get_data(as_text=True)
+    pane = html.split('class="detail-pane"', 1)[1]
+    assert '<a class="wl" href="/source/SRC-001-gespraech">Ein Gespräch</a>' in pane, pane[:600]
+    # a link to nothing stays visibly unresolved
+    assert '<span class="wl">SRC-009-fehlt</span>' in pane
+    assert '<span class="wl">DR-009-fehlt</span>' in pane
 
 
 if __name__ == "__main__":
