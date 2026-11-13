@@ -55,7 +55,7 @@
     {% if o.epics %}
       {% for fr in o.epics %}<a href="{{ fr.url }}">{{ fr.id }} {{ fr.title }}</a>{% if not loop.last %} · {% endif %}{% endfor %}
     {% else %}
-      <span class="goal-drives-empty">no epics or use cases linked</span>
+      <span class="goal-drives-empty">No epic or use case yet</span>
     {% endif %}
   </div>
 </section>
@@ -63,26 +63,27 @@
 
 <section class="goal-matrix">
   <h2>Goal coverage matrix</h2>
-  <p class="lead">Projected from the <code>goal:</code> field on each functional requirement and each use case. Enablers (FRs with <code>goal: []</code>) form their own column group on the right, set off with a dashed border.</p>
+  <p class="lead">Projected from the <code>goal:</code> field of each epic and use case. Enablers are epics in lane platform or display that serve no goal. They form their own column group on the right, set off with a dashed border.</p>
+  {{ list_controls(spec, order=False) }}
   <div class="goal-matrix-card">
     <table>
       <thead>
         <tr>
           <th class="gm-corner">Goal</th>
           {% for col in fr_cols %}
-          <th class="gm-th{% if col.enabler %} gm-enabler{% endif %}"
-              data-tooltip="{{ col.title }}{% if col.enabler %} (Enabler){% endif %}"
-              tabindex="0">{{ col.epic }}</th>
+          <th class="gm-th{% if col.enabler %} gm-enabler{% endif %}{% if col.nogoal %} gm-nogoal{% endif %}"
+              data-status="{{ col.status }}"
+              data-tooltip="{{ col.title }}{% if col.enabler %} (enabler){% endif %}{% if col.nogoal %} (no goal){% endif %}"><a href="{{ col.url }}" aria-label="{{ col.id }} {{ col.title }}">{{ col.id }}</a>{% if col.nogoal %}<span class="gm-flag">no goal</span>{% endif %}</th>
           {% endfor %}
         </tr>
       </thead>
       <tbody>
         {% for row in matrix_rows %}
-        <tr>
-          <td class="gm-row-head"><code>{{ row.id }}</code>{{ row.title }}</td>
-          {% for cell in row.cells %}
-          <td{% if fr_cols[loop.index0].enabler %} class="gm-enabler"{% endif %}>
-            {% if cell %}<span class="gm-dot">●</span>{% else %}<span class="gm-empty">·</span>{% endif %}
+        <tr{% if row.gap %} class="gm-gap"{% endif %} data-goal="{{ row.id }}" data-status="{{ row.status }}">
+          <td class="gm-row-head"><a href="{{ row.url }}"><code>{{ row.id }}</code>{{ row.title }}</a>{% if row.gap %}<span class="gm-gap-note">No epic or use case yet</span>{% endif %}</td>
+          {% for cell in row.cells %}{% set col = fr_cols[loop.index0] %}
+          <td{% if col.enabler %} class="gm-enabler"{% endif %} data-status="{{ col.status }}">
+            {% if cell %}<span class="gm-dot" title="{{ col.id }} serves {{ row.id }}">●</span>{% else %}<span class="gm-empty">·</span>{% endif %}
           </td>
           {% endfor %}
         </tr>
@@ -90,7 +91,7 @@
       </tbody>
     </table>
   </div>
-  <p class="goal-matrix-legend">● = FR or use case addresses this goal · dashed columns = enablers (platform track, not motivated by the vision).</p>
+  <p class="goal-matrix-legend">● the epic or use case serves the goal · dashed columns are enablers · <span class="gm-flag">no goal</span> an epic that names no goal, against the Systems42 rule · a quiet row is a goal nothing serves yet.</p>
 </section>
 {% else %}
 {{ empty_state("objectives") }}
@@ -130,4 +131,5 @@
 
 {% block scripts %}
 {% if needs_mermaid %}{% include "_mermaid.html" %}{% endif %}
+{% if matrix_rows %}<script src="{{ static_url('goal-matrix.js') }}" defer></script>{% endif %}
 {% endblock %}

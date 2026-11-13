@@ -31,6 +31,15 @@ def test_goal_column_stays_put():
     assert "position: sticky" in _rule(".goal-matrix-card thead th.gm-corner")
 
 
+def test_goal_column_leaves_room_on_a_phone():
+    # 16rem of a 320 px screen left one column in view: the goal column
+    # shrinks with the viewport, so several columns stay visible beside it
+    corner = _rule(".goal-matrix-card thead th.gm-corner")
+    assert re.search(r"min-width:\s*min\(16rem,\s*\d+vw\)", corner), corner
+    # and a goal ID does not break at its hyphen in the narrower column
+    assert "white-space: nowrap" in _rule(".goal-matrix-card tbody td.gm-row-head code")
+
+
 def test_lead_names_no_foreign_decision():
     lead = re.search(r'<section class="goal-matrix">(.*?)<div class="goal-matrix-card">', TPL, re.S).group(1)
     assert "DR-018" not in lead and "DR-011" not in lead, lead
