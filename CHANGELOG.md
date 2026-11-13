@@ -31,6 +31,36 @@ Unreleased changes sit at the top until the next Starter Kit release.
   as a column. Domain Terms drop their own sort buttons: "Added" is a column
   now, and its header gives newest or oldest first. Decision and issue titles
   link their pages.
+- Search forgives typos and word forms (FR-002): `keyholdr` finds Keyholder,
+  `requirement engineer` finds "Requirements engineers". Words of 4 to 7
+  letters allow one wrong letter, longer words two. Short words and IDs match
+  only exactly or as a prefix, and an ID's number alone (`023`) finds it.
+  An exact hit, in any place, always ranks above a word form or a typo.
+- Search knows the wiki's other names (FR-003): a page's `aliases:` find
+  the page, and a glossary term's name and aliases count as one word, so
+  searching for an alias also finds pages that use only the term's name.
+  Alias hits rank below exact hits.
+- Search takes questions (FR-004): filler words such as `who`, `the` and
+  `is` don't count, so `who starts the app` finds the Keyholder. Pages with
+  only some of the words now show too, after every page with all of them.
+- Every search hit that isn't an exact match says why it is there (FR-005),
+  in the popup and on `/search`: "typo: keyholdr → Keyholder", "word form:
+  starts → started", "via alias of Keyholder" or "matches 1 of 2 words".
+- Search finds pages by their labels (FR-006): `tags`, `status`,
+  `stereotype`, `priority`, `kind`, `state`, `category` and `dimensions`.
+  `Must` finds every page with `priority: Must`. A field hit ranks below a
+  title hit and above a hit in the body text. Link fields, dates and raw
+  markdown are no longer searched. In the body, a link reads as its label
+  or the page title, and a link to a source as the source's ID
+  (`SRC-006`), so file names add no noise.
+- Each hit on `/search` shows the sentence where the query matched, with
+  the matching words highlighted (FR-007). A title hit shows the page's
+  first sentence. The popup stays compact and shows no passage.
+- `/search` lists "Related pages" below the hits (FR-008): up to 5 pages
+  one link away from a title or alias hit, each with "linked from <ID>".
+  A page that is a hit already is not repeated. The popup shows none.
+- `/search` filters by status, priority and tag next to the type facets
+  (FR-009). The filters combine. The search box keeps no filter syntax.
 - Quality requirements are classified by Q42 dimensions (DR-003): the
   template and the metamodel replace the single ISO 25010 `attribute:` with
   `dimensions:`, a list of one or more of reliable, flexible, maintainable,

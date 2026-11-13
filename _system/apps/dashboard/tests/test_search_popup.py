@@ -58,11 +58,13 @@ def test_index_endpoint():
     app._PARSE_CACHE.clear()
     r = app.app.test_client().get("/search.json")
     assert r.status_code == 200 and r.is_json
-    recs = r.get_json()
-    rec = next(x for x in recs if x["id"] == "GLO-001")
-    assert set(rec) == {"id", "type", "title", "status", "url", "text"}, rec
+    data = r.get_json()
+    assert set(data) == {"records", "synonyms"}, set(data)
+    rec = next(x for x in data["records"] if x["id"] == "GLO-001")
+    assert {"id", "type", "title", "status", "url", "aliases", "plain", "fields", "links"} <= set(rec), rec
     assert rec["url"] == "/page/glossary/GLO-001-training"
-    assert "prüfung" in rec["text"]
+    assert "Prüfung" in rec["plain"]
+    assert ["training"] in data["synonyms"]
 
 
 def test_every_page_loads_ranker_and_popup():
@@ -78,10 +80,10 @@ def test_ranker_title_before_body():
         print("skip: node not installed")
         return
     recs = [
-        {"id": "ISS-001", "type": "Issue", "title": "Unklar", "text": "iss-001 unklar es geht um training"},
-        {"id": "GLO-001", "type": "Glossary term", "title": "Training", "text": "glo-001 training"},
-        {"id": "UC-001", "type": "Use case", "title": "Trainingstermin einreichen", "text": "uc-001 trainingstermin"},
-        {"id": "STK-001", "type": "Stakeholder", "title": "Anbieter", "text": "stk-001 anbieter"},
+        {"id": "ISS-001", "type": "Issue", "title": "Unklar", "plain": "Es geht um Training."},
+        {"id": "GLO-001", "type": "Glossary term", "title": "Training", "plain": ""},
+        {"id": "UC-001", "type": "Use case", "title": "Trainingstermin einreichen", "plain": ""},
+        {"id": "STK-001", "type": "Stakeholder", "title": "Anbieter", "plain": "Bietet an."},
     ]
     js = (_DASH / "static" / "search-rank.js").read_text(encoding="utf-8")
     script = ("var window = {};\n" + js +
@@ -93,8 +95,19 @@ def test_ranker_title_before_body():
     assert ranked[0][1] == 100 and ranked[1][1] == 92 and ranked[2][1] < 55, ranked
 
 
+def test_reason_note_rendered_in_popup_and_page():
+    """FR-005: both result lists have a place for the reason of a non-exact hit."""
+    popup = (_DASH / "static" / "search-popup.js").read_text(encoding="utf-8")
+    page = (_DASH / "templates" / "search.html").read_text(encoding="utf-8")
+    assert 'class="hit-note"' in popup, "popup renders no reason note"
+    assert 'class="hit-note"' in page, "/search renders no reason note"
+    css = (_DASH / "static" / "style.css").read_text(encoding="utf-8")
+    assert ".hit-note" in css
+
+
 if __name__ == "__main__":
     test_index_endpoint()
+    test_reason_note_rendered_in_popup_and_page()
     test_every_page_loads_ranker_and_popup()
     test_ranker_title_before_body()
     print("OK: search popup")

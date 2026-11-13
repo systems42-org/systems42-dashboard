@@ -1,62 +1,393 @@
 // Shared search ranking for the /search page and the nav search popup, so both
 // rank a query identically. Records have the shape of build_search_records()
-// in app.py: {id, type, title, text} (text lower-cased; title and id are
-// lower-cased here).
+// in app.py: {id, type, title, aliases, plain, fields, links, ...}.
 //
-// Relevance as a 0–100 percentage, decided by *where* the query matched: the
-// strongest tier wins, so a title hit can never be out-scored by a body hit
-// and the number means the same thing for every query (not a per-query
-// normalisation). Body-only matches scale with term frequency. Every query
-// word must appear (AND). No lunr — weighted substring matching is plenty for
-// a few hundred pages, keeps scores stable, and needs no German stemmer.
+// Relevance is a 0–100 percentage, decided by *how* and *where* each query
+// word matched. How comes first, in tiers: a word as typed (exact or as a
+// prefix, 40–100), then another name of a glossary term (33–39, FR-003), then
+// a word form (27–32), then a typo (21–26, FR-002). A page's tier is the tier
+// of its weakest word, so an exact match in any place outranks every typo
+// and a typo never pushes a correct match down. Within a tier, places rank
+// strongest first: id, title, alias, field (tags, priority, status and the
+// like, FR-006), type, body. The number means the same thing for every query
+// (no per-query normalisation).
+//
+// Pages that contain every query word come first. Pages that contain only
+// some follow, ranked by how many, with a note such as "matches 1 of 2 words"
+// and a score of at most 20 (FR-004).
 (function () {
-  function countOcc(hay, needle) {
-    var n = 0, i = 0;
-    while ((i = hay.indexOf(needle, i)) !== -1) { n++; i += needle.length; }
-    return n;
+  var WORD_RE = /\p{L}+-\d+|[\p{L}\p{N}]+/gu;
+  var ID_RE = /^\p{L}+-\d+$/u;
+  var SUFFIXES = ["ing", "ed", "es", "s"];
+  // Filler words of a question don't count, unless the query has nothing else (FR-004).
+  var STOP_WORDS = new Set(("who what when where why how the a an is are does do of to in on " +
+    "for and or with").split(" "));
+
+  // base score per place (the exact tier's scale), the tier of each kind of
+  // match, and the score band of each tier below the exact one
+  var PLACE = {id: 90, title: 80, alias: 70, field: 60, type: 50, body: 40};
+  var PLACES = ["id", "title", "alias", "field", "type", "body"];
+  var TIER = {exact: 0, prefix: 0, synonym: 1, form: 2, typo: 3};
+  var BAND = [null, {floor: 33, width: 6}, {floor: 27, width: 5}, {floor: 21, width: 5}];
+
+  function norm(s) { return String(s || "").normalize("NFC"); }
+  function words(s) { return norm(s).match(WORD_RE) || []; }
+  function len(w) { return Array.from(w).length; }
+
+  // Common English endings count as the same word (FR-002).
+  function stem(w) {
+    for (var i = 0; i < SUFFIXES.length; i++) {
+      var s = SUFFIXES[i];
+      if (w.length > s.length && w.slice(-s.length) === s && len(w) - s.length >= 3) {
+        return w.slice(0, -s.length);
+      }
+    }
+    return w;
   }
 
-  function tokenize(q) {
-    return q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  // Damerau-Levenshtein distance (optimal string alignment), or max + 1 once
+  // it is clear the distance exceeds max.
+  function distance(a, b, max) {
+    a = Array.from(a); b = Array.from(b);
+    if (Math.abs(a.length - b.length) > max) { return max + 1; }
+    var prev2 = null, prev = [], i, j;
+    for (j = 0; j <= b.length; j++) { prev.push(j); }
+    for (i = 1; i <= a.length; i++) {
+      var cur = [i], low = i;
+      for (j = 1; j <= b.length; j++) {
+        var c = a[i - 1] === b[j - 1] ? 0 : 1;
+        var d = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + c);
+        if (prev2 && i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+          d = Math.min(d, prev2[j - 2] + 1);
+        }
+        cur.push(d);
+        if (d < low) { low = d; }
+      }
+      if (low > max) { return max + 1; }
+      prev2 = prev; prev = cur;
+    }
+    return prev[b.length];
   }
 
-  function relevance(rec, tokens, q) {
-    var title = rec.title.toLowerCase(), id = rec.id.toLowerCase();
-    var type = rec.type.toLowerCase(), text = rec.text;
-    if (!tokens.every(function (t) { return (text + " " + type).includes(t); })) return 0;
-    if (title === q) return 100;                                            // exact title
-    if (title.startsWith(q)) return 92;                                     // title prefix
-    if (title.includes(q)) return 85;                                       // phrase in title
-    if (tokens.every(function (t) { return title.includes(t); })) return 78; // all words in title
-    if (tokens.some(function (t) { return title.includes(t); })) return 68;  // some word in title
-    if (id.includes(q) || tokens.every(function (t) { return id.includes(t); })) return 62; // id match
-    if (type.includes(q)) return 55;                                        // category match
-    var freq = tokens.reduce(function (a, t) { return a + countOcc(text, t); }, 0);  // content only
-    return 32 + Math.min(freq, 11) * 2;                                     // 34–54
+  // How the query word `q` matches the text word `w` (both lower-case):
+  // {kind: "exact"|"prefix"|"form"|"typo", from, to} or null. Words of 3
+  // letters or fewer and IDs match only exactly or as a prefix. 4 to 7
+  // letters allow one wrong, missing, extra or swapped letter, 8 or more two.
+  function matchWord(q, w) {
+    if (q === w) { return {kind: "exact", from: q, to: w}; }
+    var n = len(q);
+    var strict = n <= 3 || ID_RE.test(q);
+    if (w.lastIndexOf(q, 0) === 0) { return {kind: "prefix", from: q, to: w}; }
+    if (!strict && stem(q) === stem(w)) { return {kind: "form", from: q, to: w}; }
+    if (strict || ID_RE.test(w)) { return null; }
+    var d = distance(q, w, tolerance(q));
+    if (d > tolerance(q)) {
+      var sq = stem(q), sd = distance(sq, stem(w), tolerance(sq));
+      d = sd <= tolerance(sq) ? sd : null;
+    }
+    if (d === null) { return null; }
+    // a typo rarely hits the first letter: a match that changes it ranks lower
+    return {kind: "typo", from: q, to: w, cost: d + (Array.from(q)[0] === Array.from(w)[0] ? 0 : 1)};
   }
 
-  function band(pct) { return pct >= 80 ? "high" : pct >= 55 ? "mid" : "low"; }
+  function tolerance(w) { var n = len(w); return n >= 8 ? 2 : n >= 4 ? 1 : 0; }
 
-  // Rank `records` against query `q`; returns [{rec, score}] best first:
-  // relevance, then body frequency, then title alphabetically.
-  function rank(records, q) {
-    q = q.trim().toLowerCase();
-    var tokens = tokenize(q);
-    if (!tokens.length) return [];
-    var out = [];
-    records.forEach(function (rec) {
-      var score = relevance(rec, tokens, q);
-      if (score > 0) {
-        var freq = tokens.reduce(function (a, t) { return a + countOcc(rec.text, t); }, 0);
-        out.push({rec: rec, score: score, freq: freq});
+  // Order of two word matches: tier, then (typos only) the size of the typo,
+  // then exact before prefix.
+  function weight(m) {
+    return TIER[m.kind] * 10 + (m.cost || 0) + (m.kind === "prefix" ? 0.5 : 0);
+  }
+
+  // Per-record word lists, built once per record: lower-case word -> the
+  // word as written, plus how often it occurs in the body.
+  var prepared = typeof WeakMap === "function" ? new WeakMap() : null;
+
+  // An ID such as STK-023 is one word, and its parts (`stk`, `023`) are
+  // words too, so the number alone finds it.
+  function wordMap(s, counts) {
+    var m = new Map();
+    function add(w) {
+      var lc = w.toLowerCase();
+      if (!m.has(lc)) { m.set(lc, w); }
+      if (counts) { counts.set(lc, (counts.get(lc) || 0) + 1); }
+    }
+    words(s).forEach(function (w) {
+      add(w);
+      if (ID_RE.test(w)) { w.split("-").forEach(add); }
+    });
+    return m;
+  }
+
+  function prep(rec) {
+    var p = prepared && prepared.get(rec);
+    if (p) { return p; }
+    var freq = new Map();
+    p = {
+      id: wordMap(rec.id),
+      title: wordMap(rec.title),
+      titleLc: words(rec.title).join(" ").toLowerCase(),
+      alias: wordMap((rec.aliases || []).join(" ")),
+      aliasLc: (rec.aliases || []).map(function (a) { return words(a).join(" ").toLowerCase(); }),
+      field: wordMap(Object.keys(rec.fields || {}).map(function (k) {
+        return [].concat(rec.fields[k]).join(" ");
+      }).join(" ")),
+      type: wordMap(rec.type),
+      body: wordMap(rec.plain, freq),
+      freq: freq,
+    };
+    if (prepared) { prepared.set(rec, p); }
+    return p;
+  }
+
+  // Best match of query word `q` among the words of one place.
+  function bestIn(map, q, memo) {
+    var best = null;
+    map.forEach(function (orig, lc) {
+      var key = q + "\u0000" + lc;
+      if (!memo.has(key)) { memo.set(key, matchWord(q, lc)); }
+      var m = memo.get(key);
+      if (m && (!best || weight(m) < weight(best))) {
+        best = {kind: m.kind, cost: m.cost || 0, from: q, to: orig, lc: lc};
       }
     });
-    out.sort(function (a, b) {
-      return b.score - a.score || b.freq - a.freq
-        || a.rec.title.localeCompare(b.rec.title, "en");
+    return best;
+  }
+
+  // The query as units: a single word, or a glossary term's name or alias
+  // that the query contains. A unit carries its alternatives: the words as
+  // typed first, then the other names of the same term (FR-003).
+  function units(qwords, synonyms, titles) {
+    var groups = (synonyms || []).map(function (g) {
+      return g.map(function (s) { return words(s).map(function (w) { return w.toLowerCase(); }); })
+        .filter(function (ws) { return ws.length; });
+    });
+    var out = [], i = 0;
+    while (i < qwords.length) {
+      var found = null;
+      groups.forEach(function (g) {
+        g.forEach(function (ws) {
+          if ((!found || ws.length > found.words.length) && ws.every(function (w, k) {
+            var q = qwords[i + k];
+            return q !== undefined && (q === w || stem(q) === stem(w));
+          })) { found = {words: ws, group: g}; }
+        });
+      });
+      if (found) {
+        var typed = qwords.slice(i, i + found.words.length);
+        var name = found.group[0].join(" ");
+        out.push({words: typed, via: titles.get(name) || name,
+                  alts: [typed].concat(found.group.filter(function (ws) { return ws !== found.words; }))});
+        i += found.words.length;
+      } else {
+        out.push({words: [qwords[i]], alts: [[qwords[i]]], via: null});
+        i += 1;
+      }
+    }
+    return out;
+  }
+
+  // Best place and match for one query unit in one record. Every word of an
+  // alternative must match within the same place. The unit's `score` is its
+  // value on its tier's scale, `fit` its place on that scale from 0 to 1.
+  function matchUnit(p, unit, memo) {
+    var best = null;
+    PLACES.forEach(function (place) {
+      unit.alts.forEach(function (alt, ai) {
+        var worst = null, lcs = [];
+        for (var k = 0; k < alt.length; k++) {
+          var m = bestIn(p[place], alt[k], memo);
+          if (!m) { return; }
+          lcs.push(m.lc);
+          if (!worst || weight(m) > weight(worst)) { worst = m; }
+        }
+        var tier = Math.max(TIER[worst.kind], ai > 0 ? TIER.synonym : 0);
+        var key = tier * 1000 + (100 - PLACE[place]) + worst.cost;   // lower is better
+        if (best && key >= best.key) { return; }
+        var fit = Math.max(0, Math.min(1, (PLACE[place] - 40) / 50 - 0.1 * worst.cost));
+        best = {place: place, tier: tier, key: key, fit: fit, match: worst, lcs: lcs,
+                via: ai > 0 ? unit.via : null,
+                score: tier === 0 ? PLACE[place] - (worst.kind === "prefix" ? 2 : 0)
+                                  : BAND[tier].floor + BAND[tier].width * fit};
+      });
+    });
+    return best;
+  }
+
+  // A page's score: its weakest word's tier decides the band (FR-002).
+  function relevance(p, phrases, matches) {
+    var tier = Math.max.apply(null, matches.map(function (m) { return m.tier; }));
+    if (tier > 0) {
+      var fit = matches.reduce(function (a, m) { return a + m.fit; }, 0) / matches.length;
+      return BAND[tier].floor + BAND[tier].width * fit;
+    }
+    function all(place) {
+      return matches.every(function (m) {
+        return m.place === place && !m.via && (m.match.kind === "exact" || m.match.kind === "prefix");
+      });
+    }
+    function each(test) { return phrases.some(test); }
+    if (all("title")) {
+      if (each(function (ph) { return p.titleLc === ph; })) { return 100; }                  // exact title
+      if (each(function (ph) { return p.titleLc.lastIndexOf(ph, 0) === 0; })) { return 92; } // title prefix
+      if (each(function (ph) { return p.titleLc.indexOf(ph) !== -1; })) { return 85; }       // phrase in title
+    }
+    // an alias, exactly: below every title phrase and every page with all words in its title (FR-003)
+    if (all("alias") && each(function (ph) { return p.aliasLc.indexOf(ph) !== -1; })) { return 78; }
+    var sum = matches.reduce(function (a, m) { return a + m.score; }, 0);
+    return sum / matches.length;
+  }
+
+  // Why a page with every query word is a hit, when it doesn't contain the
+  // words as typed: the first non-exact word decides (FR-005). An exact or
+  // prefix hit has no note.
+  function reason(rec, matches) {
+    for (var i = 0; i < matches.length; i++) {
+      var m = matches[i];
+      if (m.via) { return "via alias of " + m.via; }
+      if (m.place === "alias") { return "via alias of " + rec.title; }
+      if (m.match.kind === "typo") { return "typo: " + m.match.from + " → " + m.match.to; }
+      if (m.match.kind === "form") { return "word form: " + m.match.from + " → " + m.match.to; }
+    }
+    return null;
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c];
+    });
+  }
+
+  function sentences(plain) {
+    return norm(plain).split("\n").reduce(function (acc, line) {
+      return acc.concat(line.split(/(?<=[.!?])\s+/));
+    }, []).filter(function (x) { return x.trim(); });
+  }
+
+  // The sentence where the query matched, with the matching words in <mark>,
+  // for /search (FR-007). A hit with no match in the body shows the page's
+  // first sentence. Empty when the page has no text. Escaped before marking.
+  var PASSAGE_MAX = 240;
+  function passage(hit) {
+    var marks = new Set();
+    hit.matches.forEach(function (m) {
+      if (m.place === "body") { m.lcs.forEach(function (w) { marks.add(w); }); }
+    });
+    var all = sentences(hit.rec.plain);
+    var s = all[0];
+    if (marks.size) {
+      s = all.filter(function (x) {
+        return words(x).some(function (w) { return marks.has(w.toLowerCase()); });
+      })[0] || s;
+    }
+    if (!s) { return ""; }
+    var re = new RegExp(WORD_RE.source, "gu"), hits = [], m;
+    while ((m = re.exec(s)) !== null) {
+      if (marks.has(m[0].toLowerCase())) { hits.push({at: m.index, end: m.index + m[0].length}); }
+    }
+    // a long sentence keeps PASSAGE_MAX characters around the first mark,
+    // cut at word gaps
+    var start = 0, end = s.length;
+    if (s.length > PASSAGE_MAX) {
+      if (hits.length && hits[0].at > PASSAGE_MAX / 2) { start = s.lastIndexOf(" ", hits[0].at - 40) + 1; }
+      if (start + PASSAGE_MAX < s.length) {
+        var gap = s.lastIndexOf(" ", start + PASSAGE_MAX);
+        end = gap > start ? gap : start + PASSAGE_MAX;
+      }
+    }
+    var html = "", last = start;
+    hits.forEach(function (h) {
+      if (h.at < start || h.end > end) { return; }
+      html += esc(s.slice(last, h.at)) + "<mark>" + esc(s.slice(h.at, h.end)) + "</mark>";
+      last = h.end;
+    });
+    html += esc(s.slice(last, end));
+    return '<p class="hit-passage">' + (start > 0 ? "…" : "") + html + (end < s.length ? "…" : "") + "</p>";
+  }
+
+  // Pages one link step away from the strong hits, for the "Related pages"
+  // group on /search (FR-008). Strong means every query word matched in the
+  // title or an alias. At most `max` (5), never a page that is a hit already,
+  // each with its reason.
+  function related(hits, records, max) {
+    max = max || 5;
+    var byId = new Map(), seen = new Set(), out = [];
+    records.forEach(function (r) { byId.set(r.id, r); });
+    hits.forEach(function (h) { seen.add(h.rec.id); });
+    hits.forEach(function (h) {
+      var strong = h.full && h.matches.every(function (m) {
+        return m.place === "title" || m.place === "alias";
+      });
+      if (!strong) { return; }
+      (h.rec.links || []).forEach(function (id) {
+        var r = byId.get(id);
+        if (!r || seen.has(id) || out.length >= max) { return; }
+        seen.add(id);
+        out.push({rec: r, note: "linked from " + h.rec.id});
+      });
     });
     return out;
   }
 
-  window.S42Search = {rank: rank, band: band};
+  // Narrow hits to a status, a priority and a tag, all lower-case; an empty
+  // value leaves that filter off (FR-009, /search only).
+  function filter(hits, f) {
+    f = f || {};
+    return hits.filter(function (h) {
+      var r = h.rec, fields = r.fields || {};
+      return (!f.status || String(r.status || "").toLowerCase() === f.status)
+        && (!f.priority || (fields.priority || []).indexOf(f.priority) !== -1)
+        && (!f.tag || (fields.tags || []).indexOf(f.tag) !== -1);
+    });
+  }
+
+  function band(pct) { return pct >= 80 ? "high" : pct >= 55 ? "mid" : "low"; }
+
+  // Rank `records` against query `q`, with the glossary's synonym groups;
+  // returns [{rec, score, note}] best first: pages with every word, then
+  // relevance, then the number of matched words, then how often the words
+  // occur in the body, then title.
+  function rank(records, q, synonyms) {
+    var qwords = words(q).map(function (w) { return w.toLowerCase(); });
+    if (!qwords.length) { return []; }
+    var titles = new Map();
+    records.forEach(function (r) { titles.set(words(r.title).join(" ").toLowerCase(), r.title); });
+    // glossary terms are found in the query as typed, filler words included
+    // ("definition of done"); then single filler words drop out
+    var qunits = units(qwords, synonyms, titles);
+    var content = qunits.filter(function (u) { return u.via || !STOP_WORDS.has(u.words[0]); });
+    if (content.length) { qunits = content; }
+    // a title or alias may contain the filler words too ("search the wiki")
+    var phrases = [qwords.join(" ")];
+    var short = [].concat.apply([], qunits.map(function (u) { return u.words; })).join(" ");
+    if (short !== phrases[0]) { phrases.push(short); }
+    var memo = new Map();
+    var out = [];
+    records.forEach(function (rec) {
+      var p = prep(rec);
+      var matches = [];
+      qunits.forEach(function (u) {
+        var m = matchUnit(p, u, memo);
+        if (m) { matches.push(m); }
+      });
+      if (!matches.length) { return; }
+      var n = qunits.length, full = matches.length === n;
+      var freq = matches.reduce(function (a, m) {
+        return a + (m.place === "body" ? p.freq.get(m.match.lc) || 0 : 0);
+      }, 0);
+      var sum = matches.reduce(function (a, m) { return a + m.score; }, 0);
+      var raw = full ? relevance(p, phrases, matches) : Math.min(20, sum / n / 4);
+      out.push({
+        rec: rec, matches: matches, freq: freq, full: full, raw: raw, score: Math.round(raw),
+        note: full ? reason(rec, matches) : "matches " + matches.length + " of " + n + " words",
+      });
+    });
+    out.sort(function (a, b) {
+      return (b.full - a.full) || b.raw - a.raw || b.matches.length - a.matches.length
+        || b.freq - a.freq || a.rec.title.localeCompare(b.rec.title, "en");
+    });
+    return out;
+  }
+
+  window.S42Search = {rank: rank, band: band, matchWord: matchWord, stem: stem, passage: passage,
+                      related: related, filter: filter, esc: esc};
 })();
