@@ -225,7 +225,8 @@
       if (each(function (ph) { return p.titleLc.lastIndexOf(ph, 0) === 0; })) { return 92; } // title prefix
       if (each(function (ph) { return p.titleLc.indexOf(ph) !== -1; })) { return 85; }       // phrase in title
     }
-    if (all("alias") && each(function (ph) { return p.aliasLc.indexOf(ph) !== -1; })) { return 88; }  // an alias
+    // an alias, exactly: below every title phrase and every page with all words in its title (FR-003)
+    if (all("alias") && each(function (ph) { return p.aliasLc.indexOf(ph) !== -1; })) { return 78; }
     var sum = matches.reduce(function (a, m) { return a + m.score; }, 0);
     return sum / matches.length;
   }

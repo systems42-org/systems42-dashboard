@@ -159,6 +159,12 @@ def test_fr003_alias_below_exact_title():
     assert hit("Jedi Master", "STK-023")["score"] < 100
 
 
+def test_fr003_alias_below_a_phrase_in_a_title():
+    found = ids("jedi master")
+    assert found.index("ISS-002") < found.index("STK-023"), found   # "Guide to the Jedi Master role"
+    assert hit("jedi master", "ISS-002")["score"] > hit("jedi master", "STK-023")["score"]
+
+
 def test_fr003_synonym_group_works_both_ways():
     assert "GLO-001" in ids("moderator")                           # the term's own alias
     assert "STK-023" in ids("moderator")                           # says "facilitator" in its body
