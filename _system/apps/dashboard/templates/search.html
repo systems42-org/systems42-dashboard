@@ -20,7 +20,7 @@
     <label class="search-filter">{{ label }}
       <select id="search-{{ name }}" data-filter="{{ name }}">
         <option value="">Any</option>
-        {% for v in filters[name] %}<option value="{{ v }}">{{ v }}</option>{% endfor %}
+        {% for v in filters[name] %}<option value="{{ v.value }}">{{ v.label }}</option>{% endfor %}
       </select>
     </label>
     {% endfor %}

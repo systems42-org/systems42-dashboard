@@ -2869,22 +2869,31 @@ def search_view():
         tally[r["type"]] = tally.get(r["type"], 0) + 1
     facets = sorted(tally.items(), key=lambda kv: (-kv[1], kv[0]))
     return render_template("search.html", index=index, total=len(index["records"]), facets=facets,
-                           filters=_search_filters(index["records"]))
+                           filters=_search_filters())
 
 
 _PRIORITY_ORDER = ["must", "should", "could", "wont", "won't"]
 
 
-def _search_filters(records: list[dict]) -> dict[str, list[str]]:
+def _search_filters() -> dict[str, list[dict]]:
     """The values offered by /search's status, priority and tag filters
-    (FR-009): every value some page carries, lower-case."""
-    def values(key):
-        return {v for r in records for v in r["fields"].get(key, [])}
-    prio = values("priority")
-    return {"status": sorted(values("status")),
-            "priority": sorted(prio, key=lambda v: (v not in _PRIORITY_ORDER,
-                                                    _PRIORITY_ORDER.index(v) if v in _PRIORITY_ORDER else 0, v)),
-            "tag": sorted(values("tags"))}
+    (FR-009): every value some page carries, as {value, label}. The value is
+    lower-case, as the ranker compares it; the label is how the wiki writes
+    it (the first spelling found)."""
+    labels: dict[str, dict[str, str]] = {"status": {}, "priority": {}, "tags": {}}
+    for p in load_all_pages():
+        for key, seen in labels.items():
+            raw = p.meta.get(key)
+            for x in raw if isinstance(raw, list) else [raw]:
+                written = str(x).strip() if x is not None else ""
+                if written:
+                    seen.setdefault(written.lower(), written)   # same value as _search_fields
+
+    def opts(key, order=None):
+        vals = labels[key]
+        rank = (lambda v: (v not in order, order.index(v) if v in order else 0, v)) if order else None
+        return [{"value": v, "label": vals[v]} for v in sorted(vals, key=rank)]
+    return {"status": opts("status"), "priority": opts("priority", _PRIORITY_ORDER), "tag": opts("tags")}
 
 
 def _short_title(p: Page) -> str:

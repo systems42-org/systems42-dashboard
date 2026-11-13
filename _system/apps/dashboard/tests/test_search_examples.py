@@ -142,6 +142,10 @@ def test_fr002_stem_typo_uses_the_stem_length():
     assert "FR-009" not in ids("searches"), ids("searches")         # search → reach is 2 edits, 6 letters allow 1
 
 
+def test_fr002_id_number_alone():
+    assert ids("023")[:1] == ["STK-023"], ids("023")
+
+
 def test_fr002_non_ascii_typo():
     assert "STK-022" in ids("ärztn"), ids("ärztn")                 # Ärztin, one letter missing
 
@@ -289,6 +293,18 @@ def test_fr007_passage_is_escaped():
     assert "&lt;script&gt; &amp; a <mark>facilitator</mark>." in html, html
 
 
+def test_fr007_long_sentence_is_cut_at_both_ends():
+    import re
+    filler = " ".join(["word"] * 80)
+    for plain, starts in ((f"The facilitator {filler} end.", False), (f"Start {filler} facilitator {filler} end.", True)):
+        rec = {"id": "X-1", "type": "Issue", "title": "X", "aliases": [], "fields": {}, "plain": plain}
+        html = js(f"S.passage(S.rank([{json.dumps(rec)}], 'facilitator', [])[0])")
+        text = re.sub(r"<[^>]+>", "", html)
+        assert "<mark>facilitator</mark>" in html, html
+        assert text.endswith("…") and len(text) <= 245, (len(text), text)
+        assert text.startswith("…") == starts, text
+
+
 def test_fr007_only_on_the_results_page():
     popup = (_DASH / "static" / "search-popup.js").read_text(encoding="utf-8")
     page = (_DASH / "templates" / "search.html").read_text(encoding="utf-8")
@@ -357,8 +373,9 @@ def test_fr009_filters_sit_next_to_the_type_facets():
     bar = page[page.index('class="toolbar"'):page.index('class="table-card"')]
     for name in ("status", "priority", "tag"):
         assert f'id="search-{name}"' in bar, name
-    for value in ("accepted", "draft", "open", "must", "should", "could", "navigation"):
-        assert f'<option value="{value}">' in bar, value
+    for value, label in (("accepted", "accepted"), ("draft", "draft"), ("open", "open"), ("must", "Must"),
+                         ("should", "Should"), ("could", "Could"), ("navigation", "navigation")):
+        assert f'<option value="{value}">{label}</option>' in bar, (value, label)   # as the wiki writes it
     assert "S42Search.filter(" in page
 
 

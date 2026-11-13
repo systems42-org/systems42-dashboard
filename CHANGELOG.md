@@ -16,8 +16,8 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - Search forgives typos and word forms (FR-002): `keyholdr` finds Keyholder,
   `requirement engineer` finds "Requirements engineers". Words of 4 to 7
   letters allow one wrong letter, longer words two. Short words and IDs match
-  only exactly or as a prefix. An exact hit, in any place, always ranks
-  above a word form or a typo.
+  only exactly or as a prefix, and an ID's number alone (`023`) finds it.
+  An exact hit, in any place, always ranks above a word form or a typo.
 - Search knows the wiki's other names (FR-003): a page's `aliases:` find
   the page, and a glossary term's name and aliases count as one word, so
   searching for an alias also finds pages that use only the term's name.

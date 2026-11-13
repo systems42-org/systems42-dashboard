@@ -102,12 +102,18 @@
   // word as written, plus how often it occurs in the body.
   var prepared = typeof WeakMap === "function" ? new WeakMap() : null;
 
+  // An ID such as STK-023 is one word, and its parts (`stk`, `023`) are
+  // words too, so the number alone finds it.
   function wordMap(s, counts) {
     var m = new Map();
-    words(s).forEach(function (w) {
+    function add(w) {
       var lc = w.toLowerCase();
       if (!m.has(lc)) { m.set(lc, w); }
       if (counts) { counts.set(lc, (counts.get(lc) || 0) + 1); }
+    }
+    words(s).forEach(function (w) {
+      add(w);
+      if (ID_RE.test(w)) { w.split("-").forEach(add); }
     });
     return m;
   }
@@ -274,21 +280,28 @@
       })[0] || s;
     }
     if (!s) { return ""; }
-    var html = "", last = 0, first = -1, m;
-    var re = new RegExp(WORD_RE.source, "gu");
+    var re = new RegExp(WORD_RE.source, "gu"), hits = [], m;
     while ((m = re.exec(s)) !== null) {
-      if (!marks.has(m[0].toLowerCase())) { continue; }
-      if (first < 0) { first = m.index; }
-      html += esc(s.slice(last, m.index)) + "<mark>" + esc(m[0]) + "</mark>";
-      last = m.index + m[0].length;
+      if (marks.has(m[0].toLowerCase())) { hits.push({at: m.index, end: m.index + m[0].length}); }
     }
-    html += esc(s.slice(last));
-    if (s.length > PASSAGE_MAX && first > PASSAGE_MAX / 2) {
-      // keep the first mark in view: cut the start at a word gap before it
-      var cut = s.lastIndexOf(" ", first - 40);
-      html = "…" + html.slice(esc(s.slice(0, cut + 1)).length);
+    // a long sentence keeps PASSAGE_MAX characters around the first mark,
+    // cut at word gaps
+    var start = 0, end = s.length;
+    if (s.length > PASSAGE_MAX) {
+      if (hits.length && hits[0].at > PASSAGE_MAX / 2) { start = s.lastIndexOf(" ", hits[0].at - 40) + 1; }
+      if (start + PASSAGE_MAX < s.length) {
+        var gap = s.lastIndexOf(" ", start + PASSAGE_MAX);
+        end = gap > start ? gap : start + PASSAGE_MAX;
+      }
     }
-    return '<p class="hit-passage">' + html + "</p>";
+    var html = "", last = start;
+    hits.forEach(function (h) {
+      if (h.at < start || h.end > end) { return; }
+      html += esc(s.slice(last, h.at)) + "<mark>" + esc(s.slice(h.at, h.end)) + "</mark>";
+      last = h.end;
+    });
+    html += esc(s.slice(last, end));
+    return '<p class="hit-passage">' + (start > 0 ? "…" : "") + html + (end < s.length ? "…" : "") + "</p>";
   }
 
   // Pages one link step away from the strong hits, for the "Related pages"
