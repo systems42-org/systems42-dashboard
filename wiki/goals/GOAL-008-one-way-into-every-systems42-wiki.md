@@ -11,9 +11,9 @@ tags: ["goal"]
 stereotype: objective
 parent: ["[[GOAL-001-trusted-answers]]"]
 beneficiary: ["[[STK-011-people-who-set-up-a-project-wiki]]", "[[STK-010-people-who-run-the-dashboard]]", "[[STK-012-maintainers]]", "[[STK-007-workshop-facilitators]]", "[[STK-022-prospective-adopters]]"]
-metric: "Share of Systems42 wikis that run a released dashboard without any change to its code."
+metric:
 baseline:
-target: "100 %"
+target:
 horizon:
 short_title: One way into every wiki
 tile_claim:
@@ -27,10 +27,10 @@ tile_claim:
 
 - **Purpose.** The dashboard is a reusable, consistent and efficient way into any Systems42 wiki. Every wiki uses the same released dashboard and makes it its own by configuration only.
 - **Advantage.** A fix or a feature reaches every wiki with the next release. Readers find the same pages in the same places in every project. Nobody maintains a private copy of the dashboard code.
-- **Metric.** Share of Systems42 wikis that run a released dashboard without any change to its code. Proposed target: 100 %.
+- **Metric.** None yet.
 
 > [!note]
-> The metric and the target are proposals. Nobody has agreed them yet. No baseline has been measured.
+> No metric on purpose. Gernot Starke set a counting metric aside on 2026-11-13.
 
 **Parent.** [[GOAL-001-trusted-answers]].
 

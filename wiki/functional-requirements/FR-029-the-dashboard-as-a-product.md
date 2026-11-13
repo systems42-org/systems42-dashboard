@@ -45,7 +45,7 @@ These rules hold for every feature below:
 - **Children:** projected from the `parent:` backlinks: [[FR-030-numbered-releases]], [[FR-031-branding-is-configuration]], [[FR-032-example-brands-to-try]], [[FR-033-runnable-dashboard-in-the-starter-kit]].
 
 > [!note] Open points
-> The priorities of this epic and its features are proposals (Should). Nobody has agreed them yet.
+> None. Gernot Starke agreed Should for the epic and FR-030, FR-032, FR-033, and Must for FR-031, on 2026-11-13.
 
 ## History
 

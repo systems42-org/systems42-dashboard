@@ -10,7 +10,7 @@ related: ["[[FR-032-example-brands-to-try]]", "[[CON-002-dashboard-never-writes-
 tags: ["functional-requirement", "product"]
 stereotype: feature
 parent: ["[[FR-029-the-dashboard-as-a-product]]"]
-priority: Should
+priority: Must
 release: unscheduled
 lane: backbone
 order: 31
