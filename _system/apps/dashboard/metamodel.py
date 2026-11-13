@@ -135,6 +135,25 @@ def sort_orders(type_name: str) -> list[dict]:
     return []
 
 
+def _type_page(type_name: str) -> dict:
+    return next((t for t in _load("types", "type") if t.get("name") == type_name), {})
+
+
+def field_values(type_name: str, field: str) -> list[str]:
+    """The closed list of values a type's enum field allows, or []."""
+    for f in _type_page(type_name).get("fields") or []:
+        if isinstance(f, dict) and f.get("name") == field:
+            return [str(v) for v in f.get("values") or []]
+    return []
+
+
+def lifecycle(type_name: str) -> list[str]:
+    """The status values a type's lifecycle allows, or []."""
+    meta = _read(METAMODEL_DIR / "meta-metamodel.md") or {}
+    name = _type_page(type_name).get("lifecycle")
+    return [str(v) for v in (meta.get("lifecycles") or {}).get(name) or []]
+
+
 def type_for_folder(folder: str) -> str | None:
     """The type whose pages live in `wiki/<folder>`, or None."""
     for t in _load("types", "type"):

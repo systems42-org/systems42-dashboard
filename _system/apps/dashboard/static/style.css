@@ -544,6 +544,15 @@ a.wl:hover { border-bottom-style: solid; border-bottom-color: var(--accent); }
 .list-order select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(62,166,255,.15); }
 tr.list-out { display: none; }
 
+/* ---- issue filters (FR-025): run on the server, so the address carries them ---- */
+.issue-counts { margin: 0 0 var(--space-2); color: var(--ink-soft); }
+.issue-filters { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3);
+  margin: 0 0 var(--space-3); }
+.issue-filters label { display: inline-flex; align-items: center; gap: .5rem; font-size: .85rem; color: var(--ink-soft); }
+.issue-filters select { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line);
+  border-radius: 999px; padding: .35rem .8rem; max-width: 16rem; }
+.issue-filters select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(62,166,255,.15); }
+
 /* ---- influence / interest level badges ---- */
 .lvl { font-size: .75rem; padding: .14rem .55rem; border-radius: 999px; border: 1px solid var(--line);
   background: var(--card-2); color: var(--ink-soft); white-space: nowrap; }

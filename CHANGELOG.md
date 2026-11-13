@@ -13,6 +13,12 @@ Unreleased changes sit at the top until the next Starter Kit release.
 ## [Unreleased]
 
 ### Changed
+- The issue list shows category and owner, "nobody yet" for an issue without
+  one (FR-025, FR-026, FR-028). It filters by status, category, severity,
+  section and owner, the filters combine and the address carries them, as
+  `/issues?category=systems42&owner=none`. The open count counts `open` and
+  `in-progress` only. Each row's ID and title open the issue page, the inline
+  pane is gone. `?filter=open` still works and means `?status=open`.
 - Every section list uses the shared list layer (FR-021, FR-022): an order
   picker with the type's sort orders, "Agreed only", and every column
   sortable. Functional requirements get a flat list under the hierarchy, the

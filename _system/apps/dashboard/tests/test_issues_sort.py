@@ -55,8 +55,8 @@ def _row(issue_id):
 
 
 def _cell_keys(row):
-    """The three c-status sort keys: kind (none, its text sorts), severity, status."""
-    return re.findall(r'<td class="c-status" data-sort-value="([^"]*)">', row)
+    """The rank sort keys: severity, status (kind and category sort by text)."""
+    return re.findall(r'<td class="c-status c-(?:severity|istatus)" data-sort-value="([^"]*)">', row)
 
 
 def test_severity_sorts_by_rank():

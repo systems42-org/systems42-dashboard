@@ -2468,7 +2468,7 @@ def build_section_tile(section: dict) -> dict:
         t.update({"count": len(open_issues), "total": len(issues),
                   # "open" is the adjective, not a noun: it never takes an -s
                   "unit": "open", "unit_many": "open",
-                  "href": "/issues?filter=open" if open_issues else "/issues",
+                  "href": "/issues?status=open" if open_issues else "/issues",
                   "sub": f"{len(issues)} in total",
                   "rows": [{"id": i.id, "title": i.title, "severity": str(i.meta.get("severity") or "")}
                            for i in sorted(open_issues,
@@ -2588,35 +2588,108 @@ def glossary_graph_view():
                            named_layers=named_layers, rest=rest)
 
 
+def _issue_owner(p: Page, titles: dict[str, str],
+                 links: dict[str, tuple[str, str]]) -> dict:
+    """Who is expected to answer an issue (FR-028): `key` for the filter,
+    `label` to show, `url` when it names a wiki page. An empty owner gives
+    key "" (nobody yet)."""
+    raw = str(_scalar(p.meta.get("owner")) or "").strip()
+    if raw.lower() in ("", "none", "null"):
+        return {"key": "", "label": "", "url": None}
+    m = re.fullmatch(r"\[\[([^\]|#]+)(?:\|([^\]]+))?\]\]", raw)
+    target = (m.group(1) if m else raw).strip()
+    if target in links:
+        folder, stem = links[target]
+        label = (m.group(2) if m and m.group(2) else titles.get(stem, stem)).strip()
+        return {"key": stem, "label": label, "url": _page_url(folder, stem)}
+    return {"key": raw, "label": (m.group(2) or target).strip() if m else raw, "url": None}
+
+
+# ?status= on the issue list: a lifecycle value, or one of these groups
+_ISSUE_STATUS_GROUPS = {"open": ("open", "in-progress"), "closed": tuple(sorted(CLOSED_STATUSES))}
+
+
 @app.route("/issues")
 def issues_view():
-    titles = title_index()
+    """C6: every issue, filtered on the server by status, category, severity,
+    section and owner (FR-025). Filters combine and live in the address, so a
+    copied link shows the same issues. Unknown values are ignored."""
+    titles, links = title_index(), link_index()
     pages = sorted(load_folder("issues"), key=lambda x: x.id)
-    # ?section=<ID>: only the open issues that point at that section's pages,
-    # the ones its tile counts (FR-019). An unknown section shows every issue.
-    section = catalog.SECTION_BY_ID.get(request.args.get("section", ""))
-    if section and section["folders"] and section["id"] != "C6":
-        flags = open_issue_counts()
-        wanted = set().union(*(flags.get(f, set()) for f in section["folders"]))
-        pages = [p for p in pages if p.id in wanted]
-    else:
-        section = None
+    lifecycle_values = metamodel.lifecycle("issue")
+    categories = metamodel.field_values("issue", "category")
+    severities = metamodel.field_values("issue", "severity")
+    kinds = metamodel.field_values("issue", "kind")
+    folder_section = {f: s["id"] for s in catalog.SECTIONS for f in s["folders"] if s["id"] != "C6"}
+
     items = []
     for p in pages:
+        status = p.status if p.status in lifecycle_values else ""
+        category = str(p.meta.get("category") or "").strip()
+        severity = str(p.meta.get("severity") or "").strip()
+        kind = str(p.meta.get("kind") or "").strip()
+        sections = sorted({folder_section[links[t][0]] for t in p.link_targets()
+                           if t in links and links[t][0] in folder_section})
+        owner = _issue_owner(p, titles, links)
         items.append({
             "id": p.id,
             "title": p.title,
-            "status": p.status,
-            "is_open": p.status not in CLOSED_STATUSES,
-            "severity": p.meta.get("severity", ""),
-            "kind": p.meta.get("kind", ""),
+            "status": status,
+            "is_open": status in _ISSUE_STATUS_GROUPS["open"],
+            "severity": severity if severity in severities else "",
+            "kind": kind if kind in kinds else "",
+            "category": category if category in categories else "",
+            "owner": owner["label"],
+            "owner_key": owner["key"],
+            "owner_url": owner["url"],
+            "sections": sections,
             "url": _page_url("issues", p.stem),
-            "html": render_markdown(p.body, titles),
         })
+
+    # the filters: only known values count, anything else shows every issue
+    owners = sorted({(i["owner_key"], i["owner"]) for i in items if i["owner_key"]}, key=lambda o: o[1].lower())
+    sections = [s for s in catalog.SECTIONS if s["folders"] and s["id"] != "C6"]
+    arg = lambda name: request.args.get(name, "").strip()
+    section = catalog.SECTION_BY_ID.get(arg("section"))
+    if section not in sections:
+        section = None
+    status = arg("status") or arg("filter")          # ?filter= was the former name
+    if status not in lifecycle_values and status not in _ISSUE_STATUS_GROUPS and status != "all":
+        status = ""
+    if not status:
+        # a section's open issue count opens the list with its open issues (FR-019)
+        status = "open" if section else "all"
+    chosen = {
+        "status": status,
+        "category": arg("category") if arg("category") in categories else "",
+        "severity": arg("severity") if arg("severity") in severities else "",
+        "section": section["id"] if section else "",
+        "owner": arg("owner") if arg("owner") in {"none"} | {o[0] for o in owners} else "",
+    }
+
+    def keep(i: dict) -> bool:
+        st = chosen["status"]
+        if st != "all" and i["status"] not in _ISSUE_STATUS_GROUPS.get(st, (st,)):
+            return False
+        if chosen["category"] and i["category"] != chosen["category"]:
+            return False
+        if chosen["severity"] and i["severity"] != chosen["severity"]:
+            return False
+        if chosen["section"] and chosen["section"] not in i["sections"]:
+            return False
+        if chosen["owner"] and i["owner_key"] != ("" if chosen["owner"] == "none" else chosen["owner"]):
+            return False
+        return True
+
+    shown = [i for i in items if keep(i)]
     open_count = sum(1 for i in items if i["is_open"])
+    filtered = any(v for k, v in chosen.items() if k != "status") or chosen["status"] != "all"
     return render_template(
-        "issues.html", items=items, total=len(items), section=section,
-        open_count=open_count, closed_count=len(items) - open_count,
+        "issues.html", items=shown, total=len(items), shown=len(shown), filtered=filtered,
+        open_count=open_count, section=section, chosen=chosen,
+        options={"status": lifecycle_values, "category": categories, "severity": severities,
+                 "section": sections, "owner": owners},
+        sort=arg("sort"),
         maturity=maturity(p.status for p in pages),
     )
 

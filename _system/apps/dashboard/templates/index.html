@@ -78,7 +78,7 @@
       {% else %}{{ empty_state("pages") }}{% endif %}
     </div>
     <div class="valley-block">
-      <h2 class="valley-h"><a href="{{ '/issues?filter=open' if valley.open_total else '/issues' }}">Open issues</a> <span class="count-pill">{{ valley.open_total }}</span></h2>
+      <h2 class="valley-h"><a href="{{ '/issues?status=open' if valley.open_total else '/issues' }}">Open issues</a> <span class="count-pill">{{ valley.open_total }}</span></h2>
       {% if valley.open_issues %}
       <ul class="mini-list">
         {% for i in valley.open_issues %}
