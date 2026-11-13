@@ -89,6 +89,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-033-runnable-dashboard-in-the-starter-kit]] Runnable dashboard in the starter kit (feature, Should, draft)
 - [[FR-034-read-a-page-with-its-links]] Read a page with its links (feature, Must, draft)
 - [[FR-035-method-terms-lead-to-their-definition]] Method terms lead to their definition (feature, Should, draft)
+- [[FR-036-goal-coverage-matrix]] Goal coverage matrix (feature, Should, draft)
 
 ## Quality requirements
 
@@ -138,3 +139,5 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-020-grilling-session-on-the-dashboard-as-a-product]] Grilling session on the dashboard as a product (interview)
 - [[SRC-021-read-a-page-with-its-links]] Read a page with its links (document)
 - [[SRC-022-grilling-session-on-reading-a-page]] Grilling session on reading a page (interview)
+- [[SRC-023-goal-coverage-matrix]] Goal coverage matrix (document)
+- [[SRC-024-grilling-session-on-the-goal-coverage-matrix]] Grilling session on the goal coverage matrix (interview)

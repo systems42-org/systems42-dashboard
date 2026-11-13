@@ -210,3 +210,10 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
   - Q1: dashboard requirements and Systems42 (metamodel) requirements are separated by one test: would it still hold without the dashboard? Recorded as [[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]].
   - Q2: two features. [[FR-034-read-a-page-with-its-links]] under FR-017, Must. [[FR-035-method-terms-lead-to-their-definition]] under FR-010, Should.
 - Created: FR-034, FR-035, CON-004, SRC-021, SRC-022. Updated: FR-010 and FR-017 child lists, `_system/index.md`.
+
+## [2026-11-13] capture | Goal coverage matrix
+- Source: `raw/fr-16-goal-coverage-matrix.md`, raised by Gernot Starke and drafted by Claude, now [[SRC-023-goal-coverage-matrix]] in `raw/ingested/`. The answers are [[SRC-024-grilling-session-on-the-goal-coverage-matrix]].
+- Grill gate: Systems42 already defines the matrix as the projection `proj-goal-coverage`, so by [[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]] its content is Systems42's part and the draft's question on columns falls away. Enablers follow the metamodel (platform or display lane), and a backbone epic with `goal: []` breaks `rule-fr-traces-to-goal`. Gernot Starke answered questions 1 to 3, so no Issue was needed.
+- Decisions: Q1 serves GOAL-004. Q2 a feature under FR-017, Should. Q3 no counts per row, only on Vision & Goals.
+- Created: [[FR-036-goal-coverage-matrix]], SRC-023, SRC-024. Updated: FR-017 child list, `_system/index.md`.
+- Noticed for Systems42, not filed: `proj-goal-coverage` cites DR-018 and DR-011, which exist only in isaqb-atrium.
