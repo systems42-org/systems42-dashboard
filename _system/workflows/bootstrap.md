@@ -17,10 +17,10 @@ Grilling resumes as normal from the first real `capture.md` run onward.
    Ask the group for a working name for *their* system and a one-line tagline,
    then **replace** `system_name:` and fill in `tagline:` in `_system/wiki.yaml`.
    The dashboard reads this file live — the group sees the re-brand on its next
-   refresh, no restart needed. (The hero logo is a static asset and stays; only
-   the wordmark changes. The shipped mark is Systems42's own — replace
-   `systems42-logo.svg` and `systems42-favicon.png` in
-   `_system/apps/dashboard/static/` when the group has its own.)
+   refresh, no restart needed. (The mark comes from `brand:` in the same file,
+   `systems42` by default. When the group has its own, put it in a folder of
+   this repository and name that folder in `brand:`, see
+   `_system/apps/dashboard/brands/README.md`.)
 2. **Confirm the ubiquitous language.** Ask whether the group will work in
    English. If they want to capture requirements in their own domain language
    instead, record their language as a Constraint (`CON-NNN`, organizational)

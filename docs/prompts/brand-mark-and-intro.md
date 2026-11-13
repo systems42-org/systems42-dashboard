@@ -2,7 +2,8 @@
 
 Fill in the three lines below, then paste everything after the line into a fresh
 agent session started in the repository. The prompt is generic: it works for any
-Systems42 wiki whose dashboard has the brand slot (`static/brand/README.md`).
+Systems42 wiki whose dashboard reads its brand from `brand:` in `_system/wiki.yaml`
+(`_system/apps/dashboard/brands/README.md`).
 
 - **Product:** Systems42 Dashboard
 - **What it is, in one sentence:** a browsable, read-only view of a requirements
@@ -19,8 +20,8 @@ files into a fixed slot. Work in four stages, and stop after stage 2 for my choi
 ## Stage 1: understand before drawing
 
 Read:
-- `_system/apps/dashboard/static/brand/README.md`: the contract your files must
-  meet. It is binding.
+- `_system/apps/dashboard/brands/README.md`: the contract your files must
+  meet. It is binding. `brands/systems42/` and `brands/atrium/` are worked examples.
 - `_system/apps/dashboard/static/style.css`: the colour tokens at the top, first
   for the dark theme, then for the light theme (`:root[data-theme="light"]`).
 - `raw/02-vision.md` and `raw/01-stakeholders.md`: what the product is for and who
@@ -58,8 +59,9 @@ round.
 - Recognisable at 16 px (favicon) and at 1.35 rem in the top bar.
 - Original: it must not resemble an existing logo, and it uses no other
   organisation's logo or name.
-- Deliver `mark-dark.svg`, `mark-light.svg` and `favicon.svg` in
-  `_system/apps/dashboard/static/brand/`, replacing the placeholders.
+- Deliver `mark-dark.svg`, `mark-light.svg` and `favicon.svg` in a folder of the
+  wiki repository, for example `brand/`, and set `brand: brand/` in
+  `_system/wiki.yaml`. The dashboard's own files stay as they are.
 
 **Intro animation**
 - The mark's own parts move into place. The motion explains the idea; it is not
@@ -69,8 +71,8 @@ round.
   any click or key ends it, hidden until the script shows it, a `var(--bg)` cover,
   no network, theme tokens only.
 - Plain JavaScript with SVG or CSS. No library.
-- Deliver `_system/apps/dashboard/templates/_brand_intro.html` (markup and inline
-  style) and, if the script is long, `_system/apps/dashboard/static/brand/intro.js`.
+- Deliver `intro.html` in the same folder: one self-contained fragment with its
+  markup, inline style and inline script.
 
 **Brand page**
 - Write `docs/brand/README.md`: the idea, the grid and coordinates, the colours with
@@ -79,16 +81,16 @@ round.
 - Set `about: docs/brand/README.md` in `_system/wiki.yaml`, so the hero mark links
   to it.
 
-Change nothing outside the slot, the brand page and `wiki.yaml`: no other template,
-no shared CSS. If the contract keeps you from doing something good, tell me instead
+Change nothing outside the brand folder, the brand page and `wiki.yaml`: no
+template, no shared CSS. If the contract keeps you from doing something good, tell me instead
 of working around it.
 
 ## Stage 4: check, then show me
 
 - Run the dashboard tests:
   `cd _system/apps/dashboard && for t in tests/test_*.py; do .venv/bin/python "$t" || echo "FAILED: $t"; done`.
-  `tests/test_brand.py` contains a test that expects no intro. Replace it with tests
-  for your intro's contract: hidden by default, placed before the hero, shown once
+  `tests/test_brand.py` checks the example brands against the contract. Point the
+  same checks at your folder: hidden by default, placed before the hero, shown once
   per tab, nothing under reduced motion. `test_design_tokens.py` already fails for
   reasons unrelated to your work.
 - Screenshots: the home page in both themes at 1280 px and 375 px wide, the top bar

@@ -13,6 +13,11 @@ Unreleased changes sit at the top until the next Starter Kit release.
 ## [Unreleased]
 
 ### Changed
+- Dashboard brand: the brand slot moved from `static/brand/` and
+  `templates/_brand_intro.html` to `_system/apps/dashboard/brands/<name>/`. A
+  brand's intro is now one self-contained `intro.html`, inserted as it is. The
+  contract is in `brands/README.md`. An intro may declare its own colours as
+  `--brand-*` custom properties, once per theme.
 - Quality requirements are classified by Q42 dimensions (DR-003): the
   template and the metamodel replace the single ISO 25010 `attribute:` with
   `dimensions:`, a list of one or more of reliable, flexible, maintainable,
@@ -34,6 +39,17 @@ Unreleased changes sit at the top until the next Starter Kit release.
   the new changes page and no longer counts pages (FR-018).
 
 ### Added
+- Branding is configuration. Three optional keys in `_system/wiki.yaml`:
+  `brand:` names an example brand (`systems42`, the default, or `atrium`) or a
+  folder of the wiki repository such as `brand/`, `intro: off` hides the home
+  page intro, `dashboard_version:` names the dashboard release the wiki uses.
+  Switching brands is one changed key and a reload. The dashboard only reads a
+  wiki's brand folder (mounted at `/repo`, read-only, under Docker). A folder
+  outside the repository, missing or incomplete shows `systems42` and logs a
+  warning.
+- The dashboard has a release number, `_system/apps/dashboard/VERSION`
+  (0.9.0), shown in the footer. When `dashboard_version:` names another release,
+  one footer line says so.
 - `/changes`: every wiki page, most recently changed first (FR-018).
 - `/issues?section=<ID>`: only the open issues that point at that section's
   pages. A section tile's open issue count links there (FR-019).
