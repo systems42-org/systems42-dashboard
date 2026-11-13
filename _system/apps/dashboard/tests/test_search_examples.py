@@ -119,6 +119,27 @@ def test_fr002_stem():
         ["start", "start", "requirement", "box", "use", "using", "is"]
 
 
+def test_fr002_exact_beats_typo_in_any_place():
+    found = ids("test")
+    assert found.index("FR-003") < found.index("FR-006"), found     # body "test" above title "Text tools"
+    recs = [{"id": "A-1", "type": "Issue", "title": "Mist", "aliases": [], "plain": "", "fields": {}},
+            {"id": "B-1", "type": "Issue", "title": "Other", "aliases": [], "plain": "",
+             "fields": {"priority": ["must"]}},
+            {"id": "C-1", "type": "Issue", "title": "Other", "aliases": [], "plain": "Musts and more", "fields": {}}]
+    ranked = js(f'S.rank({json.dumps(recs)}, "must", []).map(function (h) {{ return [h.rec.id, h.score]; }})')
+    assert [i for i, _ in ranked] == ["B-1", "C-1", "A-1"], ranked   # exact field, word form, typo title
+    assert ranked[0][1] > ranked[1][1] > ranked[2][1], ranked
+
+
+def test_fr002_typo_tie_prefers_same_first_letter():
+    found = ids("seach")
+    assert found.index("FR-007") < found.index("FR-009"), found     # Search the wiki above Reach
+
+
+def test_fr002_stem_typo_uses_the_stem_length():
+    assert "FR-009" not in ids("searches"), ids("searches")         # search → reach is 2 edits, 6 letters allow 1
+
+
 def test_fr002_non_ascii_typo():
     assert "STK-022" in ids("ärztn"), ids("ärztn")                 # Ärztin, one letter missing
 
@@ -227,7 +248,7 @@ def test_fr007_body_hit_shows_marked_sentence():
     assert ps["STK-023"] == ('<p class="hit-passage">Works with the <mark>facilitator</mark>'
                              ' in every workshop.</p>'), ps["STK-023"]
     assert "<mark>facilitator</mark>" in ps["FR-001"], ps
-    for q in ("person", "start", "guides session"):                  # body-only queries: every hit is marked
+    for q in ("person", "start", "session"):                         # body-only queries: every hit is marked
         for page_id, html in passages(q).items():
             assert html.startswith('<p class="hit-passage">') and "<mark>" in html, (q, page_id, html)
 

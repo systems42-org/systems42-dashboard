@@ -2,13 +2,15 @@
 // rank a query identically. Records have the shape of build_search_records()
 // in app.py: {id, type, title, aliases, plain, fields, links, ...}.
 //
-// Relevance is a 0–100 percentage, decided by *where* and *how* each query
-// word matched. Places, strongest first: id, title, alias, field (tags,
-// priority, status and the like, FR-006), type, body.
-// Within a place an exact or prefix hit beats a word form, a word form beats
-// a typo (FR-002), and a typo beats a glossary synonym (FR-003), so a weaker
-// match never pushes a correct one down. The number means
-// the same thing for every query (no per-query normalisation).
+// Relevance is a 0–100 percentage, decided by *how* and *where* each query
+// word matched. How comes first, in tiers: a word as typed (exact or as a
+// prefix, 40–100), then another name of a glossary term (33–39, FR-003), then
+// a word form (27–32), then a typo (21–26, FR-002). A page's tier is the tier
+// of its weakest word, so an exact match in any place outranks every typo
+// and a typo never pushes a correct match down. Within a tier, places rank
+// strongest first: id, title, alias, field (tags, priority, status and the
+// like, FR-006), type, body. The number means the same thing for every query
+// (no per-query normalisation).
 //
 // Pages that contain every query word come first. Pages that contain only
 // some follow, ranked by how many, with a note such as "matches 1 of 2 words"
@@ -21,10 +23,12 @@
   var STOP_WORDS = new Set(("who what when where why how the a an is are does do of to in on " +
     "for and or with").split(" "));
 
-  // base score per place, and what each kind of match costs within a place
+  // base score per place (the exact tier's scale), the tier of each kind of
+  // match, and the score band of each tier below the exact one
   var PLACE = {id: 90, title: 80, alias: 70, field: 60, type: 50, body: 40};
   var PLACES = ["id", "title", "alias", "field", "type", "body"];
-  var COST = {exact: 0, prefix: 2, form: 4, typo: 8, synonym: 12};
+  var TIER = {exact: 0, prefix: 0, synonym: 1, form: 2, typo: 3};
+  var BAND = [null, {floor: 33, width: 6}, {floor: 27, width: 5}, {floor: 21, width: 5}];
 
   function norm(s) { return String(s || "").normalize("NFC"); }
   function words(s) { return norm(s).match(WORD_RE) || []; }
@@ -76,11 +80,22 @@
     if (!strict && stem(q) === stem(w)) { return {kind: "form", from: q, to: w}; }
     if (w.lastIndexOf(q, 0) === 0) { return {kind: "prefix", from: q, to: w}; }
     if (strict || ID_RE.test(w)) { return null; }
-    var max = n >= 8 ? 2 : 1;
-    if (distance(q, w, max) <= max || distance(stem(q), stem(w), max) <= max) {
-      return {kind: "typo", from: q, to: w};
+    var d = distance(q, w, tolerance(q));
+    if (d > tolerance(q)) {
+      var sq = stem(q), sd = distance(sq, stem(w), tolerance(sq));
+      d = sd <= tolerance(sq) ? sd : null;
     }
-    return null;
+    if (d === null) { return null; }
+    // a typo rarely hits the first letter: a match that changes it ranks lower
+    return {kind: "typo", from: q, to: w, cost: d + (Array.from(q)[0] === Array.from(w)[0] ? 0 : 1)};
+  }
+
+  function tolerance(w) { var n = len(w); return n >= 8 ? 2 : n >= 4 ? 1 : 0; }
+
+  // Order of two word matches: tier, then (typos only) the size of the typo,
+  // then exact before prefix.
+  function weight(m) {
+    return TIER[m.kind] * 10 + (m.cost || 0) + (m.kind === "prefix" ? 0.5 : 0);
   }
 
   // Per-record word lists, built once per record: lower-case word -> the
@@ -125,8 +140,8 @@
       var key = q + "\u0000" + lc;
       if (!memo.has(key)) { memo.set(key, matchWord(q, lc)); }
       var m = memo.get(key);
-      if (m && (!best || COST[m.kind] < COST[best.kind])) {
-        best = {kind: m.kind, from: q, to: orig, lc: lc};
+      if (m && (!best || weight(m) < weight(best))) {
+        best = {kind: m.kind, cost: m.cost || 0, from: q, to: orig, lc: lc};
       }
     });
     return best;
@@ -166,7 +181,8 @@
   }
 
   // Best place and match for one query unit in one record. Every word of an
-  // alternative must match within the same place.
+  // alternative must match within the same place. The unit's `score` is its
+  // value on its tier's scale, `fit` its place on that scale from 0 to 1.
   function matchUnit(p, unit, memo) {
     var best = null;
     PLACES.forEach(function (place) {
@@ -176,20 +192,28 @@
           var m = bestIn(p[place], alt[k], memo);
           if (!m) { return; }
           lcs.push(m.lc);
-          if (!worst || COST[m.kind] > COST[worst.kind]) { worst = m; }
+          if (!worst || weight(m) > weight(worst)) { worst = m; }
         }
-        var cost = COST[worst.kind] + (ai > 0 ? COST.synonym : 0);
-        var score = PLACE[place] - cost;
-        if (!best || score > best.score) {
-          best = {place: place, score: score, match: worst, lcs: lcs,
-                  via: ai > 0 ? unit.via : null};
-        }
+        var tier = Math.max(TIER[worst.kind], ai > 0 ? TIER.synonym : 0);
+        var key = tier * 1000 + (100 - PLACE[place]) + worst.cost;   // lower is better
+        if (best && key >= best.key) { return; }
+        var fit = Math.max(0, Math.min(1, (PLACE[place] - 40) / 50 - 0.1 * worst.cost));
+        best = {place: place, tier: tier, key: key, fit: fit, match: worst, lcs: lcs,
+                via: ai > 0 ? unit.via : null,
+                score: tier === 0 ? PLACE[place] - (worst.kind === "prefix" ? 2 : 0)
+                                  : BAND[tier].floor + BAND[tier].width * fit};
       });
     });
     return best;
   }
 
+  // A page's score: its weakest word's tier decides the band (FR-002).
   function relevance(p, phrase, matches) {
+    var tier = Math.max.apply(null, matches.map(function (m) { return m.tier; }));
+    if (tier > 0) {
+      var fit = matches.reduce(function (a, m) { return a + m.fit; }, 0) / matches.length;
+      return BAND[tier].floor + BAND[tier].width * fit;
+    }
     function all(place) {
       return matches.every(function (m) {
         return m.place === place && !m.via && (m.match.kind === "exact" || m.match.kind === "prefix");
@@ -202,7 +226,7 @@
     }
     if (all("alias") && p.aliasLc.indexOf(phrase) !== -1) { return 88; }  // an alias, exactly
     var sum = matches.reduce(function (a, m) { return a + m.score; }, 0);
-    return Math.round(sum / matches.length);
+    return sum / matches.length;
   }
 
   // Why a page with every query word is a hit, when it doesn't contain the
@@ -331,14 +355,14 @@
         return a + (m.place === "body" ? p.freq.get(m.match.lc) || 0 : 0);
       }, 0);
       var sum = matches.reduce(function (a, m) { return a + m.score; }, 0);
+      var raw = full ? relevance(p, phrase, matches) : Math.min(20, sum / n / 4);
       out.push({
-        rec: rec, matches: matches, freq: freq, full: full,
-        score: full ? relevance(p, phrase, matches) : Math.min(20, Math.round(sum / n / 4)),
+        rec: rec, matches: matches, freq: freq, full: full, raw: raw, score: Math.round(raw),
         note: full ? reason(rec, matches) : "matches " + matches.length + " of " + n + " words",
       });
     });
     out.sort(function (a, b) {
-      return (b.full - a.full) || b.score - a.score || b.matches.length - a.matches.length
+      return (b.full - a.full) || b.raw - a.raw || b.matches.length - a.matches.length
         || b.freq - a.freq || a.rec.title.localeCompare(b.rec.title, "en");
     });
     return out;
