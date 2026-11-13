@@ -39,6 +39,12 @@ HEAD = ("---\nid: {id}\ntype: {type}\ntitle: {title}\nstatus: {status}\ncreated:
     HEAD.format(id="ISS-003", type="issue", title="Kaputt", status="open",
                 extra="severity: huge\nkind: question\ncategory: bogus\n"), encoding="utf-8")
 
+# the template's unquoted form: YAML reads it as a nested list
+(_wiki / "issues" / "ISS-004-alias.md").write_text(
+    HEAD.format(id="ISS-004", type="issue", title="Mit Alias", status="open",
+                extra="severity: minor\nkind: question\ncategory: content\nowner: [[STK-001-team|Die Ärzte]]\n"),
+    encoding="utf-8")
+
 import app  # noqa: E402
 
 client = app.app.test_client()
@@ -67,6 +73,21 @@ def test_owner_links_its_stakeholder():
     assert 'href="/page/stakeholders/STK-001-team"' in html
 
 
+def test_owner_in_the_unquoted_alias_form_links_its_stakeholder():
+    fields, html = _fields("ISS-004-alias")
+    assert fields["Owner"] == "Die Ärzte", fields
+    assert 'href="/page/stakeholders/STK-001-team"' in html
+    body = client.get("/issues").get_data(as_text=True)
+    row = re.search(r'<tr class="issue-row" data-id="ISS-004".*?</tr>', body, re.S).group(0)
+    assert re.search(r'<a class="wl" href="/page/stakeholders/STK-001-team">Die Ärzte</a>', row), row
+    # one option per owner, named by the page's title, whatever alias an issue uses
+    assert body.count('<option value="STK-001-team">') == 1 and "STK-001-team|" not in body
+    assert '<option value="STK-001-team">Das Team</option>' in body
+    ids = re.findall(r'<tr class="issue-row" data-id="([^"]+)"',
+                     client.get("/issues?owner=STK-001-team").get_data(as_text=True))
+    assert ids == ["ISS-001", "ISS-004"], ids
+
+
 def test_unknown_values_show_empty():
     fields, _ = _fields("ISS-003-kaputt")
     assert fields["Category"] == "" and fields["Severity"] == "", fields
@@ -80,6 +101,7 @@ def test_other_pages_have_no_issue_fields():
 if __name__ == "__main__":
     test_issue_page_shows_its_fields()
     test_owner_links_its_stakeholder()
+    test_owner_in_the_unquoted_alias_form_links_its_stakeholder()
     test_unknown_values_show_empty()
     test_other_pages_have_no_issue_fields()
     print("OK: issue page")

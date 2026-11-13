@@ -2602,13 +2602,18 @@ def _issue_owner(p: Page, titles: dict[str, str],
     raw = str(_scalar(p.meta.get("owner")) or "").strip()
     if raw.lower() in ("", "none", "null"):
         return {"key": "", "label": "", "url": None}
-    m = re.fullmatch(r"\[\[([^\]|#]+)(?:\|([^\]]+))?\]\]", raw)
-    target = (m.group(1) if m else raw).strip()
+    # "[[stem|label]]" quoted, or "stem|label" when YAML read the unquoted
+    # form as a nested list (the template writes it unquoted)
+    linked = raw.startswith("[[") and raw.endswith("]]")
+    inner = raw[2:-2] if linked else raw
+    target, _, alias = (part.strip() for part in inner.partition("|"))
+    target = target.split("#")[0].strip()
     if target in links:
         folder, stem = links[target]
-        label = (m.group(2) if m and m.group(2) else titles.get(stem, stem)).strip()
-        return {"key": stem, "label": label, "url": _page_url(folder, stem)}
-    return {"key": raw, "label": (m.group(2) or target).strip() if m else raw, "url": None}
+        return {"key": stem, "label": alias or titles.get(stem, stem), "url": _page_url(folder, stem)}
+    if linked or alias:
+        return {"key": raw, "label": alias or target, "url": None}
+    return {"key": raw, "label": raw, "url": None}
 
 
 # ?status= on the issue list: a lifecycle value, or one of these groups
@@ -2683,7 +2688,9 @@ def issues_view():
                       "sections": sections, "url": _page_url("issues", p.stem)})
 
     # the filters: only known values count, anything else shows every issue
-    owners = sorted({(i["owner_key"], i["owner"]) for i in items if i["owner_key"]}, key=lambda o: o[1].lower())
+    # one option per owner: a page by its title, whatever alias an issue uses
+    owners = sorted({i["owner_key"]: titles.get(i["owner_key"], i["owner"]) if i["owner_url"] else i["owner"]
+                     for i in items if i["owner_key"]}.items(), key=lambda o: o[1].lower())
     sections = [s for s in catalog.SECTIONS if s["folders"] and s["id"] != "C6"]
     arg = lambda name: request.args.get(name, "").strip()
     section = catalog.SECTION_BY_ID.get(arg("section"))
