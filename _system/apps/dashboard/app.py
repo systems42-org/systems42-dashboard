@@ -2344,28 +2344,123 @@ def deployment_view():
 
 # --- global search ---------------------------------------------------------
 
+# Frontmatter fields searched as plain words (FR-006). Link fields (parent,
+# sources, related, drivers …) are left out: their values are file names.
+SEARCH_FIELDS = ["tags", "status", "stereotype", "priority", "kind", "state",
+                 "category", "dimensions"]
+
+_MD_LINK_RE = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+_SOURCE_ID_RE = re.compile(r"[A-Z]+-\d+")
+# Lines that label a page's structure rather than say something: headings,
+# callout titles, bold-only lines such as **PROBLEM / GOAL** and the anchor
+# note "> follows [[MADR]]". A bold lead label such as **Snapshot.** goes too,
+# the text after it stays.
+_HEADING_LINE_RE = re.compile(r"^\s*(?:#{1,6}\s|>\s*\[![\w-]+\]|>\s*follows\s|\*\*[^*]+\*\*\s*$)")
+_LEAD_LABEL_RE = re.compile(r"^(\s*(?:[-*+]\s+)?)\*\*[^*]{1,60}[.:]\*\*\s+")
+_LINE_MARK_RE = re.compile(r"^\s*(?:#{1,6}\s+|>\s*(?:\[![\w-]+\][-+]?\s*)?|[-*+]\s+(?:\[[ xX]\]\s+)?|\d+[.)]\s+)+")
+_EMPHASIS_RE = re.compile(r"\*\*|__|~~|`|(?<!\w)\*(?=\S)|(?<=\S)\*(?!\w)")
+
+
+def search_plain(page: Page, titles: dict[str, str]) -> str:
+    """A page body as the reader sees it, for search: wikilinks become their
+    label (or the target's title), markdown and HTML markup go, hard-wrapped
+    prose is joined. One line per paragraph or list item, so the ranker can
+    cut passages. Headings and labels go (`_HEADING_LINE_RE`).
+    An unlabelled provenance link to raw/sources becomes the source's ID
+    (`SRC-006`): its file name or title would match words such as
+    "grilling" on most pages, and dropping it leaves "came from ." holes."""
+    def link_text(m: re.Match) -> str:
+        target, label = m.group(1).strip(), m.group(2)
+        base = target.split("/")[-1]
+        if label:
+            return label.strip()
+        if target.startswith("raw/") or base.startswith("SRC-"):
+            src = source_index().get(base)
+            return src.id if src else _SOURCE_ID_RE.match(base).group(0) if _SOURCE_ID_RE.match(base) else ""
+        return titles.get(base, target)
+
+    body = _unwrap_prose(page.body)
+    body = WIKILINK_RE.sub(link_text, body)
+    body = _MD_LINK_RE.sub(lambda m: m.group(1), body)
+    body = _HTML_TAG_RE.sub(" ", body)
+    lines = []
+    for line in body.splitlines():
+        if line.strip().startswith("```") or _TABLE_SEP_RE.match(line) or _HEADING_LINE_RE.match(line):
+            continue
+        line = _LEAD_LABEL_RE.sub(r"\1", line)
+        line = _LINE_MARK_RE.sub("", line)
+        line = _EMPHASIS_RE.sub("", line).replace("|", " ")
+        line = re.sub(r"\s+", " ", line).strip()
+        if line and line != "---":
+            lines.append(line)
+    return "\n".join(lines)
+
+
+def _search_fields(page: Page) -> dict[str, list[str]]:
+    out: dict[str, list[str]] = {}
+    for key in SEARCH_FIELDS:
+        v = page.meta.get(key)
+        vals = v if isinstance(v, list) else [v]
+        vals = [str(x).strip().lower() for x in vals if x is not None and str(x).strip()]
+        if vals:
+            out[key] = vals
+    return out
+
+
+def _search_links(pages: list[Page]) -> dict[str, set[str]]:
+    """page id -> ids one link step away, in either direction (FR-008)."""
+    idx = link_index()
+    by_stem = {p.stem: p for p in pages}
+    out: dict[str, set[str]] = {p.id: set() for p in pages}
+    for p in pages:
+        for t in p.link_targets():
+            dest = idx.get(t)
+            if not dest or dest[1] not in by_stem:
+                continue
+            other = by_stem[dest[1]].id
+            if other != p.id:
+                out[p.id].add(other)
+                out.setdefault(other, set()).add(p.id)
+    return out
+
+
 def build_search_records() -> list[dict]:
-    """A flat, lower-cased index over every wiki page. Each record
-    links to that unit's own detail page and carries both the full searchable
-    text (for the /search page) and a slim title/id key (for the tile preview).
-    Small enough to rank client-side (static/search-rank.js); /search.json
-    serves it to the topbar popup."""
+    """A flat index over every wiki page, ranked client-side by
+    static/search-rank.js. Each record links to that unit's own detail page
+    and carries the reader's text (`plain`), `aliases`, the searched `fields`
+    (lower-cased) and the ids of its neighbours (`links`)."""
+    pages = load_all_pages()
+    titles = title_index()
+    neighbours = _search_links(pages)
     records = []
-    for p in load_all_pages():
-        kind = FOLDER_LABELS.get(p.folder, p.folder)
-        text = " ".join(filter(None, [p.id, p.title, " ".join(p.aliases), p.body]))
+    for p in pages:
         records.append({
             "id": p.id,
-            "type": kind,
+            "type": FOLDER_LABELS.get(p.folder, p.folder),
             "title": p.title,
             "status": p.status,
             "url": (f"/functional-requirements/{p.stem}"
                     if p.folder == "functional-requirements"
                     else f"/page/{p.folder}/{p.stem}"),
-            "text": re.sub(r"\s+", " ", text).strip().lower(),
-            "key": " ".join([p.id, p.title, " ".join(p.aliases), kind]).strip().lower(),
+            "aliases": [str(a) for a in p.aliases],
+            "plain": search_plain(p, titles),
+            "fields": _search_fields(p),
+            "links": sorted(neighbours.get(p.id, ())),
         })
     return records
+
+
+def search_synonyms() -> list[list[str]]:
+    """Each glossary term's title plus its aliases, lower-cased. The search
+    treats a group as one word (FR-003)."""
+    return [[str(w).strip().lower() for w in [p.title, *p.aliases] if str(w).strip()]
+            for p in load_folder("glossary")]
+
+
+def build_search_index() -> dict:
+    """What /search.json serves and /search embeds: {records, synonyms}."""
+    return {"records": build_search_records(), "synonyms": search_synonyms()}
 
 
 # --- views -----------------------------------------------------------------
@@ -2761,20 +2856,44 @@ def search_index():
     """The search index for the topbar's incremental search popup
     (static/search-popup.js); ranked client-side by static/search-rank.js,
     the same code the /search page uses."""
-    return jsonify([{k: r[k] for k in ("id", "type", "title", "status", "url", "text")}
-                    for r in build_search_records()])
+    return jsonify(build_search_index())
 
 
 @app.route("/search")
 def search_view():
     """Global search across all wiki content. Results render once and are
     filtered incrementally client-side; type facets allow browsing by content type."""
-    records = build_search_records()
+    index = build_search_index()
     tally: dict[str, int] = {}
-    for r in records:
+    for r in index["records"]:
         tally[r["type"]] = tally.get(r["type"], 0) + 1
     facets = sorted(tally.items(), key=lambda kv: (-kv[1], kv[0]))
-    return render_template("search.html", records=records, total=len(records), facets=facets)
+    return render_template("search.html", index=index, total=len(index["records"]), facets=facets,
+                           filters=_search_filters())
+
+
+_PRIORITY_ORDER = ["must", "should", "could", "wont", "won't"]
+
+
+def _search_filters() -> dict[str, list[dict]]:
+    """The values offered by /search's status, priority and tag filters
+    (FR-009): every value some page carries, as {value, label}. The value is
+    lower-case, as the ranker compares it; the label is how the wiki writes
+    it (the first spelling found)."""
+    labels: dict[str, dict[str, str]] = {"status": {}, "priority": {}, "tags": {}}
+    for p in load_all_pages():
+        for key, seen in labels.items():
+            raw = p.meta.get(key)
+            for x in raw if isinstance(raw, list) else [raw]:
+                written = str(x).strip() if x is not None else ""
+                if written:
+                    seen.setdefault(written.lower(), written)   # same value as _search_fields
+
+    def opts(key, order=None):
+        vals = labels[key]
+        rank = (lambda v: (v not in order, order.index(v) if v in order else 0, v)) if order else None
+        return [{"value": v, "label": vals[v]} for v in sorted(vals, key=rank)]
+    return {"status": opts("status"), "priority": opts("priority", _PRIORITY_ORDER), "tag": opts("tags")}
 
 
 def _short_title(p: Page) -> str:
