@@ -60,6 +60,36 @@ def test_unknown_sort_key_leaves_the_server_order():
     assert _sort(rows, [{"key": "nosuchcol", "dir": "asc"}, {"key": "v", "dir": "asc"}]) == ["3", "2", "1"]
 
 
+def _order(values, numeric, asc):
+    return _node("var v = " + json.dumps(values) + ";\n"
+                 "v.sort(function (a, b) { return window.S42List.compare(a, b, "
+                 + json.dumps(numeric) + ", " + json.dumps(asc) + "); });\n"
+                 "console.log(JSON.stringify(v));")
+
+
+def test_non_numbers_in_a_numeric_column_sort_after_numbers():
+    # Number("x") is NaN: compared as a number it broke the order
+    assert _order(["10", "2", "", "x", "1"], True, True) == ["1", "2", "10", "x", ""]
+    assert _order(["10", "2", "", "x", "1"], True, False) == ["10", "2", "1", "x", ""]
+    assert _order(["b", "3", "", "a"], True, True) == ["3", "a", "b", ""]
+    assert _order(["b", "3", "", "a"], True, False) == ["3", "b", "a", ""]
+    # the same order from every starting order: the comparison is consistent
+    base = ["10", "x", "2", "", "1", "b", "007"]
+    seen = {json.dumps(_order(base[i:] + base[:i], True, True)) for i in range(len(base))}
+    assert len(seen) == 1, seen
+
+
+def test_each_cell_is_read_once_per_sort():
+    out = _node(
+        "var calls = 0, rows = [];\n"
+        "for (var i = 0; i < 50; i++) rows.push({id: i, a: String(i % 5), b: String(50 - i)});\n"
+        "var r = window.S42List.sortKeyed(rows, [{key: 'a', dir: 'asc', numeric: true}, {key: 'b', dir: 'asc', numeric: true}],\n"
+        "  function (row, key) { calls++; return row[key]; });\n"
+        "console.log(JSON.stringify({calls: calls, first: r.slice(0, 3).map(function (x) { return x.id; })}));")
+    assert out["calls"] == 100, out          # 50 rows, 2 keys
+    assert out["first"] == [45, 40, 35], out
+
+
 def test_address_format():
     parsed = _node('console.log(JSON.stringify(window.S42List.parseSort("priority:asc,release:desc,order")));')
     assert parsed == [{"key": "priority", "dir": "asc"}, {"key": "release", "dir": "desc"}, {"key": "order"}]
@@ -94,6 +124,8 @@ if __name__ == "__main__":
         test_empty_cells_last_in_both_directions()
         test_aerztin_sorts_next_to_arzt()
         test_unknown_sort_key_leaves_the_server_order()
+        test_non_numbers_in_a_numeric_column_sort_after_numbers()
+        test_each_cell_is_read_once_per_sort()
         test_address_format()
         test_agreed_only_keeps_accepted_rows()
     test_replaces_table_sort()

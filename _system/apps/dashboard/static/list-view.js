@@ -29,7 +29,18 @@
   function compare(a, b, numeric, asc) {
     // an empty cell is missing data, not a small value: last in either direction
     if (a === "" || b === "") return a === b ? 0 : (a === "" ? 1 : -1);
-    var d = numeric ? Number(a) - Number(b) : collator.compare(a, b);
+    if (numeric) {
+      // a non-number in a numeric column comes after the numbers and before
+      // the empty cells, in either direction (NaN would break the order)
+      var na = Number(a), nb = Number(b);
+      if (isNaN(na) || isNaN(nb)) {
+        if (!isNaN(na)) return -1;
+        if (!isNaN(nb)) return 1;
+      } else {
+        return asc ? na - nb : nb - na;
+      }
+    }
+    var d = collator.compare(a, b);
     return asc ? d : -d;
   }
 
@@ -56,6 +67,19 @@
         }
         return a.i - b.i;
       })
+      .map(function (e) { return e.row; });
+  }
+
+  // sortRows, reading each row's key once per sort through keyOf(row, key)
+  // instead of once per comparison
+  function sortKeyed(rows, spec, keyOf) {
+    var keys = (spec || []).map(function (s) { return s.key; });
+    var entries = rows.map(function (row) {
+      var v = {};
+      keys.forEach(function (k) { v[k] = keyOf(row, k); });
+      return {row: row, v: v};
+    });
+    return sortRows(entries, spec, function (e, key) { return e.v[key]; })
       .map(function (e) { return e.row; });
   }
 
@@ -86,7 +110,7 @@
     });
   }
 
-  var api = {compare: compare, sortRows: sortRows, parseSort: parseSort,
+  var api = {compare: compare, sortRows: sortRows, sortKeyed: sortKeyed, parseSort: parseSort,
              formatSort: formatSort, keepRow: keepRow, clear: clear};
   window.S42List = api;
   window.S42TableSort = api;                       // the former name, for older pages
@@ -140,7 +164,7 @@
 
     function render() {
       var rows = state.spec.length
-        ? sortRows(serverRows, state.spec, function (row, key) {
+        ? sortKeyed(serverRows, state.spec, function (row, key) {
             return cols[key] ? cellKey(row, cols[key].idx) : undefined;
           })
         : serverRows;
