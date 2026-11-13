@@ -49,6 +49,10 @@ Unreleased changes sit at the top until the next Starter Kit release.
   the new changes page and no longer counts pages (FR-018).
 
 ### Added
+- Every wiki page lists the issues that link to it, open ones first and then
+  by severity, each with status and severity (FR-027). A page without an open
+  issue says "No open issues point at this page." Functional requirement
+  pages included.
 - The shared list layer `static/list-view.js` replaces `table-sort.js`
   (FR-021, FR-022). A list sorts by several columns: shift-click a header to
   add it as the next key. A list can offer its type's sort orders and an

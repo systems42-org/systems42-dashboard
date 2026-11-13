@@ -2622,6 +2622,31 @@ def issue_fields(p: Page, titles: dict[str, str], links: dict[str, tuple[str, st
             "owner": owner["label"], "owner_key": owner["key"], "owner_url": owner["url"]}
 
 
+_SEVERITY_RANK = {"blocker": 0, "major": 1, "minor": 2}
+
+
+@_request_cached
+def _issue_backlinks() -> dict[str, list[dict]]:
+    """page stem -> the issues that link to it, by frontmatter or body
+    wikilink (FR-027). A mere mention without a link does not count."""
+    titles, links = title_index(), link_index()
+    out: dict[str, list[dict]] = {}
+    for iss in load_folder("issues"):
+        f = issue_fields(iss, titles, links)
+        item = {"id": iss.id, "title": iss.title, "status": f["status"], "severity": f["severity"],
+                "is_open": f["is_open"], "url": _page_url("issues", iss.stem)}
+        for stem in {links[t][1] for t in iss.link_targets() if t in links}:
+            out.setdefault(stem, []).append(item)
+    return out
+
+
+def open_issues_for(stem: str) -> list[dict]:
+    """The issues that link to a page, open ones first, then by severity
+    (blocker first), then by ID (FR-027)."""
+    return sorted(_issue_backlinks().get(stem, []),
+                  key=lambda i: (not i["is_open"], _SEVERITY_RANK.get(i["severity"], 3), i["id"]))
+
+
 @app.route("/issues")
 def issues_view():
     """C6: every issue, filtered on the server by status, category, severity,
@@ -2803,6 +2828,7 @@ def page_detail(folder, stem):
         needs_mermaid=bool(context_diagram or whitebox or sequence or deployment) or "language-mermaid" in body_html,
         sources=provenance(page),
         issue=issue_fields(page, titles, link_index()) if folder == "issues" else None,
+        page_issues=open_issues_for(stem),
     )
 
 
@@ -3480,6 +3506,7 @@ def fr_view(stem):
         trace=build_trace(stem, "functional-requirements"),
         needs_mermaid=bool(diagram) or "language-mermaid" in body_html,
         sources=provenance(page),
+        page_issues=open_issues_for(stem),
     )
 
 

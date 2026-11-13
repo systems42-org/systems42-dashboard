@@ -1,0 +1,20 @@
+{# The issues that link to this page, open ones first (FR-027). `issues` is
+   open_issues_for(stem). Shown on every wiki page, so a reader sees how firm
+   the page is before building on it. #}
+{% macro page_issues(issues) %}
+<section class="page-issues" aria-label="Issues">
+  {% if not issues | selectattr("is_open") | list %}<p class="page-issues-none">No open issues point at this page.</p>{% endif %}
+  {% if issues %}
+  <h2 class="page-issues-h">Issues that point at this page</h2>
+  <ul class="page-issues-list">
+    {% for i in issues %}
+    <li class="page-issue{{ '' if i.is_open else ' page-issue-closed' }}">
+      <a class="wl" href="{{ i.url }}"><code>{{ i.id }}</code> {{ i.title }}</a>
+      {% if i.status %}<span class="status status-{{ i.status }}">{{ i.status }}</span>{% endif %}
+      {% if i.severity %}<span class="badge sev-badge">{{ i.severity }}</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+{% endmacro %}

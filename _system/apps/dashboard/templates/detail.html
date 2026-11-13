@@ -2,6 +2,7 @@
 {% from "_context_flows.html" import context_flow_table %}
 {% from "_provenance.html" import provenance_chips %}
 {% from "_trace.html" import trace_panel %}
+{% from "_page_issues.html" import page_issues as page_issues_panel %}
 {% block title %}{{ id }} · {{ title }}{% endblock %}
 {% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}{% if crumb %}<a href="{{ crumb_href }}">{{ crumb }}</a> <span>›</span> {% endif %}{{ id }}</nav>{% endblock %}
 {% block content %}
@@ -82,6 +83,7 @@
 </figure>
 {% endif %}
 
+{% if page_issues is defined and page_issues is not none %}{{ page_issues_panel(page_issues) }}{% endif %}
 <article class="detail-pane">{{ body_html | safe }}</article>
 
 {{ trace_panel(trace) }}

@@ -557,6 +557,16 @@ tr.list-out { display: none; }
 .issue-fields dt { color: var(--ink-dim); margin: 0; }
 .issue-fields dd { margin: 0; color: var(--ink); }
 
+/* ---- issues on the page they affect (FR-027) ---- */
+.page-issues { margin: var(--space-3) 0; padding: var(--space-2) var(--space-3); border: 1px solid var(--line);
+  border-radius: var(--radius, 8px); background: var(--card); font-size: .88rem; }
+.page-issues-none { margin: 0; color: var(--ink-dim); }
+.page-issues-h { margin: 0 0 var(--space-1); font-size: .9rem; color: var(--ink-soft); }
+.page-issues-none + .page-issues-h { margin-top: var(--space-2); }
+.page-issues-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .3rem; }
+.page-issue { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+.page-issue-closed { opacity: .7; }
+
 /* ---- influence / interest level badges ---- */
 .lvl { font-size: .75rem; padding: .14rem .55rem; border-radius: 999px; border: 1px solid var(--line);
   background: var(--card-2); color: var(--ink-soft); white-space: nowrap; }
