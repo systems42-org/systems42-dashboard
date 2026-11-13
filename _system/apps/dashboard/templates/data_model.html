@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Data model · req42{% endblock %}
-{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}<a href="/req42/models">Supporting Models</a> <span>›</span> Data model</nav>{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}{% if crumb %}<a href="{{ crumb_href }}">{{ crumb }}</a> <span>›</span> {% endif %}Data model</nav>{% endblock %}
 {% from "_empty.html" import empty_state %}
 {% from "_macros.html" import status_rank %}
 {% from "_list.html" import list_attrs, list_controls, list_empty %}

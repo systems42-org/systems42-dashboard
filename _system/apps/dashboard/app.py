@@ -3427,7 +3427,7 @@ def data_model_view():
     if focus not in {n["key"] for n in nodes}:
         focus = None
     diagram = build_data_model_full_diagram(context=context, focus=focus)
-    return render_template("data_model.html", diagram=diagram,
+    return render_template("data_model.html", diagram=diagram, **_section_crumb("data-models"),
                            entities=data_model_entities(), nodes=nodes,
                            contexts=contexts, context=context, focus=focus,
                            stubs=[n for n in nodes if n["stub"]],
