@@ -55,7 +55,7 @@
     {% if o.epics %}
       {% for fr in o.epics %}<a href="{{ fr.url }}">{{ fr.id }} {{ fr.title }}</a>{% if not loop.last %} · {% endif %}{% endfor %}
     {% else %}
-      <span class="goal-drives-empty">No epic or use case yet</span>
+      <span class="goal-drives-empty">No requirement yet</span>
     {% endif %}
   </div>
 </section>
@@ -79,8 +79,13 @@
       </thead>
       <tbody>
         {% for row in matrix_rows %}
-        <tr{% if row.gap %} class="gm-gap"{% endif %} data-goal="{{ row.id }}" data-status="{{ row.status }}" data-gap-note="{{ row.note }}" data-gap-note-accepted="{{ row.note_accepted }}">
-          <td class="gm-row-head"><a href="{{ row.url }}"><code>{{ row.id }}</code>{{ row.title }}</a>{% if row.gap %}<span class="gm-gap-note">{{ row.note }}</span>{% endif %}</td>
+        <tr{% if row.views.all.gap %} class="gm-gap"{% endif %} data-goal="{{ row.id }}" data-status="{{ row.status }}"{% if row.views.all.gap %} data-gap{% endif %}{% if row.views.accepted.gap %} data-gap-accepted{% endif %}>
+          <td class="gm-row-head"><a href="{{ row.url }}"><code>{{ row.id }}</code>{{ row.title }}</a>
+            {%- for name, v in [("all", row.views.all), ("accepted", row.views.accepted)] %}
+            {%- if v.gap %}<span class="gm-gap-note" data-view="{{ name }}"{% if name == "accepted" %} hidden{% endif %}>No {% if name == "accepted" %}agreed {% endif %}requirement yet</span>
+            {%- elif v.served %}<span class="gm-served" data-view="{{ name }}"{% if name == "accepted" %} hidden{% endif %}>Served by {% for g in v.served %}{{ g.label }} {% for l in g.links %}<a href="{{ l.url }}">{{ l.id }}</a>{% if not loop.last %}, {% endif %}{% endfor %}{% if not loop.last %} and {% endif %}{% endfor %}</span>
+            {%- endif %}
+            {%- endfor %}</td>
           {% for cell in row.cells %}{% set col = fr_cols[loop.index0] %}
           <td{% if col.enabler %} class="gm-enabler"{% endif %} data-status="{{ col.status }}">
             {% if cell %}<span class="gm-dot" title="{{ col.id }} serves {{ row.id }}">●</span>{% else %}<span class="gm-empty">·</span>{% endif %}
@@ -92,7 +97,7 @@
     </table>
   </div>
   <p class="empty-hint" data-gm-none hidden>No agreed goals yet.</p>
-  <p class="goal-matrix-legend">● the epic or use case serves the goal · dashed columns are enablers · <span class="gm-flag">no goal</span> an epic that names no goal, against the Systems42 rule · a quiet row is a goal no epic or use case serves yet.</p>
+  <p class="goal-matrix-legend">● the epic or use case serves the goal · dashed columns are enablers · <span class="gm-flag">no goal</span> an epic that names no goal, against the Systems42 rule · a row without marks names the features and stories that serve its goal · a quiet row is a goal no requirement serves yet.</p>
 </section>
 {% else %}
 {{ empty_state("objectives") }}

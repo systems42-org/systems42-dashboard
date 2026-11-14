@@ -164,8 +164,11 @@ def test_goal_without_a_mark_stands_out():
     assert "gm-dot" not in rows["GOAL-003"]
     head = re.search(r'<tr([^>]*)data-goal="GOAL-003"', _matrix()).group(1)
     assert "gm-gap" in head, head
-    assert "No epic or use case yet" in rows["GOAL-003"]
-    assert "No epic or use case yet" not in rows["GOAL-002"]
+    assert "No requirement yet" in rows["GOAL-003"]
+    assert "No requirement yet" not in rows["GOAL-002"]
+    # its card says the same
+    card = re.search(r'<section id="GOAL-003" class="goal-card">(.*?)</section>', BODY, re.S).group(1)
+    assert "No requirement yet" in card, card
     assert "gm-gap" not in re.search(r'<tr([^>]*)data-goal="GOAL-002"', _matrix()).group(1)
 
 
@@ -199,12 +202,41 @@ def test_drives_lists_every_requirement_and_every_mark():
     assert re.findall(r'<a href="[^"]+">((?:FR|UC)-\d+) ', card) == ["FR-001", "FR-004", "FR-006", "FR-011", "FR-012"]
 
 
-def test_gap_served_by_features_says_so():
+def _head(gid):
+    """The row's whole <tr> tag."""
+    return re.search(r'<tr[^>]*data-goal="' + gid + r'"[^>]*>', _matrix()).group(0)
+
+
+def _view(row, view):
+    """The row-head notes the server renders for one filter view."""
+    return re.findall(r'<span class="(gm-[a-z-]+)" data-view="' + view + r'"[^>]*>(.*?)</span>', row, re.S)
+
+
+def test_goal_served_only_by_features_is_no_gap():
+    # the product owner's rule: a feature or story serving the goal is enough
     row = _rows()["GOAL-005"]
     assert "gm-dot" not in row
-    assert "No epic yet, served by features" in row, row
-    assert "No epic or use case yet" not in row, row
-    assert "No epic or use case yet" in _rows()["GOAL-003"]
+    assert "gm-gap" not in _head("GOAL-005"), _head("GOAL-005")
+    notes = _view(row, "all")
+    assert len(notes) == 1 and notes[0][0] == "gm-served", notes
+    assert re.sub(r"<[^>]+>", "", notes[0][1]) == "Served by features FR-008", notes
+    assert 'href="/functional-requirements/FR-008-feature-only"' in notes[0][1], notes
+    assert "No requirement yet" not in row
+
+
+def test_agreed_only_counts_agreed_pages():
+    # GOAL-005: only a draft feature, so with drafts hidden it is a gap
+    assert 'data-gap-accepted' in _head("GOAL-005")
+    assert _view(_rows()["GOAL-005"], "accepted") == [("gm-gap-note", "No agreed requirement yet")]
+    # GOAL-006: a draft epic (a mark) and an agreed feature: no note in the
+    # full view, and with drafts hidden the agreed feature explains the row
+    row = _rows()["GOAL-006"]
+    assert _view(row, "all") == [], _view(row, "all")
+    notes = _view(row, "accepted")
+    assert [(c, re.sub(r"<[^>]+>", "", t)) for c, t in notes] == [("gm-served", "Served by features FR-014")], notes
+    assert "data-gap-accepted" not in _head("GOAL-006")
+    # the accepted-view notes start hidden
+    assert re.search(r'data-view="accepted" hidden', row)
 
 
 def _node(body):
@@ -212,20 +244,6 @@ def _node(body):
     out = subprocess.run(["node", "-e", "var window = {};\n" + js + "\n" + body],
                          capture_output=True, text=True, check=True).stdout
     return json.loads(out)
-
-
-def _gap_notes(gid):
-    tr = re.search(r'<tr[^>]*data-goal="' + gid + r'"[^>]*>', _matrix()).group(0)
-    return (re.search(r'data-gap-note="([^"]*)"', tr).group(1),
-            re.search(r'data-gap-note-accepted="([^"]*)"', tr).group(1))
-
-
-def test_agreed_only_has_its_own_gap_note():
-    # served only by a draft feature: with drafts hidden nothing serves it
-    assert _gap_notes("GOAL-005") == ("No epic yet, served by features",
-                                      "No agreed epic or use case yet")
-    # a draft epic and an agreed feature: a gap only with drafts hidden
-    assert _gap_notes("GOAL-006")[1] == "No agreed epic yet, served by agreed features"
 
 
 def test_tooltips_near_the_right_edge_open_to_the_left():
@@ -248,19 +266,21 @@ def test_agreed_only_hides_drafts_and_finds_new_gaps():
         return
     cols = [{"status": "accepted"}, {"status": "draft"}, {"status": "accepted"},
             {"status": "accepted"}, {"status": "draft"}]
-    rows = [{"status": "accepted", "marks": [True, False, False, False, False], "note": "a", "noteAccepted": "A"},
-            {"status": "accepted", "marks": [False, True, False, False, False], "note": "b", "noteAccepted": "B"},
-            {"status": "draft", "marks": [True, True, False, False, False], "note": "c", "noteAccepted": "C"}]
+    # gap / gapAccepted come from the server: no requirement at all serves the
+    # goal, counting every page or agreed pages only
+    rows = [{"status": "accepted", "marks": [True, False, False, False, False], "gap": False, "gapAccepted": False},
+            {"status": "accepted", "marks": [False, True, False, False, False], "gap": False, "gapAccepted": True},
+            {"status": "draft", "marks": [True, True, False, False, False], "gap": False, "gapAccepted": False}]
     call = "console.log(JSON.stringify(window.S42GoalMatrix.view(%s, %s, %s)));"
     every = _node(call % (json.dumps(rows), json.dumps(cols), json.dumps("all")))
     assert every == {"rows": [True, True, True], "cols": [True] * 5,
-                     "gaps": [False, False, False], "notes": ["a", "b", "c"],
+                     "gaps": [False, False, False],
                      "edges": [False, False, True, True, True], "none": False}, every
     agreed = _node(call % (json.dumps(rows), json.dumps(cols), json.dumps("accepted")))
     # the second goal is served only by a draft, so with drafts hidden it is a
-    # gap with the agreed note, and the tooltip flip counts visible columns only
+    # gap, and the tooltip flip counts visible columns only
     assert agreed == {"rows": [True, True, False], "cols": [True, False, True, True, False],
-                      "gaps": [False, True, False], "notes": ["A", "B", "C"],
+                      "gaps": [False, True, False],
                       "edges": [True, False, True, True, False], "none": False}, agreed
     drafts = [dict(r, status="draft") for r in rows]
     assert _node(call % (json.dumps(drafts), json.dumps(cols), json.dumps("accepted")))["none"] is True

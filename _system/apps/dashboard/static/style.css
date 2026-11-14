@@ -787,7 +787,10 @@ pre.mermaid:not([data-processed]) { color: transparent; min-height: 2rem; }
 .goal-matrix-card tbody tr.gm-gap td { background: var(--bg-soft); }
 .goal-matrix-card tbody tr.gm-gap td.gm-row-head { color: var(--ink-soft); }
 .gm-gap-note { display: block; color: var(--warn); font-size: .78rem; font-style: italic; margin-top: .15rem; }
-.gm-gap-note[hidden] { display: none; }
+/* a goal served only by features or stories: no gap, a quiet note says by what */
+.gm-served { display: block; color: var(--ink-dim); font-size: .78rem; margin-top: .15rem; }
+.goal-matrix-card .gm-served a { color: var(--ink-soft); text-decoration: underline dotted; }
+.gm-gap-note[hidden], .gm-served[hidden] { display: none; }
 /* the "Agreed only" filter hides columns cell by cell (static/goal-matrix.js) */
 .goal-matrix-card .list-out { display: none; }
 .goal-matrix .list-controls { margin: 0 0 .55rem; }

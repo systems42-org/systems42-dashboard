@@ -3713,9 +3713,10 @@ def _goal_matrix(data: dict) -> tuple[list[dict], list[dict]]:
 
     Columns are the epics and use cases: epics that serve a goal or break
     rule-fr-traces-to-goal (`nogoal`), then use cases, then the enabler epics
-    as their own group. Rows are the objectives; a row without a mark is a
-    `gap`, and its `note` says when features or stories serve it all the same.
-    Columns and rows carry their status for the "Agreed only" filter."""
+    as their own group. Rows are the objectives. Per filter view (`views`, all
+    pages or accepted only) a row is a `gap` when no requirement at all serves
+    it, and a row without a mark lists the features and stories that serve it
+    (`served`). Columns and rows carry their status for the filter."""
     enabler_ids = {fr.id for fr in data["enablers"]}
     untraced_ids = {fr.id for fr in data["untraced"]}
     epics = [fr for fr in data["frs"]
@@ -3731,16 +3732,17 @@ def _goal_matrix(data: dict) -> tuple[list[dict], list[dict]]:
             + [col(e) for e in epics if e.id in enabler_ids])
     col_ids = {c["id"] for c in cols}
 
-    def gap_note(serving: list[Page], agreed: bool) -> str:
-        # the features and stories that serve a goal without a column
-        kinds = [k for k in ("feature", "story") if any(
-            p.id not in col_ids and str(p.meta.get("stereotype") or "").strip().lower() == k
-            for p in serving)]
-        a = "agreed " if agreed else ""
-        if not kinds:
-            return f"No {a}epic or use case yet"
-        plural = {"feature": "features", "story": "stories"}
-        return f"No {a}epic yet, served by " + " and ".join(a + plural[k] for k in kinds)
+    def view(serving: list[Page]) -> dict:
+        # gap: nothing serves the goal. served: a row without a mark names the
+        # features and stories that serve it, grouped by kind
+        groups = []
+        if not any(p.id in col_ids for p in serving):
+            for kind, label in (("feature", "features"), ("story", "stories")):
+                links = [{"id": p.id, "url": _page_url(p.folder, p.stem)} for p in serving
+                         if str(p.meta.get("stereotype") or "").strip().lower() == kind]
+                if links:
+                    groups.append({"label": label, "links": links})
+        return {"gap": not serving, "served": groups}
 
     rows = []
     for o in data["objectives"]:
@@ -3748,10 +3750,10 @@ def _goal_matrix(data: dict) -> tuple[list[dict], list[dict]]:
         covered = {p.id for p in serving}
         cells = [c["id"] in covered for c in cols]
         rows.append({"id": o.id, "title": o.title, "url": _page_url(o.folder, o.stem),
-                     "status": o.status, "cells": cells, "gap": not any(cells),
-                     "note": gap_note(serving, False),
-                     # for "Agreed only": counts accepted pages only
-                     "note_accepted": gap_note([p for p in serving if p.status == "accepted"], True)})
+                     "status": o.status, "cells": cells,
+                     "views": {"all": view(serving),
+                               # for "Agreed only": counts accepted pages only
+                               "accepted": view([p for p in serving if p.status == "accepted"])}})
     return cols, rows
 
 
