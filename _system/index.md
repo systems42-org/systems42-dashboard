@@ -114,7 +114,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 
 - [[ISS-001-who-holds-the-keys-in-parallel-work]] Who holds the keys when two people work in parallel (open)
 - [[ISS-002-define-the-clarify-loop]] Define the clarify loop (open)
-- [[ISS-003-goal-coverage-projection-cites-decisions-from-another-wiki]] The goal coverage projection cites decisions from another wiki (open, systems42)
+- [[ISS-003-goal-coverage-projection-cites-decisions-from-another-wiki]] The goal coverage projection cites decisions from another wiki (open, systems42, meta #37)
 
 ## Sources
 

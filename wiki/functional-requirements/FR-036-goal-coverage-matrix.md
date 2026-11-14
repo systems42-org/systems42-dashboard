@@ -4,7 +4,7 @@ type: functional-requirement
 title: Goal coverage matrix
 status: draft
 created: 2026-11-13
-updated: 2026-11-13
+updated: 2026-11-14
 sources: ["[[SRC-023-goal-coverage-matrix]]", "[[SRC-024-grilling-session-on-the-goal-coverage-matrix]]"]
 related: ["[[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]]", "[[QR-001-usable-on-phone-and-tablet]]", "[[FR-022-lists-keep-sort-and-filter-in-their-address]]", "[[STK-001-product-owners]]", "[[STK-002-business-analysts]]"]
 tags: ["functional-requirement", "goals"]
@@ -27,7 +27,7 @@ As a [[STK-001-product-owners|product owner]] I want **to see at a glance which 
 
 - At the bottom of Vision & Goals, the dashboard shows Systems42's goal coverage projection as a matrix. Systems42 defines what it contains: goals as rows, epics and use cases as columns, and what counts as a gap ([[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]]).
 - A mark sits where a requirement serves a goal.
-- A goal row without any mark stands out, so a goal that nothing serves is easy to see.
+- A goal that no requirement serves at all (no epic, use case, feature or story) stands out as a gap. A goal served only by features or stories is not a gap: its row names them, so the row without marks is explained.
 - Enablers (epics in the platform or display lane) form their own group of columns, set apart.
 - An epic that should serve a goal but names none is marked as breaking the Systems42 rule, not shown as an enabler.
 - Each column shows the requirement's real ID, such as `FR-024` or `UC-003`. Hover or focus shows its title, and a click opens it. Each row's goal links its goal page.
@@ -35,7 +35,7 @@ As a [[STK-001-product-owners|product owner]] I want **to see at a glance which 
 - Every mark is also reachable as text on the same page: each goal card lists the requirements that serve it.
 - The "Agreed only" filter applies here too ([[FR-022-lists-keep-sort-and-filter-in-their-address]]).
 
-**Success metric(s).** On a test wiki with 7 goals and 60 requirements, the page does not scroll sideways at 320 and at 1280 CSS pixels, and the goal column stays readable while the columns scroll. For every mark, the requirement's page names that goal, and the other way round. A goal without any requirement is visibly marked.
+**Success metric(s).** On a test wiki with 7 goals and 60 requirements, the page does not scroll sideways at 320 and at 1280 CSS pixels, and the goal column stays readable while the columns scroll. For every mark, the requirement's page names that goal, and the other way round. A goal without any requirement is visibly marked as a gap, and a goal served only by features is not.
 
 **Scope.** in: showing the projection on Vision & Goals · out: deciding what the projection contains (Systems42), counts per row, the matrix on area pages, quality requirements and constraints in the matrix, editing.
 
@@ -46,4 +46,4 @@ As a [[STK-001-product-owners|product owner]] I want **to see at a glance which 
 
 ## History
 
-> Raised by Gernot Starke on 2026-11-13 together with a layout fix for the matrix ([[SRC-023-goal-coverage-matrix]]). GOAL-004, Should, under FR-017, no row counts and only on Vision & Goals, in questions 1 to 3 of [[SRC-024-grilling-session-on-the-goal-coverage-matrix]]. Rows, columns and enablers follow Systems42's projection `proj-goal-coverage`.
+> Raised by Gernot Starke on 2026-11-13 together with a layout fix for the matrix ([[SRC-023-goal-coverage-matrix]]). GOAL-004, Should, under FR-017, no row counts and only on Vision & Goals, in questions 1 to 3 of [[SRC-024-grilling-session-on-the-goal-coverage-matrix]]. Rows, columns and enablers follow Systems42's projection `proj-goal-coverage`. On 2026-11-14 Gernot Starke decided that a goal served by at least one feature is not a gap, which the projection text does not say yet ([[ISS-003-goal-coverage-projection-cites-decisions-from-another-wiki]]).

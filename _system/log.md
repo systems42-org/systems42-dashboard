@@ -221,3 +221,7 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 ## [2026-11-13] issue | Goal coverage projection cites foreign decisions
 - Gernot Starke asked to file what the fr-16 capture noticed for Systems42. Filed here with category systems42, as [[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]] prescribes.
 - Created: [[ISS-003-goal-coverage-projection-cites-decisions-from-another-wiki]]. Updated: `_system/index.md`.
+
+## [2026-11-14] update | Gap rule of the goal coverage matrix
+- Gernot Starke decided: a goal that at least one feature serves is not a gap. Only a goal no requirement serves is one.
+- Updated: [[FR-036-goal-coverage-matrix]]. [[ISS-003-goal-coverage-projection-cites-decisions-from-another-wiki]] now also covers the gap definition and links meta issue #37, opened at his request. The dashboard change goes into PR #22.
