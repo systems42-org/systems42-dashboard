@@ -144,6 +144,10 @@ Unreleased changes sit at the top until the next Starter Kit release.
   not a limit.
 
 ### Fixed
+- The dashboard did not start in Docker. The anchors folder (FR-035) had no
+  mount and no variable, so the container stopped at startup while `make dev`
+  still said it was running. The anchors are now mounted at `/anchors`, and
+  `make dev` reports a container that stopped, with the end of its log.
 - `/metamodel`: a row opened by its address (`#type-goal`, `#anchor-madr`)
   stops below the sticky header instead of under it.
 - Vision & Goals: the goal coverage matrix stays inside its card. With many

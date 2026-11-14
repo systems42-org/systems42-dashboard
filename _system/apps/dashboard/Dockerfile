@@ -6,6 +6,7 @@ ENV PYTHONUNBUFFERED=1 \
     RAW_SOURCES_DIR=/sources \
     DOCS_DIR=/docs \
     METAMODEL_DIR=/metamodel \
+    ANCHORS_DIR=/anchors \
     REPO_DIR=/repo
 
 WORKDIR /app
