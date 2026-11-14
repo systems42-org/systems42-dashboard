@@ -28,6 +28,7 @@ export WIKI_DIR="$ROOT/wiki"
 export SOURCES_DIR="$ROOT/raw/sources"
 export DOCS_DIR="$ROOT/docs"
 export METAMODEL_DIR="$ROOT/_system/metamodel"
+export ANCHORS_DIR="$ROOT/_system/anchors"
 export CONFIG_FILE="$ROOT/_system/wiki.yaml"
 # The wiki repository itself: a wiki's own brand folder (`brand:` in wiki.yaml) lives in it.
 export REPO_DIR="$ROOT"
@@ -77,6 +78,21 @@ wait_for_url() {
   return 1
 }
 
+# When the dashboard does not answer: if its container has stopped, say so,
+# show the end of its log and fail, instead of claiming it runs.
+report_failed_start() {
+  local state
+  state="$(docker compose -f "$COMPOSE_FILE" ps -a --format '{{.State}}' 2>/dev/null | head -n 1)"
+  state="${state:-missing}"
+  if [ "$state" = "running" ]; then
+    echo "… still starting; reload the page if it does not answer."
+    return 0
+  fi
+  echo "✗ The dashboard did not start (container $state). Last log lines:" >&2
+  docker compose -f "$COMPOSE_FILE" logs --tail 25 >&2 || true
+  exit 1
+}
+
 cmd="${1:-up}"
 
 # Docker is required for every mode except `local`, which is the escape hatch
@@ -91,7 +107,7 @@ case "$cmd" in
   up)
     export DASH_PUBLIC_URL="${DASH_PUBLIC_URL:-http://${LAN_IP:-localhost}:8080}"
     docker compose -f "$COMPOSE_FILE" up --build -d
-    wait_for_url "$URL" || echo "… still starting; reload the page if it does not answer."
+    wait_for_url "$URL" || report_failed_start
     echo "✓ Dashboard running at $URL"
     echo "✓ Others in the room: $DASH_PUBLIC_URL (QR on the home page, /join to project it)"
     open_browser_at "$URL"
@@ -100,7 +116,7 @@ case "$cmd" in
     export DASH_PUBLIC_URL="${DASH_PUBLIC_URL:-http://${LAN_IP:-localhost}:8080}"
     docker compose -f "$COMPOSE_FILE" build --no-cache
     docker compose -f "$COMPOSE_FILE" up -d
-    wait_for_url "$URL" || echo "… still starting; reload the page if it does not answer."
+    wait_for_url "$URL" || report_failed_start
     echo "✓ Dashboard rebuilt, running at $URL"
     echo "✓ Others in the room: $DASH_PUBLIC_URL (QR on the home page, /join to project it)"
     open_browser_at "$URL"
@@ -119,7 +135,7 @@ case "$cmd" in
       python3 -m venv .venv
       .venv/bin/pip install -q --disable-pip-version-check -r requirements.txt
     fi
-    export WIKI_DIR SOURCES_DIR DOCS_DIR METAMODEL_DIR CONFIG_FILE DASHBOARD_CONFIG REPO_DIR
+    export WIKI_DIR SOURCES_DIR DOCS_DIR METAMODEL_DIR ANCHORS_DIR CONFIG_FILE DASHBOARD_CONFIG REPO_DIR
     export WIKI_CONFIG="$CONFIG_FILE"
     export RAW_SOURCES_DIR="$SOURCES_DIR"
     export DASH_PUBLIC_URL="${DASH_PUBLIC_URL:-http://${LAN_IP:-localhost}:8000}"

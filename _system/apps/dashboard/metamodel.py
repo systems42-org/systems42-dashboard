@@ -191,9 +191,11 @@ def type_for_folder(folder: str) -> str | None:
 # /metamodel and links every `[[MADR]]` there (FR-035); it adds nothing to
 # them (CON-004).
 
+# The anchors sit next to the metamodel folder (`_system/anchors/`). In the
+# container both are mounted, `/metamodel` and `/anchors`, so the default is
+# worked out from METAMODEL_DIR, never from this file's own place.
 _aenv = os.environ.get("ANCHORS_DIR")
-ANCHORS_DIR = (Path(_aenv) if _aenv
-               else Path(__file__).resolve().parents[2] / "anchors")
+ANCHORS_DIR = Path(_aenv) if _aenv else METAMODEL_DIR.parent / "anchors"
 
 _URL = re.compile(r"https?://[^\s<>()\]]+")
 _SLUG = re.compile(r"[^a-z0-9]+")
