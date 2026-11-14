@@ -225,3 +225,14 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 ## [2026-11-14] update | Gap rule of the goal coverage matrix
 - Gernot Starke decided: a goal that at least one feature serves is not a gap. Only a goal no requirement serves is one.
 - Updated: [[FR-036-goal-coverage-matrix]]. [[ISS-003-goal-coverage-projection-cites-decisions-from-another-wiki]] now also covers the gap definition and links meta issue #37, opened at his request. The dashboard change goes into PR #22.
+
+## [2026-11-14] capture | Domain terms and their two views
+- Source: `raw/fr-10-domain-terms-and-their-network.md`, extracted from the code on 2026-11-10 and rewritten on 2026-11-14 for the planned merge of glossary terms and data models (systems42-org/meta#36), now [[SRC-025-domain-terms-and-their-two-views]] in `raw/ingested/`. The answers are [[SRC-026-grilling-session-on-domain-terms]].
+- Grill gate: by [[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]] the type is Systems42's, so the requirement covers showing it only. Gernot Starke answered questions 1 to 4, so no Issue was needed.
+- Decisions:
+  - Q1: serves GOAL-003.
+  - Q2: one epic, Must, with four features: the term list (Must), the term page (Must), two views (Should), definition in place (Should).
+  - Q3: a bridge now. Glossary terms show as terms without kind, data-model entities as `entity`, until Systems42 has the type.
+  - Q4: the data model (entity diagram) stays in Supporting Models (R4). C5 holds the list, the pages and the terminology network. Recorded on meta#36 too.
+- Created: [[FR-037-domain-terms]] (epic), FR-038 to FR-041 (features), SRC-025, SRC-026. Updated: `_system/index.md`.
+- Related: an implementation plan for the Systems42 side is posted on meta#36.

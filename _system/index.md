@@ -90,6 +90,11 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-034-read-a-page-with-its-links]] Read a page with its links (feature, Must, draft)
 - [[FR-035-method-terms-lead-to-their-definition]] Method terms lead to their definition (feature, Should, draft)
 - [[FR-036-goal-coverage-matrix]] Goal coverage matrix (feature, Should, draft)
+- [[FR-037-domain-terms]] Domain terms (epic, Must, draft)
+- [[FR-038-the-term-list]] The term list (feature, Must, draft)
+- [[FR-039-the-term-page]] The term page (feature, Must, draft)
+- [[FR-040-two-views-of-the-same-terms]] Two views of the same terms (feature, Should, draft)
+- [[FR-041-definition-in-place]] Definition in place (feature, Should, draft)
 
 ## Quality requirements
 
@@ -142,3 +147,5 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-022-grilling-session-on-reading-a-page]] Grilling session on reading a page (interview)
 - [[SRC-023-goal-coverage-matrix]] Goal coverage matrix (document)
 - [[SRC-024-grilling-session-on-the-goal-coverage-matrix]] Grilling session on the goal coverage matrix (interview)
+- [[SRC-025-domain-terms-and-their-two-views]] Domain terms and their two views (document)
+- [[SRC-026-grilling-session-on-domain-terms]] Grilling session on domain terms (interview)
