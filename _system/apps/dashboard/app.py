@@ -1572,6 +1572,27 @@ def _vision_paragraphs(page: Page, titles: dict[str, str],
     return out
 
 
+ENABLER_LANES = ("platform", "display")
+
+
+def _in_enabler_lane(fr: Page) -> bool:
+    return str(fr.meta.get("lane") or "").strip().lower() in ENABLER_LANES
+
+
+def is_enabler(fr: Page, goals: list) -> bool:
+    """rel-goal: an FR that serves no goal (`goals`, its own or its use-case
+    parent's) and sits in lane platform or display is an explicit enabler."""
+    return not goals and _in_enabler_lane(fr)
+
+
+def breaks_fr_traces_to_goal(fr: Page, goals: list) -> bool:
+    """rule-fr-traces-to-goal: an epic or feature serves a goal (`goals`, its
+    own or its use-case parent's) or is an enabler. Advisory only."""
+    if str(fr.meta.get("stereotype") or "").strip().lower() not in ("epic", "feature"):
+        return False
+    return not goals and not _in_enabler_lane(fr)
+
+
 def load_goals() -> dict:
     """Return everything the tile and /goals page need.
 
@@ -1579,7 +1600,8 @@ def load_goals() -> dict:
       vision     — the goal Page with `stereotype: vision`, or None
       objectives — every other goal Page, ordered by id (GOAL-002, -003, …)
       coverage   — { 'GOAL-NNN': [FR- or UC-Page, ...] } from goal: backlinks
-      enablers   — list of FR-Pages with goal: [] (explicit enablers, DR-018)
+      enablers   — FR-Pages that serve no goal, in lane platform or display
+      untraced   — FR-Pages that break rule-fr-traces-to-goal
       frs        — all FR-Pages sorted by id (column order for the matrix)
       ucs        — all use-case Pages sorted by id (DR-011: use cases are FRs;
                    a UC with goal: [] is simply untraced, not an enabler)
@@ -1604,27 +1626,34 @@ def load_goals() -> dict:
     ucs = sorted(load_folder("use-cases"), key=lambda p: p.id)
     uc_by_stem = {u.stem: u for u in ucs}
     coverage: dict[str, list[Page]] = {o.id: [] for o in objectives}
+    objective_by_stem = {o.stem: o for o in objectives}
+
+    def served(p: Page) -> list[str]:
+        # only links that resolve to an objective count: the vision, a missing
+        # page or a mangled value serves no goal (rule-fr-traces-to-goal)
+        return [objective_by_stem[s].id for s in links_of(p, "goal") if s in objective_by_stem]
+
     enablers: list[Page] = []
+    untraced: list[Page] = []
     for fr in frs:
-        refs = fr.meta.get("goal") or []
-        if not refs:
+        gids = served(fr)
+        if not gids:
             # a feature/story refining a use case serves that use case's goals
             uc = next((uc_by_stem[s] for s in links_of(fr, "parent") if s in uc_by_stem), None)
-            refs = (uc.meta.get("goal") or []) if uc else []
-        if not refs:
+            gids = served(uc) if uc else []
+        if is_enabler(fr, gids):
             enablers.append(fr)
-            continue
-        for ref in refs:
-            gid = _goal_id_from_ref(ref)
-            if gid in coverage:
-                coverage[gid].append(fr)
+        elif breaks_fr_traces_to_goal(fr, gids):
+            untraced.append(fr)
+        for gid in gids:
+            coverage[gid].append(fr)
     for uc in ucs:
-        for ref in uc.meta.get("goal") or []:
-            gid = _goal_id_from_ref(ref)
-            if gid in coverage and uc not in coverage[gid]:
+        for gid in served(uc):
+            if uc not in coverage[gid]:
                 coverage[gid].append(uc)
     return {"vision": vision, "objectives": objectives,
-            "coverage": coverage, "enablers": enablers, "frs": frs, "ucs": ucs}
+            "coverage": coverage, "enablers": enablers, "untraced": untraced,
+            "frs": frs, "ucs": ucs}
 
 
 def build_vision_tile(data: dict, titles: dict[str, str]) -> dict:
@@ -1804,8 +1833,9 @@ def build_fr_hierarchy() -> dict:
 
 def _mermaid_goal_epic_tree(goals: dict, hierarchy: dict) -> str | None:
     """Compact top-of-hierarchy map: each Objective links down to the Epics that
-    contribute to it (FR `goal:` coverage, DR-018). Enabler epics (`goal: []`)
-    hang under a shared `Platform / Enabler` node so they stay visible. Two
+    contribute to it (FR `goal:` coverage, DR-018). Enabler epics (lane
+    platform or display) hang under a shared `Platform / Enabler` node, epics
+    that name no goal under `No goal`, so both stay visible. Two
     levels only — it must stay readable as the hierarchy grows, which is exactly
     why the old full Epic→Feature→Story tree was split out to the epic pages.
     Goal nodes jump to their card on /goals; epic nodes open their epic page.
@@ -1864,11 +1894,21 @@ def _mermaid_goal_epic_tree(goals: dict, hierarchy: dict) -> str | None:
         for e in enabler_epics:
             epic_edge("ENABLER", e)
 
+    # epics that break rule-fr-traces-to-goal: no enabler, but still on the map
+    untraced_epics = [epic_by_id[fr.id] for fr in goals.get("untraced") or []
+                      if fr.id in epic_by_id and fr.id not in seen]
+    if untraced_epics:
+        lines.append('  NOGOAL["No goal"]:::nogoal')
+        for e in untraced_epics:
+            epic_edge("NOGOAL", e)
+
     lines += [
         "  classDef goal fill:#2f6fb3,stroke:#7fc0ff,color:#ffffff,stroke-width:2px,font-weight:bold;",
         "  classDef enabler fill:#3a3f4b,stroke:#7a8497,color:#ffffff,font-weight:bold;",
         "  classDef epic fill:#d7dbe3,stroke:#9aa3b2,color:#15202e;",
         "  classDef usecase fill:#eef1f6,stroke:#9aa3b2,color:#15202e,stroke-dasharray:4 3;",
+        # the warning colour of the matrix's "no goal" flag (--warn)
+        "  classDef nogoal fill:#5a3d0c,stroke:#ffb454,color:#ffffff,stroke-width:2px,font-weight:bold;",
     ]
     return "\n".join(lines)
 
@@ -3668,12 +3708,53 @@ def _supporting_model_entries() -> list[dict]:
     return out
 
 
-def _epic_label(fr_id: str) -> str:
-    """FR-001 → Epic-01 — display alias for the coverage-matrix column header.
-    The underlying id stays FR-NNN (linking, frontmatter, search); this is
-    purely cosmetic for the matrix."""
-    m = re.match(r"FR-?0*(\d+)", fr_id)
-    return f"Epic-{int(m.group(1)):02d}" if m else fr_id
+def _goal_matrix(data: dict) -> tuple[list[dict], list[dict]]:
+    """proj-goal-coverage as (columns, rows) for /goals (FR-036).
+
+    Columns are the epics and use cases: epics that serve a goal or break
+    rule-fr-traces-to-goal (`nogoal`), then use cases, then the enabler epics
+    as their own group. Rows are the objectives. Per filter view (`views`, all
+    pages or accepted only) a row is a `gap` when no requirement at all serves
+    it, and a row without a mark lists the features and stories that serve it
+    (`served`). Columns and rows carry their status for the filter."""
+    enabler_ids = {fr.id for fr in data["enablers"]}
+    untraced_ids = {fr.id for fr in data["untraced"]}
+    epics = [fr for fr in data["frs"]
+             if str(fr.meta.get("stereotype") or "").strip().lower() == "epic"]
+
+    def col(p: Page) -> dict:
+        return {"id": p.id, "title": p.title, "url": _page_url(p.folder, p.stem),
+                "status": p.status, "enabler": p.id in enabler_ids,
+                "nogoal": p.id in untraced_ids}
+
+    cols = ([col(e) for e in epics if e.id not in enabler_ids]
+            + [col(uc) for uc in data["ucs"]]
+            + [col(e) for e in epics if e.id in enabler_ids])
+    col_ids = {c["id"] for c in cols}
+
+    def view(serving: list[Page]) -> dict:
+        # gap: nothing serves the goal. served: a row without a mark names the
+        # features and stories that serve it, grouped by kind
+        groups = []
+        if not any(p.id in col_ids for p in serving):
+            for kind, label in (("feature", "features"), ("story", "stories")):
+                links = [{"id": p.id, "url": _page_url(p.folder, p.stem)} for p in serving
+                         if str(p.meta.get("stereotype") or "").strip().lower() == kind]
+                if links:
+                    groups.append({"label": label, "links": links})
+        return {"gap": not serving, "served": groups}
+
+    rows = []
+    for o in data["objectives"]:
+        serving = data["coverage"].get(o.id, [])
+        covered = {p.id for p in serving}
+        cells = [c["id"] in covered for c in cols]
+        rows.append({"id": o.id, "title": o.title, "url": _page_url(o.folder, o.stem),
+                     "status": o.status, "cells": cells,
+                     "views": {"all": view(serving),
+                               # for "Agreed only": counts accepted pages only
+                               "accepted": view([p for p in serving if p.status == "accepted"])}})
+    return cols, rows
 
 
 @app.route("/goals")
@@ -3735,11 +3816,12 @@ def goals_view():
         "html": "".join(f"<p>{p}</p>" for p in _vision_paragraphs(vision, titles, links)),
     }
 
-    coverage = data["coverage"]
     def _inline(s) -> str:
         """Frontmatter strings may contain `[[wikilinks]]` — render them as
         real hyperlinks when the target resolves."""
         return render_wikilinks(str(s or "").strip(), titles, links)
+
+    fr_cols, matrix_rows = _goal_matrix(data)
 
     objective_cards = []
     for o in objectives:
@@ -3754,24 +3836,10 @@ def goals_view():
             "target": _inline(o.meta.get("target")),
             "baseline": _inline(o.meta.get("baseline")),
             "beneficiary": _wikilink_list(o.meta.get("beneficiary")),
-            "epics": [{"id": fr.id, "title": fr.title, "url": _page_url(fr.folder, fr.stem)}
-                      for fr in coverage.get(o.id, [])],
-        })
-
-    # matrix: rows = objectives ordered by id; columns = FR-001..N + enablers
-    enabler_ids = {fr.id for fr in data["enablers"]}
-    fr_cols = [{"id": fr.id, "title": fr.title, "epic": _epic_label(fr.id),
-                "stem": fr.stem, "enabler": fr.id in enabler_ids}
-               for fr in data["frs"]]
-    # use cases are FRs too (DR-011): their own columns, after the epics
-    fr_cols += [{"id": uc.id, "title": uc.title, "epic": uc.id,
-                 "stem": uc.stem, "enabler": False} for uc in data["ucs"]]
-    matrix_rows = []
-    for o in objectives:
-        covered_ids = {fr.id for fr in coverage.get(o.id, [])}
-        matrix_rows.append({
-            "id": o.id, "title": o.title,
-            "cells": [(col["id"] in covered_ids) for col in fr_cols],
+            # every requirement that serves the goal, features and stories
+            # too: a superset of its matrix marks, as text (FR-036)
+            "epics": [{"id": p.id, "title": p.title, "url": _page_url(p.folder, p.stem)}
+                      for p in data["coverage"].get(o.id, [])],
         })
 
     diagram = _mermaid_goal_tree(vision, objectives)

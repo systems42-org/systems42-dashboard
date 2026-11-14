@@ -13,6 +13,22 @@ Unreleased changes sit at the top until the next Starter Kit release.
 ## [Unreleased]
 
 ### Changed
+- Dashboard, Vision & Goals: the goal coverage matrix follows Systems42's
+  goal coverage projection (FR-036). Columns are the epics and use cases,
+  headed by their real IDs. Each header links its page and shows the title on
+  hover or focus. Enablers are epics in lane platform or display that serve no
+  goal, grouped on the right. An epic that names no goal stays in the main
+  group, marked "no goal". A goal that no requirement serves at all gets a
+  quiet row and the note "No requirement yet". A goal served only by features
+  or stories is no gap: its row names them, as in "Served by features FR-021,
+  FR-036". The "Agreed only" filter applies to the matrix too, with its own
+  buttons for the same `?status=`. It then counts agreed pages only, also in
+  the notes. A `goal:` counts only when it links an existing objective. Each
+  goal card's "drives" list still names every requirement that serves the
+  goal, so every mark is also there as text. On a phone the goal column
+  leaves room for the marks. The goal and epic map on the functional
+  requirements page shows epics without a goal under "No goal", no longer
+  under "Platform / Enabler".
 - Dashboard brand: the brand slot moved from `static/brand/` and
   `templates/_brand_intro.html` to `_system/apps/dashboard/brands/<name>/`. A
   brand's intro is now one self-contained `intro.html`, inserted as it is. The

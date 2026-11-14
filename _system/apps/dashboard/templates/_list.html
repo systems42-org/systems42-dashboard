@@ -4,9 +4,9 @@
 {% from "_macros.html" import status_rank %}
 {% macro list_attrs(spec) %} data-list="{{ spec.type }}" data-sort-orders='{{ spec.orders | tojson }}'{% endmacro %}
 
-{% macro list_controls(spec, status=True) %}
+{% macro list_controls(spec, status=True, order=True) %}
 <div class="list-controls" data-list-controls="{{ spec.type }}" hidden>
-  {% if spec.orders %}<label class="list-order">Order
+  {% if order and spec.orders %}<label class="list-order">Order
     <select data-list-order>
       <option value="">As listed</option>
       {% for o in spec.orders %}<option value="{{ o['keys'] | join(',') }}">{{ o.label }}</option>
