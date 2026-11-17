@@ -36,7 +36,7 @@ SECTIONS: list[dict] = [
      "scope": "in", "colors": ["req"],
      "note": "One type, stereotype epic|feature|story; hierarchy via parent: (DR-012). Use cases are FRs too (DR-011)."},
     {"id": "R4", "area": "requirements", "title": "Supporting Models",
-     "folders": ["activity-models", "data-models"], "href": "/req42/models",
+     "folders": ["activity-models"], "href": "/req42/models",
      "slug": "models", "scope": "in", "colors": ["req"], "note": ""},
     {"id": "R5", "area": "requirements", "title": "Team Structure", "folders": [],
      "href": None, "slug": None, "scope": "out", "colors": ["org"],
@@ -71,7 +71,7 @@ SECTIONS: list[dict] = [
      "scope": "in", "colors": ["req", "arc"], "note": ""},
     {"id": "C4", "area": "commons", "title": "Stakeholders", "folders": ["stakeholders"],
      "href": "/stakeholders", "slug": None, "scope": "in", "colors": ["req", "arc"], "note": ""},
-    {"id": "C5", "area": "commons", "title": "Domain Terms", "folders": ["glossary"],
+    {"id": "C5", "area": "commons", "title": "Domain Terms", "folders": ["domain-terms"],
      "href": "/glossary", "slug": None, "scope": "in", "colors": ["req"], "note": ""},
     {"id": "C6", "area": "commons", "title": "Issues", "folders": ["issues"],
      "href": "/issues", "slug": None, "scope": "in", "colors": ["org", "arc"],
@@ -84,7 +84,13 @@ SECTIONS: list[dict] = [
 AREA_BY_KEY: dict[str, dict] = {a["key"]: a for a in AREAS}
 SECTION_BY_ID: dict[str, dict] = {s["id"]: s for s in SECTIONS}
 SECTION_BY_SLUG: dict[str, dict] = {s["slug"]: s for s in SECTIONS if s["slug"]}
-_SECTION_BY_FOLDER: dict[str, dict] = {f: s for s in SECTIONS for f in s["folders"]}
+def section_folders(section: dict) -> list[str]:
+    """Include the old folders until project wikis migrate."""
+    legacy = {"C5": ["glossary"], "R4": ["data-models"]}
+    return section["folders"] + legacy.get(section["id"], [])
+
+
+_SECTION_BY_FOLDER: dict[str, dict] = {f: s for s in SECTIONS for f in section_folders(s)}
 
 # Routes that are not a section href but still belong to an area.
 _EXTRA_PATH_PREFIXES: dict[str, str] = {

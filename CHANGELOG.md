@@ -13,6 +13,9 @@ Unreleased changes sit at the top until the next Starter Kit release.
 ## [Unreleased]
 
 ### Changed
+- Domain Terms shows the terminology graph and Supporting Models shows the
+  entity diagram from the same pages. Vaults using the previous glossary
+  and data-model folders still open (meta #36).
 - Dashboard, Vision & Goals: the goal coverage matrix follows Systems42's
   goal coverage projection (FR-036). Columns are the epics and use cases,
   headed by their real IDs. Each header links its page and shows the title on

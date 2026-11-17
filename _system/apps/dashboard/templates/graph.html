@@ -4,13 +4,15 @@
 {% from "_empty.html" import empty_state %}
 {% block content %}
 <h1 class="page-h1">Term network <span class="count-pill">{{ n_glo }} terms</span></h1>
-<p class="lead">The ubiquitous language as a network, projected from the <code>related:</code> edges
-(DR-023). By default only glossary terms are shown — bring in neighbouring types layer
-by layer. Drag a node freely; on release, <em>cola</em> nudges only its direct neighbours
-aside and leaves everything else where it is. Tap a node to highlight its neighbours; tap
-again to open its page. The frame colour is the type; hover a clipped title to read it
-in full. <strong>Layout</strong> picks the arrangement (<em>cola</em> avoids
-overlaps, <em>fcose</em> is spring-based); clicking the active layout re-tidies it.</p>
+<p class="lead">Explore links and structured relationships between domain terms.
+  Tap a term to highlight its neighbours and tap again to open its page.
+  <a href="/data-model">Entity diagram</a></p>
+<nav class="filterbar" aria-label="Relationship filter">
+  {% for key, label in [("all", "All relationships"), ("related", "Simple links"), ("structured", "Structured relationships")] %}
+  <a class="fbtn{% if edge_filter == key %} active{% endif %}" href="?edges={{ key }}"
+     {% if edge_filter == key %}aria-current="true"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</nav>
 
 {% if n_glo %}
 <div class="graph-toolbar" id="graph-layers">
@@ -21,7 +23,7 @@ overlaps, <em>fcose</em> is spring-based); clicking the active layout re-tidies 
   {% if rest.count %}
   <button class="layer-btn layer-REST" data-layer="{{ rest.types|join(',') }}" aria-pressed="false">More <span class="layer-n">{{ rest.count }}</span></button>
   {% endif %}
-  <button class="layer-btn layer-reset" id="graph-reset">GLO only</button>
+  <button class="layer-btn layer-reset" id="graph-reset">Terms only</button>
 </div>
 
 <div class="graph-toolbar" id="graph-layout">

@@ -128,7 +128,7 @@ wiki folders), `out` (deliberately not captured, an inactive tile) or `planned`
 | **R1** Vision & Goals | Requirements | the vision claim line and the objectives with covering epic/use-case counts | `/goals` |
 | **R2** Resources & Staff | Requirements | out of scope, inactive tile | — |
 | **R3** Functional Requirements | Requirements | all functional requirements (FR pages + use cases), broken down by epic/feature/story/use case, a per-epic breakdown and the use cases | `/req42/functional-requirements` |
-| **R4** Supporting Models | Requirements | activity-model and data-model page counts | `/req42/models` |
+| **R4** Supporting Models | Requirements | activity models and the entity diagram | `/req42/models` |
 | **R5** Team Structure | Requirements | out of scope, inactive tile | — |
 | **R6** Roadmap | Requirements | out of scope, inactive tile | — |
 | **A1** Solution Strategy | Architecture | planned, "not captured yet" | — |

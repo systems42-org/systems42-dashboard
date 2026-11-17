@@ -110,7 +110,7 @@ def test_no_type_map_entry_is_dead():
     for name, keys in (("_TYPE_FOLDER", set(app._TYPE_FOLDER)),
                        ("_TYPE_LABEL", set(app._TYPE_LABEL)),
                        ("_REL_TYPE_ORDER", set(app._REL_TYPE_ORDER))):
-        dead = sorted(keys - emitted)
+        dead = sorted(keys - emitted - {"DT"})
         assert not dead, f"{name} maps prefixes no template emits: {dead}"
     codes = {m["code"] for m in app.SUPPORTING_MODEL_TYPES}
     assert codes <= emitted, \

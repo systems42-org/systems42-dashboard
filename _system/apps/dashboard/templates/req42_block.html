@@ -12,6 +12,15 @@
 {{ maturity_bar(maturity) }}
 <p class="lead">{{ block.title }} — section {{ block.id }}.{% if block.note %} {{ block.note }}{% endif %}</p>
 
+{% if block.id == "R4" %}
+<p><a href="/data-model">Entity diagram with filters</a></p>
+{% if entity_diagram %}
+<figure class="goals-diagram dm-diagram">
+  <pre class="mermaid">{{ entity_diagram }}</pre>
+</figure>
+{% endif %}
+{% endif %}
+
 {% if context_diagram %}
 <figure class="ctx-diagram">
   <figcaption>System context · projected live from interfaces &amp; data flows (DR-013)</figcaption>

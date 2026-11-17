@@ -7,12 +7,9 @@
 {% set spec = list_spec("data-model") %}
 {% block content %}
 <h1 class="page-h1">Data model</h1>
-<p class="lead">A class diagram projected from <code>wiki/data-models/</code>
-  ({{ entities|length }} entities), plus any glossary term marked as data that
-  no DM page models yet. A multiplicity sits at the end it describes; a hollow
-  diamond is aggregation, a filled one composition, a hollow triangle
-  inheritance. Relationships come from each page's <code>relationships:</code>
-  frontmatter (DR-027).</p>
+<p class="lead">A class diagram of the structured domain terms.
+  A hollow diamond means aggregation, a filled one composition, and a hollow
+  triangle generalization. <a href="/graph/glossary">Terminology graph</a></p>
 
 {% if nodes %}
 <nav class="dm-filters" aria-label="Diagram filters">
@@ -72,7 +69,7 @@
     <tbody>
       {% for e in entities %}
       <tr data-status="{{ e.status }}">
-        <td class="c-id" data-sort-value="{{ e.id }}"><a href="/page/data-models/{{ e.stem }}" title="Open as its own page"><code>{{ e.id }}</code></a></td>
+        <td class="c-id" data-sort-value="{{ e.id }}"><a href="{{ e.url }}" title="Open as its own page"><code>{{ e.id }}</code></a></td>
         <td class="dm-col-name" data-sort-value="{{ e.title|lower }}"><a href="#{{ e.id }}" class="dm-jump"><span class="term">{{ e.title }}</span></a>{% if e.stereotype %} <span class="dm-stereo-inline">{{ e.stereotype }}</span>{% endif %}</td>
         <td class="dm-col-attrs" data-sort-value="{{ e.attributes|length }}">
           {% if e.attributes %}

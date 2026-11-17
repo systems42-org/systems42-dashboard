@@ -56,6 +56,7 @@
   --bz-glo: #8fb6e8;
   --bz-dm: #8fd8c4;
   --layer-glo-ink: #5fa3e8;    /* term-network frames + legend (DR-023): one per type */
+  --layer-dt-ink: var(--layer-glo-ink);
   --layer-dm-ink: #8fd8c4;
   --layer-stk-ink: #e6b667;
   --layer-eif-ink: #b39ad6;
@@ -124,6 +125,7 @@
   --bz-glo: #2f6fb3;
   --bz-dm: #1c7a66;
   --layer-glo-ink: #2f6fb3;
+  --layer-dt-ink: var(--layer-glo-ink);
   --layer-dm-ink: #14705c;
   --layer-stk-ink: #8a5c10;
   --layer-eif-ink: #59418c;
@@ -1416,6 +1418,7 @@ a.mm-anchor:hover { color: var(--accent); border-color: var(--accent); }
 @media (max-width: 780px) { .mm-language-grid { grid-template-columns: 1fr; } }
 .mm-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space-3) var(--space-4); }
 /* legend swatches for every type, one token each (the term network's five + the rest) */
+.mm-dot-dt { border-color: var(--layer-dt-ink); }
 .mm-dot-glo { border-color: var(--layer-glo-ink); } .mm-dot-dm { border-color: var(--layer-dm-ink); }
 .mm-dot-stk { border-color: var(--layer-stk-ink); } .mm-dot-eif { border-color: var(--layer-eif-ink); }
 .mm-dot-goal { border-color: var(--layer-goal-ink); } .mm-dot-fr { border-color: var(--layer-fr-ink); }
