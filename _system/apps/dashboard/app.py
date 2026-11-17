@@ -1383,7 +1383,7 @@ def build_glossary_graph(edge_filter: str = "all") -> dict:
                 continue
             seen_structure.add(key)
             edges.append({"id": f"e{len(edges)}", "source": src, "target": tgt,
-                          "cross": False, "kind": kind, "label": label})
+                          "cross": False, "kind": kind, "label": label or kind})
             glo_degree[src] += 1
             glo_degree[tgt] += 1
 
@@ -1393,6 +1393,7 @@ def build_glossary_graph(edge_filter: str = "all") -> dict:
                  else "agreed" if p.meta.get("agreed") is True
                  else "draft")
         nodes.append({
+            # GLO is the visual layer shared by legacy and migrated terminology.
             "id": p.stem, "label": p.title, "type": "GLO", "core": True,
             "url": f"/page/{p.folder}/{p.stem}",
             "degree": glo_degree.get(p.stem, 0),
@@ -2816,9 +2817,10 @@ def build_section_tile(section: dict) -> dict:
     and Issues (C6) keep their special bodies; everything else is a count plus
     a relation-ranked preview."""
     sid = section["id"]
+    folders = catalog.section_folders(section)
     base = {"key": sid.lower(), "id": sid, "label": section["title"],
             "eyebrow": f"{sid} · {section['title']}", "href": section["href"],
-            "folders": section["folders"], "scope": section["scope"],
+            "folders": folders, "scope": section["scope"],
             "colors": section["colors"], "note": section["note"],
             "links": [], "rows": [], "active": section["scope"] == "in",
             "sub": "", "sub_units": [], "unit": "page", "unit_many": None, "count": 0}
@@ -2826,7 +2828,6 @@ def build_section_tile(section: dict) -> dict:
         base["maturity"] = maturity([])
         base["open_issues"] = 0
         return base
-    folders = catalog.section_folders(section)
     pages = [p for f in folders for p in load_folder(f)]
     t = {**base, "count": len(pages), "rows": _tile_rows_by_relations(pages)}
     if sid == "R1":
@@ -2855,9 +2856,9 @@ def build_section_tile(section: dict) -> dict:
                                "level": str(p.meta.get("level") or "")} for p in ucs]})
     elif sid == "R4":
         # `relations` there is a page count per model type, not a link count
-        t.update({"unit": "model page",
-                  "rows": [{"title": m["title"], "pages": m["relations"]}
-                           for m in _supporting_model_entries()]})
+        models = _supporting_model_entries()
+        t.update({"unit": "model page", "count": sum(m["relations"] for m in models),
+                  "rows": [{"title": m["title"], "pages": m["relations"]} for m in models]})
     elif sid == "C1":
         t["unit"] = "scenario"
     elif sid == "C2":
@@ -3403,9 +3404,10 @@ DM_MARKED_STEREOTYPES = {"entity", "value-object"}
 DOMAIN_MODEL_STEREOTYPES = DM_MARKED_STEREOTYPES | {"sum-type"}
 
 
-def structured_domain_terms() -> list[Page]:
-    return [page for page in load_folder("domain-terms")
-            if str(page.meta.get("stereotype") or "").strip().lower() in DOMAIN_MODEL_STEREOTYPES]
+def data_model_pages() -> list[Page]:
+    structured = [page for page in load_folder("domain-terms")
+                  if str(page.meta.get("stereotype") or "").strip().lower() in DOMAIN_MODEL_STEREOTYPES]
+    return sorted(load_folder("data-models") + structured, key=lambda page: page.id)
 
 
 # `kind:` -> (mermaid arrow, cardinalities are meaningful). Inheritance is the
@@ -3461,11 +3463,12 @@ def data_model_nodes() -> list[dict]:
     A DM page claims a term by linking it in `related:`, or by carrying the same
     title. Title matching is the forgiving half — during a workshop the term is
     written first and the DM page often forgets the back-link."""
-    dm_pages = sorted(load_folder("data-models"), key=lambda p: p.id)
-    structured = structured_domain_terms()
+    pages = data_model_pages()
 
     claimed: set[str] = set()
-    for p in dm_pages:
+    for p in pages:
+        if p.folder != "data-models":
+            continue
         claimed.add(p.title.strip().lower())
         for raw in (p.meta.get("related") or []):
             stem = _stem_of_link(raw)
@@ -3481,7 +3484,7 @@ def data_model_nodes() -> list[dict]:
         "attributes": _extract_dm_attribute_names(p),
         "stub": False,
         "url": f"/page/{p.folder}/{p.stem}",
-    } for p in sorted(dm_pages + structured, key=lambda p: p.id)]
+    } for p in pages]
 
     for p in sorted(load_folder("glossary"), key=lambda p: p.id):
         stereotype = str(p.meta.get("stereotype") or "").strip().lower()
@@ -3509,7 +3512,7 @@ def data_model_edges() -> list[dict]:
     dangling stub — a typo should leave a gap you notice, not a ghost class."""
     by_stem = {n["key"] for n in data_model_nodes()}
     out = []
-    for p in sorted(load_folder("data-models") + structured_domain_terms(), key=lambda p: p.id):
+    for p in data_model_pages():
         # A sum-type variant already names its sum type in `parent:` (DR-019).
         # Draw that as the inheritance it is, rather than make the author repeat
         # it as a relationship entry — one fact, one place.
@@ -3528,7 +3531,7 @@ def data_model_edges() -> list[dict]:
             if kind == "generalization":
                 kind = "inheritance"
             multiplicity = entry.get("multiplicity", entry.get("cardinality"))
-            if tgt == p.stem and kind == "inheritance":
+            if tgt == p.stem and (kind == "inheritance" or p.folder == "data-models"):
                 continue
             out.append({
                 "source": p.stem,
@@ -3615,8 +3618,9 @@ def build_data_model_full_diagram(context: str | None = None,
         # `cardinality:` describes the TARGET end only. Deriving a source
         # multiplicity from it looked tidier and was wrong: "0..*" would have
         # drawn a zero on the owning side, which means nothing.
-        if carded and re.fullmatch(r"(?:\d+|\*)(?:\.\.(?:\d+|\*))?", e["cardinality"]):
-            line = f'  {src} {arrow} "{e["cardinality"]}" {dst}'
+        multiplicity = _clean_label(e["cardinality"], drop_parenthetical=False).replace('\\', "")
+        if carded and multiplicity:
+            line = f'  {src} {arrow} "{multiplicity}" {dst}'
         else:
             line = f"  {src} {arrow} {dst}"
         if e["verb"]:
@@ -3699,7 +3703,7 @@ def data_model_entities() -> list[dict]:
     """One record per data-model page with its sections + notes ready to render —
     the per-entity catalog rendered below the projection diagram on /data-model."""
     titles = title_index()
-    pages = sorted(load_folder("data-models") + structured_domain_terms(), key=lambda p: p.id)
+    pages = data_model_pages()
     out = []
     for p in pages:
         out.append({
@@ -3733,7 +3737,7 @@ def _supporting_model_entries() -> list[dict]:
     written)."""
     out = []
     for m in SUPPORTING_MODEL_TYPES:
-        n = (len(data_model_nodes()) if m["code"] == "DM"
+        n = (len(data_model_pages()) if m["code"] == "DM"
              else len(load_folder(m["folder"])))
         if n == 0:
             continue

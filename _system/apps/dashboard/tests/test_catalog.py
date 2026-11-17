@@ -85,6 +85,8 @@ def test_routes_are_unchanged():
 
 def test_lookups():
     assert catalog.section_for_folder("stakeholders")["id"] == "C4"
+    assert catalog.section_for_folder("glossary")["id"] == "C5"
+    assert catalog.section_for_folder("data-models")["id"] == "R4"
     assert catalog.area_for_folder("external-interfaces")["key"] == "commons"
     assert catalog.area_for_folder("nope") is None
     assert catalog.area_for_path("/req42/functional-requirements")["key"] == "requirements"

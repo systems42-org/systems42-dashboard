@@ -84,10 +84,14 @@ SECTIONS: list[dict] = [
 AREA_BY_KEY: dict[str, dict] = {a["key"]: a for a in AREAS}
 SECTION_BY_ID: dict[str, dict] = {s["id"]: s for s in SECTIONS}
 SECTION_BY_SLUG: dict[str, dict] = {s["slug"]: s for s in SECTIONS if s["slug"]}
+
+
+_LEGACY_FOLDERS = {"C5": ("glossary",), "R4": ("data-models",)}
+
+
 def section_folders(section: dict) -> list[str]:
     """Include the old folders until project wikis migrate."""
-    legacy = {"C5": ["glossary"], "R4": ["data-models"]}
-    return section["folders"] + legacy.get(section["id"], [])
+    return [*section["folders"], *_LEGACY_FOLDERS.get(section["id"], ())]
 
 
 _SECTION_BY_FOLDER: dict[str, dict] = {f: s for s in SECTIONS for f in section_folders(s)}

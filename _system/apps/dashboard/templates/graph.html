@@ -5,7 +5,9 @@
 {% block content %}
 <h1 class="page-h1">Term network <span class="count-pill">{{ n_glo }} terms</span></h1>
 <p class="lead">Explore links and structured relationships between domain terms.
-  Tap a term to highlight its neighbours and tap again to open its page.
+  Use the layer buttons to include nearby pages of other types. Drag terms to
+  make room, or switch layouts to rearrange the network. Tap a term to highlight
+  its neighbours and tap again to open its page.
   <a href="/data-model">Entity diagram</a></p>
 <nav class="filterbar" aria-label="Relationship filter">
   {% for key, label in [("all", "All relationships"), ("related", "Simple links"), ("structured", "Structured relationships")] %}

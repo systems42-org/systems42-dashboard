@@ -49,4 +49,26 @@ related: ["[[DT-003-review]]"]
         ):
             response = client.get(url)
             assert response.status_code == 200 and expected in response.get_data(as_text=True), url
+    glossary = wiki / "glossary"
+    models = wiki / "data-models"
+    glossary.mkdir()
+    models.mkdir()
+    (glossary / "GLO-004-policy.md").write_text(
+        "---\nid: GLO-004\ntitle: Policy\nstereotype: entity\n---\n", encoding="utf-8"
+    )
+    (models / "DM-005-legacy.md").write_text(
+        '---\nid: DM-005\ntitle: Legacy\nstereotype: entity\n'
+        'relationships: [{target: "[[GLO-004-policy]]", kind: association, cardinality: "1..n"}]\n---\n',
+        encoding="utf-8"
+    )
+    with app.app.test_request_context("/req42"):
+        tile = app.build_section_tile(app.catalog.SECTION_BY_ID["R4"])
+        assert tile["count"] == 3
+        assert next(row for row in tile["rows"] if row["title"] == "Data model")["pages"] == 3
+        assert 'Legacy --> "1..n" Policy' in app.build_data_model_full_diagram()
+    with app.app.test_client() as client:
+        commons = client.get("/commons").get_data(as_text=True)
+        assert "shared by both peaks · 4 pages" in commons
+        requirements = client.get("/req42").get_data(as_text=True)
+        assert "goals, needs, constraints · 1 page" in requirements
 print("domain terms: passed")
