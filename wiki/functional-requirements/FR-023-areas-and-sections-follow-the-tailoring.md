@@ -4,9 +4,9 @@ type: functional-requirement
 title: Areas and sections follow the tailoring
 status: draft
 created: 2026-11-12
-updated: 2026-11-12
+updated: 2026-11-17
 sources: ["[[SRC-013-browse-by-area-and-section]]", "[[SRC-014-grilling-session-on-browsing]]"]
-related: ["[[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]]", "[[FR-012-guided-path-through-the-wiki]]", "[[STK-011-people-who-set-up-a-project-wiki]]"]
+related: ["[[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]]", "[[FR-012-guided-path-through-the-wiki]]", "[[STK-011-people-who-set-up-a-project-wiki]]", "[[FR-044-sections-come-from-the-repositorys-metamodel]]"]
 tags: ["functional-requirement", "navigation"]
 stereotype: feature
 parent: ["[[FR-017-browse-by-area-and-section]]"]

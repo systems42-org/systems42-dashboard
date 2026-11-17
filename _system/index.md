@@ -95,6 +95,10 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-039-the-term-page]] The term page (feature, Must, draft)
 - [[FR-040-two-views-of-the-same-terms]] Two views of the same terms (feature, Should, draft)
 - [[FR-041-definition-in-place]] Definition in place (feature, Should, draft)
+- [[FR-042-start-a-pinned-release-with-one-command]] Start a pinned release with one command (feature, Should, draft)
+- [[FR-043-the-dashboard-checks-the-metamodel-version]] The dashboard checks the metamodel version (feature, Should, draft)
+- [[FR-044-sections-come-from-the-repositorys-metamodel]] Sections come from the repository's metamodel (feature, Must, draft)
+- [[FR-045-a-prompt-template-for-a-brand]] A prompt template for a brand (feature, Could, draft)
 
 ## Quality requirements
 
@@ -107,6 +111,8 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[CON-002-dashboard-never-writes-to-the-wiki]] The dashboard never writes to the wiki (draft)
 - [[CON-003-docker-is-the-supported-way-to-run-it]] Docker is the supported way to run the dashboard (draft)
 - [[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]] The dashboard shows the metamodel, it does not define it (draft)
+- [[CON-005-the-dashboard-works-on-systems42-derivatives-only]] The dashboard works on Systems42 derivatives only (draft)
+- [[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]] The dashboard depends on the metamodel, never the reverse (draft)
 
 ## Decisions
 
@@ -114,12 +120,16 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]] Tailoring belongs to Systems42, the view belongs to the dashboard (accepted)
 - [[DR-003-quality-requirements-are-classified-by-q42-dimensions]] Quality requirements are classified by Q42 dimensions (accepted)
 - [[DR-004-releases-are-container-images-pinned-per-wiki]] Releases are container images, pinned per wiki (accepted)
+- [[DR-005-the-dashboard-lives-in-its-own-repository]] The dashboard lives in its own repository, with its requirements and its code (review)
 
 ## Issues
 
 - [[ISS-001-who-holds-the-keys-in-parallel-work]] Who holds the keys when two people work in parallel (open)
 - [[ISS-002-define-the-clarify-loop]] Define the clarify loop (open)
 - [[ISS-003-goal-coverage-projection-cites-decisions-from-another-wiki]] The goal coverage projection cites decisions from another wiki (open, systems42, meta #37)
+- [[ISS-004-where-the-metamodel-declares-its-version]] Where the metamodel declares its version (open, systems42, meta #39)
+- [[ISS-005-the-method-lint-imports-dashboard-code]] The method's lint imports dashboard code (open, systems42, meta #40)
+- [[ISS-006-other-container-engines-than-docker]] Should the dashboard run with other container engines than Docker (open, requirements, #24)
 
 ## Sources
 
@@ -149,3 +159,5 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-024-grilling-session-on-the-goal-coverage-matrix]] Grilling session on the goal coverage matrix (interview)
 - [[SRC-025-domain-terms-and-their-two-views]] Domain terms and their two views (document)
 - [[SRC-026-grilling-session-on-domain-terms]] Grilling session on domain terms (interview)
+- [[SRC-027-dashboard-distribution-and-metamodel-contract]] Dashboard distribution and its contract with the metamodel (document)
+- [[SRC-028-grilling-session-on-dashboard-distribution]] Grilling session on dashboard distribution (interview)

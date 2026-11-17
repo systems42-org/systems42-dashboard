@@ -4,9 +4,9 @@ type: constraint
 title: The dashboard shows the metamodel, it does not define it
 status: draft
 created: 2026-11-13
-updated: 2026-11-13
+updated: 2026-11-17
 sources: ["[[SRC-022-grilling-session-on-reading-a-page]]"]
-related: ["[[FR-035-method-terms-lead-to-their-definition]]", "[[GOAL-006-source-and-status-on-every-statement]]", "[[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]]", "[[STK-012-maintainers]]"]
+related: ["[[FR-035-method-terms-lead-to-their-definition]]", "[[GOAL-006-source-and-status-on-every-statement]]", "[[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]]", "[[STK-012-maintainers]]", "[[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]]"]
 tags: [constraint]
 category: organizational
 ---
