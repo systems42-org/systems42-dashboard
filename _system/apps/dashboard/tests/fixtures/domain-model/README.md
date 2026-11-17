@@ -22,11 +22,11 @@ to keep it running. Stop it with Ctrl+C. Settings go into a temporary file.
 
 | Page | Expected result |
 |---|---|
-| `/glossary` | Four definitions, each linking to its own page. |
-| `/graph/glossary` | Four terms, two structured relationships and one simple link. |
-| `/graph/glossary?edges=related` | The link between Order and Review policy. |
-| `/graph/glossary?edges=structured` | Customer places Order, and Order contains Order line. |
-| `/data-model` | Three entity classes with attribute names. Customer places `0..*` Orders. Order contains `1..*` Order lines, with a filled diamond at Order. |
+| `/domain-terms` | Four definitions, each linking to its own page. |
+| `/graph/domain-terms` | Four terms, two structured relationships and one simple link. |
+| `/graph/domain-terms?edges=related` | The link between Order and Review policy. |
+| `/graph/domain-terms?edges=structured` | Customer places Order, and Order contains Order line. |
+| `/entity-diagram` | Three entity classes with attribute names. Customer places `0..*` Orders. Order contains `1..*` Order lines, with a filled diamond at Order. |
 | `/req42/models` | The same entity diagram within R4. |
 
 The diagram currently displays multiplicity at the target end of each

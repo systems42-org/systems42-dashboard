@@ -2874,8 +2874,8 @@ def build_section_tile(section: dict) -> dict:
         t["unit"] = "persona"
     elif sid == "C5":
         t.update({"unit": "term",
-                  "links": [{"label": "Table", "href": "/glossary"},
-                            {"label": "Term network", "href": "/graph/glossary"}]})
+                  "links": [{"label": "Table", "href": "/domain-terms"},
+                            {"label": "Term network", "href": "/graph/domain-terms"}]})
     elif sid == "C6":
         issues = pages
         open_issues = [i for i in issues if is_open_issue(i.status)]
@@ -2959,7 +2959,16 @@ def changes_view():
     return render_template("changes.html", changes=recent_changes(None))
 
 
-@app.route("/glossary")
+@app.route("/glossary", defaults={"destination": "/domain-terms"})
+@app.route("/graph/glossary", defaults={"destination": "/graph/domain-terms"})
+@app.route("/data-model", defaults={"destination": "/entity-diagram"})
+def legacy_model_redirect(destination):
+    """Preserve bookmarks and their filters after the terminology change."""
+    query = request.query_string.decode("latin-1")
+    return redirect(destination + ("?" + query if query else ""), code=301)
+
+
+@app.route("/domain-terms")
 def glossary_view():
     titles = title_index()
     links = link_index()       # so definition wikilinks render as real hyperlinks
@@ -2985,7 +2994,7 @@ def glossary_view():
                            maturity=maturity(p.status for p in pages))
 
 
-@app.route("/graph/glossary")
+@app.route("/graph/domain-terms")
 def glossary_graph_view():
     """Force-directed glossary term network (DR-023). The graph data is a
     deterministic server projection; cytoscape.js lays it out client-side."""
@@ -3630,7 +3639,7 @@ def build_data_model_full_diagram(context: str | None = None,
     return "\n".join(lines)
 
 
-# Section/callout extractors for the /data-model catalog: each DM page is
+# Section/callout extractors for the /entity-diagram catalog: each DM page is
 # rendered as bold-led sections (**Purpose.**, **Attributes.**, **Relationships.**,
 # **Invariants / rules.** …) plus 0..n `> [!note] X` callouts (Open points,
 # deliberately omitted). Order from the file is preserved so the on-page detail
@@ -3726,7 +3735,7 @@ def data_model_entities() -> list[dict]:
 # (DR-011). Each row links to its own
 # overview page; types with no content yet are skipped from the listing.
 SUPPORTING_MODEL_TYPES = [
-    {"folder": "data-models", "label": "Data model", "code": "DM", "href": "/data-model"},
+    {"folder": "data-models", "label": "Entity diagram", "code": "DM", "href": "/entity-diagram"},
     {"folder": "activity-models", "label": "Activity models", "code": "ACT", "href": None},
 ]
 
@@ -3899,7 +3908,7 @@ def goals_view():
     )
 
 
-@app.route("/data-model")
+@app.route("/entity-diagram")
 def data_model_view():
     """req42 block 05 — Data model: the full class diagram of all DM entities
     (not yet implemented — see build_data_model_full_diagram()) plus the

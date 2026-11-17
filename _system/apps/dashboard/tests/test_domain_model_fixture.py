@@ -38,7 +38,7 @@ with tempfile.TemporaryDirectory() as temp:
         assert len(app.build_glossary_graph("structured")["edges"]) == 2
 
     with app.app.test_client() as client:
-        for route in ("/glossary", "/graph/glossary", "/data-model", "/req42/models"):
+        for route in ("/domain-terms", "/graph/domain-terms", "/entity-diagram", "/req42/models"):
             response = client.get(route)
             assert response.status_code == 200, route
             assert "Order" in response.get_data(as_text=True), route

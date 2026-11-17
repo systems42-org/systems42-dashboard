@@ -72,7 +72,7 @@ SECTIONS: list[dict] = [
     {"id": "C4", "area": "commons", "title": "Stakeholders", "folders": ["stakeholders"],
      "href": "/stakeholders", "slug": None, "scope": "in", "colors": ["req", "arc"], "note": ""},
     {"id": "C5", "area": "commons", "title": "Domain Terms", "folders": ["domain-terms"],
-     "href": "/glossary", "slug": None, "scope": "in", "colors": ["req"], "note": ""},
+     "href": "/domain-terms", "slug": None, "scope": "in", "colors": ["req"], "note": ""},
     {"id": "C6", "area": "commons", "title": "Issues", "folders": ["issues"],
      "href": "/issues", "slug": None, "scope": "in", "colors": ["org", "arc"],
      "note": "Issues (especially kind: risk) plus [!assumption] markers."},
@@ -99,16 +99,16 @@ _SECTION_BY_FOLDER: dict[str, dict] = {f: s for s in SECTIONS for f in section_f
 # Routes that are not a section href but still belong to an area.
 _EXTRA_PATH_PREFIXES: dict[str, str] = {
     "/functional-requirements/": "requirements",   # FR detail pages
-    "/data-model": "requirements",                  # R4 projection
-    "/graph/glossary": "commons",                   # C5 term network
+    "/entity-diagram": "requirements",                  # R4 projection
+    "/graph/domain-terms": "commons",                   # C5 term network
 }
 
 
 # Routes that are not a section href but still belong to a section.
 _EXTRA_SECTION_PREFIXES: dict[str, str] = {
     "/functional-requirements/": "R3",
-    "/data-model": "R4",
-    "/graph/glossary": "C5",
+    "/entity-diagram": "R4",
+    "/graph/domain-terms": "C5",
 }
 
 

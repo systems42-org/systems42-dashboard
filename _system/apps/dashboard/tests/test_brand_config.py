@@ -97,7 +97,7 @@ def test_example_brand_atrium_is_one_key_away():
     page = home()
     assert 'id="atrium-splash"' in page and 'id="brand-intro"' not in page
     assert page.index('id="atrium-splash"') < page.index('class="hero"')
-    sub = client.get("/glossary").get_data(as_text=True)
+    sub = client.get("/domain-terms").get_data(as_text=True)
     assert 'id="atrium-splash"' not in sub
     assert 'src="/brand/mark-dark.svg?v=' in sub            # top bar
 
@@ -133,7 +133,7 @@ def test_folder_brand_is_never_written():
     make_brand(_repo / "ro", intro="<div hidden></div>")
     before = {p.name: (p.stat().st_mtime_ns, p.stat().st_size) for p in (_repo / "ro").iterdir()}
     configure("brand: ro\n")
-    home(); served("favicon.svg"); client.get("/glossary")
+    home(); served("favicon.svg"); client.get("/domain-terms")
     after = {p.name: (p.stat().st_mtime_ns, p.stat().st_size) for p in (_repo / "ro").iterdir()}
     assert before == after
 
@@ -208,7 +208,7 @@ def test_other_dashboard_version_is_named_in_one_line():
     assert 'class="version-mismatch"' in page
     line = page.split('class="version-mismatch"', 1)[1].split("</", 1)[0]
     assert "1.4.0" in line and app.DASHBOARD_VERSION in line, line
-    assert "version-mismatch" in client.get("/glossary").get_data(as_text=True)
+    assert "version-mismatch" in client.get("/domain-terms").get_data(as_text=True)
 
 
 def test_wiki_config_reports_the_three_keys():

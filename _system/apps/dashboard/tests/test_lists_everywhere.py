@@ -68,7 +68,7 @@ client = app.app.test_client()
 # route -> the type its list is declared as
 ROUTES = {
     "/goals": "goal",
-    "/glossary": "glossary-term",
+    "/domain-terms": "glossary-term",
     "/stakeholders": "stakeholder",
     "/decisions": "decision-record",
     "/issues": "issue",
@@ -77,7 +77,7 @@ ROUTES = {
     "/req42/scope": "context",
     "/req42/models": "activity-model",
     "/req42/functional-requirements": "functional-requirement",
-    "/data-model": "data-model",
+    "/entity-diagram": "data-model",
     "/arc42/building-blocks": "building-block",
     "/arc42/deployment": "deployment-node",
     "/arc42/runtime": "runtime-scenario",

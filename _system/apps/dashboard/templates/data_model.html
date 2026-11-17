@@ -1,32 +1,32 @@
 {% extends "base.html" %}
-{% block title %}Data model · req42{% endblock %}
-{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}{% if crumb %}<a href="{{ crumb_href }}">{{ crumb }}</a> <span>›</span> {% endif %}Data model</nav>{% endblock %}
+{% block title %}Entity diagram · req42{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}{% if crumb %}<a href="{{ crumb_href }}">{{ crumb }}</a> <span>›</span> {% endif %}Entity diagram</nav>{% endblock %}
 {% from "_empty.html" import empty_state %}
 {% from "_macros.html" import status_rank %}
 {% from "_list.html" import list_attrs, list_controls, list_empty %}
 {% set spec = list_spec("data-model") %}
 {% block content %}
-<h1 class="page-h1">Data model</h1>
+<h1 class="page-h1">Entity diagram</h1>
 <p class="lead">A class diagram of the structured domain terms.
   A hollow diamond means aggregation, a filled one composition, and a hollow
-  triangle generalization. <a href="/graph/glossary">Terminology graph</a></p>
+  triangle generalization. <a href="/graph/domain-terms">Terminology graph</a></p>
 
 {% if nodes %}
 <nav class="dm-filters" aria-label="Diagram filters">
   <span class="dm-filter-label">Context</span>
   <a class="dm-chip{% if not context %} is-on{% endif %}"
-     href="/data-model{% if focus %}?focus={{ focus }}{% endif %}">All</a>
+     href="/entity-diagram{% if focus %}?focus={{ focus }}{% endif %}">All</a>
   {% for c in contexts %}
   <a class="dm-chip{% if context == c %} is-on{% endif %}"
-     href="/data-model?context={{ c | urlencode }}{% if focus %}&amp;focus={{ focus }}{% endif %}">{{ c }}</a>
+     href="/entity-diagram?context={{ c | urlencode }}{% if focus %}&amp;focus={{ focus }}{% endif %}">{{ c }}</a>
   {% endfor %}
 
   <span class="dm-filter-label">Focus</span>
   <a class="dm-chip{% if not focus %} is-on{% endif %}"
-     href="/data-model{% if context %}?context={{ context | urlencode }}{% endif %}">Whole model</a>
+     href="/entity-diagram{% if context %}?context={{ context | urlencode }}{% endif %}">Whole model</a>
   {% for n in nodes %}
   <a class="dm-chip{% if focus == n.key %} is-on{% endif %}{% if n.stub %} is-stub{% endif %}"
-     href="/data-model?focus={{ n.key }}{% if context %}&amp;context={{ context | urlencode }}{% endif %}">{{ n.label }}</a>
+     href="/entity-diagram?focus={{ n.key }}{% if context %}&amp;context={{ context | urlencode }}{% endif %}">{{ n.label }}</a>
   {% endfor %}
 </nav>
 {% endif %}
@@ -88,7 +88,7 @@
 <section class="dm-catalog">
   <h2>Entities in detail</h2>
   <p class="lead">Per entity: purpose, identity, attributes, relationships,
-    invariants, and deferred points — extracted from the respective DM pages.</p>
+    invariants, and deferred points — from the structured domain-term pages.</p>
 
   {% for e in entities %}
   <article id="{{ e.id }}" class="dm-entity">

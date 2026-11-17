@@ -8,7 +8,7 @@ reads:
   - {type: glossary-term, fields: [stereotype]}
 output: mermaid
 stored: false
-implemented: "/data-model"
+implemented: "/entity-diagram"
 anchor: req42
 decision: DR-019-data-model-product-and-sum-types, DR-027-data-model-projected-from-two-carriers
 ---

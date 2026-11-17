@@ -13,6 +13,10 @@ Unreleased changes sit at the top until the next Starter Kit release.
 ## [Unreleased]
 
 ### Changed
+- Domain-term routes now use "/domain-terms", "/graph/domain-terms" and
+  "/entity-diagram". The previous URLs redirect with HTTP 301 and preserve
+  query parameters. This brings the route rename forward from the later
+  dashboard work proposed in meta #36, as requested during implementation.
 - Domain Terms shows the terminology graph and Supporting Models shows the
   entity diagram from the same pages. Vaults using the previous glossary
   and data-model folders still open (meta #36).

@@ -41,9 +41,9 @@ related: ["[[DT-003-review]]"]
         assert 'Training *-- "0..*" Session : schedules' in diagram and "+training_id" in diagram
         assert "Review" not in diagram and "<<term>>" not in diagram
         for url, expected in (
-            ("/glossary", "/page/domain-terms/DT-003-review"),
-            ("/graph/glossary?edges=structured", "Structured relationships"),
-            ("/data-model", "/graph/glossary"),
+            ("/domain-terms", "/page/domain-terms/DT-003-review"),
+            ("/graph/domain-terms?edges=structured", "Structured relationships"),
+            ("/entity-diagram", "/graph/domain-terms"),
             ("/req42/models", "classDiagram"),
             ("/page/domain-terms/DT-001-training", "Meaning of DT-001-training."),
         ):
@@ -64,7 +64,7 @@ related: ["[[DT-003-review]]"]
     with app.app.test_request_context("/req42"):
         tile = app.build_section_tile(app.catalog.SECTION_BY_ID["R4"])
         assert tile["count"] == 3
-        assert next(row for row in tile["rows"] if row["title"] == "Data model")["pages"] == 3
+        assert next(row for row in tile["rows"] if row["title"] == "Entity diagram")["pages"] == 3
         assert 'Legacy --> "1..n" Policy' in app.build_data_model_full_diagram()
     with app.app.test_client() as client:
         commons = client.get("/commons").get_data(as_text=True)

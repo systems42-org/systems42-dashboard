@@ -40,8 +40,8 @@ import app  # noqa: E402
 # /leaving is deliberately NOT exercised: it arms the self-shutdown watchdog,
 # which would SIGTERM this test process. Its behaviour is covered by DR-022.
 GET_ROUTES = [
-    "/", "/glossary", "/graph/glossary", "/issues", "/stakeholders", "/decisions",
-    "/search", "/goals", "/data-model", "/req42", "/req42/functional-requirements", "/arc42/building-blocks",
+    "/", "/domain-terms", "/graph/domain-terms", "/issues", "/stakeholders", "/decisions",
+    "/search", "/goals", "/entity-diagram", "/req42", "/req42/functional-requirements", "/arc42/building-blocks",
     "/arc42/deployment", "/arc42/runtime", "/arc42/concepts",
     "/req42/scope", "/req42/models", "/req42/quality", "/req42/constraints",
     "/arc42", "/commons", "/help", "/metamodel",

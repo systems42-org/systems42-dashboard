@@ -49,7 +49,7 @@ def test_stakeholder_columns():
 
 
 def test_glossary_columns():
-    assert _sortable("/glossary") == ["ID", "Term", "Definition", "Links", "Added", "Status"]
+    assert _sortable("/domain-terms") == ["ID", "Term", "Definition", "Links", "Added", "Status"]
 
 
 def test_decision_columns():
@@ -86,7 +86,7 @@ def test_initial_state_matches_server_order():
     assert marked("/stakeholders") == ["ID"]
     assert marked("/decisions") == ["ID"]
     assert marked("/req42/quality") == ["ID"]
-    assert marked("/glossary") == ["Term"]        # the view orders by title
+    assert marked("/domain-terms") == ["Term"]        # the view orders by title
 
 
 def test_ratings_sort_by_rank_not_alphabet():
@@ -114,12 +114,12 @@ def test_title_cells_sort_on_the_title_alone():
     # the cell also holds role/alias text, which must not decide the order
     body = client.get("/stakeholders").get_data(as_text=True)
     assert re.search(r'<td class="c-term" data-sort-value="[^"]+">\s*<a class="term term-link"', body)
-    body = client.get("/glossary").get_data(as_text=True)
+    body = client.get("/domain-terms").get_data(as_text=True)
     assert re.search(r'<td class="c-term" data-sort-value="[^"]+">\s*<a class="term term-link"', body)
 
 
 def test_script_comes_from_base_once():
-    for path in ("/stakeholders", "/glossary", "/decisions", "/req42/quality", "/data-model"):
+    for path in ("/stakeholders", "/domain-terms", "/decisions", "/req42/quality", "/entity-diagram"):
         body = client.get(path).get_data(as_text=True)
         assert len(re.findall(r'<script src="[^"]*list-view\.js', body)) == 1, path
     # the data-model page uses the shared script instead of its former inline copy
@@ -132,8 +132,8 @@ def test_domain_terms_tile_is_clickable():
     tile = body[body.rfind("<", 0, start):body.rfind("<", 0, body.index('id="tile-c6"'))]
     assert re.match(r'<div id="tile-c5" class="tile tile-link', tile), tile[:120]
     # a stretched link over the whole tile, and the term network still reachable
-    assert re.search(r'<a class="tile-stretch" href="/glossary">', tile), tile[:400]
-    assert 'href="/graph/glossary"' in tile
+    assert re.search(r'<a class="tile-stretch" href="/domain-terms">', tile), tile[:400]
+    assert 'href="/graph/domain-terms"' in tile
     # no anchor nested in an anchor: the outer element stays a div
     assert tile.count("<a ") == tile.count("</a>")
 

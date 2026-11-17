@@ -55,7 +55,7 @@ def test_marks_are_square_and_text_free():
 def test_marks_and_favicon_are_served_on_every_page():
     (_tmp / "wiki.yaml").write_text("", encoding="utf-8")
     home = client.get("/").get_data(as_text=True)
-    sub = client.get("/glossary").get_data(as_text=True)
+    sub = client.get("/domain-terms").get_data(as_text=True)
     for page in (home, sub):
         assert re.search(r'rel="icon" type="image/svg\+xml" href="/brand/favicon\.svg\?v=', page)
         for name in ("mark-dark.svg", "mark-light.svg"):
@@ -115,7 +115,7 @@ def test_intro_is_placed_before_the_hero_on_the_home_page_only():
         home = client.get("/").get_data(as_text=True)
         assert marker in home, brand
         assert home.index(marker) < home.index('class="hero"'), brand
-        assert marker not in client.get("/glossary").get_data(as_text=True), brand
+        assert marker not in client.get("/domain-terms").get_data(as_text=True), brand
 
 
 def test_no_atrium_branding_outside_its_brand_folder():

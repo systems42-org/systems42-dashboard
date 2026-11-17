@@ -69,7 +69,7 @@ def test_bar_renders_on_home_tile_and_list_page():
         tile = home[home.index("tile-c5"):home.index("tile-c6")]
         assert 'maturity-seg maturity-accepted" style="flex-basis: 50%"' in tile, tile
         assert "maturity-draft" in tile
-        page = c.get("/glossary").get_data(as_text=True)
+        page = c.get("/domain-terms").get_data(as_text=True)
         assert 'class="maturity' in page
     finally:
         for i in (1, 2):
