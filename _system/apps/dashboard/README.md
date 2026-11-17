@@ -291,6 +291,10 @@ _system/apps/dashboard/
 
 ## Tests
 
+For visual inspection of domain terms, relationships and multiplicities, open
+the [order model fixture](tests/fixtures/domain-model/README.md). Its README
+includes the startup command and the expected diagrams.
+
 Plain Python scripts with bare `assert`s — no pytest, no runner. From this
 directory, inside the venv `./dashboard.sh local` builds:
 
