@@ -21,6 +21,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
   next.
 
 ### Changed
+- Dashboard release 0.11.2 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.11.0 (`_system/apps/dashboard/VERSION`): requirement
   notations (DR-038), ported from the Systems42 meta repository.
 - Dashboard: functional requirements follow requirement notations (DR-038).
