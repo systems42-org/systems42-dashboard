@@ -65,6 +65,7 @@ _page("deployment-nodes", "DN-001-scalars",
 _page("runtime-scenarios", "RS-001-scalars",
       "id: RS-001\ntitle: Scenario\nstate: current\nsteps: 7\ndrivers: 7")
 _page("concepts", "CC-001-scalars", "id: CC-001\ntitle: Concept\nstate: current\napplies-to: 7")
+_page("decisions", 'DR-002-quote" onmouseover="x', "id: DR-002\ntitle: Quote in the file name")
 _page("decisions", "DR-001-scalars", "id: DR-001\ntitle: Decision\nkind: 7\ndrivers: 7\ntags: 7")
 # not UTF-8
 (_wiki / "glossary" / "GLO-002-latin1.md").write_bytes(
@@ -290,6 +291,12 @@ def test_symlinks_inside_the_wiki_still_work():
     assert status == 200 and "LINKED FOLDER" in body
 
 
+def test_decision_links_are_escaped():
+    # a metamodel page citing a decision whose file name holds a quote
+    html = app._mm_dr_link('DR-002-quote" onmouseover="x', "DR-002")
+    assert 'href="/page/decisions/DR-002-quote&#34; onmouseover=&#34;x"' in html, html
+
+
 
 if __name__ == "__main__":
     test_no_route_breaks_on_a_bad_page()
@@ -302,4 +309,5 @@ if __name__ == "__main__":
     test_served_files_cannot_run_script_in_the_dashboard()
     test_symlinks_out_of_the_wiki_are_not_followed()
     test_symlinks_inside_the_wiki_still_work()
+    test_decision_links_are_escaped()
     print("OK: broken, oddly typed and hostile pages render safely")

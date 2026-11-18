@@ -4786,7 +4786,7 @@ def _mm_dr_link(ref: str, label: str = "") -> str:
     vault lacks stays plain text instead of a link that 404s."""
     text = escape(label or ref)
     if ref in {p.stem for p in load_folder("decisions")}:
-        return f'<a class="wl" href="{_page_url("decisions", ref)}">{text}</a>'
+        return f'<a class="wl" href="{escape(_page_url("decisions", ref))}">{text}</a>'
     return str(text)
 
 
