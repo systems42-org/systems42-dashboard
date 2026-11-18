@@ -12,7 +12,8 @@ with tempfile.TemporaryDirectory() as temp:
     for name, fields in {
         "DT-001-training": '''title: Training
 stereotype: entity
-attributes: [{name: training_id, type: string, identifier: true}]
+aliases: [DM-009-training, GLO-001-training]
+attributes: [{name: training_id, type: string, identifier: true}, {name: order date}, {name: "cost {net}"}]
 relationships:
 - {to: "[[DT-002-session]]", label: schedules, kind: composition, multiplicity: "0..*"}
 related: ["[[DT-003-review]]"]
@@ -39,6 +40,15 @@ related: ["[[DT-003-review]]"]
         assert {e["data"]["kind"] for e in app.build_glossary_graph("related")["edges"]} == {"related"}
         diagram = app.build_data_model_full_diagram()
         assert 'Training *-- "0..*" Session : schedules' in diagram and "+training_id" in diagram
+        assert "+order date" in diagram
+        assert "+cost #123;net#125;" in diagram
+        summary = client.get("/entity-diagram").get_data(as_text=True)
+        assert "<code>order date</code>" in summary and "<code>cost {net}</code>" in summary
+        for legacy in ("DM-009-training", "GLO-001-training"):
+            old_focus = client.get("/data-model?focus=" + legacy, follow_redirects=True)
+            html = old_focus.get_data(as_text=True)
+            assert "and its direct neighbours" in html
+            assert "Training" in html.split("<figcaption>", 1)[1].split("</figcaption>", 1)[0]
         assert "Review" not in diagram and "<<term>>" not in diagram
         for url, expected in (
             ("/domain-terms", "/page/domain-terms/DT-003-review"),
@@ -67,6 +77,8 @@ related: ["[[DT-003-review]]"]
         assert next(row for row in tile["rows"] if row["title"] == "Entity diagram")["pages"] == 3
         assert 'Legacy --> "1..n" Policy' in app.build_data_model_full_diagram()
     with app.app.test_client() as client:
+        models_page = client.get("/req42/models").get_data(as_text=True)
+        assert "DM-005" in models_page and "No entries captured" not in models_page
         commons = client.get("/commons").get_data(as_text=True)
         assert "shared by both peaks · 4 pages" in commons
         requirements = client.get("/req42").get_data(as_text=True)

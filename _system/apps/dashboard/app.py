@@ -1076,7 +1076,7 @@ REQ42_BY_SLUG = catalog.SECTION_BY_SLUG
 def _block_pages(block: dict) -> list[Page]:
     """All wiki pages feeding one req42 block, sorted by id."""
     pages: list[Page] = []
-    for folder in block["folders"]:
+    for folder in catalog.section_folders(block):
         pages.extend(load_folder(folder))
     return sorted(pages, key=lambda p: p.id)
 
@@ -3491,6 +3491,7 @@ def data_model_nodes() -> list[dict]:
         "context": str(p.meta.get("bounded-context") or "").strip(),
         "stereotype": str(p.meta.get("stereotype") or "").strip().lower(),
         "attributes": _extract_dm_attribute_names(p),
+        "aliases": p.aliases if p.folder == "domain-terms" else [],
         "stub": False,
         "url": f"/page/{p.folder}/{p.stem}",
     } for p in pages]
@@ -3508,6 +3509,7 @@ def data_model_nodes() -> list[dict]:
             "context": str(p.meta.get("bounded-context") or "").strip(),
             "stereotype": stereotype,
             "attributes": [],
+            "aliases": [],
             "stub": True,
             "url": f"/page/{p.folder}/{p.stem}",
         })
@@ -3608,7 +3610,10 @@ def build_data_model_full_diagram(context: str | None = None,
             body.append("    <<term>>")
         elif n["stereotype"] and n["stereotype"] != "entity":
             body.append(f"    <<{n['stereotype']}>>")
-        body += [f"    +{a}" for a in n["attributes"]]
+        for name in n["attributes"]:
+            # Encode punctuation so Mermaid reads it as part of the member name.
+            member = re.sub(r"[^\w -]", lambda m: f"#{ord(m[0])};", " ".join(name.split()))
+            body.append(f"    +{member}")
         if body:
             lines.append(f"  class {_decl(n)} {{")
             lines += ["  " + b for b in body]
@@ -3675,9 +3680,11 @@ def _extract_dm_attribute_names(page: Page) -> list[str]:
     for the compact summary table at the top of /data-model; the per-entity
     cards below carry types, modality, and prose."""
     if "attributes" in page.meta:
-        return [name for entry in (page.meta["attributes"] if isinstance(page.meta["attributes"], list) else []) if isinstance(entry, dict)
-                and (name := str(entry.get("name") or ""))
-                and re.fullmatch(r"[\w-]+", name)]
+        attributes = page.meta["attributes"]
+        if not isinstance(attributes, list):
+            return []
+        return [name for entry in attributes if isinstance(entry, dict)
+                and isinstance(name := entry.get("name"), str) and name.strip()]
     m = _DM_ATTRIBUTES_BLOCK_RE.search(page.body)
     if not m:
         return []
@@ -3920,8 +3927,9 @@ def data_model_view():
         context = None                     # an unknown filter shows everything
     nodes = data_model_nodes()
     focus = request.args.get("focus") or None
-    if focus not in {n["key"] for n in nodes}:
-        focus = None
+    if focus and focus not in {n["key"] for n in nodes}:
+        matches = [n["key"] for n in nodes if focus in n["aliases"]]
+        focus = matches[0] if len(matches) == 1 else None
     diagram = build_data_model_full_diagram(context=context, focus=focus)
     return render_template("data_model.html", diagram=diagram, **_section_crumb("data-models"),
                            entities=data_model_entities(), nodes=nodes,
