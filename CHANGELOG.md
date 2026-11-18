@@ -12,6 +12,42 @@ Unreleased changes sit at the top until the next Starter Kit release.
 
 ## [Unreleased]
 
+### Changed
+- Dashboard release 0.11.0 (`_system/apps/dashboard/VERSION`): requirement
+  notations (DR-038), ported from the Systems42 meta repository.
+- Dashboard: functional requirements follow requirement notations (DR-038).
+  Every FR page names its `notation:` (`agile`, `use-case`, `ears`, `prose`
+  or a project's own) and one of that notation's `level:` values. The story
+  map on `/req42/functional-requirements` places only Agile epics, features
+  and stories. An Agile feature or story may name a use case at level `sea`
+  or `fish` as `parent:`: that use case is a root beside the epics, and its
+  page lists what realizes it under "Realized by". Every other requirement,
+  and every page without a known notation or level, is listed under
+  "Outside the Agile hierarchy" and is never treated as Agile. The flat list
+  shows notation and level instead of the stereotype.
+- Dashboard: use cases are functional requirements in the `use-case`
+  notation (levels `kite`, `sea`, `fish`) and live in
+  `wiki/functional-requirements/`. They open at `/functional-requirements/<id>`,
+  count on the Functional Requirements tile and are columns of the goal
+  coverage matrix. A link to `/page/use-cases/<id>` redirects there (HTTP
+  301) once the page has moved. The section no longer reads
+  `wiki/use-cases/`.
+- Dashboard: `/metamodel` shows the requirement notations instead of the
+  altitude (granularity) scale: levels, extra fields and the level-marked page
+  sections of each file in `_system/metamodel/notations/` and a project's own
+  `_system/notations/`. `default_notation:` in `_system/wiki.yaml` marks the
+  default (`agile` when unset). Rules show the notation and level they apply to.
+- Dashboard: the goal coverage matrix lists requirements of other notations
+  (EARS, prose) that serve a goal under "other requirements". Search indexes
+  `notation:` and `level:`.
+- A wiki still on the old schema (`stereotype: epic|feature|story`,
+  `wiki/use-cases/`, `_system/metamodel/altitude.md`) still opens without
+  errors, but its requirements are not placed until migrated with
+  `migrate-requirements` (Systems42 meta, `_system/scripts/new-project.sh`):
+  every FR is listed outside the Agile hierarchy, use cases are plain pages
+  outside the Functional Requirements section, and `/metamodel` shows no
+  notations. This repository's own wiki and schema are migrated separately.
+
 ### Security
 - Dashboard release 0.10.1 (`_system/apps/dashboard/VERSION`): the security
   fixes of the Systems42 meta repository's dashboard, ported to this copy.
