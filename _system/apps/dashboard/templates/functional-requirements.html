@@ -8,7 +8,7 @@
 {% block content %}
 
 <h1 class="page-h1">Functional Requirements</h1>
-<p class="lead">Goals and the epics and use cases that contribute to them, projected from each requirement's <code>goal:</code> field (DR-018, DR-011). Each epic opens its own feature&nbsp;→&nbsp;story breakdown.</p>
+<p class="lead">Goals and the epics and use cases that contribute to them, projected from each requirement's <code>goal:</code> field (DR-018). Every requirement names its <code>notation:</code> and <code>level:</code> (DR-038); the story map below places the Agile epics, features and stories. Each epic opens its own feature&nbsp;→&nbsp;story breakdown.</p>
 
 {% if diagram %}
 <figure class="goals-diagram">
@@ -39,27 +39,40 @@
 </div>
 {% endif %}
 
-{% if use_cases %}
-<h2 class="mm-h2">Use cases</h2>
+{% if hierarchy.use_cases %}
+<h2 class="mm-h2">Use cases refined by features and stories</h2>
 <div class="fr-epics">
-  {% for u in use_cases %}
+  {% for u in hierarchy.use_cases %}
   <a class="fr-card fr-card-link" href="{{ u.url }}">
     <header class="fr-card-head">
       <code class="ml-id">{{ u.id }}</code>
       <h2>{{ u.title }}</h2>
-      <span class="stereo">Use case</span>
-      {% if u.level %}<span class="badge">{{ u.level }}</span>{% endif %}
+      <span class="stereo">Use case · {{ u.level }}</span>
       {% if u.priority %}<span class="badge badge-prio">{{ u.priority }}</span>{% endif %}
       {% if u.status %}<span class="badge">{{ u.status }}</span>{% endif %}
-      {% if u.n_features or u.n_stories %}<span class="fr-counter">{{ plural(u.n_stories, 'story', 'stories') }} · {{ plural(u.n_features, 'feature') }}</span>{% endif %}
+      <span class="fr-counter">{{ plural(u.n_stories, 'story', 'stories') }} · {{ plural(u.n_features, 'feature') }}</span>
     </header>
-    <p class="fr-card-sub{% if not u.goals %} fr-empty{% endif %}">{% if u.goals %}serves {{ u.goals | map(attribute='id') | join(' · ') }}{% else %}no goal linked{% endif %} →</p>
+    <p class="fr-card-sub">{{ plural(u.n_features, 'feature') }} · {{ plural(u.n_stories, 'story', 'stories') }} — View breakdown →</p>
   </a>
   {% endfor %}
 </div>
 {% endif %}
 
-{% if not hierarchy.epics and not use_cases %}
+{% if hierarchy.other_notations %}
+<section class="fr-other-notations">
+  <h2 class="mm-h2">Outside the Agile hierarchy</h2>
+  <p class="lead">Requirements in other notations, and pages whose <code>notation:</code> or <code>level:</code> the story map does not know.</p>
+  <ul class="fr-stories">
+    {% for o in hierarchy.other_notations %}
+    <li><code class="ml-id">{{ o.id }}</code> <a href="/functional-requirements/{{ o.stem }}">{{ o.title }}</a>
+      <span class="badge">{{ o.notation or 'no notation' }} · {{ o.level or 'no level' }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if not hierarchy.epics and not hierarchy.use_cases and not hierarchy.other_notations and not hierarchy.orphans %}
 {{ empty_state("functional requirements") }}
 {% endif %}
 
@@ -71,7 +84,8 @@
   <thead>
     <tr>
       <th class="c-id" data-sort="text" data-key="id" aria-sort="ascending">ID</th>
-      <th class="c-status" data-sort="text" data-key="stereotype">Kind</th>
+      <th class="c-status" data-sort="text" data-key="notation">Notation</th>
+      <th class="c-status" data-sort="text" data-key="level">Level</th>
       <th class="c-title" data-sort="text" data-key="title">Title</th>
       <th class="c-status" data-sort="numeric" data-key="priority">Priority</th>
       <th class="c-status" data-sort="text" data-key="release">Release</th>
@@ -83,7 +97,8 @@
     {% for r in rows %}
     <tr data-status="{{ r.status }}">
       <td class="c-id"><code>{{ r.id }}</code></td>
-      <td class="c-status">{% if r.kind %}<span class="stereo stereo-{{ r.kind | replace(' ', '-') }}">{{ r.kind }}</span>{% endif %}</td>
+      <td class="c-status">{{ r.notation }}</td>
+      <td class="c-status">{% if r.level %}<span class="stereo stereo-{{ r.level }}">{{ r.level }}</span>{% endif %}</td>
       <td class="c-title" data-sort-value="{{ r.title }}"><a class="term term-link" href="{{ r.url }}">{{ r.title }}</a></td>
       <td class="c-status" data-sort-value="{{ priority_rank(r.priority) }}">{% if r.priority %}<span class="badge badge-prio">{{ r.priority }}</span>{% endif %}</td>
       <td class="c-status">{{ r.release }}</td>
@@ -100,13 +115,13 @@
 {% if hierarchy.orphans %}
 <section class="fr-card fr-orphans">
   <header class="fr-card-head"><h2>Orphaned requirements</h2></header>
-  <p class="lead">Feature/story whose <code>parent:</code> resolves to neither an FR nor a use case — probably a typo in the wikilink.</p>
+  <p class="lead">Agile feature/story whose <code>parent:</code> resolves to neither an Agile requirement nor a use case at level sea or fish — probably a typo in the wikilink.</p>
   <ul class="fr-stories">
     {% for o in hierarchy.orphans %}
     <li>
       <code class="ml-id">{{ o.id }}</code>
       <a href="/functional-requirements/{{ o.stem }}">{{ o.title }}</a>
-      <span class="badge">{{ o.stereotype }}</span>
+      <span class="badge">{{ o.level }}</span>
     </li>
     {% endfor %}
   </ul>

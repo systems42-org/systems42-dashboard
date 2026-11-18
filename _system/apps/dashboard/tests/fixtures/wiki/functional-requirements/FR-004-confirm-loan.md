@@ -9,7 +9,8 @@ sources: []
 related:
   - "[[GLO-002-loan]]"
 tags: [functional-requirement]
-stereotype: story
+notation: agile
+level: story
 parent:
   - "[[FR-002-checkout]]"
 priority: Should

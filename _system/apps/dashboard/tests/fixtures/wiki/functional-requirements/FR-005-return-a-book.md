@@ -8,7 +8,8 @@ updated: 2026-09-06
 sources: []
 related: []
 tags: [functional-requirement]
-stereotype: story
+notation: agile
+level: story
 parent:
   - "[[FR-001-lending]]"
 priority: Must

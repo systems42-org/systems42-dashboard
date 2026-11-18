@@ -8,7 +8,8 @@ updated: 2026-10-19
 sources: []
 related: []
 tags: [functional-requirement]
-stereotype: epic
+notation: agile
+level: epic
 ---
 
 # Suche

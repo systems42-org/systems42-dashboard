@@ -3,7 +3,8 @@ id: FR-006
 type: functional-requirement
 title: Text tools
 status: draft
-stereotype: feature
+notation: agile
+level: feature
 priority: Could
 tags: [functional-requirement]
 ---

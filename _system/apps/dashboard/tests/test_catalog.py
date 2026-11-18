@@ -13,7 +13,7 @@ import catalog  # noqa: E402
 
 WIKI_FOLDERS = [
     "domain-terms", "goals", "stakeholders", "context", "external-interfaces",
-    "activity-models", "use-cases", "functional-requirements",
+    "activity-models", "functional-requirements",
     "quality-requirements", "constraints", "issues", "decisions", "building-blocks",
     "deployment-nodes", "runtime-scenarios", "concepts",
 ]

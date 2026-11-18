@@ -9,7 +9,9 @@ WIKI_DIR points at tests/fixtures/wiki, a small neutral vault, so the suite is
 independent of whatever content this starter is filled with.
 """
 import os
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 _FIXTURE = Path(__file__).resolve().parent / "fixtures" / "wiki"
@@ -29,10 +31,11 @@ def test_build_fr_hierarchy_counts_and_shape():
     # --- internal-consistency invariants (hold for any valid vault) ---
     assert bl["total_epics"] == len(bl["epics"]), \
         (bl["total_epics"], len(bl["epics"]))
-    assert sum(e["n_features"] for e in bl["epics"]) == bl["total_features"], \
-        (sum(e["n_features"] for e in bl["epics"]), bl["total_features"])
-    assert sum(e["n_stories"] for e in bl["epics"]) == bl["total_stories"], \
-        (sum(e["n_stories"] for e in bl["epics"]), bl["total_stories"])
+    roots = bl["epics"] + bl["use_cases"]
+    assert sum(e["n_features"] for e in roots) == bl["total_features"], \
+        (sum(e["n_features"] for e in roots), bl["total_features"])
+    assert sum(e["n_stories"] for e in roots) == bl["total_stories"], \
+        (sum(e["n_stories"] for e in roots), bl["total_stories"])
     assert bl["orphans"] == [], bl["orphans"]
 
     by_id = {e["id"]: e for e in bl["epics"]}
@@ -176,8 +179,87 @@ def test_old_backlog_route_redirects():
     assert client.get("/req42/functional-requirements").status_code == 200
 
 
+def test_unplaced_requirements_stay_visible():
+    """A page the Agile projection cannot place (other notation, no notation,
+    an unmigrated `stereotype:` page) is listed, never silently dropped."""
+    extra = [
+        app.Page("UC-009-find", {"id": "UC-009", "title": "Find", "notation": "use-case",
+                                 "level": "sea"}, "", "functional-requirements"),
+        app.Page("FR-090-legacy", {"id": "FR-090", "title": "Legacy", "stereotype": "epic"},
+                 "", "functional-requirements"),
+        app.Page("FR-091-ears", {"id": "FR-091", "title": "Shall", "notation": "ears",
+                                 "level": "requirement"}, "", "functional-requirements"),
+    ]
+    real = app.load_folder
+    app.load_folder = lambda folder: real(folder) + (extra if folder == "functional-requirements" else [])
+    try:
+        bl = app.build_fr_hierarchy()
+        body = app.app.test_client().get("/req42/functional-requirements").get_data(as_text=True)
+    finally:
+        app.load_folder = real
+    other = {o["id"]: o for o in bl["other_notations"]}
+    assert set(other) == {"UC-009", "FR-090", "FR-091"}, other
+    assert other["FR-090"]["notation"] == "", other["FR-090"]
+    assert "FR-090" not in {e["id"] for e in bl["epics"]}
+    section = body[body.index("Outside the Agile hierarchy"):]
+    assert "no notation · no level" in section and "ears · requirement" in section, section[:800]
+    print("OK unplaced requirements listed:", sorted(other))
+
+
+def test_features_and_stories_may_refine_a_use_case():
+    """DR-038 amendment: an Agile feature or story may name a sea- or fish-level
+    use case as parent. The use case becomes a root beside the epics, its page
+    shows what realizes it, and the children are no orphans. A kite-level use
+    case takes no Agile children, so a story under one stays an orphan."""
+    pages = {
+        "UC-010-borrow": "notation: use-case\nlevel: sea\n",
+        "FR-091-scan": "notation: agile\nlevel: story\nparent: [\"[[UC-010-borrow]]\"]\n",
+        "FR-092-renew": "notation: agile\nlevel: feature\nparent: [\"[[UC-010-borrow]]\"]\n",
+        "FR-093-renew-online": "notation: agile\nlevel: story\nparent: [\"[[FR-092-renew]]\"]\n",
+        "UC-011-run-library": "notation: use-case\nlevel: kite\n",
+        "FR-094-under-kite": "notation: agile\nlevel: story\nparent: [\"[[UC-011-run-library]]\"]\n",
+        "UC-012-reserve": "notation: use-case\nlevel: sea\n",
+    }
+    with tempfile.TemporaryDirectory() as tmp:
+        wiki = Path(tmp) / "wiki"
+        shutil.copytree(_FIXTURE, wiki)
+        for stem, meta in pages.items():
+            (wiki / "functional-requirements" / f"{stem}.md").write_text(
+                f"---\nid: {stem[:6]}\ntype: functional-requirement\ntitle: {stem[7:]}\n"
+                f"status: draft\n{meta}---\n\n# {stem[7:]}\n", encoding="utf-8")
+        saved, app.WIKI_DIR = app.WIKI_DIR, wiki
+        try:
+            bl = app.build_fr_hierarchy()
+            node, level = app._fr_hierarchy_node(bl, "UC-010-borrow")
+            client = app.app.test_client()
+            uc_page = client.get("/functional-requirements/UC-010-borrow").get_data(as_text=True)
+            overview = client.get("/req42/functional-requirements").get_data(as_text=True)
+            crumbs = [a["id"] for a in app._fr_ancestors("FR-093-renew-online")]
+        finally:
+            app.WIKI_DIR = saved
+
+    ucs = {u["id"]: u for u in bl["use_cases"]}
+    assert set(ucs) == {"UC-010"}, ucs
+    uc = ucs["UC-010"]
+    assert [f["id"] for f in uc["features"]] == ["FR-092"], uc["features"]
+    assert [s["id"] for s in uc["features"][0]["stories"]] == ["FR-093"], uc["features"]
+    assert [s["id"] for s in uc["direct_stories"]] == ["FR-091"], uc["direct_stories"]
+    assert (uc["n_features"], uc["n_stories"]) == (1, 2), uc
+    assert {o["id"] for o in bl["orphans"]} == {"FR-094"}, bl["orphans"]
+    other = {o["id"] for o in bl["other_notations"]}
+    assert "UC-010" not in other and {"UC-011", "UC-012"} <= other, other
+    assert "UC-010" not in {e["id"] for e in bl["epics"]}
+    assert node is uc and level == "sea", (node, level)
+    assert "Realized by" in uc_page and "FR-091" in uc_page and "FR-093" in uc_page
+    assert "Use cases refined by features and stories" in overview and "UC-010" in overview
+    assert "UC-010" in crumbs, crumbs
+    print("OK use case refined by Agile children")
+
+
 if __name__ == "__main__":
     test_build_fr_hierarchy_counts_and_shape()
+    test_unplaced_requirements_stay_visible()
+    test_features_and_stories_may_refine_a_use_case()
     test_goal_epic_diagram_string()
     test_fr_subtree_diagram_string()
     test_fr_ancestors()

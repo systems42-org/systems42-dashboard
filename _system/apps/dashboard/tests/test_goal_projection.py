@@ -119,7 +119,8 @@ updated: 2026-09-06
 sources: []
 related: []
 tags: [functional-requirement]
-stereotype: epic
+notation: agile
+level: epic
 parent: []
 priority: Must
 release: v1

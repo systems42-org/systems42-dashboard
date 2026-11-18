@@ -9,13 +9,13 @@
 {% block content %}
 
 <div class="detail-head">
-  <span class="stereo stereo-{{ fr.stereotype }}">{{ fr.stereotype|capitalize }}</span>
+  <span class="stereo stereo-{{ fr.level or 'none' }}">{{ fr.notation or 'no notation' }} · {{ fr.level|capitalize if fr.level else 'no level' }}</span>
   <code class="detail-id">{{ fr.id }}</code>
   {% if fr.status %}<span class="status status-{{ fr.status }}">{{ fr.status }}</span>{% endif %}
   {% if fr.priority %}<span class="badge badge-prio">{{ fr.priority }}</span>{% endif %}
   {% if fr.release %}<span class="badge">{{ fr.release }}</span>{% endif %}
-  {% if fr.stereotype in ('epic', 'feature') and (fr.n_stories or fr.n_features) %}
-  <span class="fr-counter">{{ plural(fr.n_stories, 'story', 'stories') }}{% if fr.stereotype == 'epic' %} · {{ plural(fr.n_features, 'feature') }}{% endif %}</span>
+  {% if (fr.notation == 'agile' and fr.level in ('epic', 'feature') or fr.notation == 'use-case') and (fr.n_stories or fr.n_features) %}
+  <span class="fr-counter">{{ plural(fr.n_stories, 'story', 'stories') }}{% if fr.level != 'feature' %} · {{ plural(fr.n_features, 'feature') }}{% endif %}</span>
   {% endif %}
   {{ format_labels(formats) }}
 </div>
@@ -35,7 +35,7 @@
 
 {% if fr.features or fr.direct_stories or fr.stories %}
 <section class="fr-breakdown">
-  <h2 class="fr-breakdown-head">Breakdown</h2>
+  <h2 class="fr-breakdown-head">{{ 'Realized by' if fr.notation == 'use-case' else 'Breakdown' }}</h2>
 
   {% if fr.features or fr.direct_stories %}
   {# epic: feature blocks, each with its stories, plus any epic-direct stories #}
@@ -66,7 +66,7 @@
 
     {% if fr.direct_stories %}
     <div class="fr-feature">
-      <div class="fr-feature-head"><span class="stereo stereo-feature">Direct on epic</span></div>
+      <div class="fr-feature-head"><span class="stereo stereo-feature">Direct on {{ 'use case' if fr.notation == 'use-case' else 'epic' }}</span></div>
       <ul class="fr-stories">
         {% for s in fr.direct_stories %}
         <li>

@@ -74,7 +74,7 @@ _page("goals", "GOAL-002-ziel", "goal", "Ziel", extra="stereotype: objective\n",
 _page("building-blocks", "BB-001-kern", "building-block", "Kern", extra="state: target\n",
       body="> follows [[arc42]] (section 5, black box)\n\n## Purpose / Responsibility\n\nDer Kern.\n")
 _page("functional-requirements", "FR-001-suche", "functional-requirement", "Suche",
-      extra="stereotype: story\n",
+      extra="notation: agile\nlevel: story\n",
       body="## Story\n\n> follows [[user-story-format]]\n\nAs a reader I want to search.\n")
 _page("decisions", "DR-002-nur-text", "decision-record", "Nur Text", extra="kind: business\n",
       body="## Beispiel\n\n```markdown\n> follows [[MADR]]\n```\n\n"

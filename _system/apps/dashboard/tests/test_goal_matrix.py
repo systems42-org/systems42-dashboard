@@ -20,7 +20,7 @@ from pathlib import Path
 
 _tmp = Path(tempfile.mkdtemp())
 _wiki = _tmp / "wiki"
-for _f in ("goals", "functional-requirements", "use-cases"):
+for _f in ("goals", "functional-requirements"):
     (_wiki / _f).mkdir(parents=True)
 (_tmp / "wiki.yaml").write_text("system_name: System X\n", encoding="utf-8")
 os.environ["WIKI_DIR"] = str(_wiki)
@@ -52,43 +52,45 @@ _page("goals", "GOAL-006-draft-epic-agreed-feature", "Draft epic, agreed feature
 
 _FR = "functional-requirements"
 _page(_FR, "FR-001-served-epic", "Served epic", "accepted",
-      stereotype="epic", lane="backbone", parent="[]", goal='["[[GOAL-002-served]]"]')
+      notation="agile", level="epic", lane="backbone", parent="[]", goal='["[[GOAL-002-served]]"]')
 _page(_FR, "FR-002-untraced-epic", "Untraced epic", "draft",
-      stereotype="epic", lane="backbone", parent="[]", goal="[]")
+      notation="agile", level="epic", lane="backbone", parent="[]", goal="[]")
 _page(_FR, "FR-003-platform-epic", "Platform epic", "accepted",
-      stereotype="epic", lane="platform", parent="[]", goal="[]")
+      notation="agile", level="epic", lane="platform", parent="[]", goal="[]")
 _page(_FR, "FR-004-feature", "A feature", "accepted",
-      stereotype="feature", lane="backbone", parent='["[[FR-001-served-epic]]"]',
+      notation="agile", level="feature", lane="backbone", parent='["[[FR-001-served-epic]]"]',
       goal='["[[GOAL-002-served]]"]')
 _page(_FR, "FR-005-display-epic", "Display epic", "draft",
-      stereotype="epic", lane="display", parent="[]", goal="[]")
+      notation="agile", level="epic", lane="display", parent="[]", goal="[]")
 _page(_FR, "FR-006-draft-epic", "Draft epic", "draft",
-      stereotype="epic", lane="backbone", parent="[]", goal='["[[GOAL-002-served]]"]')
+      notation="agile", level="epic", lane="backbone", parent="[]", goal='["[[GOAL-002-served]]"]')
 # lane platform, but it names a goal: no enabler (rel-goal)
 _page(_FR, "FR-007-platform-with-goal", "Platform epic with a goal", "draft",
-      stereotype="epic", lane="platform", parent="[]", goal='["[[GOAL-004-draft]]"]')
+      notation="agile", level="epic", lane="platform", parent="[]", goal='["[[GOAL-004-draft]]"]')
 # the only requirement serving GOAL-005: a feature, no matrix column
 _page(_FR, "FR-008-feature-only", "Feature for goal five", "draft",
-      stereotype="feature", lane="backbone", parent='["[[FR-001-served-epic]]"]',
+      notation="agile", level="feature", lane="backbone", parent='["[[FR-001-served-epic]]"]',
       goal='["[[GOAL-005-features-only]]"]')
 # goal: values that look truthy but name no objective, and two odd spellings
 # that do: each backbone epic is either marked "no goal" or marks its goal
 _page(_FR, "FR-009-names-the-vision", "Names the vision", "draft",
-      stereotype="epic", lane="backbone", parent="[]", goal='["[[GOAL-001-vision]]"]')
+      notation="agile", level="epic", lane="backbone", parent="[]", goal='["[[GOAL-001-vision]]"]')
 _page(_FR, "FR-010-names-a-missing-goal", "Names a missing goal", "draft",
-      stereotype="epic", lane="backbone", parent="[]", goal='["[[GOAL-099-x]]"]')
+      notation="agile", level="epic", lane="backbone", parent="[]", goal='["[[GOAL-099-x]]"]')
 _page(_FR, "FR-011-unquoted-goal", "Unquoted goal", "draft",
-      stereotype="epic", lane="backbone", parent="[]", goal="[[GOAL-002-served]]")
+      notation="agile", level="epic", lane="backbone", parent="[]", goal="[[GOAL-002-served]]")
 _page(_FR, "FR-012-scalar-goal", "Scalar goal", "draft",
-      stereotype="epic", lane="backbone", parent="[]", goal='"[[GOAL-002-served]]"')
+      notation="agile", level="epic", lane="backbone", parent="[]", goal='"[[GOAL-002-served]]"')
 # GOAL-006: a draft epic and an agreed feature
 _page(_FR, "FR-013-draft-epic-for-six", "Draft epic for six", "draft",
-      stereotype="epic", lane="backbone", parent="[]",
+      notation="agile", level="epic", lane="backbone", parent="[]",
       goal='["[[GOAL-006-draft-epic-agreed-feature]]"]')
 _page(_FR, "FR-014-agreed-feature-for-six", "Agreed feature for six", "accepted",
-      stereotype="feature", lane="backbone", parent='["[[FR-013-draft-epic-for-six]]"]',
+      notation="agile", level="feature", lane="backbone", parent='["[[FR-013-draft-epic-for-six]]"]',
       goal='["[[GOAL-006-draft-epic-agreed-feature]]"]')
-_page("use-cases", "UC-001-borrow", "Borrow", "draft", goal='["[[GOAL-004-draft]]"]')
+# a use case is a functional requirement in the use-case notation (DR-038)
+_page(_FR, "UC-001-borrow", "Borrow", "draft", notation="use-case", level="sea",
+      goal='["[[GOAL-004-draft]]"]')
 
 BODY = app.app.test_client().get("/goals").get_data(as_text=True)
 
@@ -143,7 +145,7 @@ def test_header_links_and_tooltip():
     assert 'href="/functional-requirements/FR-001-served-epic"' in h, h
     assert 'data-tooltip="Served epic"' in h, h
     uc = next(x for x in _headers() if "UC-001" in x)
-    assert 'href="/page/use-cases/UC-001-borrow"' in uc, uc
+    assert 'href="/functional-requirements/UC-001-borrow"' in uc, uc
 
 
 def test_enablers_by_lane():

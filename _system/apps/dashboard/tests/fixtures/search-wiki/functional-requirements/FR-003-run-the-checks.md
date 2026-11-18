@@ -3,7 +3,8 @@ id: FR-003
 type: functional-requirement
 title: Run the checks
 status: draft
-stereotype: feature
+notation: agile
+level: feature
 priority: Should
 tags: [functional-requirement]
 ---

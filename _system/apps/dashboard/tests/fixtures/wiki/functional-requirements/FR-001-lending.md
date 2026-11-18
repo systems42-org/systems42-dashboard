@@ -9,7 +9,8 @@ sources: []
 related:
   - "[[STK-001-librarian]]"
 tags: [functional-requirement]
-stereotype: epic
+notation: agile
+level: epic
 parent: []
 priority: Must
 release: v1

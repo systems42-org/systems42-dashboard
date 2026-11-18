@@ -3,7 +3,8 @@ id: FR-007
 type: functional-requirement
 title: Search the wiki
 status: draft
-stereotype: epic
+notation: agile
+level: epic
 priority: Should
 tags: [functional-requirement]
 ---

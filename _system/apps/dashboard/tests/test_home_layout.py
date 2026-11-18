@@ -264,16 +264,20 @@ def test_supporting_model_rows_say_pages_not_links():
 
 
 def test_use_cases_are_functional_requirements():
-    """DR-011: a use case shows on the R3 tile, not R4, and its `goal:` list
-    counts towards goal coverage."""
-    f = _write("use-cases", "UC-001-borrow", id="UC-001", type="use-case", title="Borrow a book")
+    """DR-038: a use case is a functional requirement in the use-case
+    notation. It shows on the R3 tile, not R4, and counts once."""
+    f = _write("functional-requirements", "UC-001-borrow", id="UC-001",
+               type="functional-requirement", title="Borrow a book")
+    f.write_text(f.read_text(encoding="utf-8").replace(
+        "tags: [functional-requirement]\n", "tags: [functional-requirement]\nnotation: use-case\nlevel: sea\n"),
+        encoding="utf-8")
     try:
         body = _area("/req42")
         r3 = body[body.index("tile-r3"):body.index("tile-r4")]
         r4 = body[body.index("tile-r4"):body.index("tile-r5")]
-        assert "UC-001" in r3 and "1 use case" in r3, r3
+        assert "UC-001" in r3 and "1 use case" in r3 and "use case · sea" in r3, r3
         # the headline counts all functional requirements; empty kinds are not named
-        n_fr = len(app.load_folder("functional-requirements")) + len(app.load_folder("use-cases"))
+        n_fr = len(app.load_folder("functional-requirements"))
         assert f'<span class="num">{n_fr}</span>' in r3, r3
         assert ("requirement" if n_fr == 1 else "requirements") in r3, r3
         if not app.build_fr_hierarchy()["total_epics"]:
