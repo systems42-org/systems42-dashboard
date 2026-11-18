@@ -5040,13 +5040,15 @@ def metamodel_view():
             "summary_html": _mm_inline(pr.get("_summary") or "", anchors),
         })
 
-    # requirement notations (DR-038): the default one first, then by name
+    # requirement notations (DR-038): the default one first, then by name.
+    # Names compare without case, as an FR's `notation:` does (_fr_notation).
     default_notation = wiki_config()["default_notation"]
     notations = []
-    for n in sorted(mm["notations"], key=lambda n: (n["name"] != default_notation, n["name"])):
+    for n in sorted(mm["notations"], key=lambda n: (n["name"].lower() != default_notation,
+                                                    n["name"].lower())):
         notations.append({
             "name": n["name"], "anchor": f"notation-{n['name']}",
-            "title": n.get("title") or n["name"], "default": n["name"] == default_notation,
+            "title": n.get("title") or n["name"], "default": n["name"].lower() == default_notation,
             "levels": n.get("levels") or [],
             "sections": n.get("_sections") or [],
             "fields": [f for f in n.get("fields") or [] if isinstance(f, dict)],

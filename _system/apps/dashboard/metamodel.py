@@ -128,7 +128,7 @@ def notations() -> list[dict]:
         n["_sections"] = notation_sections(str(n.get("_body") or ""))
         levels = n.get("levels")
         n["levels"] = [str(v) for v in levels] if isinstance(levels, list) else []
-    return sorted(out, key=lambda n: n["name"])
+    return sorted(out, key=lambda n: n["name"].lower())
 
 
 def _load(folder: str, construct: str) -> list[dict]:

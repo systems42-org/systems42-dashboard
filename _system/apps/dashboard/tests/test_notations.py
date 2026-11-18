@@ -39,7 +39,7 @@ _own.mkdir(parents=True)
 (_own / "notation-report-brief.md").write_text("""---
 type: metamodel
 construct: notation
-name: report-brief
+name: ReportBrief
 title: Report brief
 summary: "An information need: who asks, which decision it serves."
 extends: functional-requirement
@@ -84,7 +84,7 @@ def _row(body: str, anchor: str) -> str:
 def test_shipped_and_project_notations_are_read():
     names = [n["name"] for n in metamodel.load()["notations"]]
     # the README has no frontmatter, the nameless file defines nothing
-    assert names == ["agile", "ears", "prose", "report-brief", "use-case"], names
+    assert names == ["agile", "ears", "prose", "ReportBrief", "use-case"], names
     uc = next(n for n in metamodel.notations() if n["name"] == "use-case")
     assert uc["levels"] == ["kite", "sea", "fish"]
     assert [f["name"] for f in uc["fields"]] == ["primary-actor", "scope-building-block"]
@@ -96,7 +96,7 @@ def test_sections_come_from_the_level_markers():
     assert sections["Story"] == ["epic", "feature", "story"], sections
     assert sections["Acceptance criteria"] == ["story"], sections   # a **Label.** block
     assert sections["PROBLEM / GOAL"] == ["epic", "feature"], sections
-    own = next(n for n in metamodel.notations() if n["name"] == "report-brief")
+    own = next(n for n in metamodel.notations() if n["name"] == "ReportBrief")
     assert [(s["heading"], s["levels"]) for s in own["_sections"]] == [
         ("Information need", ["brief", "metric"]), ("Metric definition", ["metric"])]
     # text before the first marker is no section
@@ -121,9 +121,14 @@ def test_default_notation_is_agile_unless_wiki_yaml_names_one():
         assert app.wiki_config()["default_notation"] == "ears"
         body = app.app.test_client().get("/metamodel").get_data(as_text=True)
         # the default comes first, then the others by name
-        order = [body.index(f'id="notation-{n}"') for n in ("ears", "agile", "prose", "report-brief", "use-case")]
+        order = [body.index(f'id="notation-{n}"') for n in ("ears", "agile", "prose", "ReportBrief", "use-case")]
         assert order == sorted(order), order
         assert "default" in _row(body, "notation-ears") and "default" not in _row(body, "notation-agile")
+        # a project notation whose name has capitals is the default all the same
+        _cfg.write_text("system_name: Notations\ndefault_notation: ReportBrief\n", encoding="utf-8")
+        body = app.app.test_client().get("/metamodel").get_data(as_text=True)
+        assert body.index('id="notation-ReportBrief"') < body.index('id="notation-agile"')
+        assert "default" in _row(body, "notation-ReportBrief")
     finally:
         _cfg.write_text("system_name: Notations\n", encoding="utf-8")
 
@@ -137,7 +142,7 @@ def test_metamodel_page_shows_levels_fields_and_sections():
     assert "kite → sea → fish" in uc
     assert "<code>scope-building-block</code> *" in uc
     assert "<code>Preconditions</code> <span class=\"aliases\">sea, fish</span>" in uc
-    own = _row(body, "notation-report-brief")
+    own = _row(body, "notation-ReportBrief")
     assert "brief → metric" in own and "<code>audience</code> *" in own
     # a rule narrowed by notation and level says so
     rule = _row(body, "rule-fr-traces-to-goal")
