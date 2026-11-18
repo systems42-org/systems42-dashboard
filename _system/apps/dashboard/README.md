@@ -53,7 +53,9 @@ start. The launcher hands every command it does not know to `dev.sh` here:
 ```
 
 `local` is the escape hatch for machines where Docker will not start: it
-builds a `.venv/` here on first run (~20 s) and serves the same app.
+builds a `.venv/` here on first run (~20 s), installs the requirements again
+whenever `requirements.txt` has changed, and serves the same app until you
+press Ctrl+C. It refuses to start while something already answers on port 8000.
 
 ### Releases
 
@@ -345,6 +347,27 @@ from this directory:
 
 `sh tests/run-all.sh .venv/bin/python` runs all of them there. Without `node`
 on the machine, the scripts that need it skip their JavaScript checks.
+
+One test needs a browser: `tests/test_mermaid_browser.py` starts the dashboard
+on a throwaway vault and checks in headless Chromium that the vendored mermaid
+actually draws the context diagram, the entity diagram and fenced
+```` ```mermaid ```` blocks, survives the theme re-render, logs no JavaScript
+errors, and is the version `static/vendor/README.md` names. Run it after every
+mermaid update. Its dependencies are development-only and stay out of the
+Docker image:
+
+```sh
+.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/python -m playwright install chromium
+```
+
+Without them it prints `SKIP` and exits 0, so `run-all.sh` and `make test`
+still pass; a SKIP is not a pass.
+
+pytest can run one script (`pytest tests/test_reload.py`), but not the whole
+folder: each script points the app at its own throwaway vault before
+`import app`, so in one shared process only the first one counts.
+`tests/conftest.py` stops such a run with this hint.
 
 They cover the empty vault (every route must render on day one), a populated
 fixture vault, the functional-requirements hierarchy and goal projections, the glossary graphs, the

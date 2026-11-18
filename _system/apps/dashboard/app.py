@@ -24,6 +24,7 @@ from urllib.parse import quote, unquote, urlsplit
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import markdown as md
+import nh3
 import yaml
 from flask import (Flask, abort, g, has_request_context, jsonify, redirect,
                    render_template, request, send_file, url_for)
@@ -320,6 +321,34 @@ def _brand_file(folder: Path, name: str) -> Path | None:
     return path if path.parent == folder.resolve() and path.is_file() else None
 
 
+# A file the dashboard serves as it is (a brand mark, a file under docs/) is
+# shown from the dashboard's own origin. Opened directly, an SVG or HTML file
+# with a script in it would run with the dashboard's rights; sandboxed and
+# without script it is only a picture.
+_FILE_CSP = "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox"
+
+
+def _inert_file(resp):
+    resp.headers["Content-Security-Policy"] = _FILE_CSP
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    return resp
+
+
+@app.after_request
+def _no_framing(resp):
+    """No HTML page of the dashboard may be shown inside another site's frame
+    (clickjacking the settings or Disconnect-all controls). A response that
+    already has a policy (the file routes) keeps it and gains the directive."""
+    if resp.mimetype == "text/html":
+        csp = resp.headers.get("Content-Security-Policy")
+        if not csp:
+            resp.headers["Content-Security-Policy"] = "frame-ancestors 'none'"
+        elif "frame-ancestors" not in csp:
+            resp.headers["Content-Security-Policy"] = f"{csp}; frame-ancestors 'none'"
+        resp.headers.setdefault("X-Frame-Options", "DENY")
+    return resp
+
+
 def _brand_checksum(path: Path | None) -> str:
     try:
         return f"{zlib.crc32(path.read_bytes()):08x}"
@@ -370,7 +399,7 @@ def brand_mark(name):
     # behind this URL never changes, so the browser may keep it for a year.
     # Any other request revalidates, so a stale ?v= never sticks.
     fresh = request.args.get("v") == _brand_checksum(path)
-    return send_file(path, mimetype="image/svg+xml", max_age=31536000 if fresh else 0)
+    return _inert_file(send_file(path, mimetype="image/svg+xml", max_age=31536000 if fresh else 0))
 
 
 @app.context_processor
@@ -470,16 +499,27 @@ class Page:
 
     @property
     def title(self) -> str:
-        return self.meta.get("title", self.stem)
+        # a blank `title:` (YAML null) falls back to the file name like a
+        # missing one; a number or date is shown as written
+        t = self.meta.get("title")
+        return str(t) if t not in (None, "") else self.stem
 
     @property
     def status(self) -> str:
-        return self.meta.get("status", "")
+        return str(self.meta.get("status") or "")
 
     @property
     def aliases(self) -> list[str]:
-        a = self.meta.get("aliases") or []
-        return [x for x in a if x]
+        return [str(x) for x in self.as_list("aliases") if x]
+
+    def as_list(self, field: str) -> list:
+        """A list-valued frontmatter field as a list, whatever was written:
+        blank → [], a single value → [value] (`tags: draft` is one tag, and
+        `parent: 7` must not crash an iteration)."""
+        v = self.meta.get(field)
+        if v is None or v == "":
+            return []
+        return v if isinstance(v, list) else [v]
 
     def link_targets(self) -> set[str]:
         """Distinct wiki pages this page points to (frontmatter + body),
@@ -521,7 +561,28 @@ class Page:
 _PARSE_CACHE: dict[Path, tuple[float, "Page | None"]] = {}
 
 
+def _resolves_inside(root: Path, path: Path) -> bool:
+    """True when `path`, every symlink on the way resolved, is `root` or below
+    it. A symlink in the wiki that points elsewhere in the wiki is fine; one
+    that leads out of it (a committed `x.md -> /etc/…`, a linked folder) is
+    not read: the dashboard serves the wiki, not what a link names."""
+    try:
+        return _inside(root.resolve(), path.resolve(strict=True))
+    except (OSError, RuntimeError):            # missing, or a symlink loop
+        return False
+
+
+def _page_root(path: Path) -> Path:
+    """The folder a page must stay inside: raw/sources/ for a provenance
+    record, the wiki for everything else."""
+    return SOURCES_DIR if _inside(SOURCES_DIR.absolute(), path.absolute()) else WIKI_DIR
+
+
 def _parse(path: Path, folder: str) -> Page | None:
+    # checked before the cache: a symlink retargeted out of the wiki must not
+    # keep serving the page it pointed to before
+    if not _resolves_inside(_page_root(path), path):
+        return None
     try:
         mtime = path.stat().st_mtime
     except OSError:
@@ -529,7 +590,14 @@ def _parse(path: Path, folder: str) -> Page | None:
     cached = _PARSE_CACHE.get(path)
     if cached is not None and cached[0] == mtime:
         return cached[1]
-    text = path.read_text(encoding="utf-8")
+    # One broken file must never take the whole dashboard down: every page
+    # render walks the full vault (title/link indexes), so an exception here
+    # is a 500 everywhere. Bytes that are not UTF-8 show as U+FFFD; a file
+    # that vanished between stat and read is simply skipped (not cached).
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
     m = FRONTMATTER_RE.match(text)
     if not m:
         page = None
@@ -538,6 +606,8 @@ def _parse(path: Path, folder: str) -> Page | None:
             meta = yaml.safe_load(m.group(1)) or {}
         except yaml.YAMLError:
             meta = {}
+        if not isinstance(meta, dict):
+            meta = {}                         # `--- just a string ---` or a list: no fields
         page = Page(stem=path.stem, meta=meta, body=m.group(2), folder=folder,
                     mtime=mtime)
     _PARSE_CACHE[path] = (mtime, page)
@@ -547,7 +617,7 @@ def _parse(path: Path, folder: str) -> Page | None:
 @_request_cached
 def load_folder(folder: str) -> list[Page]:
     d = WIKI_DIR / folder
-    if not d.is_dir():
+    if not d.is_dir() or not _resolves_inside(WIKI_DIR, d):
         return []
     pages = [_parse(p, folder) for p in sorted(d.glob("*.md"))]
     return [p for p in pages if p is not None]
@@ -660,9 +730,7 @@ def provenance(page: Page) -> list[dict]:
     entries are kept (url=None) so the chip can say so instead of vanishing."""
     idx = source_index()
     rows = []
-    refs = page.meta.get("sources") or []
-    if not isinstance(refs, list):
-        refs = [refs]                            # a bare string is one entry, not a list of characters
+    refs = page.as_list("sources")          # a bare string is one entry, not a list of characters
     for ref in refs:
         base = _fr_stem_from_ref(ref)           # '[[raw/sources/SRC-001-x]]' -> 'SRC-001-x'
         if not base:
@@ -698,29 +766,109 @@ def open_issue_counts() -> dict[str, set[str]]:
 
 
 # --- rendering helpers -----------------------------------------------------
+#
+# Wiki text is not trusted markup. Pages are written by agents from sources in
+# raw/ (emails, tickets, transcripts), and the dashboard is served to the whole
+# room, so a `<script>` or `onerror=` that arrives with a source must never run
+# in a viewer's browser. Every HTML fragment built from wiki content goes
+# through sanitize_html() before a template renders it with `| safe`; a
+# wikilink's label is escaped where it is built; plain-text frontmatter values
+# are escaped outright (render_wikilinks_text).
+
+# Allow-list on top of nh3's defaults: titles for abbr/footnotes and anchor
+# links, and `text-align` only for the alignment the tables extension writes
+# as inline style. Comments (the `<!-- levels: … -->` markers) are stripped,
+# which they already were visually.
+#
+# `id` and `class` are allowed only with the values our own markup and
+# Python-Markdown emit. The content sits in the page *before* the settings
+# dialog and the footer, and the page scripts look elements up by id
+# (getElementById returns the first match) and by class across the whole
+# document (`.fbtn`, `.sresult`, `.layer-btn` …): a free `id="settings-dialog"`
+# or `class="fbtn"` in a wiki page would take over the page's own controls.
+_SANITIZE_ATTRIBUTES = {tag: set(attrs) for tag, attrs in nh3.ALLOWED_ATTRIBUTES.items()}
+_SANITIZE_ATTRIBUTES["*"] = {"class", "id", "title"}
+for _cell in ("th", "td"):
+    _SANITIZE_ATTRIBUTES[_cell] = _SANITIZE_ATTRIBUTES.get(_cell, set()) | {"style"}
+_SANITIZE_TAGS = set(nh3.ALLOWED_TAGS) | {"tfoot"}
+# footnotes: fn:1, fnref:1, fnref2:1 (a second reference to the same note)
+_CONTENT_ID_RE = re.compile(r"fn(?:ref\d*)?:[\w.-]+")
+# wikilinks and anchor links (render_wikilinks, /metamodel), fenced code incl.
+# mermaid, footnotes
+_CONTENT_CLASS_RE = re.compile(r"wl|wl-anchor|mm-anchor|language-[\w+-]+|footnote(?:-ref|-backref)?")
+
+
+def _content_attribute(tag: str, attr: str, value: str) -> str | None:
+    if attr == "id":
+        return value if _CONTENT_ID_RE.fullmatch(value) else None
+    if attr == "class":
+        kept = [c for c in value.split() if _CONTENT_CLASS_RE.fullmatch(c)]
+        return " ".join(kept) or None
+    return value
+
+
+# The About page is the project's own documentation (docs/), laid out by hand:
+# it may also place and colour boxes with inline styles. Property names only;
+# CSS in a style attribute cannot run script.
+_ABOUT_STYLES = {"text-align", "display", "gap", "flex", "flex-wrap", "align-items",
+                 "justify-content", "background", "background-color", "color",
+                 "padding", "margin", "border", "border-radius", "width", "max-width",
+                 "height"}
+_ABOUT_ATTRIBUTES = {tag: attrs | {"style"} for tag, attrs in _SANITIZE_ATTRIBUTES.items()}
+
+
+def sanitize_html(html: str, about: bool = False) -> str:
+    """Strip scripts, event handlers, `javascript:` URLs, every tag or
+    attribute outside the allow-list, and ids or classes the page's own
+    markup could collide with, from an HTML fragment. `about` keeps the
+    inline layout styles of the About page (_ABOUT_STYLES)."""
+    return nh3.clean(html, tags=_SANITIZE_TAGS,
+                     attributes=_ABOUT_ATTRIBUTES if about else _SANITIZE_ATTRIBUTES,
+                     attribute_filter=_content_attribute,
+                     filter_style_properties=_ABOUT_STYLES if about else {"text-align"},
+                     link_rel=None)
+
 
 def render_wikilinks(text: str, titles: dict[str, str],
                      links: dict[str, tuple[str, str]] | None = None) -> str:
     """Replace [[..]] with its alias (or resolved title). When `links` is given
     and the target resolves to a wiki page, a source record or a method anchor,
     emit a real hyperlink; otherwise (inline snippets, or an unresolved target)
-    keep the styled-text span."""
+    keep the styled-text span.
+
+    The label is escaped (a title is data, not markup); the text around the
+    links is left as it is, because callers pass markdown here and sanitize
+    the result (render_markdown) or escape it (render_wikilinks_text)."""
     def repl(m: re.Match) -> str:
         target, alias = m.group(1).strip(), m.group(2)
         base = target.split("/")[-1]
-        label = alias.strip() if alias else titles.get(base, base)
+        label = escape(alias.strip() if alias else titles.get(base, base))
         if links is not None and (target.startswith("raw/") or base.startswith("SRC-")):
             # a source cited in the text leads to its record (FR-034)
             if src := source_index().get(base):
-                return f'<a class="wl" href="/source/{src.stem}">{alias.strip() if alias else escape(src.title)}</a>'
+                return (f'<a class="wl" href="{escape("/source/" + src.stem)}">'
+                        f'{escape(alias.strip() if alias else src.title)}</a>')
         elif links:
             dest = links.get(base)
             if dest:
-                return f'<a class="wl" href="{_page_url(*dest)}">{label}</a>'
+                return f'<a class="wl" href="{escape(_page_url(*dest))}">{label}</a>'
         if links is not None and (a := anchor_lookup().get(base.lower())):
-            return _anchor_link(a, alias.strip() if alias else str(escape(a["name"])))
+            return _anchor_link(a, str(escape(alias.strip() if alias else a["name"])))
         return f'<span class="wl">{label}</span>'
     return WIKILINK_RE.sub(repl, text)
+
+
+def render_wikilinks_text(text: str, titles: dict[str, str],
+                          links: dict[str, tuple[str, str]] | None = None) -> str:
+    """render_wikilinks for a plain-text value (a frontmatter string): the
+    text between the links is escaped too, so `<b>` shows as written."""
+    parts, pos = [], 0
+    for m in WIKILINK_RE.finditer(text):
+        parts.append(str(escape(text[pos:m.start()])))
+        parts.append(render_wikilinks(m.group(0), titles, links))
+        pos = m.end()
+    parts.append(str(escape(text[pos:])))
+    return "".join(parts)
 
 
 # --- method anchors (FR-035) -------------------------------------------------
@@ -735,13 +883,15 @@ def anchor_lookup() -> dict[str, dict]:
     return metamodel.anchor_index(metamodel.method_anchors())
 
 
-_PLAIN_MD_RE = re.compile(r"\*\*([^*]+)\*\*|`([^`]+)`|<(https?://[^>]+)>")
+# `[text](url)` too: a link inside the `title=""` of an anchor link would be
+# turned into an <a> by Markdown and break the attribute open
+_PLAIN_MD_RE = re.compile(r"\*\*([^*]+)\*\*|`([^`]+)`|<(https?://[^>]+)>|\[([^\]]+)\]\([^)\s]+\)")
 
 
 def anchor_title(a: dict) -> str:
     """An anchor's definition as plain text, for a `title` attribute."""
     text = WIKILINK_RE.sub(lambda m: (m.group(2) or m.group(1)).strip(), a.get("definition") or "")
-    return _PLAIN_MD_RE.sub(lambda m: m.group(1) or m.group(2) or m.group(3), text)
+    return _PLAIN_MD_RE.sub(lambda m: m.group(1) or m.group(2) or m.group(3) or m.group(4), text)
 
 
 def anchor_url(a: dict) -> str:
@@ -926,7 +1076,7 @@ def render_markdown(body: str, titles: dict[str, str]) -> str:
     body = render_wikilinks(body, titles, link_index())
     # turn Obsidian callouts `> [!type] title` into a bold label line
     body = CALLOUT_RE.sub(lambda m: f"> **{m.group(2) or m.group(1).title()}**", body)
-    return md.markdown(body, extensions=["extra", "sane_lists"])
+    return sanitize_html(md.markdown(body, extensions=["extra", "sane_lists"]))
 
 
 def extract_labeled(page: Page, label: str, titles: dict[str, str],
@@ -939,7 +1089,7 @@ def extract_labeled(page: Page, label: str, titles: dict[str, str],
     m = rx.search(page.body)
     raw = m.group(1).strip() if m else ""
     raw = re.sub(r"\s+", " ", raw)
-    return render_wikilinks(raw, titles, links)
+    return sanitize_html(render_wikilinks(raw, titles, links))
 
 
 _PAM_BULLET_RE = re.compile(
@@ -957,7 +1107,7 @@ def extract_pam_bullet(page: Page, label: str, titles: dict[str, str],
     for m in _PAM_BULLET_RE.finditer(page.body):
         if m.group("label").lower() == label.lower():
             raw = re.sub(r"\s+", " ", m.group("body")).strip()
-            return render_wikilinks(raw, titles, links)
+            return sanitize_html(render_wikilinks(raw, titles, links))
     return ""
 
 
@@ -1157,7 +1307,7 @@ def _eif_flows(p) -> tuple[list[dict], list[dict], list[dict]]:
     """(inbound, outbound, all-in-document-order) flow dicts for one interface.
     The third is what labels the edge, so the label reads in the order the author
     wrote the flows rather than in-then-out."""
-    flows = [f for f in (p.meta.get("flows") or []) if isinstance(f, dict)]
+    flows = [f for f in p.as_list("flows") if isinstance(f, dict)]
     d = lambda f: str(f.get("direction", "")).lower()
     return ([f for f in flows if d(f) in ("inbound", "bidirectional")],
             [f for f in flows if d(f) in ("outbound", "bidirectional")],
@@ -1219,7 +1369,7 @@ def build_context_diagram(center: str | None = None) -> str | None:
 
     groups: dict[str, dict] = {}   # label -> {prov, recv, cls, order}
     for p in load_folder("stakeholders"):
-        prov, recv = p.meta.get("provides") or [], p.meta.get("receives") or []
+        prov, recv = p.as_list("provides"), p.as_list("receives")
         if not (prov or recv):
             continue
         raw_role = p.meta.get("context_role")
@@ -1351,7 +1501,7 @@ def build_glossary_graph(edge_filter: str = "all") -> dict:
 
     for p in glossary:                       # src is always a GLO page
         src = p.stem
-        for raw in (p.meta.get("related") or []) if edge_filter != "structured" else []:
+        for raw in p.as_list("related") if edge_filter != "structured" else []:
             tgt = _stem_of_link(raw)
             if not tgt or tgt == src or tgt not in by_stem:
                 continue                     # self / dangling / non-page
@@ -1583,7 +1733,7 @@ def _vision_paragraphs(page: Page, titles: dict[str, str],
             continue
         para = re.sub(r"\s+", " ", para)
         para = render_wikilinks(para, titles, links)
-        out.append(re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", para))
+        out.append(sanitize_html(re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", para)))
     return out
 
 
@@ -1767,7 +1917,7 @@ def build_fr_hierarchy() -> dict:
         # The hierarchy is a tree: we take the first parent only. A page with
         # multiple parents is placed under its first; multi-parent graphs are
         # out of scope for this view.
-        for ref in (p.meta.get("parent") or []):
+        for ref in p.as_list("parent"):
             stem = _fr_stem_from_ref(ref)
             if stem:
                 return stem
@@ -2007,7 +2157,7 @@ def _fr_ancestors(stem: str) -> list[dict]:
     cur, seen = pages.get(stem), {stem}
     while cur:
         ps = None
-        for ref in (cur.meta.get("parent") or []):
+        for ref in cur.as_list("parent"):
             ps = _fr_stem_from_ref(ref)
             if ps:
                 break
@@ -3182,8 +3332,8 @@ def stakeholders_view():
             "title": p.title,
             "role": p.meta.get("role", ""),
             "snapshot": extract_labeled(p, "Snapshot", titles, links),
-            "influence": p.meta.get("influence", ""),
-            "interest": p.meta.get("interest", ""),
+            "influence": str(p.meta.get("influence") or ""),
+            "interest": str(p.meta.get("interest") or ""),
             "rel_links": rel[:_REL_MAX],
             "rel_more": max(0, len(rel) - _REL_MAX),
             "status": p.status,
@@ -3209,6 +3359,15 @@ def adrs_redirect():
     return redirect("/decisions", code=301)
 
 
+def _is_wiki_folder(folder: str) -> bool:
+    """True when `folder` is a direct, non-hidden subfolder of WIKI_DIR that,
+    symlinks resolved, stays inside it."""
+    if not folder or folder.startswith(".") or "/" in folder or "\\" in folder:
+        return False
+    d = WIKI_DIR / folder
+    return d.is_dir() and _resolves_inside(WIKI_DIR, d)
+
+
 @app.route("/page/<folder>/<stem>")
 def page_detail(folder, stem):
     """Detail page for a single content unit (any wiki page). Search results
@@ -3230,6 +3389,12 @@ def page_detail(folder, stem):
     if folder == "functional-requirements":
         return redirect(f"/functional-requirements/{stem}", code=302)
 
+    # `folder` must name one of the wiki's own content folders: the route
+    # takes any single path segment, and `..` or `.` would otherwise reach a
+    # markdown file beside or above wiki/ (the repository root under
+    # `dashboard.sh local`, /repo under Docker).
+    if not _is_wiki_folder(folder):
+        abort(404)
     path = WIKI_DIR / folder / f"{stem}.md"
     page = _parse(path, folder) if path.is_file() else None
     if not page:
@@ -3261,7 +3426,7 @@ def page_detail(folder, stem):
     return render_template(
         "detail.html", kind=kind, id=page.id, title=page.title,
         status=page.status, created=str(page.meta.get("created", "")),
-        updated=str(page.meta.get("updated", "")), tags=page.meta.get("tags") or [],
+        updated=str(page.meta.get("updated", "")), tags=page.as_list("tags"),
         body_html=body_html, **_section_crumb(folder),
         context_diagram=context_diagram, context_flows=context_flows,
         relations=build_relations_panel(stem, exclude=trace_stems(trace)),
@@ -3303,15 +3468,14 @@ def source_detail(stem):
              ("Captured", str(src.meta.get("captured") or "—")),
              ("Checksum", str(src.meta.get("sha256") or "—")[:16])]
     facts_html = "".join(f"<dt>{k}</dt><dd>{escape(v)}</dd>" for k, v in facts)
-    # each ref is escaped before render_wikilinks sees it — confirmed this does
-    # not break [[…]] matching (brackets/pipes aren't HTML-special, so a clean
-    # wikilink round-trips untouched; a hostile one comes out as inert entities
-    # whether or not it resolves to a real page).
-    ingested = ", ".join(render_wikilinks(str(escape(str(r))), titles, link_index()) for r in (src.meta.get("ingested-pages") or [])) or "—"
+    # each ref is plain text: escaped around its wikilinks, label escaped
+    # inside them, so a hostile one comes out as inert entities whether or
+    # not it resolves to a real page.
+    ingested = ", ".join(render_wikilinks_text(str(r), titles, link_index()) for r in src.as_list("ingested-pages")) or "—"
     body_html = f'<dl class="source-facts">{facts_html}<dt>Ingested pages</dt><dd>{ingested}</dd></dl>' + render_markdown(body, titles)
     return render_template("detail.html", kind="Source", id=src.id, title=src.title, status=src.status,
                            created=str(src.meta.get("created", "")), updated=str(src.meta.get("updated", "")),
-                           tags=src.meta.get("tags") or [], body_html=body_html, crumb=None, crumb_href=None,
+                           tags=src.as_list("tags"), body_html=body_html, crumb=None, crumb_href=None,
                            context_diagram=None, context_flows=None,
                            relations=None, ego_graph=None, ego_layers=None,
                            needs_mermaid=False, sources=None)
@@ -3477,7 +3641,7 @@ def data_model_nodes() -> list[dict]:
         if p.folder != "data-models":
             continue
         claimed.add(p.title.strip().lower())
-        for raw in (p.meta.get("related") or []):
+        for raw in p.as_list("related"):
             stem = _stem_of_link(raw)
             if stem:
                 claimed.add(stem)
@@ -3525,12 +3689,12 @@ def data_model_edges() -> list[dict]:
         # A sum-type variant already names its sum type in `parent:` (DR-019).
         # Draw that as the inheritance it is, rather than make the author repeat
         # it as a relationship entry — one fact, one place.
-        for raw in (p.meta.get("parent") or []):
+        for raw in p.as_list("parent"):
             tgt = _stem_of_link(raw)
             if tgt and tgt in by_stem and tgt != p.stem:
                 out.append({"source": p.stem, "target": tgt, "verb": "",
                             "cardinality": "", "kind": "inheritance"})
-        for entry in (p.meta.get("relationships") or []):
+        for entry in p.as_list("relationships"):
             if not isinstance(entry, dict):
                 continue
             tgt = _stem_of_link(entry.get("to") or entry.get("target"))
@@ -3867,7 +4031,7 @@ def goals_view():
         "url": _page_url(vision.folder, vision.stem),
         "stereotype": "Vision",
         "maturity": None,
-        "beneficiary": _wikilink_list(vision.meta.get("beneficiary")),
+        "beneficiary": _wikilink_list(vision.as_list("beneficiary")),
         # Vision card shows the prose of the `## Vision` section — the
         # objectives list and impact block from the wiki page are projected
         # below as separate objective cards and the coverage matrix.
@@ -3877,7 +4041,7 @@ def goals_view():
     def _inline(s) -> str:
         """Frontmatter strings may contain `[[wikilinks]]` — render them as
         real hyperlinks when the target resolves."""
-        return render_wikilinks(str(s or "").strip(), titles, links)
+        return render_wikilinks_text(str(s or "").strip(), titles, links)
 
     fr_cols, matrix_rows = _goal_matrix(data)
 
@@ -3893,7 +4057,7 @@ def goals_view():
             "metric": _inline(o.meta.get("metric")),
             "target": _inline(o.meta.get("target")),
             "baseline": _inline(o.meta.get("baseline")),
-            "beneficiary": _wikilink_list(o.meta.get("beneficiary")),
+            "beneficiary": _wikilink_list(o.as_list("beneficiary")),
             # every requirement that serves the goal, features and stories
             # too: a superset of its matrix marks, as text (FR-036)
             "epics": [{"id": p.id, "title": p.title, "url": _page_url(p.folder, p.stem)}
@@ -3970,7 +4134,7 @@ def functional_requirements_view():
         "priority": str(p.meta.get("priority") or ""),
         "status": p.status,
         "goals": [{"id": _goal_id_from_ref(g), "anchor": f"/goals#{_goal_id_from_ref(g)}"}
-                  for g in (p.meta.get("goal") or [])],
+                  for g in p.as_list("goal")],
         "n_features": uc_kids.get(p.id, {}).get("n_features", 0),
         "n_stories": uc_kids.get(p.id, {}).get("n_stories", 0),
     } for p in goals["ucs"]]
@@ -4636,7 +4800,7 @@ def _mm_dr_link(ref: str, label: str = "") -> str:
     vault lacks stays plain text instead of a link that 404s."""
     text = escape(label or ref)
     if ref in {p.stem for p in load_folder("decisions")}:
-        return f'<a class="wl" href="{_page_url("decisions", ref)}">{text}</a>'
+        return f'<a class="wl" href="{escape(_page_url("decisions", ref))}">{text}</a>'
     return str(text)
 
 
@@ -4664,8 +4828,8 @@ def _mm_wikilinks(text: str, anchors: dict[str, str]) -> str:
 
 def _mm_html(text: str, anchors: dict[str, str]) -> str:
     """A metamodel page body (or a summary line) as HTML."""
-    return md.markdown(_mm_wikilinks(_unwrap_prose(text or ""), anchors),
-                       extensions=["extra", "sane_lists"])
+    return sanitize_html(md.markdown(_mm_wikilinks(_unwrap_prose(text or ""), anchors),
+                                     extensions=["extra", "sane_lists"]))
 
 
 def _mm_inline(text: str, anchors: dict[str, str]) -> str:
@@ -4942,7 +5106,8 @@ def about_view():
     path = _about_path()
     if path is None:
         abort(404)
-    html = md.markdown(path.read_text(encoding="utf-8"), extensions=["extra", "sane_lists"])
+    html = sanitize_html(md.markdown(path.read_text(encoding="utf-8", errors="replace"),
+                                     extensions=["extra", "sane_lists"]), about=True)
     html = _REL_URL.sub(lambda m: f'{m.group(1)}{_about_url(path, m.group(2))}"', html)
     title = wiki_config()["about_label"]
     return render_template("about.html", html=html, title=title)
@@ -4956,7 +5121,7 @@ def about_file(name):
     path = docs_file(name)
     if path is None:
         abort(404)
-    return send_file(path)
+    return _inert_file(send_file(path))
 
 
 if __name__ == "__main__":

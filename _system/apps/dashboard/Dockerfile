@@ -46,6 +46,9 @@ EXPOSE 8000
 # lightweight /ping heartbeat concurrently. No request is held open anymore
 # (the heartbeat replaced the SSE /events stream), so a small pool suffices and
 # can never be starved — /stop is always serviceable. See DR-022.
+# --no-control-socket: newer gunicorn (26 here) opens a Unix control socket by default;
+# nothing here uses it, so it stays off, as it was under gunicorn 23.
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", \
      "--worker-class", "gthread", "--workers", "1", "--threads", "4", \
+     "--no-control-socket", \
      "app:app"]

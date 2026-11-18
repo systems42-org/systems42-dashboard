@@ -12,6 +12,49 @@ Unreleased changes sit at the top until the next Starter Kit release.
 
 ## [Unreleased]
 
+### Security
+- Dashboard release 0.10.1 (`_system/apps/dashboard/VERSION`): the security
+  fixes of the Systems42 meta repository's dashboard, ported to this copy.
+- Dashboard dependencies updated past published advisories: Markdown 3.7 →
+  3.11.2 (CVE-2025-69534, parser crash on malformed HTML-like input), Flask
+  3.0.3 → 3.1.3 (CVE-2026-27205; the dashboard does not use `session`, so not
+  exploitable here), vendored mermaid 11.15.0 → 11.17.2 (five advisories fixed
+  in 11.16.1: CSS injection, prototype pollution, XY/radar DoS; bundled
+  DOMPurify 3.4.0 → 3.4.12). Also PyYAML 6.0.2 → 6.0.3 and gunicorn 23.0.0 →
+  26.2.0 (no advisories; the container now passes `--no-control-socket`).
+- Dashboard: wiki content can no longer run script in a viewer's browser.
+  Rendered markdown and snippets (definitions, snapshots, PAM bullets, quality
+  scenarios, the vision), the metamodel's prose and the About page go through
+  an allow-list sanitizer (new dependency `nh3`); wikilink labels, aliases,
+  anchor names and plain-text frontmatter values (goal metric, target,
+  baseline; a source's ingested pages) are escaped. Tables, footnotes,
+  `<kbd>` and mermaid blocks render as before; HTML comments and unknown tags
+  (e.g. a bare `<file>` placeholder, which the browser already hid) are
+  dropped. `id` and `class` keep only the values the dashboard's own markup
+  emits (footnote anchors, wikilinks, anchor links, code blocks), so a page
+  cannot take over the settings dialog or filter buttons. The About page keeps
+  its inline layout styles. A new test renders every route against a vault
+  whose every text field is hostile, and fails when a route is added without
+  being rendered there.
+- Dashboard: `/page/<folder>/<stem>` only serves the wiki's own content
+  folders; `..` or `.` as folder used to reach a markdown file beside wiki/.
+  The files served as they are, `/brand/<file>` and `/about/files/<path>`,
+  carry a sandboxing Content-Security-Policy and `nosniff`, so an SVG or HTML
+  file opened directly cannot run script with the dashboard's rights.
+- Dashboard: symlinks that lead out of the wiki are no longer followed. A
+  committed page such as `wiki/glossary/GLO-002-x.md -> /outside/notes.md`
+  was served on `/page` and listed in search, and a linked folder passed as a
+  wiki folder; pages and provenance records are now read only when their
+  resolved path stays inside `wiki/` (or `raw/sources/`). Symlinks that point
+  elsewhere inside the wiki still work.
+- Dashboard: every HTML page sends `Content-Security-Policy: frame-ancestors
+  'none'` and `X-Frame-Options: DENY`, so no other site can frame the
+  dashboard and trick a viewer into clicking its controls. A decision-record
+  link on `/metamodel` is escaped like every other wiki link.
+- Not covered: a brand's `intro.html` is inserted as it is, script included,
+  as `brands/README.md` specifies; it stays trusted content, to be reviewed
+  like code.
+
 ### Changed
 - Dashboard release 0.10.0 (`_system/apps/dashboard/VERSION`): unified
   domain terms with the terminology graph and entity diagram (meta #36), the
@@ -148,6 +191,12 @@ Unreleased changes sit at the top until the next Starter Kit release.
   A link to a source that does not exist stays plain text (FR-034).
 
 ### Added
+- Dashboard browser test `tests/test_mermaid_browser.py`: checks in headless
+  Chromium that the vendored mermaid draws the context diagram, the entity
+  diagram and fenced blocks, re-renders on a theme switch without JavaScript
+  errors, and matches the version in `static/vendor/README.md`. Its Playwright
+  dependency is in the new development-only `requirements-dev.txt`; without it
+  the test skips.
 - Dashboard: a release workflow. A git tag `vX.Y.Z` that matches `VERSION`
   runs the tests, publishes the image for amd64 and arm64 and creates the
   GitHub release (DR-004, FR-030).
@@ -200,6 +249,20 @@ Unreleased changes sit at the top until the next Starter Kit release.
   not a limit.
 
 ### Fixed
+- Dashboard: one broken page no longer takes every page down. Frontmatter
+  that is not a mapping counts as empty, a blank `title:` falls back to the
+  file name, a single value where a list belongs (`parent: 7`, `tags: draft`,
+  `beneficiary: "[[STK-…]]"`) is read as a one-item list, and bytes that are
+  not UTF-8 show as U+FFFD.
+- Dashboard: a method anchor's definition as a link title dropped its
+  markdown links into the page text (DR-003, QR-001, QR-002, `/metamodel`).
+- `./dashboard.sh local` installs the requirements again when
+  `requirements.txt` changed (an existing `.venv` started without `nh3`),
+  Ctrl+C stops the server instead of leaving it running, and a port that
+  already answers is refused instead of reported as a fresh start.
+- The disconnect test no longer SIGTERMs its parent (a test runner);
+  `tests/conftest.py` stops pytest from running several test scripts in one
+  process.
 - The dashboard did not start in Docker. The anchors folder (FR-035) had no
   mount and no variable, so the container stopped at startup while `make dev`
   still said it was running. The anchors are now mounted at `/anchors`, and
