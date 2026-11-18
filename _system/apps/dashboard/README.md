@@ -59,6 +59,12 @@ press Ctrl+C. It refuses to start while something already answers on port 8000.
 
 ### Releases
 
+To publish a release, raise `VERSION`, name the release in `CHANGELOG.md`,
+merge that to `main`, then run `make publish` there. It sets the tag
+`vX.Y.Z` and pushes it, but only when `main` is clean and equal to
+`origin/main`, the release does not exist yet and is not lower than the
+newest one, and the tests pass.
+
 A git tag `vX.Y.Z` that matches `VERSION` runs `.github/workflows/release.yml`:
 the tests, then an image for amd64 and arm64 under
 `ghcr.io/systems42-org/dashboard:X.Y.Z` and `:latest`, then a GitHub release,

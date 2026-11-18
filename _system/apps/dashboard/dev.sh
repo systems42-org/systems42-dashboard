@@ -8,6 +8,7 @@
 #   ./dashboard.sh local    run Flask directly, without Docker, on port 8000;
 #                           Ctrl+C stops it
 #   ./dashboard.sh test     run the test scripts in Docker
+#   ./dashboard.sh publish  publish the release that VERSION names
 #
 set -euo pipefail
 
@@ -91,9 +92,39 @@ case "${1:-}" in
       tar -C /repo --exclude=./.git --exclude=.venv --exclude=__pycache__ -cf - . | tar -C /work -xf - &&
       sh /work/_system/apps/dashboard/tests/run-all.sh'
     ;;
+  publish)
+    # Publishes the release that VERSION names. The release itself is built by
+    # .github/workflows/release.yml, which a tag vX.Y.Z starts. This command
+    # only sets that tag, after checking what makes a release go wrong: a tag
+    # on the wrong commit, a number that exists or is lower than the newest,
+    # or code that fails its tests. It changes nothing until every check holds.
+    cd "$ROOT"
+    stop() { echo "✗ $1" >&2; exit 1; }
+    version="$(tr -d '[:space:]' < "$HERE/VERSION")"
+    tag="v$version"
+    [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || stop "VERSION holds '$version', not a release number like 1.2.3."
+    [ "$(git rev-parse --abbrev-ref HEAD)" = main ] || stop "A release is published from main. You are on $(git rev-parse --abbrev-ref HEAD)."
+    [ -z "$(git status --porcelain --untracked-files=no)" ] || stop "There are uncommitted changes. Commit or drop them first."
+    git fetch -q origin main --tags || stop "Could not reach origin."
+    [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || stop "main differs from origin/main. Pull or push first."
+    if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+      stop "Release $version exists already (tag $tag). Raise VERSION first."
+    fi
+    newest="$(git tag -l 'v[0-9]*' | sort -V | tail -n 1)"
+    if [ -n "$newest" ] && [ "$(printf '%s\n%s\n' "$newest" "$tag" | sort -V | tail -n 1)" != "$tag" ]; then
+      stop "Release $version is lower than the newest release (${newest#v})."
+    fi
+    grep -qF "$version" CHANGELOG.md || stop "CHANGELOG.md does not name release $version."
+    echo "→ Running the tests before release $version…"
+    "$0" test || stop "The tests failed. Nothing was published."
+    git tag "$tag"
+    git push -q origin "$tag" || { git tag -d "$tag" >/dev/null; stop "Could not push the tag. Nothing was published."; }
+    echo "✓ Tag $tag is pushed. GitHub now builds release $version (about 3 minutes):"
+    echo "  $(git remote get-url origin | sed -e 's|^git@github.com:|https://github.com/|' -e 's|\.git$||')/actions/workflows/release.yml"
+    ;;
   *)
     echo "Unknown command: ${1:-}" >&2
-    echo "Usage: ./dashboard.sh [up|down|logs|update|clean|rebuild|local|test]" >&2
+    echo "Usage: ./dashboard.sh [up|down|logs|update|clean|rebuild|local|test|publish]" >&2
     exit 2
     ;;
 esac
