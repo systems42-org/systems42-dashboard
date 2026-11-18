@@ -12,8 +12,10 @@ Run from the dashboard dir:
 """
 import json
 import os
+import signal
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 WIKI_FOLDERS = [
@@ -245,16 +247,34 @@ def test_disconnect_all_rejects_a_non_facilitator():
 
 
 def test_disconnect_all_accepts_the_facilitator():
+    # The real shutdown SIGTERMs this process *and its parent* 0.4 s later
+    # (`_shutdown` → `_terminate`): under a test runner or a CI shell that
+    # parent is the runner itself. Record the signals instead of sending
+    # them, and wait for every one so none can fire after the restore.
     _reset_presence()
     client = app.app.test_client()
     _ping(client, "yoda")
-    resp = client.post("/disconnect-all", data=json.dumps({"client_id": "yoda"}),
-                        content_type="application/json")
-    assert resp.status_code == 204
-    with app._lifecycle_lock:
-        assert app._shutting_down is True
-    # undo, so later tests in this process aren't affected by the shutdown flag
-    app._shutting_down = False
+    sent = []
+    real_kill = app.os.kill
+    app.os.kill = lambda pid, sig: sent.append((pid, sig))
+    try:
+        resp = client.post("/disconnect-all", data=json.dumps({"client_id": "yoda"}),
+                            content_type="application/json")
+        assert resp.status_code == 204
+        with app._lifecycle_lock:
+            assert app._shutting_down is True
+        # Outside the dev server `_terminate` signals the parent (gunicorn's
+        # master) and then this process: wait for BOTH, or the second could
+        # land after the restore below and hit the real os.kill.
+        expected = [(os.getppid(), signal.SIGTERM), (os.getpid(), signal.SIGTERM)]
+        deadline = time.monotonic() + 3
+        while len(sent) < len(expected) and time.monotonic() < deadline:
+            time.sleep(0.05)
+        assert sent == expected, sent
+    finally:
+        app.os.kill = real_kill
+        # undo, so later tests in this process aren't affected by the shutdown flag
+        app._shutting_down = False
 
 
 def test_a_page_restored_from_the_bfcache_pings_again():
