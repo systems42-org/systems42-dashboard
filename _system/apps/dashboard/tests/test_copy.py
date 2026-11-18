@@ -64,7 +64,7 @@ def test_presence_list_uses_clients_key():
 
 
 def test_footer_has_a_pluralisable_unit():
-    body = _client().get("/glossary").get_data(as_text=True)
+    body = _client().get("/domain-terms").get_data(as_text=True)
     assert 'id="presence-unit"' in body
     assert 'id="presence-count"' in body
 

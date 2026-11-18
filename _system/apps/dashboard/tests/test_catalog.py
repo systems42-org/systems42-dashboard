@@ -12,8 +12,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import catalog  # noqa: E402
 
 WIKI_FOLDERS = [
-    "glossary", "goals", "stakeholders", "context", "external-interfaces",
-    "data-models", "activity-models", "use-cases", "functional-requirements",
+    "domain-terms", "goals", "stakeholders", "context", "external-interfaces",
+    "activity-models", "use-cases", "functional-requirements",
     "quality-requirements", "constraints", "issues", "decisions", "building-blocks",
     "deployment-nodes", "runtime-scenarios", "concepts",
 ]
@@ -77,7 +77,7 @@ def test_routes_are_unchanged():
     assert by_id["C2"]["href"] == "/req42/constraints" and by_id["C2"]["slug"] == "constraints"
     assert by_id["C3"]["href"] == "/req42/scope" and by_id["C3"]["slug"] == "scope"
     assert by_id["C4"]["href"] == "/stakeholders"
-    assert by_id["C5"]["href"] == "/glossary"
+    assert by_id["C5"]["href"] == "/domain-terms"
     assert by_id["C6"]["href"] == "/issues"
     assert set(catalog.SECTION_BY_SLUG) == {"functional-requirements", "models", "quality", "constraints", "scope",
                                            "building-blocks", "deployment", "runtime", "concepts"}
@@ -85,6 +85,8 @@ def test_routes_are_unchanged():
 
 def test_lookups():
     assert catalog.section_for_folder("stakeholders")["id"] == "C4"
+    assert catalog.section_for_folder("glossary")["id"] == "C5"
+    assert catalog.section_for_folder("data-models")["id"] == "R4"
     assert catalog.area_for_folder("external-interfaces")["key"] == "commons"
     assert catalog.area_for_folder("nope") is None
     assert catalog.area_for_path("/req42/functional-requirements")["key"] == "requirements"
@@ -94,8 +96,8 @@ def test_lookups():
     assert catalog.area_for_path("/commons")["key"] == "commons"
     assert catalog.area_for_path("/page/glossary/GLO-001-x")["key"] == "commons"
     assert catalog.area_for_path("/functional-requirements/FR-001-x")["key"] == "requirements"
-    assert catalog.area_for_path("/graph/glossary")["key"] == "commons"
-    assert catalog.area_for_path("/data-model")["key"] == "requirements"
+    assert catalog.area_for_path("/graph/domain-terms")["key"] == "commons"
+    assert catalog.area_for_path("/entity-diagram")["key"] == "requirements"
     assert catalog.area_for_path("/") is None
     assert catalog.area_for_path("/decisions")["key"] == "commons"
     assert catalog.area_for_path("/help") is None

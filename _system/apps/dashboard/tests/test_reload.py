@@ -93,7 +93,7 @@ def test_reload_is_post_only():
 def test_reload_empties_the_parse_cache():
     _write_term("Alpha")
     with app.app.test_client() as client:
-        client.get("/glossary")
+        client.get("/domain-terms")
         assert app._PARSE_CACHE, "expected the page render to populate the cache"
         client.post("/reload")
         assert app._PARSE_CACHE == {}, app._PARSE_CACHE
@@ -101,7 +101,7 @@ def test_reload_empties_the_parse_cache():
 
 def test_reload_empties_the_jinja_template_cache():
     with app.app.test_client() as client:
-        client.get("/glossary")
+        client.get("/domain-terms")
         assert app.app.jinja_env.cache, "expected rendering to cache a template"
         client.post("/reload")
         assert not app.app.jinja_env.cache, app.app.jinja_env.cache
@@ -112,14 +112,14 @@ def test_a_rewrite_that_keeps_its_mtime_is_only_seen_after_reload():
     _write_term("Alpha")
     with app.app.test_client() as client:
         client.post("/reload")
-        assert b"Alpha" in client.get("/glossary").data
+        assert b"Alpha" in client.get("/domain-terms").data
 
         _write_term("Betamax", keep_mtime=True)
-        assert b"Betamax" not in client.get("/glossary").data, \
+        assert b"Betamax" not in client.get("/domain-terms").data, \
             "same mtime should still be served from the parse cache"
 
         client.post("/reload")
-        assert b"Betamax" in client.get("/glossary").data
+        assert b"Betamax" in client.get("/domain-terms").data
 
 
 def test_static_url_stamps_the_files_mtime():

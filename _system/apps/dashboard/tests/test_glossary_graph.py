@@ -107,10 +107,10 @@ def test_glossary_table_links_to_the_term_network():
     """DR-023 §5: the graph is a view onto the glossary, so the table page
     offers it; the graph page's crumbs lead back."""
     c = app.app.test_client()
-    table = c.get("/glossary").get_data(as_text=True)
-    assert 'class="fbtn fbtn-link" href="/graph/glossary"' in table, "no link to the term network"
-    graph = c.get("/graph/glossary").get_data(as_text=True)
-    assert 'href="/glossary"' in graph
+    table = c.get("/domain-terms").get_data(as_text=True)
+    assert 'class="fbtn fbtn-link" href="/graph/domain-terms"' in table, "no link to the term network"
+    graph = c.get("/graph/domain-terms").get_data(as_text=True)
+    assert 'href="/domain-terms"' in graph
 
 
 if __name__ == "__main__":

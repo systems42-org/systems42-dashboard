@@ -1058,6 +1058,7 @@ FOLDER_LABELS = {
     "quality-requirements": "Quality requirement",
     "constraints": "Constraint",
     "glossary": "Glossary term",
+    "domain-terms": "Domain term",
     "stakeholders": "Stakeholder",
     "issues": "Issue",
     "decisions": "Decision record",
@@ -1073,7 +1074,7 @@ REQ42_BY_SLUG = catalog.SECTION_BY_SLUG
 def _block_pages(block: dict) -> list[Page]:
     """All wiki pages feeding one req42 block, sorted by id."""
     pages: list[Page] = []
-    for folder in block["folders"]:
+    for folder in catalog.section_folders(block):
         pages.extend(load_folder(folder))
     return sorted(pages, key=lambda p: p.id)
 
@@ -1309,7 +1310,7 @@ def build_context_flows() -> list[dict]:
 
 # Stem prefix -> wiki folder, for click-through URLs (/page/<folder>/<stem>).
 _TYPE_FOLDER = {
-    "GLO": "glossary", "DM": "data-models", "STK": "stakeholders",
+    "DT": "domain-terms", "GLO": "glossary", "DM": "data-models", "STK": "stakeholders",
     "EIF": "external-interfaces", "GOAL": "goals", "CTX": "context",
     "FR": "functional-requirements", "CON": "constraints", "ISS": "issues",
     "UC": "use-cases", "ACT": "activity-models", "QR": "quality-requirements",
@@ -1332,15 +1333,14 @@ def _type_of(stem: str) -> str:
     return stem.split("-")[0] if "-" in stem else stem
 
 
-def build_glossary_graph() -> dict:
-    """Project the glossary term network from `related:` edges (DR-023).
+def domain_terms() -> list[Page]:
+    """Terms in the current vault and in vaults pending migration."""
+    return load_folder("domain-terms") + load_folder("glossary")
 
-    Pure and dict-only, so it is testable and reusable outside a request.
-    Returns cytoscape elements: {"nodes", "edges", "layer_counts"}. GLO nodes
-    carry core=True (shown by default); cross-type neighbours (1-hop) are tagged
-    by type for the layer buttons. Edges are undirected and deduplicated and
-    sourced only from `related:`."""
-    glossary = load_folder("glossary")
+
+def build_glossary_graph(edge_filter: str = "all") -> dict:
+    """Project simple links and structured relationships over the terminology."""
+    glossary = domain_terms()
     glo_stems = {p.stem for p in glossary}
     by_stem = {p.stem: p for p in load_all_pages()}   # existence + title/folder
 
@@ -1351,7 +1351,7 @@ def build_glossary_graph() -> dict:
 
     for p in glossary:                       # src is always a GLO page
         src = p.stem
-        for raw in (p.meta.get("related") or []):
+        for raw in (p.meta.get("related") or []) if edge_filter != "structured" else []:
             tgt = _stem_of_link(raw)
             if not tgt or tgt == src or tgt not in by_stem:
                 continue                     # self / dangling / non-page
@@ -1360,7 +1360,7 @@ def build_glossary_graph() -> dict:
                 continue                     # undirected dedup
             seen_pairs.add(pair)
             cross = tgt not in glo_stems
-            edge = {"id": f"e{len(edges)}", "source": src, "target": tgt, "cross": cross}
+            edge = {"id": f"e{len(edges)}", "source": src, "target": tgt, "cross": cross, "kind": "related"}
             if cross:
                 edge["ntype"] = _type_of(tgt)
                 neighbour_stems.add(tgt)
@@ -1369,14 +1369,31 @@ def build_glossary_graph() -> dict:
                 glo_degree[tgt] += 1
             edges.append(edge)
 
+    if edge_filter != "related":
+        seen_structure = set()
+        for relation in data_model_edges():
+            src, tgt = relation["source"], relation["target"]
+            if src not in glo_stems or tgt not in glo_stems:
+                continue
+            kind, label = relation["kind"], relation["verb"]
+            key = (src, tgt, kind, label, relation["cardinality"])
+            if key in seen_structure:
+                continue
+            seen_structure.add(key)
+            edges.append({"id": f"e{len(edges)}", "source": src, "target": tgt,
+                          "cross": False, "kind": kind, "label": label or kind})
+            glo_degree[src] += 1
+            glo_degree[tgt] += 1
+
     nodes: list[dict] = []
     for p in glossary:
         state = ("deprecated" if p.status == "deprecated"
                  else "agreed" if p.meta.get("agreed") is True
                  else "draft")
         nodes.append({
+            # GLO is the visual layer shared by legacy and migrated terminology.
             "id": p.stem, "label": p.title, "type": "GLO", "core": True,
-            "url": f"/page/glossary/{p.stem}",
+            "url": f"/page/{p.folder}/{p.stem}",
             "degree": glo_degree.get(p.stem, 0),
             "state": state,
             "assumption": "[!assumption]" in p.body,
@@ -1388,7 +1405,7 @@ def build_glossary_graph() -> dict:
         ntype = _type_of(stem)
         node = {
             "id": stem, "label": pg.title, "type": ntype, "core": False,
-            "url": f"/page/{_TYPE_FOLDER.get(ntype, pg.folder)}/{stem}",
+            "url": f"/page/{pg.folder}/{stem}",
         }
         if ntype not in named:
             node["rest"] = 1   # CTX/FR/CON/ISS/… → grey, selected via node[rest]
@@ -1452,13 +1469,13 @@ def build_glossary_ego_graph(stem: str) -> dict | None:
 
 # Group label per stem-type for the detail-page relations panel.
 _TYPE_LABEL = {
-    "GLO": "Glossary", "STK": "Stakeholders", "DM": "Data models", "CTX": "Context",
+    "DT": "Domain terms", "GLO": "Glossary", "STK": "Stakeholders", "DM": "Data models", "CTX": "Context",
     "EIF": "External interfaces", "GOAL": "Goals", "FR": "Functional requirements",
     "UC": "Use cases", "ACT": "Activity models", "QR": "Quality requirements",
     "CON": "Constraints", "DR": "Decisions", "BB": "Building blocks", "CC": "Concepts",
     "RS": "Runtime scenarios", "DN": "Deployment nodes", "ISS": "Issues",
 }
-_REL_TYPE_ORDER = ["GLO", "STK", "DM", "CTX", "EIF", "GOAL", "FR", "UC", "ACT", "QR", "CON", "DR", "BB", "CC", "RS", "DN", "ISS"]
+_REL_TYPE_ORDER = ["DT", "GLO", "STK", "DM", "CTX", "EIF", "GOAL", "FR", "UC", "ACT", "QR", "CON", "DR", "BB", "CC", "RS", "DN", "ISS"]
 
 
 def build_relations_panel(stem: str, exclude: set[str] | None = None) -> dict:
@@ -1475,7 +1492,7 @@ def build_relations_panel(stem: str, exclude: set[str] | None = None) -> dict:
 
     def info(s: str) -> dict:
         ntype = _type_of(s)
-        folder = _TYPE_FOLDER.get(ntype)
+        folder = by_stem[s].folder if s in by_stem else _TYPE_FOLDER.get(ntype)
         if folder == "functional-requirements":
             url = f"/functional-requirements/{s}"
         elif folder:
@@ -2775,7 +2792,7 @@ def search_synonyms() -> list[list[str]]:
     """Each glossary term's title plus its aliases, lower-cased. The search
     treats a group as one word (FR-003)."""
     return [[str(w).strip().lower() for w in [p.title, *p.aliases] if str(w).strip()]
-            for p in load_folder("glossary")]
+            for p in domain_terms()]
 
 
 def build_search_index() -> dict:
@@ -2798,9 +2815,10 @@ def build_section_tile(section: dict) -> dict:
     and Issues (C6) keep their special bodies; everything else is a count plus
     a relation-ranked preview."""
     sid = section["id"]
+    folders = catalog.section_folders(section)
     base = {"key": sid.lower(), "id": sid, "label": section["title"],
             "eyebrow": f"{sid} · {section['title']}", "href": section["href"],
-            "folders": section["folders"], "scope": section["scope"],
+            "folders": folders, "scope": section["scope"],
             "colors": section["colors"], "note": section["note"],
             "links": [], "rows": [], "active": section["scope"] == "in",
             "sub": "", "sub_units": [], "unit": "page", "unit_many": None, "count": 0}
@@ -2808,7 +2826,7 @@ def build_section_tile(section: dict) -> dict:
         base["maturity"] = maturity([])
         base["open_issues"] = 0
         return base
-    pages = [p for f in section["folders"] for p in load_folder(f)]
+    pages = [p for f in folders for p in load_folder(f)]
     t = {**base, "count": len(pages), "rows": _tile_rows_by_relations(pages)}
     if sid == "R1":
         t.update(build_vision_tile(load_goals(), title_index()))
@@ -2836,9 +2854,9 @@ def build_section_tile(section: dict) -> dict:
                                "level": str(p.meta.get("level") or "")} for p in ucs]})
     elif sid == "R4":
         # `relations` there is a page count per model type, not a link count
-        t.update({"unit": "model page",
-                  "rows": [{"title": m["title"], "pages": m["relations"]}
-                           for m in _supporting_model_entries()]})
+        models = _supporting_model_entries()
+        t.update({"unit": "model page", "count": sum(m["relations"] for m in models),
+                  "rows": [{"title": m["title"], "pages": m["relations"]} for m in models]})
     elif sid == "C1":
         t["unit"] = "scenario"
     elif sid == "C2":
@@ -2854,8 +2872,8 @@ def build_section_tile(section: dict) -> dict:
         t["unit"] = "persona"
     elif sid == "C5":
         t.update({"unit": "term",
-                  "links": [{"label": "Table", "href": "/glossary"},
-                            {"label": "Term network", "href": "/graph/glossary"}]})
+                  "links": [{"label": "Table", "href": "/domain-terms"},
+                            {"label": "Term network", "href": "/graph/domain-terms"}]})
     elif sid == "C6":
         issues = pages
         open_issues = [i for i in issues if is_open_issue(i.status)]
@@ -2872,7 +2890,7 @@ def build_section_tile(section: dict) -> dict:
     flags = open_issue_counts()
     # union, not sum: an issue linking pages in two of this section's folders
     # must count once, not twice.
-    t["open_issues"] = 0 if sid == "C6" else len(set().union(*(flags.get(f, set()) for f in section["folders"])))
+    t["open_issues"] = 0 if sid == "C6" else len(set().union(*(flags.get(f, set()) for f in folders)))
     t["open_issues_href"] = f"/issues?section={sid}"
     return t
 
@@ -2881,7 +2899,7 @@ def build_area_tile(area: dict) -> dict:
     """Home-page tile for one cabinet: count, maturity and open-issue flag
     over its visible, captured sections, plus the section list as links."""
     sections = visible_sections(area["key"])
-    folders = [f for s in sections for f in s["folders"]]
+    folders = [f for s in sections for f in catalog.section_folders(s)]
     pages = [p for f in folders for p in load_folder(f)]
     flags = open_issue_counts()
     return {
@@ -2939,16 +2957,26 @@ def changes_view():
     return render_template("changes.html", changes=recent_changes(None))
 
 
-@app.route("/glossary")
+@app.route("/glossary", defaults={"destination": "/domain-terms"})
+@app.route("/graph/glossary", defaults={"destination": "/graph/domain-terms"})
+@app.route("/data-model", defaults={"destination": "/entity-diagram"})
+def legacy_model_redirect(destination):
+    """Preserve bookmarks and their filters after the terminology change."""
+    query = request.query_string.decode("latin-1")
+    return redirect(destination + ("?" + query if query else ""), code=301)
+
+
+@app.route("/domain-terms")
 def glossary_view():
     titles = title_index()
     links = link_index()       # so definition wikilinks render as real hyperlinks
-    pages = load_folder("glossary")
+    pages = domain_terms()
     rows = []
     for p in pages:
         rows.append({
             "id": p.id,
             "stem": p.stem,
+            "folder": p.folder,
             "title": p.title,
             "aliases": p.aliases,
             "definition": extract_labeled(p, "Definition", titles, links),
@@ -2964,11 +2992,14 @@ def glossary_view():
                            maturity=maturity(p.status for p in pages))
 
 
-@app.route("/graph/glossary")
+@app.route("/graph/domain-terms")
 def glossary_graph_view():
     """Force-directed glossary term network (DR-023). The graph data is a
     deterministic server projection; cytoscape.js lays it out client-side."""
-    graph = build_glossary_graph()
+    edge_filter = request.args.get("edges", "all")
+    if edge_filter not in {"all", "related", "structured"}:
+        edge_filter = "all"
+    graph = build_glossary_graph(edge_filter)
     counts = graph["layer_counts"]
     NAMED = [("DM", "Data model"), ("STK", "Stakeholder"),
              ("EIF", "Interface"), ("GOAL", "Goals"), ("BB", "Building block")]
@@ -2979,7 +3010,7 @@ def glossary_graph_view():
     rest = {"types": rest_keys, "count": sum(counts[k] for k in rest_keys)}
     n_glo = sum(1 for n in graph["nodes"] if n["data"].get("type") == "GLO")
     return render_template("graph.html", graph=graph, n_glo=n_glo,
-                           named_layers=named_layers, rest=rest)
+                           named_layers=named_layers, rest=rest, edge_filter=edge_filter)
 
 
 def _issue_owner(p: Page, titles: dict[str, str],
@@ -3066,7 +3097,7 @@ def issues_view():
     lifecycle_values = metamodel.lifecycle("issue")
     categories = metamodel.field_values("issue", "category")
     severities = metamodel.field_values("issue", "severity")
-    folder_section = {f: s["id"] for s in catalog.SECTIONS for f in s["folders"] if s["id"] != "C6"}
+    folder_section = {f: s["id"] for s in catalog.SECTIONS for f in catalog.section_folders(s) if s["id"] != "C6"}
 
     items = []
     for p in pages:
@@ -3141,10 +3172,10 @@ def stakeholders_view():
         rel = []
         for s in sorted(set(p.link_targets())):
             q = by_stem.get(s)
-            if q and _type_of(s) in ("GLO", "DM"):
+            if q and _type_of(s) in ("DT", "GLO", "DM"):
                 rel.append({"id": q.id, "label": q.title, "type": _type_of(s),
                             "url": f"/page/{q.folder}/{s}"})
-        rel.sort(key=lambda r: (r["type"] != "GLO", r["id"]))   # GLO first, then by id
+        rel.sort(key=lambda r: (r["type"] not in {"DT", "GLO"}, r["id"]))   # GLO first, then by id
         rows.append({
             "id": p.id,
             "stem": p.stem,
@@ -3211,7 +3242,7 @@ def page_detail(folder, stem):
     context_diagram = build_context_diagram() if folder == "context" else None
     context_flows = build_context_flows() if folder == "context" else None
     # glossary pages carry a focused ego-graph snippet above the definition (DR-023)
-    ego_graph = build_glossary_ego_graph(stem) if folder == "glossary" else None
+    ego_graph = build_glossary_ego_graph(stem) if folder in {"domain-terms", "glossary"} else None
     trace = build_trace(stem, folder)
     whitebox = build_whitebox(stem) if folder == "building-blocks" else None
     sequence = build_sequence_diagram(stem) if folder == "runtime-scenarios" else None
@@ -3377,6 +3408,14 @@ def _mermaid_goal_tree(vision: Page, objectives: list[Page]) -> str | None:
 # supersedes the stub, so the concept is never drawn twice.
 
 DM_MARKED_STEREOTYPES = {"entity", "value-object"}
+DOMAIN_MODEL_STEREOTYPES = DM_MARKED_STEREOTYPES | {"sum-type"}
+
+
+def data_model_pages() -> list[Page]:
+    structured = [page for page in load_folder("domain-terms")
+                  if str(page.meta.get("stereotype") or "").strip().lower() in DOMAIN_MODEL_STEREOTYPES]
+    return sorted(load_folder("data-models") + structured, key=lambda page: page.id)
+
 
 # `kind:` -> (mermaid arrow, cardinalities are meaningful). Inheritance is the
 # odd one out: mermaid wants `Base <|-- Derived`, i.e. the edge is emitted
@@ -3431,10 +3470,12 @@ def data_model_nodes() -> list[dict]:
     A DM page claims a term by linking it in `related:`, or by carrying the same
     title. Title matching is the forgiving half — during a workshop the term is
     written first and the DM page often forgets the back-link."""
-    dm_pages = sorted(load_folder("data-models"), key=lambda p: p.id)
+    pages = data_model_pages()
 
     claimed: set[str] = set()
-    for p in dm_pages:
+    for p in pages:
+        if p.folder != "data-models":
+            continue
         claimed.add(p.title.strip().lower())
         for raw in (p.meta.get("related") or []):
             stem = _stem_of_link(raw)
@@ -3448,9 +3489,10 @@ def data_model_nodes() -> list[dict]:
         "context": str(p.meta.get("bounded-context") or "").strip(),
         "stereotype": str(p.meta.get("stereotype") or "").strip().lower(),
         "attributes": _extract_dm_attribute_names(p),
+        "aliases": p.aliases if p.folder == "domain-terms" else [],
         "stub": False,
-        "url": f"/page/data-models/{p.stem}",
-    } for p in dm_pages]
+        "url": f"/page/{p.folder}/{p.stem}",
+    } for p in pages]
 
     for p in sorted(load_folder("glossary"), key=lambda p: p.id):
         stereotype = str(p.meta.get("stereotype") or "").strip().lower()
@@ -3465,8 +3507,9 @@ def data_model_nodes() -> list[dict]:
             "context": str(p.meta.get("bounded-context") or "").strip(),
             "stereotype": stereotype,
             "attributes": [],
+            "aliases": [],
             "stub": True,
-            "url": f"/page/glossary/{p.stem}",
+            "url": f"/page/{p.folder}/{p.stem}",
         })
     return nodes
 
@@ -3478,7 +3521,7 @@ def data_model_edges() -> list[dict]:
     dangling stub — a typo should leave a gap you notice, not a ghost class."""
     by_stem = {n["key"] for n in data_model_nodes()}
     out = []
-    for p in sorted(load_folder("data-models"), key=lambda p: p.id):
+    for p in data_model_pages():
         # A sum-type variant already names its sum type in `parent:` (DR-019).
         # Draw that as the inheritance it is, rather than make the author repeat
         # it as a relationship entry — one fact, one place.
@@ -3490,15 +3533,20 @@ def data_model_edges() -> list[dict]:
         for entry in (p.meta.get("relationships") or []):
             if not isinstance(entry, dict):
                 continue
-            tgt = _stem_of_link(entry.get("target"))
-            if not tgt or tgt not in by_stem or tgt == p.stem:
+            tgt = _stem_of_link(entry.get("to") or entry.get("target"))
+            if not tgt or tgt not in by_stem:
                 continue
             kind = str(entry.get("kind") or "association").strip().lower()
+            if kind == "generalization":
+                kind = "inheritance"
+            multiplicity = entry.get("multiplicity", entry.get("cardinality"))
+            if tgt == p.stem and (kind == "inheritance" or p.folder == "data-models"):
+                continue
             out.append({
                 "source": p.stem,
                 "target": tgt,
-                "verb": _clean_label(str(entry.get("verb") or "")),
-                "cardinality": str(entry.get("cardinality") or "").strip(),
+                "verb": _clean_label(str(entry.get("label") or entry.get("verb") or "")),
+                "cardinality": str(multiplicity if multiplicity is not None else "").strip(),
                 "kind": kind if kind in _DM_ARROWS else "association",
             })
     return out
@@ -3560,7 +3608,10 @@ def build_data_model_full_diagram(context: str | None = None,
             body.append("    <<term>>")
         elif n["stereotype"] and n["stereotype"] != "entity":
             body.append(f"    <<{n['stereotype']}>>")
-        body += [f"    +{a}" for a in n["attributes"]]
+        for name in n["attributes"]:
+            # Encode punctuation so Mermaid reads it as part of the member name.
+            member = re.sub(r"[^\w -]", lambda m: f"#{ord(m[0])};", " ".join(name.split()))
+            body.append(f"    +{member}")
         if body:
             lines.append(f"  class {_decl(n)} {{")
             lines += ["  " + b for b in body]
@@ -3579,8 +3630,9 @@ def build_data_model_full_diagram(context: str | None = None,
         # `cardinality:` describes the TARGET end only. Deriving a source
         # multiplicity from it looked tidier and was wrong: "0..*" would have
         # drawn a zero on the owning side, which means nothing.
-        if carded and e["cardinality"]:
-            line = f'  {src} {arrow} "{e["cardinality"]}" {dst}'
+        multiplicity = _clean_label(e["cardinality"], drop_parenthetical=False).replace('\\', "")
+        if carded and multiplicity:
+            line = f'  {src} {arrow} "{multiplicity}" {dst}'
         else:
             line = f"  {src} {arrow} {dst}"
         if e["verb"]:
@@ -3590,7 +3642,7 @@ def build_data_model_full_diagram(context: str | None = None,
     return "\n".join(lines)
 
 
-# Section/callout extractors for the /data-model catalog: each DM page is
+# Section/callout extractors for the /entity-diagram catalog: each DM page is
 # rendered as bold-led sections (**Purpose.**, **Attributes.**, **Relationships.**,
 # **Invariants / rules.** …) plus 0..n `> [!note] X` callouts (Open points,
 # deliberately omitted). Order from the file is preserved so the on-page detail
@@ -3625,6 +3677,12 @@ def _extract_dm_attribute_names(page: Page) -> list[str]:
     """Just the attribute *names* from the `**Attributes.**` bullet list — used
     for the compact summary table at the top of /data-model; the per-entity
     cards below carry types, modality, and prose."""
+    if "attributes" in page.meta:
+        attributes = page.meta["attributes"]
+        if not isinstance(attributes, list):
+            return []
+        return [name for entry in attributes if isinstance(entry, dict)
+                and isinstance(name := entry.get("name"), str) and name.strip()]
     m = _DM_ATTRIBUTES_BLOCK_RE.search(page.body)
     if not m:
         return []
@@ -3659,12 +3717,13 @@ def data_model_entities() -> list[dict]:
     """One record per data-model page with its sections + notes ready to render —
     the per-entity catalog rendered below the projection diagram on /data-model."""
     titles = title_index()
-    pages = sorted(load_folder("data-models"), key=lambda p: p.id)
+    pages = data_model_pages()
     out = []
     for p in pages:
         out.append({
             "id": p.id,
             "stem": p.stem,
+            "url": f"/page/{p.folder}/{p.stem}",
             "title": p.title,
             "status": p.status,
             "stereotype": str(p.meta.get("stereotype") or "").strip(),
@@ -3681,7 +3740,7 @@ def data_model_entities() -> list[dict]:
 # (DR-011). Each row links to its own
 # overview page; types with no content yet are skipped from the listing.
 SUPPORTING_MODEL_TYPES = [
-    {"folder": "data-models", "label": "Data model", "code": "DM", "href": "/data-model"},
+    {"folder": "data-models", "label": "Entity diagram", "code": "DM", "href": "/entity-diagram"},
     {"folder": "activity-models", "label": "Activity models", "code": "ACT", "href": None},
 ]
 
@@ -3692,7 +3751,8 @@ def _supporting_model_entries() -> list[dict]:
     written)."""
     out = []
     for m in SUPPORTING_MODEL_TYPES:
-        n = len(load_folder(m["folder"]))
+        n = (len(data_model_pages()) if m["code"] == "DM"
+             else len(load_folder(m["folder"])))
         if n == 0:
             continue
         out.append({
@@ -3853,7 +3913,7 @@ def goals_view():
     )
 
 
-@app.route("/data-model")
+@app.route("/entity-diagram")
 def data_model_view():
     """req42 block 05 — Data model: the full class diagram of all DM entities
     (not yet implemented — see build_data_model_full_diagram()) plus the
@@ -3865,8 +3925,9 @@ def data_model_view():
         context = None                     # an unknown filter shows everything
     nodes = data_model_nodes()
     focus = request.args.get("focus") or None
-    if focus not in {n["key"] for n in nodes}:
-        focus = None
+    if focus and focus not in {n["key"] for n in nodes}:
+        matches = [n["key"] for n in nodes if focus in n["aliases"]]
+        focus = matches[0] if len(matches) == 1 else None
     diagram = build_data_model_full_diagram(context=context, focus=focus)
     return render_template("data_model.html", diagram=diagram, **_section_crumb("data-models"),
                            entities=data_model_entities(), nodes=nodes,
@@ -4021,11 +4082,12 @@ def req42_block_view(slug):
     # the Scope block (03) shows the same live-projected system-context diagram
     context_diagram = build_context_diagram() if slug == "scope" else None
     context_flows = build_context_flows() if slug == "scope" else None
+    entity_diagram = build_data_model_full_diagram() if slug == "models" else None
     return render_template(
         "req42_block.html", block=block, rows=rows, total=len(rows),
         list_type=metamodel.type_for_folder(block["folders"][0]) if block["folders"] else "page",
         context_diagram=context_diagram, context_flows=context_flows,
-        needs_mermaid=bool(context_diagram),
+        entity_diagram=entity_diagram, needs_mermaid=bool(context_diagram or entity_diagram),
         maturity=maturity(r["status"] for r in rows),
     )
 

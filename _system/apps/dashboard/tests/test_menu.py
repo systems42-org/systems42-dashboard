@@ -57,7 +57,7 @@ def test_footer_lost_its_buttons_and_says_wiki_dashboard():
     for href in ('href="/metamodel"', 'href="/help"'):
         assert href in foot, href
     # Content links belong to the header and are not repeated in the footer.
-    for href in ('href="/req42"', 'href="/arc42"', 'href="/commons"', 'href="/glossary"',
+    for href in ('href="/req42"', 'href="/arc42"', 'href="/commons"', 'href="/domain-terms"',
                  'href="/decisions"'):
         assert href not in foot, href
     assert "python-logo.svg" in foot and "Flask" in foot

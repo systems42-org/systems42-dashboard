@@ -9,7 +9,7 @@ Three instances of exactly that were found in this repo:
   * `tile_claim:` was read by app.py and declared by no template, so the Vision
     tile's claim line was permanently blank;
   * `_templates/data-model.md` prescribed `- <name> : <type>` while the parser
-    required the name in backticks, so /data-model's Attributes column was `—`
+    required the name in backticks, so /entity-diagram's Attributes column was `—`
     for every entity while the cards below it showed them;
   * `_templates/activity-model.md` emits `ACT-NNN` while app.py's type maps
     said `AM`, so the relations panel showed the raw code `ACT` as a group
@@ -110,7 +110,8 @@ def test_no_type_map_entry_is_dead():
     for name, keys in (("_TYPE_FOLDER", set(app._TYPE_FOLDER)),
                        ("_TYPE_LABEL", set(app._TYPE_LABEL)),
                        ("_REL_TYPE_ORDER", set(app._REL_TYPE_ORDER))):
-        dead = sorted(keys - emitted)
+        # This repository's wiki still emits GLO/DM. The app also serves migrated DT vaults.
+        dead = sorted(keys - emitted - {"DT"})
         assert not dead, f"{name} maps prefixes no template emits: {dead}"
     codes = {m["code"] for m in app.SUPPORTING_MODEL_TYPES}
     assert codes <= emitted, \
@@ -118,7 +119,7 @@ def test_no_type_map_entry_is_dead():
 
 
 def test_data_model_attribute_bullets_are_extractable():
-    """`/data-model`'s "Entity types at a glance" reads attribute names off the
+    """`/entity-diagram`'s "Entity types at a glance" reads attribute names off the
     `**Attributes.**` bullets. The template's own bullet shape must match."""
     tpl = (TEMPLATES / "data-model.md").read_text(encoding="utf-8")
     bullet = re.search(r"^- .*<name>.*$", tpl, re.MULTILINE)

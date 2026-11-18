@@ -36,7 +36,7 @@ SECTIONS: list[dict] = [
      "scope": "in", "colors": ["req"],
      "note": "One type, stereotype epic|feature|story; hierarchy via parent: (DR-012). Use cases are FRs too (DR-011)."},
     {"id": "R4", "area": "requirements", "title": "Supporting Models",
-     "folders": ["activity-models", "data-models"], "href": "/req42/models",
+     "folders": ["activity-models"], "href": "/req42/models",
      "slug": "models", "scope": "in", "colors": ["req"], "note": ""},
     {"id": "R5", "area": "requirements", "title": "Team Structure", "folders": [],
      "href": None, "slug": None, "scope": "out", "colors": ["org"],
@@ -71,8 +71,8 @@ SECTIONS: list[dict] = [
      "scope": "in", "colors": ["req", "arc"], "note": ""},
     {"id": "C4", "area": "commons", "title": "Stakeholders", "folders": ["stakeholders"],
      "href": "/stakeholders", "slug": None, "scope": "in", "colors": ["req", "arc"], "note": ""},
-    {"id": "C5", "area": "commons", "title": "Domain Terms", "folders": ["glossary"],
-     "href": "/glossary", "slug": None, "scope": "in", "colors": ["req"], "note": ""},
+    {"id": "C5", "area": "commons", "title": "Domain Terms", "folders": ["domain-terms"],
+     "href": "/domain-terms", "slug": None, "scope": "in", "colors": ["req"], "note": ""},
     {"id": "C6", "area": "commons", "title": "Issues", "folders": ["issues"],
      "href": "/issues", "slug": None, "scope": "in", "colors": ["org", "arc"],
      "note": "Issues (especially kind: risk) plus [!assumption] markers."},
@@ -84,21 +84,31 @@ SECTIONS: list[dict] = [
 AREA_BY_KEY: dict[str, dict] = {a["key"]: a for a in AREAS}
 SECTION_BY_ID: dict[str, dict] = {s["id"]: s for s in SECTIONS}
 SECTION_BY_SLUG: dict[str, dict] = {s["slug"]: s for s in SECTIONS if s["slug"]}
-_SECTION_BY_FOLDER: dict[str, dict] = {f: s for s in SECTIONS for f in s["folders"]}
+
+
+_LEGACY_FOLDERS = {"C5": ("glossary",), "R4": ("data-models",)}
+
+
+def section_folders(section: dict) -> list[str]:
+    """Include the old folders until project wikis migrate."""
+    return [*section["folders"], *_LEGACY_FOLDERS.get(section["id"], ())]
+
+
+_SECTION_BY_FOLDER: dict[str, dict] = {f: s for s in SECTIONS for f in section_folders(s)}
 
 # Routes that are not a section href but still belong to an area.
 _EXTRA_PATH_PREFIXES: dict[str, str] = {
     "/functional-requirements/": "requirements",   # FR detail pages
-    "/data-model": "requirements",                  # R4 projection
-    "/graph/glossary": "commons",                   # C5 term network
+    "/entity-diagram": "requirements",                  # R4 projection
+    "/graph/domain-terms": "commons",                   # C5 term network
 }
 
 
 # Routes that are not a section href but still belong to a section.
 _EXTRA_SECTION_PREFIXES: dict[str, str] = {
     "/functional-requirements/": "R3",
-    "/data-model": "R4",
-    "/graph/glossary": "C5",
+    "/entity-diagram": "R4",
+    "/graph/domain-terms": "C5",
 }
 
 

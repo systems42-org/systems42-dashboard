@@ -161,7 +161,7 @@ wiki folders), `out` (deliberately not captured, an inactive tile) or `planned`
 | **R1** Vision & Goals | Requirements | the vision claim line and the objectives with covering epic/use-case counts | `/goals` |
 | **R2** Resources & Staff | Requirements | out of scope, inactive tile | — |
 | **R3** Functional Requirements | Requirements | all functional requirements (FR pages + use cases), broken down by epic/feature/story/use case, a per-epic breakdown and the use cases | `/req42/functional-requirements` |
-| **R4** Supporting Models | Requirements | activity-model and data-model page counts | `/req42/models` |
+| **R4** Supporting Models | Requirements | activity models and the entity diagram | `/req42/models` |
 | **R5** Team Structure | Requirements | out of scope, inactive tile | — |
 | **R6** Roadmap | Requirements | out of scope, inactive tile | — |
 | **A1** Solution Strategy | Architecture | planned, "not captured yet" | — |
@@ -173,7 +173,7 @@ wiki folders), `out` (deliberately not captured, an inactive tile) or `planned`
 | **C2** Constraints | Commons | constraint count and list | `/req42/constraints` |
 | **C3** Scope & Context | Commons | external interfaces; system boundary and context diagram | `/req42/scope` |
 | **C4** Stakeholders | Commons | persona count and list; profile, influence, interest | `/stakeholders` |
-| **C5** Domain Terms | Commons | term count and a per-term relation list; term network at `/graph/glossary` | `/glossary` |
+| **C5** Domain Terms | Commons | term count and a per-term relation list; term network at `/graph/domain-terms` | `/domain-terms` |
 | **C6** Issues | Commons | open issues, most severe first; filterable All / Open / Closed | `/issues` |
 | **C7** Decisions | Commons | decision records (`wiki/decisions/`, MADR); filterable by kind architecture / business / undefined, expands the full text of a row | `/decisions` |
 
@@ -268,7 +268,7 @@ mermaid.js is **vendored for offline use** at `static/vendor/mermaid.min.js` (no
 CDN at runtime; see that folder's README for versions and licenses) and loaded
 via `templates/_mermaid.html`. The same loader renders any fenced ` ```mermaid `
 block in a page body, so extra diagrams can go straight into the markdown. The
-glossary term network at `/graph/glossary` uses the vendored cytoscape bundle
+glossary term network at `/graph/domain-terms` uses the vendored cytoscape bundle
 plus `static/glossary-graph.js`.
 
 ## Provenance
@@ -318,6 +318,10 @@ _system/apps/dashboard/
 ```
 
 ## Tests
+
+For visual inspection of domain terms, relationships and multiplicities, open
+the [order model fixture](tests/fixtures/domain-model/README.md). Its README
+includes the startup command and the expected diagrams.
 
 Plain Python scripts with bare `assert`s, no pytest. From the repository root:
 

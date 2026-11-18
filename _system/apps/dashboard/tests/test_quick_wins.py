@@ -103,17 +103,17 @@ def test_one_name_per_section():
     nav = re.search(r'<nav class="mainnav".*?</nav>', home, re.S).group(0)
     assert ">Domain Terms<" in nav and ">Issues<" in nav and "Glossary" not in nav
     assert "Risks &amp; Assumptions" not in home and "Risks & Assumptions" not in home
-    body = client.get("/glossary").get_data(as_text=True)
+    body = client.get("/domain-terms").get_data(as_text=True)
     assert _crumbs(body) == "Home › Commons › Domain Terms", _crumbs(body)
     assert '<h1 class="page-h1">Domain Terms' in body
-    body = client.get("/graph/glossary").get_data(as_text=True)
+    body = client.get("/graph/domain-terms").get_data(as_text=True)
     assert _crumbs(body) == "Home › Commons › Domain Terms › Term network", _crumbs(body)
 
 
 def test_data_model_path_names_its_section_from_the_catalog():
     sec = app.catalog.SECTION_BY_ID["R4"]
-    body = client.get("/data-model").get_data(as_text=True)
-    assert _crumbs(body) == f"Home › Requirements › {sec['title']} › Data model", _crumbs(body)
+    body = client.get("/entity-diagram").get_data(as_text=True)
+    assert _crumbs(body) == f"Home › Requirements › {sec['title']} › Entity diagram", _crumbs(body)
     assert f'<a href="{app.catalog.section_href(sec)}">{sec["title"]}</a>' in body
     tpl = (Path(app.__file__).parent / "templates" / "data_model.html").read_text(encoding="utf-8")
     assert sec["title"] not in tpl, "section name typed into the template"
@@ -158,7 +158,7 @@ def test_header_marks_its_entry_on_every_page_it_covers():
     for path, entry in (("/page/issues/ISS-001-about-qr", "Issues"),
                         ("/page/decisions/DR-001-choice", "Decisions"),
                         ("/page/glossary/GLO-001-term", "Domain Terms"),
-                        ("/graph/glossary", "Domain Terms"),
+                        ("/graph/domain-terms", "Domain Terms"),
                         ("/issues?section=C1", "Issues")):
         cur = _current(client.get(path).get_data(as_text=True))
         assert cur == [entry], (path, cur)

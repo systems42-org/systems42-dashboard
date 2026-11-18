@@ -12,7 +12,7 @@
 <p class="lead">Ubiquitous language of {{ system_name }} — one canonical meaning per term.</p>
 
 <div class="filterbar" id="glossary-sort">
-  <a class="fbtn fbtn-link" href="/graph/glossary" title="The same terms as an interactive network">Term network →</a>
+  <a class="fbtn fbtn-link" href="/graph/domain-terms" title="The same terms as an interactive network">Term network →</a>
 </div>
 
 {% if rows %}
@@ -34,7 +34,7 @@
     <tr data-status="{{ r.status }}">
       <td class="c-id"><code>{{ r.id }}</code></td>
       <td class="c-term" data-sort-value="{{ r.title }}">
-        <a class="term term-link" href="/page/glossary/{{ r.stem }}">{{ r.title }}</a>
+        <a class="term term-link" href="/page/{{ r.folder }}/{{ r.stem }}">{{ r.title }}</a>
         {% if r.assumption %}<span class="badge badge-assume" title="Definition is an unconfirmed assumption">Assumption</span>{% endif %}
         {% if r.aliases %}<span class="aliases">alias: {{ r.aliases | join(", ") }}</span>{% endif %}
       </td>

@@ -104,7 +104,7 @@ def test_breadcrumbs_carry_the_area():
     try:
         for path, area in (("/stakeholders", "Commons"), ("/goals", "Requirements"),
                            ("/req42/functional-requirements", "Requirements"), ("/req42/quality", "Commons"),
-                           ("/glossary", "Commons"), ("/issues", "Commons"),
+                           ("/domain-terms", "Commons"), ("/issues", "Commons"),
                            ("/page/stakeholders/STK-001-shop-owner", "Commons")):
             _, body = _get(path)
             crumbs = re.search(r'<nav class="crumbs">(.*?)</nav>', body, re.S)

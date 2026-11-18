@@ -120,7 +120,7 @@ def test_section_lines_link_to_their_pages_and_tiles_are_not_one_big_link():
     assert 'href="/arc42#tile-a1"><code class="ml-id">A1</code>' in arc and 'href="/arc42/concepts"><code class="ml-id">A5</code>' in arc
     assert "tile-a6" not in arc, "A6 moved to Commons as C7 Decisions (FR-009)"
     com = body[body.index("area-tile-commons"):]
-    for sid, href in (("C1", "/req42/quality"), ("C4", "/stakeholders"), ("C5", "/glossary"), ("C6", "/issues"),
+    for sid, href in (("C1", "/req42/quality"), ("C4", "/stakeholders"), ("C5", "/domain-terms"), ("C6", "/issues"),
                       ("C7", "/decisions")):
         assert f'href="{href}"><code class="ml-id">{sid}</code>' in com, sid
     assert 'class="area-tile-top" href="/commons"' in com and 'class="tile-cta" href="/commons"' in com
@@ -171,7 +171,7 @@ def test_unknown_hide_entry_is_a_warning_not_an_error():
 
 def test_every_page_has_the_main_nav():
     c = app.app.test_client()
-    for route in ("/", "/glossary", "/issues", "/req42/functional-requirements", "/arc42"):
+    for route in ("/", "/domain-terms", "/issues", "/req42/functional-requirements", "/arc42"):
         body = c.get(route).get_data(as_text=True)
         assert 'class="mainnav"' in body, route
         assert 'id="nav-search"' in body, route
@@ -185,7 +185,7 @@ def test_nav_is_short_and_brand_is_not_duplicated_on_home():
     assert re.findall(r">([^<]+)</a>", nav) == NAV, nav
     assert 'class="brand"' not in home and 'class="hero-mark' in home
     assert 'class="brand"' in sub
-    for href in ('href="/req42"', 'href="/arc42"', 'href="/commons"', 'href="/glossary"', 'href="/decisions"'):
+    for href in ('href="/req42"', 'href="/arc42"', 'href="/commons"', 'href="/domain-terms"', 'href="/decisions"'):
         assert href in home, href
     assert "e.key === \"k\"" in home and "e.key === \"/\"" not in home
 

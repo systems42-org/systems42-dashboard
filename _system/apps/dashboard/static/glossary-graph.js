@@ -89,6 +89,12 @@ window.AQ_GLOSSARY_GRAPH = (function () {
       { selector: 'node[rest]',        style: frame(t.REST, 3) },
       { selector: 'edge', style: { 'width': 1.8, 'line-color': t.dim, 'curve-style': 'bezier', 'opacity': 0.9 }},
       { selector: 'edge[?cross]', style: { 'line-style': 'dashed', 'line-dash-pattern': [6, 4] }},
+      { selector: 'edge[kind][kind != "related"]', style: {
+        'label': 'data(label)', 'font-family': t.font, 'font-size': 10, 'color': t.ink,
+        'text-background-color': t.card, 'text-background-opacity': 1,
+        'text-background-padding': 2, 'line-color': t.accent,
+        'target-arrow-shape': 'triangle', 'target-arrow-color': t.accent
+      }},
       { selector: '.hidden', style: { 'display': 'none' }},
       { selector: '.faded', style: { 'opacity': 0.15, 'text-opacity': 0.15 }},
       { selector: 'edge.high', style: { 'line-color': t.accent, 'width': 2.8, 'opacity': 1 }},

@@ -174,7 +174,7 @@ def test_glossary_network_has_a_building_block_layer():
     bb = next(n["data"] for n in g["nodes"] if n["data"]["id"] == "BB-001-booking")
     assert "rest" not in bb and bb["url"] == "/page/building-blocks/BB-001-booking"
     assert app.build_glossary_ego_graph("GLO-001-booking")["layer_counts"].get("BB") == 1
-    _, body = _get("/graph/glossary")
+    _, body = _get("/graph/domain-terms")
     assert 'data-layer="BB"' in body and "lg-BB" in body
     _, body = _get("/page/glossary/GLO-001-booking")
     assert 'data-layer="BB"' in body
