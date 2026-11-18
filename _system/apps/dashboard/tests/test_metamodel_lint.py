@@ -29,11 +29,16 @@ KNOWN_UNTIL_MIGRATION = {
 def test_metamodel_lint_passes():
     r = subprocess.run([sys.executable, str(REPO / LINT)],
                        capture_output=True, text=True, cwd=REPO)
+    assert "Traceback" not in r.stderr, r.stdout + r.stderr
     findings = {line.strip()[2:] for line in r.stdout.splitlines() if line.strip().startswith("- ")}
-    unexpected = findings - KNOWN_UNTIL_MIGRATION
-    assert not unexpected and "Traceback" not in r.stderr, r.stdout + r.stderr
-    gone = KNOWN_UNTIL_MIGRATION - findings
-    assert not gone, f"no longer found, remove from KNOWN_UNTIL_MIGRATION: {gone}"
+    if r.returncode == 0:
+        # migrated: the tripwire says the entry can go
+        assert not KNOWN_UNTIL_MIGRATION, \
+            f"lint passes, remove from KNOWN_UNTIL_MIGRATION: {KNOWN_UNTIL_MIGRATION}"
+    else:
+        # a failure is accepted only when it consists of exactly the known findings
+        assert r.returncode == 1 and findings == KNOWN_UNTIL_MIGRATION, \
+            (r.returncode, findings ^ KNOWN_UNTIL_MIGRATION, r.stdout + r.stderr)
     print(r.stdout.strip())
 
 
