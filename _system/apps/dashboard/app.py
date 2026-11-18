@@ -190,9 +190,9 @@ except OSError:
     DASHBOARD_VERSION = ""
 
 # Brands: marks, favicon and an optional intro (contract: brands/README.md).
-# The example brands ship in brands/; a wiki may name its own folder instead.
+# One brand ships in brands/; a wiki may name its own folder instead.
 BRANDS_DIR = Path(__file__).resolve().parent / "brands"
-EXAMPLE_BRANDS = ("systems42", "atrium")
+EXAMPLE_BRANDS = ("systems42",)
 DEFAULT_BRAND = "systems42"
 BRAND_MARKS = ("mark-dark.svg", "mark-light.svg", "favicon.svg")
 BRAND_INTRO = "intro.html"
@@ -291,7 +291,7 @@ def _inside(root: Path, path: Path) -> bool:
 def brand_dir(value: str) -> Path:
     """The folder of the brand `brand:` names, resolved and checked.
 
-    An example brand name wins, anything else is a folder relative to the
+    The shipped brand name wins, anything else is a folder relative to the
     wiki repository root. A folder that leaves the root (`..`, an absolute
     path, a symlink) or lacks one of the three marks yields the default
     brand and a log warning. The folder is only ever read (CON-002)."""

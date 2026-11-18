@@ -1,4 +1,4 @@
-"""The example brands shipped in brands/ keep the brand contract
+"""The brand shipped in brands/ keeps the brand contract
 (brands/README.md): three square marks and an optional intro that shows once
 per tab, never under reduced motion, ends on click or key, starts hidden and
 stays offline. How wiki.yaml selects a brand: tests/test_brand_config.py.
@@ -28,7 +28,7 @@ import app  # noqa: E402
 
 client = app.app.test_client()
 BRANDS = _HERE / "brands"
-SHIPPED = ("systems42", "atrium")
+SHIPPED = ("systems42",)
 MARKS = ("mark-dark.svg", "mark-light.svg", "favicon.svg")
 
 
@@ -92,11 +92,6 @@ def test_systems42_intro_ends_within_two_seconds():
     assert "setTimeout(done, 2000)" in intro("systems42")
 
 
-def test_atrium_intro_ends_within_about_two_seconds():
-    text = intro("atrium")
-    assert "setTimeout(leave, 1700)" in text and "setTimeout(done, 400)" in text
-
-
 def test_intro_covers_the_page_with_bg_uses_tokens_and_stays_offline():
     for brand in SHIPPED:
         text = intro(brand)
@@ -110,7 +105,7 @@ def test_intro_covers_the_page_with_bg_uses_tokens_and_stays_offline():
 
 
 def test_intro_is_placed_before_the_hero_on_the_home_page_only():
-    for brand, marker in (("systems42", 'id="brand-intro"'), ("atrium", 'id="atrium-splash"')):
+    for brand, marker in (("systems42", 'id="brand-intro"'),):
         (_tmp / "wiki.yaml").write_text(f"brand: {brand}\n", encoding="utf-8")
         home = client.get("/").get_data(as_text=True)
         assert marker in home, brand
@@ -118,10 +113,11 @@ def test_intro_is_placed_before_the_hero_on_the_home_page_only():
         assert marker not in client.get("/domain-terms").get_data(as_text=True), brand
 
 
-def test_no_atrium_branding_outside_its_brand_folder():
+def test_the_dashboard_holds_no_atrium_branding():
+    """The atrium brand lives in the isaqb-atrium repository (FR-032)."""
     for path in list((_HERE / "templates").glob("*.html")) + list((_HERE / "static").glob("*.*")) \
-            + list((BRANDS / "systems42").glob("*")):
-        if path.suffix in (".html", ".css", ".js", ".svg"):
+            + list(BRANDS.rglob("*")):
+        if path.suffix in (".html", ".css", ".js", ".svg", ".md"):
             assert "atrium" not in path.read_text(encoding="utf-8").lower(), path.name
 
 
@@ -133,8 +129,7 @@ if __name__ == "__main__":
     test_intro_shows_once_per_tab_and_not_under_reduced_motion()
     test_intro_ends_on_click_or_key_and_removes_itself()
     test_systems42_intro_ends_within_two_seconds()
-    test_atrium_intro_ends_within_about_two_seconds()
     test_intro_covers_the_page_with_bg_uses_tokens_and_stays_offline()
     test_intro_is_placed_before_the_hero_on_the_home_page_only()
-    test_no_atrium_branding_outside_its_brand_folder()
-    print("OK: example brands")
+    test_the_dashboard_holds_no_atrium_branding()
+    print("OK: shipped brand")

@@ -13,6 +13,10 @@ Unreleased changes sit at the top until the next Starter Kit release.
 ## [Unreleased]
 
 ### Changed
+- Dashboard: the image ships one brand, `systems42`. The atrium brand moved
+  to the isaqb-atrium repository, which names its own folder in `brand:`
+  (FR-032). A wiki that still says `brand: atrium` shows the systems42 brand
+  and the dashboard logs a warning.
 - Domain-term routes now use "/domain-terms", "/graph/domain-terms" and
   "/entity-diagram". The previous URLs redirect with HTTP 301 and preserve
   query parameters. This brings the route rename forward from the later

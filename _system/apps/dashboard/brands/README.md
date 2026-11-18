@@ -6,7 +6,7 @@ picks its brand in `_system/wiki.yaml`. Nothing in the dashboard's code or
 templates changes.
 
 ```yaml
-brand: systems42   # an example brand from this folder, or a folder of your own
+brand: systems42   # the brand from this folder, or a folder of your own
 intro: on          # off: the home page shows no intro, whatever the brand has
 ```
 
@@ -14,7 +14,6 @@ intro: on          # off: the home page shows no intro, whatever the brand has
 
 - `brand: systems42` is the Peaks mark and its intro (the default, also when
   `brand:` is missing). The mark is described in `docs/brand/README.md`.
-- `brand: atrium` is the iSAQB atrium mark and its intro.
 - `brand: brand/` is a folder of your own, relative to the wiki repository
   root. The dashboard only reads it and serves its marks at `/brand/<file>`.
 
@@ -58,7 +57,7 @@ or with `intro: off`, there is no intro. It must:
   `:root[data-theme="light"]`, and used through `var()`;
 - fetch nothing from the network; the dashboard runs offline.
 
-`systems42/intro.html` and `atrium/intro.html` are worked examples.
+`systems42/intro.html` is a worked example.
 
 `intro.html` and the SVG marks are trusted content. The intro's script runs in
 every viewer's browser with the dashboard's own rights, so it could, for

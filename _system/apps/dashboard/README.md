@@ -127,8 +127,8 @@ macro in `templates/_macros.html`.
 
 The mark, the favicon and an optional intro animation on the home page are the
 only product-specific look. They form a brand, and a wiki picks one in
-`_system/wiki.yaml`: `brand: systems42` (the default) or `brand: atrium` names an
-example brand shipped in `brands/`, `brand: brand/` names a folder of the wiki
+`_system/wiki.yaml`: `brand: systems42` (the default) names the
+brand shipped in `brands/`, `brand: brand/` names a folder of the wiki
 repository. `intro: off` hides the intro. Switching is one changed key and a
 reload. The dashboard only reads a wiki's brand folder and serves its marks at
 `/brand/<file>`. A folder outside the repository, missing or without all three
@@ -306,8 +306,8 @@ _system/apps/dashboard/
   static/settings.js   the Configure dialog
   static/systems42-sections.svg   the sections diagram shown on /help
   static/systems42-logo.svg, systems42-favicon.png   the Systems42 mark
-  brands/            the example brands systems42 and atrium (marks, favicon,
-                     intro.html) and the brand contract (README.md)
+  brands/            the shipped brand systems42 (marks, favicon, intro.html)
+                     and the brand contract (README.md)
   VERSION            the dashboard's own release, shown in the footer
   static/vendor/     vendored mermaid + cytoscape + fonts (offline, no CDN)
   tests/             plain-assert test scripts (no pytest) + a fixture vault
