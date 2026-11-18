@@ -236,3 +236,20 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
   - Q4: the data model (entity diagram) stays in Supporting Models (R4). C5 holds the list, the pages and the terminology network. Recorded on meta#36 too.
 - Created: [[FR-037-domain-terms]] (epic), FR-038 to FR-041 (features), SRC-025, SRC-026. Updated: `_system/index.md`.
 - Related: an implementation plan for the Systems42 side is posted on meta#36.
+
+## [2026-11-17] capture | Dashboard distribution and its contract with the metamodel
+- Source: `raw/dashboard-distribution-and-metamodel-contract.md`, notes drafted by Claude and edited by Gernot Starke, now [[SRC-027-dashboard-distribution-and-metamodel-contract]] in `raw/ingested/`. The answers are [[SRC-028-grilling-session-on-dashboard-distribution]].
+- Grill gate: own repository, image and no copied code were already in DR-004 and FR-029. One line of the source is wrong: the three metamodels (meta, this repository, isaqb-atrium) declare the same sections. They differ in the title of C6 and the scope of A3 to A5. The source is left as it is, and FR-044 states the checked fact. Gernot Starke answered questions 1 to 8.
+- Decisions:
+  - Q1: the repository question is a decision record, DR-005, with two alternatives.
+  - Q2: the launcher is one feature, Should. Wikis hold no dashboard code except the launcher, currently `dashboard.sh`, which a Makefile may call. `update` is written by the launcher, so CON-002 holds.
+  - Q3: the version check names no file. `metamodel-version.md` is proposed to Systems42, because a file name should say what the file holds.
+  - Q4: on a mismatch a notice on every page, never a refusal. A missing version counts as a mismatch.
+  - Q5: one constraint (CON-006), one feature (FR-044, Must), one issue for Systems42.
+  - Q6: the dashboard is tested against meta's metamodel.
+  - Q7: the atrium brand moves into isaqb-atrium (FR-032 changed). A prompt template for a brand, Could.
+  - Q8: CON-005 as worded. Docker only for now, other engines stay an open issue.
+- Created: [[DR-005-the-dashboard-lives-in-its-own-repository]] (review), [[CON-005-the-dashboard-works-on-systems42-derivatives-only]], [[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]], [[FR-042-start-a-pinned-release-with-one-command]], [[FR-043-the-dashboard-checks-the-metamodel-version]], [[FR-044-sections-come-from-the-repositorys-metamodel]], [[FR-045-a-prompt-template-for-a-brand]], SRC-027, SRC-028.
+- Issues raised: [[ISS-004-where-the-metamodel-declares-its-version]] (meta #39), [[ISS-005-the-method-lint-imports-dashboard-code]] (meta #40), [[ISS-006-other-container-engines-than-docker]] (#24). All three were asked first and opened at Gernot Starke's request.
+- Updated: FR-029 (launcher wording, children), FR-031, FR-032, CON-003, FR-017 child list, FR-023 and CON-004 (links), `_system/index.md`.
+- Parked: sync this repository's metamodel from meta. Move meta's dashboard requirements and decisions here (DR-005). Type prefixes and labels in `app.py` fall under CON-006 and have no requirement yet. The priority of FR-043 follows its epic and was not asked.

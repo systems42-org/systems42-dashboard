@@ -202,6 +202,12 @@ def test_matching_dashboard_version_says_nothing_more():
     assert "version-mismatch" not in home()
 
 
+def test_a_local_build_is_no_other_version():
+    """`dashboard_version: local` is the code of this repository, built by the launcher."""
+    configure('dashboard_version: local\n')
+    assert "version-mismatch" not in home()
+
+
 def test_other_dashboard_version_is_named_in_one_line():
     configure('dashboard_version: "1.4.0"\n')
     page = home()
@@ -268,6 +274,7 @@ if __name__ == "__main__":
     test_intro_off_hides_every_intro()
     test_footer_shows_the_dashboard_version()
     test_matching_dashboard_version_says_nothing_more()
+    test_a_local_build_is_no_other_version()
     test_other_dashboard_version_is_named_in_one_line()
     test_wiki_config_reports_the_three_keys()
     test_unquoted_dashboard_version_is_warned_about()

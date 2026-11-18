@@ -37,6 +37,14 @@ mimetypes.add_type("image/webp", ".webp")
 
 app = Flask(__name__)
 
+# Root of the wiki repository (FR-042, CON-005). The launcher mounts it
+# read-only at /repo and the image sets REPO_DIR; a local run takes the
+# repository this file sits in. Every folder below is found from here by
+# convention. A folder's own variable (WIKI_DIR, DOCS_DIR, ...) still wins,
+# which is how the tests point the app at their fixtures.
+_env_repo = os.environ.get("REPO_DIR")
+REPO_DIR = Path(_env_repo) if _env_repo else Path(__file__).resolve().parents[3]
+
 # Timezone for the "last refreshed" footer; honours the container's TZ env.
 # Empty (not "UTC") when unset, so inject_refresh_time can fall back to the
 # host's own local zone instead of forcing UTC.
@@ -50,8 +58,7 @@ DISPLAY_TZ = os.environ.get("TZ") or ""
 # single file, and a temp-and-rename would swap the inode out from under the
 # mount.
 _env_dash = os.environ.get("DASHBOARD_CONFIG")
-DASHBOARD_CONFIG_PATH = (Path(_env_dash) if _env_dash
-                         else Path(__file__).resolve().parents[2] / "dashboard.yaml")
+DASHBOARD_CONFIG_PATH = Path(_env_dash) if _env_dash else REPO_DIR / "_system" / "dashboard.yaml"
 
 _DASHBOARD_CONFIG_HEADER = """\
 # Dashboard settings — written by the dashboard's Configure dialog (facilitator
@@ -159,31 +166,22 @@ def inject_refresh_time():
     # ISO-ish and locale-free: "06.09.2026" reads as 9 June to half the room.
     return {"refreshed_at": now.strftime("%Y-%m-%d %H:%M:%Sh")}
 
-# Root of the wiki layer. In Docker this is a read-only bind mount at /wiki;
-# for local runs it falls back to the repo's wiki/ folder (4 levels up from
-# _system/apps/dashboard/app.py). The fallback is computed lazily so the
-# container path is never resolved.
+# Root of the wiki layer, read-only.
 _env_wiki = os.environ.get("WIKI_DIR")
-WIKI_DIR = Path(_env_wiki) if _env_wiki else Path(__file__).resolve().parents[3] / "wiki"
+WIKI_DIR = Path(_env_wiki) if _env_wiki else REPO_DIR / "wiki"
 
-# Provenance records (raw/sources/, Source type, DR-006). Read-only mount at
-# /sources in Docker; repo fallback for local runs. Only ever read.
+# Provenance records (raw/sources/, Source type, DR-006). Only ever read.
 _env_src = os.environ.get("RAW_SOURCES_DIR")
-SOURCES_DIR = Path(_env_src) if _env_src else Path(__file__).resolve().parents[3] / "raw" / "sources"
+SOURCES_DIR = Path(_env_src) if _env_src else REPO_DIR / "raw" / "sources"
 
 # Project identity. Everything the original demo vault hardcoded (page title,
 # footer, hero, goal-tree root, context-diagram centre) reads from here so a
 # fresh vault can be renamed in one place. Read per call, never cached: during
 # a workshop the group fills this in live and just refreshes the page.
 _env_cfg = os.environ.get("WIKI_CONFIG")
-CONFIG_PATH = Path(_env_cfg) if _env_cfg else Path(__file__).resolve().parents[2] / "wiki.yaml"
+CONFIG_PATH = Path(_env_cfg) if _env_cfg else REPO_DIR / "_system" / "wiki.yaml"
 
 DEFAULT_SYSTEM_NAME = "Requirements Wiki"
-
-# Root of the wiki repository. A wiki's own brand folder (`brand:` in
-# wiki.yaml) is a path relative to it. Read-only mount at /repo in Docker.
-_env_repo = os.environ.get("REPO_DIR")
-REPO_DIR = Path(_env_repo) if _env_repo else Path(__file__).resolve().parents[3]
 
 # The dashboard's own release, shown in the footer.
 try:
@@ -252,7 +250,7 @@ def wiki_config() -> dict:
 # Project documentation (`docs/`), mounted read-only. Only `/about` reads it:
 # the page `about:` in wiki.yaml names, plus the files that page links to.
 _env_docs = os.environ.get("DOCS_DIR")
-DOCS_DIR = Path(_env_docs) if _env_docs else Path(__file__).resolve().parents[3] / "docs"
+DOCS_DIR = Path(_env_docs) if _env_docs else REPO_DIR / "docs"
 
 
 def about_doc(value) -> Path | None:
@@ -355,8 +353,8 @@ def inject_identity():
         "intro_html": intro_html,
     }
     cfg["dashboard_version_own"] = DASHBOARD_VERSION
-    cfg["dashboard_version_differs"] = bool(cfg["dashboard_version"]) and \
-        cfg["dashboard_version"] != DASHBOARD_VERSION
+    # `local` is the code of this repository, built by the launcher: no release to differ from.
+    cfg["dashboard_version_differs"] = cfg["dashboard_version"] not in ("", "local", DASHBOARD_VERSION)
     return cfg
 
 

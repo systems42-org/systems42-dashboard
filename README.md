@@ -21,8 +21,10 @@ define the content types and conventions.
 ## Quick start
 
 1. `./dashboard.sh` (or `make dev`) starts the dashboard in Docker at
-   `http://localhost:8080`. Without Docker, `./dashboard.sh local` runs it with
-   Python at `http://localhost:8000`.
+   `http://localhost:8080`. It starts the release that `dashboard_version:` in
+   `_system/wiki.yaml` names. This repository names `local` and builds the
+   dashboard from its own code. Here, without Docker, `./dashboard.sh local`
+   runs it with Python at `http://localhost:8000`.
 2. Open this folder in Obsidian with **Open folder as vault**.
 3. Point your agent at this folder. `AGENTS.md` holds the rules; Claude Code reads
    it through `CLAUDE.md` and finds the skills in `.claude/skills/`.

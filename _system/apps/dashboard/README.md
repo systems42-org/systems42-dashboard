@@ -10,25 +10,58 @@ settings file (see Configure) — and renders them as tiles.
 From the repository root:
 
 ```sh
-./dashboard.sh          # build + start in Docker, opens http://localhost:8080
+./dashboard.sh          # start the release this wiki names, opens http://localhost:8080
 ./dashboard.sh down     # stop
 ./dashboard.sh logs     # follow logs
-./dashboard.sh rebuild  # clean rebuild
-./dashboard.sh local    # no Docker: run Flask directly on http://localhost:8000
-./dashboard.sh clean    # remove what can be rebuilt: container, image, .venv, caches
+./dashboard.sh update   # name the newest release in _system/wiki.yaml
+./dashboard.sh clean    # remove what can be rebuilt: container, caches
 ```
 
+`dashboard.sh` is the launcher (FR-042), the only dashboard code a wiki holds.
+It reads `dashboard_version:` from `_system/wiki.yaml` and starts the image
+`ghcr.io/systems42-org/dashboard:<version>`, pulling it on the first start.
+`update` asks GitHub for the newest release and writes that one line. A wiki
+that names no release is told to run `update`.
+
+**One mount.** The launcher mounts the repository read-only at `/repo`, and
+`_system/dashboard.yaml` writable on top (the one file the dashboard writes,
+see Configure). The image sets `REPO_DIR=/repo`, and the dashboard finds
+`wiki/`, `raw/sources/`, `docs/`, `_system/metamodel/`, `_system/anchors/` and
+`_system/wiki.yaml` below it. So the dashboard always shows the current state
+of the wiki: refresh the browser after editing.
+
+**Systems42 wikis only** (CON-005). Before it starts, the dashboard checks
+that the repository holds `wiki/`, `raw/`, `_system/wiki.yaml`,
+`_system/metamodel/` and `_system/anchors/` (`preflight.py`). If one is
+missing, it names it and stops, and the launcher shows that message.
+
 `clean` (also `make clean`) never touches `wiki/`, `raw/`, `docs/`, `sandbox/`,
-the settings files or `harvest-*.patch`. Without a reachable Docker it says so,
-leaves the container and image in place and still removes the local files.
+the settings files or `harvest-*.patch`. It leaves a pulled release image in
+place, because other wikis on the machine may use it. Without a reachable
+Docker it says so and still removes the local files.
 
-The Docker path needs no local Python install — everything runs in the
-container. `local` is the escape hatch for machines where Docker will not
-start: it builds a `.venv/` here on first run (~20 s) and serves the same app.
+### In this repository
 
-The `wiki/` folder is bind-mounted read-only at `/wiki`, so the dashboard always
-reflects the current state of the vault; just refresh the browser after editing.
-(The only read-write mount is the dashboard's own settings file; see Configure.)
+This repository holds the dashboard code, so it names `dashboard_version:
+local`: the launcher builds the image from `_system/apps/dashboard/` at every
+start. The launcher hands every command it does not know to `dev.sh` here:
+
+```sh
+./dashboard.sh rebuild  # build the local image from scratch, then start
+./dashboard.sh local    # no Docker: run Flask directly on http://localhost:8000
+./dashboard.sh test     # run the test scripts in Docker (also `make test`)
+```
+
+`local` is the escape hatch for machines where Docker will not start: it
+builds a `.venv/` here on first run (~20 s) and serves the same app.
+
+### Releases
+
+A git tag `vX.Y.Z` that matches `VERSION` runs `.github/workflows/release.yml`:
+the tests, then an image for amd64 and arm64 under
+`ghcr.io/systems42-org/dashboard:X.Y.Z` and `:latest`, then a GitHub release,
+which is what `update` asks for (DR-004, FR-030).
+
 Every page footer shows the data-refresh timestamp (page load time, `%Y-%m-%d`,
 in `TZ` if set, else the host's local zone).
 
@@ -161,9 +194,7 @@ plus body `[[wikilinks]]`), excluding self-references and `raw/` provenance
 links. An issue counts as **closed** when its status is `resolved` or `wontfix`.
 "Latest changes" and "last change" read the files' modification times, so a
 freshly regenerated vault shows up on the next page refresh. The status strip's
-source count comes from `raw/sources/` (`RAW_SOURCES_DIR`, mounted read-only at
-`/sources` in Docker); it is the only folder outside `wiki/`
-the dashboard reads.
+source count comes from `raw/sources/`.
 
 ## Configure
 
@@ -200,8 +231,7 @@ text link appears under the tagline. `about_label:` sets the link text and page
 title (default "About <system_name>"). Relative image and link URLs in the page,
 `../` included, are resolved against its folder and served as
 `/about/files/<path under docs/>`. Paths are resolved before they are checked,
-so neither `..` nor a symlink reaches a file outside `docs/` (404). `docs/` is
-mounted read-only at `/docs` (`DOCS_DIR`).
+so neither `..` nor a symlink reaches a file outside `docs/` (404).
 
 ## Metamodel page
 
@@ -216,8 +246,8 @@ with the fields they read and the route that renders them; the granularity
 scale with its open assignments; the rules; and the meta-meta language
 (constructs, universal fields, lifecycles). Metamodel wikilinks resolve to
 in-page anchors, decision-record links to `/decisions`, method anchors to
-chips. The folder is mounted read-only at `/metamodel` in the container
-(`METAMODEL_DIR`).
+chips. It is the metamodel of the repository the dashboard runs on
+(`_system/metamodel/`).
 
 ## Diagrams (mermaid)
 
@@ -250,8 +280,7 @@ or a dashed "unresolved" chip if the record is missing; a page with no
 `sources:` at all shows an amber "unsourced" chip instead. `/source/<stem>`
 renders one `raw/sources/` provenance record (type, origin, captured date,
 checksum) plus the wiki pages it fed (`ingested-pages:`, resolved to real
-links). The records themselves come from `raw/sources/` (`RAW_SOURCES_DIR`,
-mounted read-only at `/sources` in Docker) — the same folder the home page's
+links). The records themselves come from `raw/sources/`, the same folder the home page's
 status-strip source count already reads.
 
 ## Layout
@@ -282,11 +311,10 @@ _system/apps/dashboard/
   VERSION            the dashboard's own release, shown in the footer
   static/vendor/     vendored mermaid + cytoscape + fonts (offline, no CDN)
   tests/             plain-assert test scripts (no pytest) + a fixture vault
-  Dockerfile         python:3.12-slim + gunicorn
-  compose.yaml       service def, mounts ${WIKI_DIR}:/wiki:ro,
-                     ${SOURCES_DIR}:/sources:ro, ${DOCS_DIR}:/docs:ro, ${REPO_DIR}:/repo:ro
-                     (for a wiki's own brand folder), and the one read-write settings
-                     mount ${DASHBOARD_CONFIG}:/config/dashboard.yaml
+  Dockerfile         python:3.12-slim + gunicorn, and a `test` stage for `make test`
+  preflight.py       the check that the repository is a Systems42 wiki (CON-005)
+  gunicorn.conf.py   runs that check before the app is loaded
+  dev.sh             rebuild, local and test, reached through ../../../dashboard.sh
 ```
 
 ## Tests
@@ -295,22 +323,28 @@ For visual inspection of domain terms, relationships and multiplicities, open
 the [order model fixture](tests/fixtures/domain-model/README.md). Its README
 includes the startup command and the expected diagrams.
 
-Plain Python scripts with bare `assert`s — no pytest, no runner. From this
-directory, inside the venv `./dashboard.sh local` builds:
+Plain Python scripts with bare `assert`s, no pytest. From the repository root:
 
 ```sh
-for t in tests/test_*.py; do .venv/bin/python "$t" || echo "FAILED: $t"; done
+make test
 ```
 
-Each script also runs on its own, which is what you want while working on one:
+It runs every script in Docker and lists the ones that failed, with their
+output. It exits 1 if any failed. The scripts run in the `test` stage of the
+`Dockerfile`: the Python and the libraries of the shipped image, plus `make`
+and `node`, which some scripts call. The repository is mounted read-only and
+copied inside the container, so a test cannot change a file on the host. The
+first run needs network to build the stage.
+
+While working on one script, run it in the venv `./dashboard.sh local` builds,
+from this directory:
 
 ```sh
 .venv/bin/python tests/test_reload.py
 ```
 
-The `|| echo` is not decoration. A `for` loop reports only its last iteration's
-status, so without it a test failing in the middle scrolls past and the shell
-still exits 0.
+`sh tests/run-all.sh .venv/bin/python` runs all of them there. Without `node`
+on the machine, the scripts that need it skip their JavaScript checks.
 
 They cover the empty vault (every route must render on day one), a populated
 fixture vault, the functional-requirements hierarchy and goal projections, the glossary graphs, the

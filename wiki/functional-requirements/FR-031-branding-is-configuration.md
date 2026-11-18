@@ -4,9 +4,9 @@ type: functional-requirement
 title: Branding is configuration
 status: draft
 created: 2026-11-13
-updated: 2026-11-13
-sources: ["[[SRC-019-the-dashboard-as-a-product]]", "[[SRC-020-grilling-session-on-the-dashboard-as-a-product]]"]
-related: ["[[FR-032-example-brands-to-try]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[CON-001-proof-of-concept-not-production-ready]]"]
+updated: 2026-11-17
+sources: ["[[SRC-019-the-dashboard-as-a-product]]", "[[SRC-020-grilling-session-on-the-dashboard-as-a-product]]", "[[SRC-027-dashboard-distribution-and-metamodel-contract]]", "[[SRC-028-grilling-session-on-dashboard-distribution]]"]
+related: ["[[FR-032-example-brands-to-try]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[CON-001-proof-of-concept-not-production-ready]]", "[[FR-045-a-prompt-template-for-a-brand]]"]
 tags: ["functional-requirement", "product"]
 stereotype: feature
 parent: ["[[FR-029-the-dashboard-as-a-product]]"]
@@ -25,7 +25,7 @@ As a [[STK-011-people-who-set-up-a-project-wiki|person who sets up a project wik
 
 **PROBLEM / GOAL**
 
-- `brand:` in `_system/wiki.yaml` names an example brand ([[FR-032-example-brands-to-try]]) or a brand folder in the wiki's repository, such as `brand/`. Without it, the dashboard shows its default brand.
+- `brand:` in `_system/wiki.yaml` names the shipped brand ([[FR-032-example-brands-to-try]]) or a brand folder in the wiki's repository, such as `brand/`. Without it, the dashboard shows its default brand.
 - A brand holds two marks (dark and light theme), a favicon and, optionally, an intro animation.
 - `intro: on | off` switches the intro. When on, it shows at most once per browser tab, nothing under reduced motion, is done within about two seconds, ends on any click or key, and fetches nothing from the network.
 - The dashboard only reads the brand folder ([[CON-002-dashboard-never-writes-to-the-wiki]]). A folder outside the repository, missing or incomplete shows the default brand, never an error page.

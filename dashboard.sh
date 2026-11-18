@@ -1,50 +1,48 @@
 #!/usr/bin/env bash
 #
-# Launch the Requirements-Wiki dashboard (Docker, no local install needed).
+# Launcher for the Systems42 dashboard (FR-042). The only dashboard code a
+# wiki holds: the dashboard itself comes as a container image.
 #
-#   ./dashboard.sh          build + start, open browser at http://localhost:8080
-#   ./dashboard.sh up       same as above
+#   ./dashboard.sh          start the release this wiki names, open the browser
 #   ./dashboard.sh down     stop and remove the container
-#   ./dashboard.sh logs     follow container logs
-#   ./dashboard.sh rebuild  force a clean rebuild, then start
-#   ./dashboard.sh local    run Flask directly (no Docker) at http://localhost:8000
-#   ./dashboard.sh clean    remove what can be rebuilt: container, image, .venv,
-#                           __pycache__, .DS_Store. Never wiki/, raw/ or settings.
+#   ./dashboard.sh logs     follow the container's log
+#   ./dashboard.sh update   name the newest release in _system/wiki.yaml
+#   ./dashboard.sh clean    remove what can be rebuilt: container, caches
 #
-# The dashboard stops itself a few seconds after you close its browser tab/window
-# (DR-022), so it won't linger as an orphan. `down` stays available to remove a
-# stopped container or stop a still-running one manually. `local` is a fallback
-# for machines where Docker will not start (e.g. a workshop laptop).
+# The release is `dashboard_version:` in _system/wiki.yaml, e.g. "0.9.0".
+# `local` builds the image from _system/apps/dashboard/, which only the
+# dashboard's own repository has. That repository adds more commands
+# (rebuild, local, test), see _system/apps/dashboard/dev.sh.
+#
+# DASH_PORT sets the port (8080). DASH_PUBLIC_URL sets the address of the QR
+# code. DASH_NO_BROWSER=1 starts without opening a browser.
 #
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMPOSE_FILE="$ROOT/_system/apps/dashboard/compose.yaml"
-URL="http://localhost:8080"
-LOCAL_URL="http://localhost:8000"
+CONFIG="$ROOT/_system/wiki.yaml"
+SETTINGS="$ROOT/_system/dashboard.yaml"
+DEV_DIR="$ROOT/_system/apps/dashboard"
+IMAGE_REPO="ghcr.io/systems42-org/dashboard"
+LATEST_RELEASE="https://api.github.com/repos/systems42-org/systems42-dashboard/releases/latest"
+LOCAL_IMAGE="systems42-dashboard:local"
+# One container per wiki, so two wikis on one machine do not replace each other.
+NAME="systems42-dashboard-$(basename "$ROOT" | tr -c 'A-Za-z0-9_.\n-' '-')"
+PORT="${DASH_PORT:-8080}"
+URL="http://localhost:$PORT"
 
-# Absolute paths to the mounted layers, consumed by compose.yaml.
-export WIKI_DIR="$ROOT/wiki"
-export SOURCES_DIR="$ROOT/raw/sources"
-export DOCS_DIR="$ROOT/docs"
-export METAMODEL_DIR="$ROOT/_system/metamodel"
-export ANCHORS_DIR="$ROOT/_system/anchors"
-export CONFIG_FILE="$ROOT/_system/wiki.yaml"
-# The wiki repository itself: a wiki's own brand folder (`brand:` in wiki.yaml) lives in it.
-export REPO_DIR="$ROOT"
-export DASHBOARD_CONFIG="$ROOT/_system/dashboard.yaml"
-# Docker bind-mounts this single file; if it is missing at `up`, Docker would
-# create a *directory* in its place. Make sure it exists first.
-[ -f "$DASHBOARD_CONFIG" ] || printf 'hidden: []\n' > "$DASHBOARD_CONFIG"
+die() { echo "✗ $*" >&2; exit 1; }
 
-# Footer time in the host's zone, not UTC: Docker containers default to UTC.
-if [ -z "${TZ:-}" ] && [ -L /etc/localtime ]; then
-  TZ="$(readlink /etc/localtime | sed 's#.*/zoneinfo/##')"
-fi
-export TZ="${TZ:-UTC}"
+need_docker() {
+  command -v docker >/dev/null 2>&1 || die "Docker is not installed or not on PATH."
+}
 
-# Address the QR code points at: the host's LAN IP, not localhost. Override with
-# DASH_PUBLIC_URL=http://name.local:8080 when the room has DNS or a tunnel.
+# The release this wiki names: the value of `dashboard_version:`, without quotes.
+wiki_version() {
+  sed -n 's/^dashboard_version:[[:space:]]*"\{0,1\}\([^"#[:space:]]*\).*/\1/p' "$CONFIG" | head -n 1
+}
+
+# The host's LAN address, for the QR code on the home page.
 lan_ip() {
   if command -v ipconfig >/dev/null 2>&1; then
     ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || true
@@ -52,121 +50,118 @@ lan_ip() {
     hostname -I 2>/dev/null | awk '{print $1}' || true
   fi
 }
-LAN_IP="$(lan_ip 2>/dev/null || true)"
 
-# Open a URL in the default browser (a normal tab is fine — the server stops
-# itself when the tab/window is closed, so nothing needs to close the window
-# programmatically). See DR-022. Shared by every mode below.
-open_browser_at() {
-  local url="$1"
-  if command -v open >/dev/null 2>&1; then open "$url"
-  elif command -v xdg-open >/dev/null 2>&1; then xdg-open "$url"
-  fi
-}
-
-# Wait (up to ~30 s) until the dashboard actually answers. Opening the browser
-# first gives the facilitator a connection-refused page and a manual reload —
-# guaranteed on the first run, which builds the venv or the image.
-wait_for_url() {
-  local url="$1" tries=60
-  command -v curl >/dev/null 2>&1 || return 0   # nothing to poll with; don't stall
+# Up to 30 s until the dashboard answers, so the browser never opens on an error page.
+wait_for_dashboard() {
+  local tries=60
+  command -v curl >/dev/null 2>&1 || return 0
   while [ "$tries" -gt 0 ]; do
-    if curl -sf --max-time 1 -o /dev/null "$url/"; then return 0; fi
+    curl -sf --max-time 1 -o /dev/null "$URL/" && return 0
+    [ "$(docker inspect -f '{{.State.Running}}' "$NAME" 2>/dev/null)" = "true" ] || return 1
     tries=$((tries - 1))
     sleep 0.5
   done
   return 1
 }
 
-# When the dashboard does not answer: if its container has stopped, say so,
-# show the end of its log and fail, instead of claiming it runs.
-report_failed_start() {
-  local state
-  state="$(docker compose -f "$COMPOSE_FILE" ps -a --format '{{.State}}' 2>/dev/null | head -n 1)"
-  state="${state:-missing}"
-  if [ "$state" = "running" ]; then
-    echo "… still starting; reload the page if it does not answer."
-    return 0
-  fi
-  echo "✗ The dashboard did not start (container $state). Last log lines:" >&2
-  docker compose -f "$COMPOSE_FILE" logs --tail 25 >&2 || true
-  exit 1
-}
-
 cmd="${1:-up}"
-
-# Docker is required for every mode except `local`, which is the escape hatch
-# for machines where Docker will not start, and `clean`, which still has local
-# files to remove there.
-if [ "$cmd" != "local" ] && [ "$cmd" != "clean" ] && ! command -v docker >/dev/null 2>&1; then
-  echo "✗ Docker is not installed or not on PATH." >&2
-  exit 1
-fi
+[ -f "$CONFIG" ] || die "This is not a Systems42 wiki: _system/wiki.yaml is missing in $ROOT."
 
 case "$cmd" in
   up)
-    export DASH_PUBLIC_URL="${DASH_PUBLIC_URL:-http://${LAN_IP:-localhost}:8080}"
-    docker compose -f "$COMPOSE_FILE" up --build -d
-    wait_for_url "$URL" || report_failed_start
-    echo "✓ Dashboard running at $URL"
-    echo "✓ Others in the room: $DASH_PUBLIC_URL (QR on the home page, /join to project it)"
-    open_browser_at "$URL"
-    ;;
-  rebuild)
-    export DASH_PUBLIC_URL="${DASH_PUBLIC_URL:-http://${LAN_IP:-localhost}:8080}"
-    docker compose -f "$COMPOSE_FILE" build --no-cache
-    docker compose -f "$COMPOSE_FILE" up -d
-    wait_for_url "$URL" || report_failed_start
-    echo "✓ Dashboard rebuilt, running at $URL"
-    echo "✓ Others in the room: $DASH_PUBLIC_URL (QR on the home page, /join to project it)"
-    open_browser_at "$URL"
+    need_docker
+    version="$(wiki_version)"
+    [ -n "$version" ] || die "_system/wiki.yaml names no dashboard release. Run ./dashboard.sh update, or set dashboard_version: yourself."
+    if [ "$version" = "local" ]; then
+      [ -f "$DEV_DIR/Dockerfile" ] || die "dashboard_version: local needs the dashboard code in _system/apps/dashboard/."
+      image="$LOCAL_IMAGE"
+      docker build -q -t "$image" "$DEV_DIR" >/dev/null
+    else
+      image="$IMAGE_REPO:$version"
+      docker image inspect "$image" >/dev/null 2>&1 || docker pull "$image"
+    fi
+    # Docker would create a directory in place of a missing file.
+    [ -f "$SETTINGS" ] || printf 'hidden: []\n' > "$SETTINGS"
+    # Footer time in the host's zone: containers default to UTC.
+    if [ -z "${TZ:-}" ] && [ -L /etc/localtime ]; then
+      TZ="$(readlink /etc/localtime | sed 's#.*/zoneinfo/##')"
+    fi
+    ip="$(lan_ip 2>/dev/null || true)"
+    public="${DASH_PUBLIC_URL:-http://${ip:-localhost}:$PORT}"
+    docker rm -f "$NAME" >/dev/null 2>&1 || true
+    # One mount: the repository, read-only. The settings file is the one thing
+    # the dashboard writes, so it is mounted writable on top (DR-033).
+    docker run -d --name "$NAME" -p "$PORT:8000" \
+      -e TZ="${TZ:-UTC}" -e DASH_PUBLIC_URL="$public" \
+      -v "$ROOT:/repo:ro" \
+      -v "$SETTINGS:/repo/_system/dashboard.yaml" \
+      "$image" >/dev/null
+    if ! wait_for_dashboard; then
+      echo "✗ The dashboard did not start. Last log lines:" >&2
+      docker logs --tail 25 "$NAME" >&2 || true
+      exit 1
+    fi
+    echo "✓ Dashboard $version running at $URL"
+    echo "✓ Others in the room: $public (QR on the home page, /join to project it)"
+    if [ -z "${DASH_NO_BROWSER:-}" ]; then
+      if command -v open >/dev/null 2>&1; then open "$URL"
+      elif command -v xdg-open >/dev/null 2>&1; then xdg-open "$URL"
+      fi
+    fi
     ;;
   down)
-    docker compose -f "$COMPOSE_FILE" down
+    need_docker
+    docker rm -f "$NAME" >/dev/null 2>&1 || true
     echo "✓ Dashboard stopped."
     ;;
   logs)
-    docker compose -f "$COMPOSE_FILE" logs -f
+    need_docker
+    docker logs -f "$NAME"
     ;;
-  local)
-    cd "$ROOT/_system/apps/dashboard"
-    if [ ! -d .venv ]; then
-      echo "→ First run: building the virtualenv and installing requirements (~20 s)…"
-      python3 -m venv .venv
-      .venv/bin/pip install -q --disable-pip-version-check -r requirements.txt
+  update)
+    command -v curl >/dev/null 2>&1 || die "update needs curl."
+    newest="$(curl -fsSL "$LATEST_RELEASE" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"v\{0,1\}\([^"]*\)".*/\1/p' | head -n 1)"
+    [ -n "$newest" ] || die "Could not find the newest release at $LATEST_RELEASE."
+    current="$(wiki_version)"
+    if [ "$current" = "$newest" ]; then
+      echo "✓ This wiki already names the newest release, $newest."
+      exit 0
     fi
-    export WIKI_DIR SOURCES_DIR DOCS_DIR METAMODEL_DIR ANCHORS_DIR CONFIG_FILE DASHBOARD_CONFIG REPO_DIR
-    export WIKI_CONFIG="$CONFIG_FILE"
-    export RAW_SOURCES_DIR="$SOURCES_DIR"
-    export DASH_PUBLIC_URL="${DASH_PUBLIC_URL:-http://${LAN_IP:-localhost}:8000}"
-    # Start the server first, then open the browser once it actually answers.
-    .venv/bin/python app.py &
-    server_pid=$!
-    wait_for_url "$LOCAL_URL" || echo "… server did not answer yet; reload if the page fails."
-    echo "✓ Dashboard (local, no Docker) on $LOCAL_URL"
-    echo "✓ Others in the room: $DASH_PUBLIC_URL (QR on the home page, /join to project it)"
-    open_browser_at "$LOCAL_URL"
-    wait "$server_pid" || true
+    # The launcher writes this one line, not the dashboard (CON-002).
+    line="dashboard_version: \"$newest\"  # the dashboard release this wiki uses, quoted"
+    tmp="$(mktemp)"
+    if grep -q '^#\{0,1\}[[:space:]]*dashboard_version:' "$CONFIG"; then
+      awk -v line="$line" '!done && /^#?[[:space:]]*dashboard_version:/ { print line; done = 1; next } { print }' "$CONFIG" > "$tmp"
+    else
+      { cat "$CONFIG"; echo "$line"; } > "$tmp"
+    fi
+    cat "$tmp" > "$CONFIG"
+    rm -f "$tmp"
+    echo "✓ _system/wiki.yaml now names dashboard $newest (was: ${current:-none}). Start it with ./dashboard.sh."
     ;;
   clean)
-    # Only what `up` and `local` rebuild. --rmi local takes this wiki's own
-    # compose-built image, no other wiki's; no --volumes, the mounts are the content.
-    if command -v docker >/dev/null 2>&1 \
-        && docker compose -f "$COMPOSE_FILE" down --rmi local; then
-      echo "✓ Container and image removed."
+    # Only what a start rebuilds. A pulled release image stays: other wikis
+    # on this machine may use it. No volumes: the mounts are the content.
+    if command -v docker >/dev/null 2>&1 && docker rm -f "$NAME" >/dev/null 2>&1; then
+      docker rmi "$LOCAL_IMAGE" >/dev/null 2>&1 || true
+      echo "✓ Container removed."
     else
-      echo "… Docker not reachable: container and image left in place." >&2
+      echo "… Docker not reachable: container left in place." >&2
     fi
-    rm -rf "$ROOT/_system/apps/dashboard/.venv"
+    rm -rf "$DEV_DIR/.venv"
     # Human-owned content and git's own files are not searched at all.
     (cd "$ROOT" && find . \( -path ./.git -o -path ./raw -o -path ./wiki \
         -o -path ./docs -o -path ./sandbox \) -prune \
         -o \( -type d -name __pycache__ -o -type f -name .DS_Store \) -exec rm -rf {} +)
-    echo "✓ Removed .venv, __pycache__ and .DS_Store. wiki/, raw/ and settings untouched."
+    echo "✓ Removed caches and .DS_Store. wiki/, raw/ and settings untouched."
     ;;
   *)
+    # The dashboard's own repository has more commands.
+    if [ -x "$DEV_DIR/dev.sh" ]; then
+      exec "$DEV_DIR/dev.sh" "$@"
+    fi
     echo "Unknown command: $cmd" >&2
-    echo "Usage: ./dashboard.sh [up|down|logs|rebuild|local|clean]" >&2
+    echo "Usage: ./dashboard.sh [up|down|logs|update|clean]" >&2
     exit 2
     ;;
 esac

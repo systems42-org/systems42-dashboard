@@ -4,7 +4,7 @@ type: functional-requirement
 title: Browse by area and section
 status: draft
 created: 2026-11-12
-updated: 2026-11-12
+updated: 2026-11-17
 sources: ["[[SRC-013-browse-by-area-and-section]]", "[[SRC-014-grilling-session-on-browsing]]"]
 related: ["[[FR-001-search-the-wiki]]", "[[FR-013-header-and-footer-on-every-page]]", "[[STK-015-newcomers]]", "[[STK-008-workshop-participants]]"]
 tags: ["functional-requirement", "navigation"]
@@ -36,7 +36,7 @@ One rule holds for every feature below: **a section carries the same name wherev
 ## Hierarchy
 
 - **Parent:** none (epic).
-- **Children:** projected from the `parent:` backlinks: [[FR-018-orientation-on-the-first-page]], [[FR-019-section-at-a-glance]], [[FR-020-know-where-you-are]], [[FR-021-sort-lists]], [[FR-022-lists-keep-sort-and-filter-in-their-address]], [[FR-023-areas-and-sections-follow-the-tailoring]], [[FR-034-read-a-page-with-its-links]], [[FR-036-goal-coverage-matrix]].
+- **Children:** projected from the `parent:` backlinks: [[FR-018-orientation-on-the-first-page]], [[FR-019-section-at-a-glance]], [[FR-020-know-where-you-are]], [[FR-021-sort-lists]], [[FR-022-lists-keep-sort-and-filter-in-their-address]], [[FR-023-areas-and-sections-follow-the-tailoring]], [[FR-034-read-a-page-with-its-links]], [[FR-036-goal-coverage-matrix]], [[FR-044-sections-come-from-the-repositorys-metamodel]].
 
 > [!note] Open points
 > None.

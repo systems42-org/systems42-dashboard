@@ -4,9 +4,9 @@ type: constraint
 title: Docker is the supported way to run the dashboard
 status: draft
 created: 2026-11-13
-updated: 2026-11-13
-sources: ["[[SRC-019-the-dashboard-as-a-product]]", "[[SRC-020-grilling-session-on-the-dashboard-as-a-product]]"]
-related: ["[[FR-029-the-dashboard-as-a-product]]", "[[QR-002-runs-alike-on-linux-and-macos]]", "[[DR-004-releases-are-container-images-pinned-per-wiki]]", "[[STK-010-people-who-run-the-dashboard]]"]
+updated: 2026-11-17
+sources: ["[[SRC-019-the-dashboard-as-a-product]]", "[[SRC-020-grilling-session-on-the-dashboard-as-a-product]]", "[[SRC-027-dashboard-distribution-and-metamodel-contract]]", "[[SRC-028-grilling-session-on-dashboard-distribution]]"]
+related: ["[[FR-029-the-dashboard-as-a-product]]", "[[QR-002-runs-alike-on-linux-and-macos]]", "[[DR-004-releases-are-container-images-pinned-per-wiki]]", "[[STK-010-people-who-run-the-dashboard]]", "[[ISS-006-other-container-engines-than-docker]]"]
 tags: [constraint]
 category: technical
 ---
@@ -21,3 +21,4 @@ category: technical
 - `./dashboard.sh local` runs the dashboard without Docker. It stays as a fallback for developers, without any promise that it works.
 - The first start downloads the image and needs network. After that the dashboard runs offline. There is no installation from a file for now.
 - Windows support comes back only when someone takes it up again.
+- Other container engines such as Podman are not supported for now ([[ISS-006-other-container-engines-than-docker]]).

@@ -1,22 +1,38 @@
-FROM python:3.12-slim
+# Three stages: `base` holds Python and the requirements, `test` adds what the
+# test scripts call (make, node), and the last, unnamed stage is the image
+# that ships. `docker build .` and compose build the last stage.
+FROM python:3.12-slim AS base
 
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    WIKI_DIR=/wiki \
-    RAW_SOURCES_DIR=/sources \
-    DOCS_DIR=/docs \
-    METAMODEL_DIR=/metamodel \
-    ANCHORS_DIR=/anchors \
-    REPO_DIR=/repo
+    PYTHONDONTWRITEBYTECODE=1
 
 WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# `make test` (dashboard.sh test) runs the test scripts in this stage, with
+# the repository mounted. It holds no dashboard code and does not set
+# REPO_DIR, so the tests see the code as it is in the repository, on the
+# Python and the libraries of the shipped image.
+FROM base AS test
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends make nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+FROM base
+
+# One mount (FR-042): the launcher mounts the wiki repository read-only at
+# /repo, and its _system/dashboard.yaml writable on top. The dashboard finds
+# every folder below /repo by convention (CON-005).
+ENV REPO_DIR=/repo
+
 COPY app.py .
 COPY catalog.py .
 COPY metamodel.py .
+COPY preflight.py .
+COPY gunicorn.conf.py .
 COPY help.md .
 COPY VERSION .
 COPY templates ./templates
