@@ -14,7 +14,8 @@ Served as static files so the dashboard renders diagrams **offline** (no CDN at 
   context detail page and `/req42/scope`, plus any ` ```mermaid ` block in a page body.
 
 To update: re-download the same `dist/mermaid.min.js` for the desired pinned version and
-bump the version above.
+bump the version above. Then run `tests/test_mermaid_browser.py`, which checks that the
+bundle draws and that its version matches the one above.
 
 ## cytoscape.min.js (+ fcose stack)
 - **Library:** Cytoscape.js (graph rendering) — <https://js.cytoscape.org>

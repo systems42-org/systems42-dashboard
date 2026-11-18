@@ -1,0 +1,5 @@
+# Development-only: the browser test (tests/test_mermaid_browser.py).
+# Not installed into the Docker image. After installing, fetch its browser:
+#   .venv/bin/python -m playwright install chromium
+-r requirements.txt
+playwright==1.63.0
