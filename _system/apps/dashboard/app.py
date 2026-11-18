@@ -321,6 +321,19 @@ def _brand_file(folder: Path, name: str) -> Path | None:
     return path if path.parent == folder.resolve() and path.is_file() else None
 
 
+# A file the dashboard serves as it is (a brand mark, a file under docs/) is
+# shown from the dashboard's own origin. Opened directly, an SVG or HTML file
+# with a script in it would run with the dashboard's rights; sandboxed and
+# without script it is only a picture.
+_FILE_CSP = "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox"
+
+
+def _inert_file(resp):
+    resp.headers["Content-Security-Policy"] = _FILE_CSP
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    return resp
+
+
 def _brand_checksum(path: Path | None) -> str:
     try:
         return f"{zlib.crc32(path.read_bytes()):08x}"
@@ -371,7 +384,7 @@ def brand_mark(name):
     # behind this URL never changes, so the browser may keep it for a year.
     # Any other request revalidates, so a stale ?v= never sticks.
     fresh = request.args.get("v") == _brand_checksum(path)
-    return send_file(path, mimetype="image/svg+xml", max_age=31536000 if fresh else 0)
+    return _inert_file(send_file(path, mimetype="image/svg+xml", max_age=31536000 if fresh else 0))
 
 
 @app.context_processor
@@ -3310,6 +3323,13 @@ def adrs_redirect():
     return redirect("/decisions", code=301)
 
 
+def _is_wiki_folder(folder: str) -> bool:
+    """True when `folder` is a direct, non-hidden subfolder of WIKI_DIR."""
+    if not folder or folder.startswith(".") or "/" in folder or "\\" in folder:
+        return False
+    return (WIKI_DIR / folder).is_dir()
+
+
 @app.route("/page/<folder>/<stem>")
 def page_detail(folder, stem):
     """Detail page for a single content unit (any wiki page). Search results
@@ -3331,6 +3351,12 @@ def page_detail(folder, stem):
     if folder == "functional-requirements":
         return redirect(f"/functional-requirements/{stem}", code=302)
 
+    # `folder` must name one of the wiki's own content folders: the route
+    # takes any single path segment, and `..` or `.` would otherwise reach a
+    # markdown file beside or above wiki/ (the repository root under
+    # `dashboard.sh local`, /repo under Docker).
+    if not _is_wiki_folder(folder):
+        abort(404)
     path = WIKI_DIR / folder / f"{stem}.md"
     page = _parse(path, folder) if path.is_file() else None
     if not page:
@@ -5057,7 +5083,7 @@ def about_file(name):
     path = docs_file(name)
     if path is None:
         abort(404)
-    return send_file(path)
+    return _inert_file(send_file(path))
 
 
 if __name__ == "__main__":

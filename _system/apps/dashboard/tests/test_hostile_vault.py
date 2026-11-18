@@ -201,7 +201,53 @@ def test_a_single_beneficiary_is_shown():
     assert "The Beneficiary" in body, "a single-string beneficiary was dropped"
 
 
+def test_page_route_stays_inside_the_wiki():
+    for folder in ("..", ".", ".obsidian", "%2e%2e"):
+        status, body = _get(f"/page/{folder}/outside")
+        assert status == 404 and "TOP SECRET" not in body, folder
+    status, _ = _get("/page/no-such-folder/GLO-004-linker")
+    assert status == 404
+    for stem in ("..", ".", "..%2Foutside"):
+        status, body = _get(f"/page/glossary/{stem}")
+        assert status == 404 and "TOP SECRET" not in body, stem
+        status, body = _get(f"/functional-requirements/{stem}")
+        assert status == 404 and "TOP SECRET" not in body, stem
+    for stem in ("..", "../outside", "%2e%2e%2foutside", "no-such-source"):
+        status, body = _get(f"/source/{stem}")
+        assert status == 404 and "TOP SECRET" not in body, stem
+    for slug in ("..", "../outside", "no-such-block"):
+        status, _ = _get(f"/req42/{slug}")
+        assert status == 404, slug
 
+
+def test_file_routes_stay_inside_their_folder():
+    for name in ("../secret.txt", "..%2Fsecret.txt", "%2e%2e/secret.txt", "/etc/passwd",
+                 "about.md/../../secret.txt", "no-such-file.svg"):
+        status, body = _get(f"/about/files/{name}")
+        assert status == 404 and "TOP SECRET" not in body, name
+    # the brand route serves the three marks and nothing else in the folder
+    for name in ("secret.svg", "intro.html", "..%2Fsecret.txt", "%2e%2e"):
+        status, body = _get(f"/brand/{name}")
+        assert status == 404 and "TOP SECRET" not in body, name
+    assert _get("/brand/mark-dark.svg")[0] == 200
+    # an intro that is a symlink out of the brand folder is not inserted
+    _, home = _get("/")
+    assert "OUTSIDE INTRO" not in home
+
+
+def test_served_files_cannot_run_script_in_the_dashboard():
+    # docs/ and brand files are served from the dashboard's own origin: a
+    # script in an SVG or HTML file opened directly must not run there
+    client = app.app.test_client()
+    for url in ("/about/files/mark.svg", "/about/files/page.html", "/brand/favicon.svg"):
+        resp = client.get(url)
+        assert resp.status_code == 200, url
+        csp = resp.headers.get("Content-Security-Policy", "")
+        assert "sandbox" in csp and "default-src 'none'" in csp, (url, csp)
+        assert resp.headers.get("X-Content-Type-Options") == "nosniff", url
+    _, about = _get("/about")
+    assert "<script>alert(7)" not in about
+    assert 'src="/about/files/mark.svg"' in about, "the about page's image link was lost"
 
 
 if __name__ == "__main__":
@@ -210,4 +256,7 @@ if __name__ == "__main__":
     test_titles_and_bodies_render_inert()
     test_frontmatter_strings_are_escaped()
     test_a_single_beneficiary_is_shown()
+    test_page_route_stays_inside_the_wiki()
+    test_file_routes_stay_inside_their_folder()
+    test_served_files_cannot_run_script_in_the_dashboard()
     print("OK: broken, oddly typed and hostile pages render safely")
