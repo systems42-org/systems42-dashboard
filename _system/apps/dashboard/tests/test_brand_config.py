@@ -1,7 +1,7 @@
 """Branding is configuration: `brand:`, `intro:` and `dashboard_version:` in
 wiki.yaml. No pytest.
 
-`brand:` names an example brand shipped in brands/ (systems42, atrium) or a
+`brand:` names the brand shipped in brands/ (systems42) or a
 folder relative to the wiki repository root (REPO_DIR). Missing means
 systems42. A folder outside the root, missing or incomplete falls back to
 systems42 with a log warning, never a 500. The folder is only read.
@@ -90,22 +90,20 @@ def test_missing_brand_key_means_systems42():
     assert 'id="brand-intro"' in page
 
 
-def test_example_brand_atrium_is_one_key_away():
+def test_a_brand_the_dashboard_does_not_ship_falls_back():
+    """`brand: atrium` named a shipped brand up to 0.9.0 (FR-032)."""
+    LOG.messages.clear()
     configure("brand: atrium\n")
-    for name in MARKS:
-        assert served(name) == (BRANDS / "atrium" / name).read_text(encoding="utf-8"), name
-    page = home()
-    assert 'id="atrium-splash"' in page and 'id="brand-intro"' not in page
-    assert page.index('id="atrium-splash"') < page.index('class="hero"')
-    sub = client.get("/domain-terms").get_data(as_text=True)
-    assert 'id="atrium-splash"' not in sub
-    assert 'src="/brand/mark-dark.svg?v=' in sub            # top bar
+    assert served("mark-dark.svg") == (BRANDS / "systems42" / "mark-dark.svg").read_text(encoding="utf-8")
+    assert 'id="brand-intro"' in home()
+    assert any("is no folder in the wiki repository" in m for m in LOG.messages), LOG.messages
 
 
 def test_switching_brand_is_read_live_and_changes_the_mark_url():
+    make_brand(_repo / "brand")
     configure("brand: systems42\n")
     first = home()
-    configure("brand: atrium\n")
+    configure("brand: brand/\n")
     second = home()
     url = lambda page: page.split('src="/brand/mark-dark.svg?v=', 1)[1].split('"', 1)[0]
     assert url(first) != url(second), "the cache buster must change with the brand"
@@ -119,6 +117,9 @@ def test_folder_brand_from_the_wiki_repository():
     page = home()
     assert 'id="own-intro"' in page and 'id="brand-intro"' not in page
     assert page.index('id="own-intro"') < page.index('class="hero"')
+    sub = client.get("/domain-terms").get_data(as_text=True)
+    assert 'id="own-intro"' not in sub
+    assert 'src="/brand/mark-dark.svg?v=' in sub            # top bar
 
 
 def test_folder_brand_without_intro_has_none():
@@ -177,7 +178,7 @@ def test_only_the_marks_are_served():
 
 def test_intro_off_hides_every_intro():
     make_brand(_repo / "brand", intro='<div id="own-intro" hidden></div>')
-    markers = {"systems42": 'id="brand-intro"', "atrium": 'id="atrium-splash"', "brand/": 'id="own-intro"'}
+    markers = {"systems42": 'id="brand-intro"', "brand/": 'id="own-intro"'}
     for brand, own in markers.items():
         for off in ("off", '"off"', "false", "no"):
             configure(f"brand: {brand}\nintro: {off}\n")
@@ -221,9 +222,9 @@ def test_wiki_config_reports_the_three_keys():
     configure()
     cfg = app.wiki_config()
     assert cfg["brand"] == "systems42" and cfg["intro"] is True and cfg["dashboard_version"] == ""
-    configure("brand: atrium\nintro: off\ndashboard_version: 0.9\n")
+    configure("brand: brand/\nintro: off\ndashboard_version: 0.9\n")
     cfg = app.wiki_config()
-    assert cfg["brand"] == "atrium" and cfg["intro"] is False and cfg["dashboard_version"] == "0.9"
+    assert cfg["brand"] == "brand/" and cfg["intro"] is False and cfg["dashboard_version"] == "0.9"
 
 
 def test_unquoted_dashboard_version_is_warned_about():
@@ -248,7 +249,8 @@ def test_non_string_brand_is_warned_about_and_falls_back():
 
 
 def test_marks_are_cached_long_only_when_the_checksum_matches():
-    configure("brand: atrium\n")
+    make_brand(_repo / "brand")
+    configure("brand: brand/\n")
     url = home().split('src="/brand/mark-dark.svg?v=', 1)[1].split('"', 1)[0]
     fresh = client.get(f"/brand/mark-dark.svg?v={url}")
     assert fresh.status_code == 200
@@ -261,7 +263,7 @@ def test_marks_are_cached_long_only_when_the_checksum_matches():
 
 if __name__ == "__main__":
     test_missing_brand_key_means_systems42()
-    test_example_brand_atrium_is_one_key_away()
+    test_a_brand_the_dashboard_does_not_ship_falls_back()
     test_switching_brand_is_read_live_and_changes_the_mark_url()
     test_folder_brand_from_the_wiki_repository()
     test_folder_brand_without_intro_has_none()

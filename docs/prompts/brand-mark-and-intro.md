@@ -21,7 +21,7 @@ files into a fixed slot. Work in four stages, and stop after stage 2 for my choi
 
 Read:
 - `_system/apps/dashboard/brands/README.md`: the contract your files must
-  meet. It is binding. `brands/systems42/` and `brands/atrium/` are worked examples.
+  meet. It is binding. `brands/systems42/` is a worked example.
 - `_system/apps/dashboard/static/style.css`: the colour tokens at the top, first
   for the dark theme, then for the light theme (`:root[data-theme="light"]`).
 - `raw/02-vision.md` and `raw/01-stakeholders.md`: what the product is for and who
