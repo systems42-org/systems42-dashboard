@@ -53,7 +53,9 @@ start. The launcher hands every command it does not know to `dev.sh` here:
 ```
 
 `local` is the escape hatch for machines where Docker will not start: it
-builds a `.venv/` here on first run (~20 s) and serves the same app.
+builds a `.venv/` here on first run (~20 s), installs the requirements again
+whenever `requirements.txt` has changed, and serves the same app until you
+press Ctrl+C. It refuses to start while something already answers on port 8000.
 
 ### Releases
 
