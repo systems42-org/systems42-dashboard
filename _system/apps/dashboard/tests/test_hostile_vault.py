@@ -111,6 +111,23 @@ for _m in ("mark-dark.svg", "mark-light.svg", "favicon.svg"):
 (_brand / "secret.svg").write_text("<svg>TOP SECRET</svg>", encoding="utf-8")
 (_tmp / "wiki.yaml").write_text("system_name: Hostile\nabout: docs/about.md\nbrand: brand\n",
                                 encoding="utf-8")
+# symlinks: a page and a folder that lead out of the wiki (and a source out of
+# raw/sources/), and a page and a folder that point elsewhere inside it
+_out = _tmp / "outside"
+_out.mkdir()
+(_out / "notes.md").write_text("---\nid: GLO-099\ntitle: Linked out\n---\nLINKED SECRET\n",
+                               encoding="utf-8")
+(_out / "SRC-099-notes.md").write_text("---\nid: SRC-099\ntitle: Linked out\n---\nLINKED SECRET\n",
+                                       encoding="utf-8")
+(_wiki / "glossary" / "GLO-005-linked-out.md").symlink_to(_out / "notes.md")
+(_wiki / "linked").symlink_to(_out, target_is_directory=True)
+(_sources / "SRC-002-linked-out.md").symlink_to(_out / "SRC-099-notes.md")
+_page("constraints", "CON-002-link-target", "id: CON-002\ntitle: Linked inside", "LINKED INSIDE\n")
+(_wiki / "glossary" / "GLO-006-linked-in.md").symlink_to(_wiki / "constraints" / "CON-002-link-target.md")
+(_wiki / ".shared").mkdir()
+(_wiki / ".shared" / "LNK-001-inside.md").write_text(
+    "---\nid: LNK-001\ntitle: In a linked folder\n---\nLINKED FOLDER\n", encoding="utf-8")
+(_wiki / "shared").symlink_to(_wiki / ".shared", target_is_directory=True)
 
 os.environ["REPO_DIR"] = str(_repo)
 os.environ["WIKI_DIR"] = str(_wiki)
@@ -141,7 +158,8 @@ def _plain_get_routes():
 
 def test_no_route_breaks_on_a_bad_page():
     pages = [app._page_url(p.parent.name, p.stem) for p in _wiki.glob("*/*.md")
-             if not p.parent.name.startswith(".")]
+             if not p.parent.name.startswith(".") and p.parent.name != "linked"
+             and p.stem != "GLO-005-linked-out"]
     failed = []
     for path in _plain_get_routes() + pages + ["/source/SRC-001-hostile"]:
         status, _ = _get(path)
@@ -250,6 +268,29 @@ def test_served_files_cannot_run_script_in_the_dashboard():
     assert 'src="/about/files/mark.svg"' in about, "the about page's image link was lost"
 
 
+def test_symlinks_out_of_the_wiki_are_not_followed():
+    for url in ("/page/glossary/GLO-005-linked-out", "/page/linked/notes",
+                "/page/linked/SRC-099-notes", "/source/SRC-002-linked-out",
+                "/source/SRC-099"):
+        status, body = _get(url)
+        assert status == 404 and "LINKED SECRET" not in body, url
+    for url in ("/", "/search", "/search.json", "/domain-terms", "/changes"):
+        _, body = _get(url)
+        assert "LINKED SECRET" not in body and "Linked out" not in body, url
+    assert app._parse(_wiki / "glossary" / "GLO-005-linked-out.md", "glossary") is None
+    assert not app._is_wiki_folder("linked")
+    assert app.load_folder("linked") == []
+
+
+def test_symlinks_inside_the_wiki_still_work():
+    status, body = _get("/page/glossary/GLO-006-linked-in")
+    assert status == 200 and "LINKED INSIDE" in body
+    assert app._is_wiki_folder("shared")
+    status, body = _get("/page/shared/LNK-001-inside")
+    assert status == 200 and "LINKED FOLDER" in body
+
+
+
 if __name__ == "__main__":
     test_no_route_breaks_on_a_bad_page()
     test_bad_fields_fall_back_instead_of_crashing()
@@ -259,4 +300,6 @@ if __name__ == "__main__":
     test_page_route_stays_inside_the_wiki()
     test_file_routes_stay_inside_their_folder()
     test_served_files_cannot_run_script_in_the_dashboard()
+    test_symlinks_out_of_the_wiki_are_not_followed()
+    test_symlinks_inside_the_wiki_still_work()
     print("OK: broken, oddly typed and hostile pages render safely")

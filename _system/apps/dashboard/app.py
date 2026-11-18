@@ -334,6 +334,7 @@ def _inert_file(resp):
     return resp
 
 
+
 def _brand_checksum(path: Path | None) -> str:
     try:
         return f"{zlib.crc32(path.read_bytes()):08x}"
@@ -546,7 +547,28 @@ class Page:
 _PARSE_CACHE: dict[Path, tuple[float, "Page | None"]] = {}
 
 
+def _resolves_inside(root: Path, path: Path) -> bool:
+    """True when `path`, every symlink on the way resolved, is `root` or below
+    it. A symlink in the wiki that points elsewhere in the wiki is fine; one
+    that leads out of it (a committed `x.md -> /etc/…`, a linked folder) is
+    not read: the dashboard serves the wiki, not what a link names."""
+    try:
+        return _inside(root.resolve(), path.resolve(strict=True))
+    except (OSError, RuntimeError):            # missing, or a symlink loop
+        return False
+
+
+def _page_root(path: Path) -> Path:
+    """The folder a page must stay inside: raw/sources/ for a provenance
+    record, the wiki for everything else."""
+    return SOURCES_DIR if _inside(SOURCES_DIR.absolute(), path.absolute()) else WIKI_DIR
+
+
 def _parse(path: Path, folder: str) -> Page | None:
+    # checked before the cache: a symlink retargeted out of the wiki must not
+    # keep serving the page it pointed to before
+    if not _resolves_inside(_page_root(path), path):
+        return None
     try:
         mtime = path.stat().st_mtime
     except OSError:
@@ -581,7 +603,7 @@ def _parse(path: Path, folder: str) -> Page | None:
 @_request_cached
 def load_folder(folder: str) -> list[Page]:
     d = WIKI_DIR / folder
-    if not d.is_dir():
+    if not d.is_dir() or not _resolves_inside(WIKI_DIR, d):
         return []
     pages = [_parse(p, folder) for p in sorted(d.glob("*.md"))]
     return [p for p in pages if p is not None]
@@ -3324,10 +3346,12 @@ def adrs_redirect():
 
 
 def _is_wiki_folder(folder: str) -> bool:
-    """True when `folder` is a direct, non-hidden subfolder of WIKI_DIR."""
+    """True when `folder` is a direct, non-hidden subfolder of WIKI_DIR that,
+    symlinks resolved, stays inside it."""
     if not folder or folder.startswith(".") or "/" in folder or "\\" in folder:
         return False
-    return (WIKI_DIR / folder).is_dir()
+    d = WIKI_DIR / folder
+    return d.is_dir() and _resolves_inside(WIKI_DIR, d)
 
 
 @app.route("/page/<folder>/<stem>")
