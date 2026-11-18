@@ -278,8 +278,49 @@ def test_features_and_stories_may_refine_a_use_case():
     print("OK use case refined by Agile children")
 
 
+def test_parent_written_as_a_number_or_a_single_link():
+    """`parent:` is a list, but a page may hold a number or one bare link
+    (Page.as_list): a number names no parent, a single link is that parent,
+    in the story map, the breadcrumb and goal inheritance alike."""
+    pages = {
+        "UC-080-lend": 'notation: use-case\nlevel: sea\ngoal: ["[[GOAL-002-faster-lending]]"]\n',
+        "FR-081-number": "notation: agile\nlevel: story\nparent: 7\n",
+        "FR-082-single-link": 'notation: agile\nlevel: feature\nlane: backbone\ngoal: []\n'
+                              'parent: "[[UC-080-lend]]"\n',
+        "FR-083-under-feature": 'notation: agile\nlevel: story\nparent: "[[FR-082-single-link]]"\n',
+    }
+    with tempfile.TemporaryDirectory() as tmp:
+        wiki = Path(tmp) / "wiki"
+        shutil.copytree(_FIXTURE, wiki)
+        for stem, meta in pages.items():
+            (wiki / "functional-requirements" / f"{stem}.md").write_text(
+                f"---\nid: {stem[:6]}\ntype: functional-requirement\ntitle: {stem[7:]}\n"
+                f"status: draft\n{meta}---\n\n# {stem[7:]}\n", encoding="utf-8")
+        saved, app.WIKI_DIR = app.WIKI_DIR, wiki
+        try:
+            bl = app.build_fr_hierarchy()
+            client = app.app.test_client()
+            codes = {s: client.get(f"/functional-requirements/{s}").status_code for s in pages}
+            overview = client.get("/req42/functional-requirements").status_code
+            crumbs = {s: [a["id"] for a in app._fr_ancestors(s)] for s in pages}
+            goals = app.load_goals()
+        finally:
+            app.WIKI_DIR = saved
+    assert set(codes.values()) == {200} and overview == 200, (codes, overview)
+    assert "FR-081" in {o["id"] for o in bl["orphans"]}, bl["orphans"]
+    assert crumbs["FR-081-number"] == [], crumbs
+    uc = {u["id"]: u for u in bl["use_cases"]}["UC-080"]
+    assert [f["id"] for f in uc["features"]] == ["FR-082"], uc
+    assert [s["id"] for s in uc["features"][0]["stories"]] == ["FR-083"], uc
+    assert crumbs["FR-083-under-feature"] == ["UC-080", "FR-082"], crumbs
+    assert app._fr_first_parent(app.Page("x", {"parent": 7}, "", "functional-requirements")) == "7"
+    assert "FR-082" in {p.id for p in goals["coverage"]["GOAL-002"]}
+    print("OK parent as a number or a single link")
+
+
 if __name__ == "__main__":
     test_build_fr_hierarchy_counts_and_shape()
+    test_parent_written_as_a_number_or_a_single_link()
     test_unplaced_requirements_stay_visible()
     test_features_and_stories_may_refine_a_use_case()
     test_goal_epic_diagram_string()

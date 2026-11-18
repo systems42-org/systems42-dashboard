@@ -49,6 +49,18 @@ _page("glossary", "GLO-001-blank-title", "id: GLO-001\ntitle:\nstatus: draft\nta
 _page("functional-requirements", "FR-001-scalar-parent",
       "id: FR-001\ntitle: Scalar parent\nstereotype: story\nparent: 7\ngoal: 7\nrelated: 7")
 _page("use-cases", "UC-001-scalar-goal", "id: UC-001\ntitle: Use case\ngoal: 7\nrelated: 7\nparent: 7")
+# the same in the notation schema (DR-038): scalars and numbers in notation,
+# level, parent and goal of Agile pages and of a use case among the FRs
+_page("functional-requirements", "FR-002-agile-scalar-parent",
+      "id: FR-002\ntitle: Agile story\nnotation: agile\nlevel: story\nparent: 7\ngoal: 7")
+_page("functional-requirements", "UC-002-use-case-scalars",
+      "id: UC-002\ntitle: Use case\nnotation: use-case\nlevel: sea\ngoal: 7\nparent: 7\n"
+      "primary-actor: 7\nscope-building-block: 7")
+_page("functional-requirements", "FR-003-string-parent",
+      'id: FR-003\ntitle: Under the use case\nnotation: agile\nlevel: feature\n'
+      'parent: "[[UC-002-use-case-scalars]]"\ngoal: []')
+_page("functional-requirements", "FR-004-numeric-notation",
+      "id: FR-004\ntitle: Numbers\nnotation: 7\nlevel: 7\nparent: [7]")
 _page("stakeholders", "STK-001-list-influence",
       "id: STK-001\ntitle: Lists\ninfluence: [high]\ninterest: [low]\nprovides: 7\nreceives: 7")
 _page("context", "CTX-001-scalar-flows", "id: CTX-001\ntitle: Ctx\nrelated: 7")
