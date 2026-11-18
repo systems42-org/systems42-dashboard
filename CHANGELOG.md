@@ -21,7 +21,9 @@ Unreleased changes sit at the top until the next Starter Kit release.
   map on `/req42/functional-requirements` places only Agile epics, features
   and stories. An Agile feature or story may name a use case at level `sea`
   or `fish` as `parent:`: that use case is a root beside the epics, and its
-  page lists what realizes it under "Realized by". Every other requirement,
+  page lists what realizes it under "Realized by"; a feature there with
+  `goal: []` serves the use case's goals (never those of a `kite` use case).
+  Every other requirement,
   and every page without a known notation or level, is listed under
   "Outside the Agile hierarchy" and is never treated as Agile. The flat list
   shows notation and level instead of the stereotype.
