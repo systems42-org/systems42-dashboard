@@ -88,8 +88,10 @@ def test_intro_ends_on_click_or_key_and_removes_itself():
         assert "el.remove()" in text, brand
 
 
-def test_systems42_intro_ends_within_two_seconds():
-    assert "setTimeout(done, 2000)" in intro("systems42")
+def test_systems42_intro_ends_within_about_two_seconds():
+    # "about two seconds" (brands/README.md); the home page's hard limit is 4 s
+    m = re.search(r"setTimeout\(done, (\d+)\)", intro("systems42"))
+    assert m and int(m.group(1)) <= 2200, m and m.group(1)
 
 
 def test_intro_covers_the_page_with_bg_uses_tokens_and_stays_offline():
@@ -129,7 +131,7 @@ if __name__ == "__main__":
     test_intro_is_hidden_until_the_script_shows_it()
     test_intro_shows_once_per_tab_and_not_under_reduced_motion()
     test_intro_ends_on_click_or_key_and_removes_itself()
-    test_systems42_intro_ends_within_two_seconds()
+    test_systems42_intro_ends_within_about_two_seconds()
     test_intro_covers_the_page_with_bg_uses_tokens_and_stays_offline()
     test_intro_is_placed_before_the_hero_on_the_home_page_only()
     test_the_dashboard_holds_no_atrium_branding()
