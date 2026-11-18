@@ -13,6 +13,24 @@ Unreleased changes sit at the top until the next Starter Kit release.
 ## [Unreleased]
 
 ### Changed
+- Dashboard: `dashboard.sh` is now a launcher (FR-042). It starts the
+  published image that `dashboard_version:` in `_system/wiki.yaml` names,
+  `ghcr.io/systems42-org/dashboard:<version>`, instead of building the code
+  in the wiki. `./dashboard.sh update` names the newest release. A wiki
+  needs no dashboard code except this script. `dashboard_version: local`
+  builds from `_system/apps/dashboard/`, which only the dashboard's
+  repository has. There, `rebuild`, `local` and `test` moved to
+  `_system/apps/dashboard/dev.sh` and still run through `./dashboard.sh`.
+- Dashboard: one mount. The container gets the wiki repository read-only at
+  `/repo`, with `_system/dashboard.yaml` writable, and finds every folder
+  below it. The image sets only `REPO_DIR`. `compose.yaml` is gone. A
+  folder's own variable (`WIKI_DIR`, `DOCS_DIR` and the others) still wins
+  when set.
+- Dashboard: it works on Systems42 wikis only (CON-005). When `wiki/`,
+  `raw/`, `_system/wiki.yaml`, `_system/metamodel/` or `_system/anchors/` is
+  missing, it names what is missing and stops.
+- Dashboard: `make clean` removes the container and the locally built image.
+  It leaves a pulled release image, which other wikis may use.
 - Dashboard, Vision & Goals: the goal coverage matrix follows Systems42's
   goal coverage projection (FR-036). Columns are the epics and use cases,
   headed by their real IDs. Each header links its page and shows the title on
@@ -116,6 +134,9 @@ Unreleased changes sit at the top until the next Starter Kit release.
   A link to a source that does not exist stays plain text (FR-034).
 
 ### Added
+- Dashboard: a release workflow. A git tag `vX.Y.Z` that matches `VERSION`
+  runs the tests, publishes the image for amd64 and arm64 and creates the
+  GitHub release (DR-004, FR-030).
 - Dashboard: `make test` (`./dashboard.sh test`) runs the dashboard's test
   scripts in Docker, on the Python and the libraries of the shipped image. It
   lists the scripts that failed and exits 1 if any did. No local Python is

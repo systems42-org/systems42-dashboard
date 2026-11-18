@@ -17,7 +17,14 @@ def test_fonts_are_vendored():
 
 
 def test_no_gradients_or_glow():
-    assert "linear-gradient" not in CSS and "radial-gradient" not in CSS
+    """No colour transitions. `linear-gradient(c, c)` with the same colour
+    twice is a flat tint laid over the card colour, which is how the area
+    tiles get their tint, so it passes."""
+    assert "radial-gradient" not in CSS and "conic-gradient" not in CSS
+    for args in re.findall(r"linear-gradient\(((?:[^()]|\([^()]*\))*)\)", CSS):
+        stops = [s.strip() for s in re.split(r",(?![^(]*\))", args)]
+        assert len(stops) == 2 and stops[0] == stops[1], f"real gradient: linear-gradient({args})"
+    assert CSS.count("linear-gradient") == len(re.findall(r"linear-gradient\(", CSS))
     assert "--glow" not in CSS
 
 
@@ -44,7 +51,21 @@ HOOKLESS_OK = {
     # not a class attribute at all — it appears inside a JS comment in
     # _mermaid.html describing the markup markdown emits for a ```mermaid fence
     "language-mermaid",
+    # issues.html: the Apply button, which its script hides once it filters live
+    "issue-filters-apply",
+    # issues.html: name the columns and the open count, read by
+    # test_issue_list.py and test_open_issues.py; c-kind completes the set
+    "c-kind", "c-category", "c-severity", "c-istatus", "c-owner", "issue-open-count",
+    # the empty-list hint that list-view.js shows and hides
+    "list-empty",
+    # search.html: the slot its script fills with the matching passage
+    "sresult-passage",
 }
+
+# A token with a character no class name has comes from markup that a script
+# builds by joining strings (`'<span class="status status-' + e(...)`), so its
+# class is as unknowable as a Jinja-composed one.
+_CLASS_NAME = re.compile(r"-?[A-Za-z_][\w-]*\Z")
 
 _JINJA_STMT = re.compile(r"\{%.*?%\}", re.S)     # control flow: contributes no text
 _JINJA_EXPR = re.compile(r"\{\{.*?\}\}", re.S)   # a value: makes its token unknowable
@@ -76,6 +97,8 @@ def test_every_template_class_has_a_rule_or_a_reason():
             attr = _JINJA_EXPR.sub("\x00", _JINJA_STMT.sub(" ", attr))
             for name in attr.split():
                 if "\x00" in name or name in css_classes or name in HOOKLESS_OK:
+                    continue
+                if not _CLASS_NAME.match(name) or name.endswith("-"):
                     continue
                 orphans.setdefault(name, set()).add(tpl.name)
     assert not orphans, "class with no CSS rule and no documented hook: " + ", ".join(
