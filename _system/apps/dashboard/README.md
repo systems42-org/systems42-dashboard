@@ -282,7 +282,7 @@ _system/apps/dashboard/
   VERSION            the dashboard's own release, shown in the footer
   static/vendor/     vendored mermaid + cytoscape + fonts (offline, no CDN)
   tests/             plain-assert test scripts (no pytest) + a fixture vault
-  Dockerfile         python:3.12-slim + gunicorn
+  Dockerfile         python:3.12-slim + gunicorn, and a `test` stage for `make test`
   compose.yaml       service def, mounts ${WIKI_DIR}:/wiki:ro,
                      ${SOURCES_DIR}:/sources:ro, ${DOCS_DIR}:/docs:ro, ${REPO_DIR}:/repo:ro
                      (for a wiki's own brand folder), and the one read-write settings
@@ -291,22 +291,28 @@ _system/apps/dashboard/
 
 ## Tests
 
-Plain Python scripts with bare `assert`s — no pytest, no runner. From this
-directory, inside the venv `./dashboard.sh local` builds:
+Plain Python scripts with bare `assert`s, no pytest. From the repository root:
 
 ```sh
-for t in tests/test_*.py; do .venv/bin/python "$t" || echo "FAILED: $t"; done
+make test
 ```
 
-Each script also runs on its own, which is what you want while working on one:
+It runs every script in Docker and lists the ones that failed, with their
+output. It exits 1 if any failed. The scripts run in the `test` stage of the
+`Dockerfile`: the Python and the libraries of the shipped image, plus `make`
+and `node`, which some scripts call. The repository is mounted read-only and
+copied inside the container, so a test cannot change a file on the host. The
+first run needs network to build the stage.
+
+While working on one script, run it in the venv `./dashboard.sh local` builds,
+from this directory:
 
 ```sh
 .venv/bin/python tests/test_reload.py
 ```
 
-The `|| echo` is not decoration. A `for` loop reports only its last iteration's
-status, so without it a test failing in the middle scrolls past and the shell
-still exits 0.
+`sh tests/run-all.sh .venv/bin/python` runs all of them there. Without `node`
+on the machine, the scripts that need it skip their JavaScript checks.
 
 They cover the empty vault (every route must render on day one), a populated
 fixture vault, the functional-requirements hierarchy and goal projections, the glossary graphs, the

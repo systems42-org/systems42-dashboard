@@ -116,6 +116,11 @@ Unreleased changes sit at the top until the next Starter Kit release.
   A link to a source that does not exist stays plain text (FR-034).
 
 ### Added
+- Dashboard: `make test` (`./dashboard.sh test`) runs the dashboard's test
+  scripts in Docker, on the Python and the libraries of the shipped image. It
+  lists the scripts that failed and exits 1 if any did. No local Python is
+  needed. The `Dockerfile` has a `test` stage for it, and the shipped image is
+  unchanged.
 - `/metamodel` has an Anchors section: one entry per file in
   `_system/anchors/` (`#anchor-madr`) with its name, short definition, the
   types it applies to and its outside reference. Every wikilink to an anchor's
