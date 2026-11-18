@@ -24,6 +24,7 @@ from urllib.parse import quote, unquote, urlsplit
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import markdown as md
+import nh3
 import yaml
 from flask import (Flask, abort, g, has_request_context, jsonify, redirect,
                    render_template, request, send_file, url_for)
@@ -716,29 +717,109 @@ def open_issue_counts() -> dict[str, set[str]]:
 
 
 # --- rendering helpers -----------------------------------------------------
+#
+# Wiki text is not trusted markup. Pages are written by agents from sources in
+# raw/ (emails, tickets, transcripts), and the dashboard is served to the whole
+# room, so a `<script>` or `onerror=` that arrives with a source must never run
+# in a viewer's browser. Every HTML fragment built from wiki content goes
+# through sanitize_html() before a template renders it with `| safe`; a
+# wikilink's label is escaped where it is built; plain-text frontmatter values
+# are escaped outright (render_wikilinks_text).
+
+# Allow-list on top of nh3's defaults: titles for abbr/footnotes and anchor
+# links, and `text-align` only for the alignment the tables extension writes
+# as inline style. Comments (the `<!-- levels: … -->` markers) are stripped,
+# which they already were visually.
+#
+# `id` and `class` are allowed only with the values our own markup and
+# Python-Markdown emit. The content sits in the page *before* the settings
+# dialog and the footer, and the page scripts look elements up by id
+# (getElementById returns the first match) and by class across the whole
+# document (`.fbtn`, `.sresult`, `.layer-btn` …): a free `id="settings-dialog"`
+# or `class="fbtn"` in a wiki page would take over the page's own controls.
+_SANITIZE_ATTRIBUTES = {tag: set(attrs) for tag, attrs in nh3.ALLOWED_ATTRIBUTES.items()}
+_SANITIZE_ATTRIBUTES["*"] = {"class", "id", "title"}
+for _cell in ("th", "td"):
+    _SANITIZE_ATTRIBUTES[_cell] = _SANITIZE_ATTRIBUTES.get(_cell, set()) | {"style"}
+_SANITIZE_TAGS = set(nh3.ALLOWED_TAGS) | {"tfoot"}
+# footnotes: fn:1, fnref:1, fnref2:1 (a second reference to the same note)
+_CONTENT_ID_RE = re.compile(r"fn(?:ref\d*)?:[\w.-]+")
+# wikilinks and anchor links (render_wikilinks, /metamodel), fenced code incl.
+# mermaid, footnotes
+_CONTENT_CLASS_RE = re.compile(r"wl|wl-anchor|mm-anchor|language-[\w+-]+|footnote(?:-ref|-backref)?")
+
+
+def _content_attribute(tag: str, attr: str, value: str) -> str | None:
+    if attr == "id":
+        return value if _CONTENT_ID_RE.fullmatch(value) else None
+    if attr == "class":
+        kept = [c for c in value.split() if _CONTENT_CLASS_RE.fullmatch(c)]
+        return " ".join(kept) or None
+    return value
+
+
+# The About page is the project's own documentation (docs/), laid out by hand:
+# it may also place and colour boxes with inline styles. Property names only;
+# CSS in a style attribute cannot run script.
+_ABOUT_STYLES = {"text-align", "display", "gap", "flex", "flex-wrap", "align-items",
+                 "justify-content", "background", "background-color", "color",
+                 "padding", "margin", "border", "border-radius", "width", "max-width",
+                 "height"}
+_ABOUT_ATTRIBUTES = {tag: attrs | {"style"} for tag, attrs in _SANITIZE_ATTRIBUTES.items()}
+
+
+def sanitize_html(html: str, about: bool = False) -> str:
+    """Strip scripts, event handlers, `javascript:` URLs, every tag or
+    attribute outside the allow-list, and ids or classes the page's own
+    markup could collide with, from an HTML fragment. `about` keeps the
+    inline layout styles of the About page (_ABOUT_STYLES)."""
+    return nh3.clean(html, tags=_SANITIZE_TAGS,
+                     attributes=_ABOUT_ATTRIBUTES if about else _SANITIZE_ATTRIBUTES,
+                     attribute_filter=_content_attribute,
+                     filter_style_properties=_ABOUT_STYLES if about else {"text-align"},
+                     link_rel=None)
+
 
 def render_wikilinks(text: str, titles: dict[str, str],
                      links: dict[str, tuple[str, str]] | None = None) -> str:
     """Replace [[..]] with its alias (or resolved title). When `links` is given
     and the target resolves to a wiki page, a source record or a method anchor,
     emit a real hyperlink; otherwise (inline snippets, or an unresolved target)
-    keep the styled-text span."""
+    keep the styled-text span.
+
+    The label is escaped (a title is data, not markup); the text around the
+    links is left as it is, because callers pass markdown here and sanitize
+    the result (render_markdown) or escape it (render_wikilinks_text)."""
     def repl(m: re.Match) -> str:
         target, alias = m.group(1).strip(), m.group(2)
         base = target.split("/")[-1]
-        label = alias.strip() if alias else titles.get(base, base)
+        label = escape(alias.strip() if alias else titles.get(base, base))
         if links is not None and (target.startswith("raw/") or base.startswith("SRC-")):
             # a source cited in the text leads to its record (FR-034)
             if src := source_index().get(base):
-                return f'<a class="wl" href="/source/{src.stem}">{alias.strip() if alias else escape(src.title)}</a>'
+                return (f'<a class="wl" href="{escape("/source/" + src.stem)}">'
+                        f'{escape(alias.strip() if alias else src.title)}</a>')
         elif links:
             dest = links.get(base)
             if dest:
-                return f'<a class="wl" href="{_page_url(*dest)}">{label}</a>'
+                return f'<a class="wl" href="{escape(_page_url(*dest))}">{label}</a>'
         if links is not None and (a := anchor_lookup().get(base.lower())):
-            return _anchor_link(a, alias.strip() if alias else str(escape(a["name"])))
+            return _anchor_link(a, str(escape(alias.strip() if alias else a["name"])))
         return f'<span class="wl">{label}</span>'
     return WIKILINK_RE.sub(repl, text)
+
+
+def render_wikilinks_text(text: str, titles: dict[str, str],
+                          links: dict[str, tuple[str, str]] | None = None) -> str:
+    """render_wikilinks for a plain-text value (a frontmatter string): the
+    text between the links is escaped too, so `<b>` shows as written."""
+    parts, pos = [], 0
+    for m in WIKILINK_RE.finditer(text):
+        parts.append(str(escape(text[pos:m.start()])))
+        parts.append(render_wikilinks(m.group(0), titles, links))
+        pos = m.end()
+    parts.append(str(escape(text[pos:])))
+    return "".join(parts)
 
 
 # --- method anchors (FR-035) -------------------------------------------------
@@ -753,13 +834,15 @@ def anchor_lookup() -> dict[str, dict]:
     return metamodel.anchor_index(metamodel.method_anchors())
 
 
-_PLAIN_MD_RE = re.compile(r"\*\*([^*]+)\*\*|`([^`]+)`|<(https?://[^>]+)>")
+# `[text](url)` too: a link inside the `title=""` of an anchor link would be
+# turned into an <a> by Markdown and break the attribute open
+_PLAIN_MD_RE = re.compile(r"\*\*([^*]+)\*\*|`([^`]+)`|<(https?://[^>]+)>|\[([^\]]+)\]\([^)\s]+\)")
 
 
 def anchor_title(a: dict) -> str:
     """An anchor's definition as plain text, for a `title` attribute."""
     text = WIKILINK_RE.sub(lambda m: (m.group(2) or m.group(1)).strip(), a.get("definition") or "")
-    return _PLAIN_MD_RE.sub(lambda m: m.group(1) or m.group(2) or m.group(3), text)
+    return _PLAIN_MD_RE.sub(lambda m: m.group(1) or m.group(2) or m.group(3) or m.group(4), text)
 
 
 def anchor_url(a: dict) -> str:
@@ -944,7 +1027,7 @@ def render_markdown(body: str, titles: dict[str, str]) -> str:
     body = render_wikilinks(body, titles, link_index())
     # turn Obsidian callouts `> [!type] title` into a bold label line
     body = CALLOUT_RE.sub(lambda m: f"> **{m.group(2) or m.group(1).title()}**", body)
-    return md.markdown(body, extensions=["extra", "sane_lists"])
+    return sanitize_html(md.markdown(body, extensions=["extra", "sane_lists"]))
 
 
 def extract_labeled(page: Page, label: str, titles: dict[str, str],
@@ -957,7 +1040,7 @@ def extract_labeled(page: Page, label: str, titles: dict[str, str],
     m = rx.search(page.body)
     raw = m.group(1).strip() if m else ""
     raw = re.sub(r"\s+", " ", raw)
-    return render_wikilinks(raw, titles, links)
+    return sanitize_html(render_wikilinks(raw, titles, links))
 
 
 _PAM_BULLET_RE = re.compile(
@@ -975,7 +1058,7 @@ def extract_pam_bullet(page: Page, label: str, titles: dict[str, str],
     for m in _PAM_BULLET_RE.finditer(page.body):
         if m.group("label").lower() == label.lower():
             raw = re.sub(r"\s+", " ", m.group("body")).strip()
-            return render_wikilinks(raw, titles, links)
+            return sanitize_html(render_wikilinks(raw, titles, links))
     return ""
 
 
@@ -1601,7 +1684,7 @@ def _vision_paragraphs(page: Page, titles: dict[str, str],
             continue
         para = re.sub(r"\s+", " ", para)
         para = render_wikilinks(para, titles, links)
-        out.append(re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", para))
+        out.append(sanitize_html(re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", para)))
     return out
 
 
@@ -3321,11 +3404,10 @@ def source_detail(stem):
              ("Captured", str(src.meta.get("captured") or "—")),
              ("Checksum", str(src.meta.get("sha256") or "—")[:16])]
     facts_html = "".join(f"<dt>{k}</dt><dd>{escape(v)}</dd>" for k, v in facts)
-    # each ref is escaped before render_wikilinks sees it — confirmed this does
-    # not break [[…]] matching (brackets/pipes aren't HTML-special, so a clean
-    # wikilink round-trips untouched; a hostile one comes out as inert entities
-    # whether or not it resolves to a real page).
-    ingested = ", ".join(render_wikilinks(str(escape(str(r))), titles, link_index()) for r in (src.meta.get("ingested-pages") or [])) or "—"
+    # each ref is plain text: escaped around its wikilinks, label escaped
+    # inside them, so a hostile one comes out as inert entities whether or
+    # not it resolves to a real page.
+    ingested = ", ".join(render_wikilinks_text(str(r), titles, link_index()) for r in src.as_list("ingested-pages")) or "—"
     body_html = f'<dl class="source-facts">{facts_html}<dt>Ingested pages</dt><dd>{ingested}</dd></dl>' + render_markdown(body, titles)
     return render_template("detail.html", kind="Source", id=src.id, title=src.title, status=src.status,
                            created=str(src.meta.get("created", "")), updated=str(src.meta.get("updated", "")),
@@ -3895,7 +3977,7 @@ def goals_view():
     def _inline(s) -> str:
         """Frontmatter strings may contain `[[wikilinks]]` — render them as
         real hyperlinks when the target resolves."""
-        return render_wikilinks(str(s or "").strip(), titles, links)
+        return render_wikilinks_text(str(s or "").strip(), titles, links)
 
     fr_cols, matrix_rows = _goal_matrix(data)
 
@@ -4682,8 +4764,8 @@ def _mm_wikilinks(text: str, anchors: dict[str, str]) -> str:
 
 def _mm_html(text: str, anchors: dict[str, str]) -> str:
     """A metamodel page body (or a summary line) as HTML."""
-    return md.markdown(_mm_wikilinks(_unwrap_prose(text or ""), anchors),
-                       extensions=["extra", "sane_lists"])
+    return sanitize_html(md.markdown(_mm_wikilinks(_unwrap_prose(text or ""), anchors),
+                                     extensions=["extra", "sane_lists"]))
 
 
 def _mm_inline(text: str, anchors: dict[str, str]) -> str:
@@ -4960,7 +5042,8 @@ def about_view():
     path = _about_path()
     if path is None:
         abort(404)
-    html = md.markdown(path.read_text(encoding="utf-8"), extensions=["extra", "sane_lists"])
+    html = sanitize_html(md.markdown(path.read_text(encoding="utf-8", errors="replace"),
+                                     extensions=["extra", "sane_lists"]), about=True)
     html = _REL_URL.sub(lambda m: f'{m.group(1)}{_about_url(path, m.group(2))}"', html)
     title = wiki_config()["about_label"]
     return render_template("about.html", html=html, title=title)

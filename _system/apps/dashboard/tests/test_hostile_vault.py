@@ -161,6 +161,36 @@ def test_bad_fields_fall_back_instead_of_crashing():
     assert "Latin-1" in body and "Gr��e" in body
 
 
+def test_titles_and_bodies_render_inert():
+    _, body = _get("/page/glossary/GLO-004-linker")
+    assert not re.search(r"<img[^>]*onerror", body), "a title or body ran as markup"
+    assert "&lt;img src=x onerror=alert(1)&gt;" in body, "the hostile title is not shown escaped"
+    assert "&lt;b&gt;an alias&lt;/b&gt;" in body, "a wikilink alias ran as markup"
+    assert "javascript:alert" not in body
+    assert "<script>alert" not in body
+    assert body.count('id="settings-dialog"') == 1, "wiki text took over the settings dialog's id"
+    assert 'class="fbtn"' not in body, "wiki text took over a filter button class"
+    # what the wiki legitimately uses survives the sanitizer
+    assert 'style="text-align:left"' in body, "table alignment lost"
+    assert 'class="language-mermaid"' in body, "mermaid block lost its class"
+    assert '<a class="wl" href="/page/glossary/GLO-003-hostile-title">' in body
+    assert 'id="fn:1"' in body and 'class="footnote-ref"' in body, "footnotes lost"
+    _, body = _get("/page/glossary/GLO-003-hostile-title")
+    assert "<script>alert(2)" not in body
+    for route in ("/domain-terms", "/search", "/"):
+        _, listing = _get(route)
+        assert "<script>alert(2)" not in listing and not re.search(r"<img[^>]*onerror", listing), route
+
+
+def test_frontmatter_strings_are_escaped():
+    _, body = _get("/goals")
+    assert "&lt;b&gt;bold&lt;/b&gt;" in body, "a frontmatter string rendered as markup"
+    assert 'href="/page/glossary/GLO-004-linker"' in body, "its wikilink no longer resolves"
+    assert "<script>alert(5)" not in body, "the vision paragraph ran as markup"
+    _, body = _get("/source/SRC-001-hostile")
+    assert "<b>x</b>" not in body and "&lt;b&gt;x&lt;/b&gt;" in body, "ingested-pages ran as markup"
+    assert 'href="/page/glossary/GLO-004-linker"' in body
+    assert "<script>alert(6)" not in body
 
 
 def test_a_single_beneficiary_is_shown():
@@ -177,5 +207,7 @@ def test_a_single_beneficiary_is_shown():
 if __name__ == "__main__":
     test_no_route_breaks_on_a_bad_page()
     test_bad_fields_fall_back_instead_of_crashing()
+    test_titles_and_bodies_render_inert()
+    test_frontmatter_strings_are_escaped()
     test_a_single_beneficiary_is_shown()
-    print("OK: broken and oddly typed pages render")
+    print("OK: broken, oddly typed and hostile pages render safely")
