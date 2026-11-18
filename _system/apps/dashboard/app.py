@@ -798,12 +798,33 @@ _CONTENT_ID_RE = re.compile(r"fn(?:ref\d*)?:[\w.-]+")
 _CONTENT_CLASS_RE = re.compile(r"wl|wl-anchor|mm-anchor|language-[\w+-]+|footnote(?:-ref|-backref)?")
 
 
+# Wiki content must not make a viewer's browser fetch from outside: a remote
+# image or a `background: url(…)` is a beacon that tells its server who looks
+# at the page, and the dashboard runs offline anyway. An image keeps its `src`
+# only when it names a path of the dashboard itself. A style declaration that
+# can load something (url(), image-set(), image(), or a CSS escape that could
+# spell one of them) is dropped.
+_URL_SCHEME_RE = re.compile(r"[a-z][a-z0-9+.-]*:", re.I)
+_CSS_FETCH_RE = re.compile(r"url\s*\(|image-set|image\s*\(|\\", re.I)
+
+
+def _local_url(value: str) -> bool:
+    # a browser drops tabs and newlines inside a URL and reads "\" as "/"
+    url = re.sub(r"[\t\n\r]", "", value).strip("".join(map(chr, range(33))))
+    return not (_URL_SCHEME_RE.match(url) or "\\" in url or url.startswith("//"))
+
+
 def _content_attribute(tag: str, attr: str, value: str) -> str | None:
     if attr == "id":
         return value if _CONTENT_ID_RE.fullmatch(value) else None
     if attr == "class":
         kept = [c for c in value.split() if _CONTENT_CLASS_RE.fullmatch(c)]
         return " ".join(kept) or None
+    if attr == "src":
+        return value if _local_url(value) else None
+    if attr == "style":
+        kept = [d for d in value.split(";") if d.strip() and not _CSS_FETCH_RE.search(d)]
+        return ";".join(kept) or None
     return value
 
 
@@ -819,8 +840,9 @@ _ABOUT_ATTRIBUTES = {tag: attrs | {"style"} for tag, attrs in _SANITIZE_ATTRIBUT
 
 def sanitize_html(html: str, about: bool = False) -> str:
     """Strip scripts, event handlers, `javascript:` URLs, every tag or
-    attribute outside the allow-list, and ids or classes the page's own
-    markup could collide with, from an HTML fragment. `about` keeps the
+    attribute outside the allow-list, ids or classes the page's own
+    markup could collide with, and anything that fetches from outside
+    (a remote image, a style with `url()`), from an HTML fragment. `about` keeps the
     inline layout styles of the About page (_ABOUT_STYLES)."""
     return nh3.clean(html, tags=_SANITIZE_TAGS,
                      attributes=_ABOUT_ATTRIBUTES if about else _SANITIZE_ATTRIBUTES,
