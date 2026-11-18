@@ -108,9 +108,10 @@ def test_intro_is_placed_before_the_hero_on_the_home_page_only():
     for brand, marker in (("systems42", 'id="brand-intro"'),):
         (_tmp / "wiki.yaml").write_text(f"brand: {brand}\n", encoding="utf-8")
         home = client.get("/").get_data(as_text=True)
-        assert marker in home, brand
-        assert home.index(marker) < home.index('class="hero"'), brand
-        assert marker not in client.get("/domain-terms").get_data(as_text=True), brand
+        assert marker in client.get("/brand/intro.html").get_data(as_text=True), brand
+        assert marker not in home, "the intro runs in a frame, never in the page"
+        assert home.index("brand-intro-frame") < home.index('class="hero"'), brand
+        assert "brand-intro-frame" not in client.get("/domain-terms").get_data(as_text=True), brand
 
 
 def test_the_dashboard_holds_no_atrium_branding():

@@ -39,18 +39,32 @@ light values) so the mark belongs to the page.
 ## Intro animation (optional)
 
 `intro.html` is one self-contained HTML fragment: its markup, an inline
-`<style>` and an inline `<script>`. The home page inserts it as it is, before
-the hero. It is not a template, so `{{ }}` stays literal text. Without the file,
-or with `intro: off`, there is no intro. It must:
+`<style>` and an inline `<script>`. It is not a template, so `{{ }}` stays
+literal text. Without the file, or with `intro: off`, there is no intro.
 
-- show at most once per browser tab (`sessionStorage`), and show every time if
-  storage is blocked;
-- show nothing when `prefers-reduced-motion: reduce` is set;
-- end by itself within about two seconds, and end at once on any click or key;
-- start hidden (`hidden` attribute) so a page without JavaScript never shows it,
-  and remove its element when done;
-- cover the window with `var(--bg)` while it runs, so nothing flashes underneath;
-  keep the script inline, right after its markup, so it runs before the page paints;
+The home page shows the intro in a frame over the whole window, before the
+hero. The frame is sandboxed: the intro's script runs in an origin of its own.
+It cannot read or change the dashboard page, cannot call the dashboard and
+cannot load anything. `sessionStorage` and `localStorage` throw there. The
+frame's document holds the theme tokens (the `:root` blocks of
+`../static/style.css`) and nothing else of the dashboard's styles or fonts.
+
+The home page does this for every intro:
+
+- it shows the intro at most once per browser tab, and every time if storage
+  is blocked;
+- it shows nothing when `prefers-reduced-motion: reduce` is set;
+- it takes the frame away when the intro has removed its element, on any key,
+  and at the latest after 4 seconds.
+
+The intro must:
+
+- end by itself within about two seconds, and end at once on any click;
+- start hidden (`hidden` attribute) and remove its element when done. That
+  removal is the sign that the intro is over. An intro that never shows its
+  element counts as over too;
+- cover the window with `var(--bg)` while it runs, and fade itself out at the
+  end, so the page appears underneath;
 - use the theme tokens for colour, so it works in both themes. A colour of the
   brand's own that no token has is declared once as a `--brand-*` custom
   property on the intro's element, for the dark theme and again under
@@ -59,10 +73,11 @@ or with `intro: off`, there is no intro. It must:
 
 `systems42/intro.html` is a worked example.
 
-`intro.html` and the SVG marks are trusted content. The intro's script runs in
-every viewer's browser with the dashboard's own rights, so it could, for
-example, call the settings endpoint. Review a brand folder like code before you
-commit it.
+The dashboard does not trust a brand folder. The marks are served without
+script, and the intro's script runs in every viewer's browser, but in the
+sandboxed frame, without the dashboard's rights. What an intro can still do is
+draw over the home page for up to 4 seconds, so look at a brand folder before
+you commit it.
 
 ## Visual rules that apply here too
 

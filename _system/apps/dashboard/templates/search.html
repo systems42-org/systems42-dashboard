@@ -55,7 +55,7 @@
 </div>
 
 <script type="application/json" id="search-index">{{ index|tojson }}</script>
-<script>
+<script nonce="{{ csp_nonce() }}">
 // runs after the deferred static/search-rank.js (base.html) has defined S42Search
 document.addEventListener('DOMContentLoaded', () => {
   const box = document.getElementById('search-box');

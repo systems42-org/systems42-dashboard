@@ -80,7 +80,7 @@
 {{ empty_state("issues") }}
 {% endif %}
 
-<script>
+<script nonce="{{ csp_nonce() }}">
   // a changed filter applies at once and keeps the sort the list shows now
   const form = document.querySelector('.issue-filters');
   if (form) {

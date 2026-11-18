@@ -310,12 +310,12 @@ They know nothing about req42; adding arc42 later adds instances, never construc
 <script src="{{ url_for('static', filename='vendor/cose-base.js') }}"></script>
 <script src="{{ url_for('static', filename='vendor/cytoscape-fcose.js') }}"></script>
 <script src="{{ url_for('static', filename='vendor/cola.min.js') }}"></script>
-<script>window.webcola = window.webcola || window.cola;</script>
+<script nonce="{{ csp_nonce() }}">window.webcola = window.webcola || window.cola;</script>
 <script src="{{ url_for('static', filename='vendor/cytoscape-cola.js') }}"></script>
 <script src="{{ url_for('static', filename='glossary-graph.js') }}"></script>
 <script src="{{ static_url('metamodel-graph.js') }}"></script>
 <script id="mm-graph-data" type="application/json">{{ graph | tojson }}</script>
-<script>
+<script nonce="{{ csp_nonce() }}">
   (function () {
     if (!window.AQ_METAMODEL_GRAPH) return;
     AQ_METAMODEL_GRAPH.mount({

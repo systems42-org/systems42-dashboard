@@ -79,6 +79,24 @@ def test_up_reports_a_container_that_did_not_start():
     assert "wait_for_dashboard" in up and "docker logs" in up and "exit 1" in up, up
 
 
+def test_the_build_is_pinned_and_does_not_run_as_root():
+    """Issue #34: the same Dockerfile builds the same image next month, and
+    the dashboard has no root rights inside its container."""
+    lines = [l.strip() for l in (HERE / "requirements.txt").read_text(encoding="utf-8").splitlines()]
+    pins = dict(l.split("==") for l in lines if l and not l.startswith("#"))
+    assert all(re.fullmatch(r"\d+(\.\d+)+", v) for v in pins.values()), pins
+    # Flask's own dependencies are named too, not left to the day of the build
+    for lib in ("Flask", "Werkzeug", "Jinja2", "MarkupSafe", "itsdangerous", "click", "blinker"):
+        assert lib in pins, lib
+    froms = re.findall(r"^FROM (\S+)", DOCKERFILE, re.M)
+    assert re.fullmatch(r"python:[\d.]+-slim@sha256:[0-9a-f]{64}", froms[0]), froms
+    assert set(froms[1:]) == {"base"}, froms          # the other stages build on it
+    shipped = DOCKERFILE.rsplit("\nFROM base\n", 1)[1]
+    user = re.search(r"^USER (\S+)", shipped, re.M)
+    assert user and user.group(1) not in ("root", "0"), "the shipped stage names a user who is not root"
+    assert '--user "$(id -u):$(id -g)"' in SCRIPT
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

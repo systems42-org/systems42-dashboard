@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Dashboard{% endblock %} · {{ system_name }}</title>
   <link rel="icon" type="image/svg+xml" href="{{ active_brand.favicon }}">
-  <script>
+  <script nonce="{{ csp_nonce() }}">
   // Theme, stamped before the stylesheet paints. Inline and in <head> on
   // purpose: an external file is a second round-trip, and the flash of dark
   // chrome before a light page settles is exactly what this prevents.
@@ -105,7 +105,7 @@
     {% if dashboard_version_differs %}<div class="version-mismatch">This wiki asks for dashboard {{ dashboard_version }}. This is {{ dashboard_version_own or "an unnumbered build" }}.</div>{% endif %}
   </footer>
   {% block scripts %}{% endblock %}
-  <script>
+  <script nonce="{{ csp_nonce() }}">
   // Lifecycle: a lightweight per-tab heartbeat keeps the server alive; once
   // the last tab disappears, the server stops itself. No held stream. Each
   // tab tags its heartbeat with a client_id (kept in sessionStorage, so a
@@ -350,7 +350,7 @@
     paint();
   })();
   </script>
-  <script>
+  <script nonce="{{ csp_nonce() }}">
   (function () {
     var menu = document.getElementById("menu");
     if (!menu) { return; }

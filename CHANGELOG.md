@@ -51,6 +51,23 @@ Unreleased changes sit at the top until the next Starter Kit release.
   notations. This repository's own wiki and schema are migrated separately.
 
 ### Security
+- Dashboard hardening after 0.10.1 (issue #34):
+  - A brand's `intro.html` runs in a sandboxed frame, in an origin of its
+    own. It cannot read the page, call the dashboard, use the viewer's
+    storage or load anything. Existing intros keep working. The home page
+    now decides when an intro shows (once per tab, never under reduced
+    motion) and removes it after 4 seconds at the latest. See
+    `brands/README.md`.
+  - Wiki content can no longer make a viewer's browser fetch from outside. An
+    image with a remote `src` loses it and shows its alt text. On the About
+    page a style with `url()` is dropped.
+  - Every HTML page carries a Content Security Policy: script only from the
+    dashboard's files and its templates' own inline blocks, nothing loaded
+    from outside.
+  - The build is pinned: Flask's own dependencies by version, the base image
+    by digest. The container no longer runs as root. `dashboard.sh` starts it
+    as the calling user. A wiki with an older `dashboard.sh` on Linux should
+    take the new one, or the Configure dialog may fail to save.
 - Dashboard release 0.10.1 (`_system/apps/dashboard/VERSION`): the security
   fixes of the Systems42 meta repository's dashboard, ported to this copy.
 - Dashboard dependencies updated past published advisories: Markdown 3.7 →

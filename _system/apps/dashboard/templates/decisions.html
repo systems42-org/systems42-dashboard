@@ -64,7 +64,7 @@
 {{ empty_decisions() }}
 {% endif %}
 
-<script>
+<script nonce="{{ csp_nonce() }}">
   const buttons = document.querySelectorAll('.toolbar .fbtn');
   const rows = document.querySelectorAll('#decisions-table tbody tr');
   const hint = document.getElementById('empty-hint');

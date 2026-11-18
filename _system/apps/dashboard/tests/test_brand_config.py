@@ -80,6 +80,16 @@ def home() -> str:
     return resp.get_data(as_text=True)
 
 
+FRAME = "brand-intro-frame"      # the home page's script that frames the intro
+
+
+def intro() -> str:
+    """The active brand's intro document, "" when there is none."""
+    resp = client.get("/brand/intro.html")
+    assert resp.status_code in (200, 404), resp.status_code
+    return resp.get_data(as_text=True) if resp.status_code == 200 else ""
+
+
 def test_missing_brand_key_means_systems42():
     configure()
     for name in MARKS:
@@ -87,7 +97,7 @@ def test_missing_brand_key_means_systems42():
     page = home()
     assert 'rel="icon" type="image/svg+xml" href="/brand/favicon.svg?v=' in page
     assert 'src="/brand/mark-dark.svg?v=' in page and 'src="/brand/mark-light.svg?v=' in page
-    assert 'id="brand-intro"' in page
+    assert FRAME in page and 'id="brand-intro"' in intro()
 
 
 def test_a_brand_the_dashboard_does_not_ship_falls_back():
@@ -95,7 +105,7 @@ def test_a_brand_the_dashboard_does_not_ship_falls_back():
     LOG.messages.clear()
     configure("brand: atrium\n")
     assert served("mark-dark.svg") == (BRANDS / "systems42" / "mark-dark.svg").read_text(encoding="utf-8")
-    assert 'id="brand-intro"' in home()
+    assert FRAME in home() and 'id="brand-intro"' in intro()
     assert any("is no folder in the wiki repository" in m for m in LOG.messages), LOG.messages
 
 
@@ -115,10 +125,11 @@ def test_folder_brand_from_the_wiki_repository():
     assert "brand mark-dark.svg" in served("mark-dark.svg")
     assert "brand favicon.svg" in served("favicon.svg")
     page = home()
-    assert 'id="own-intro"' in page and 'id="brand-intro"' not in page
-    assert page.index('id="own-intro"') < page.index('class="hero"')
+    assert 'id="own-intro"' in intro() and 'id="brand-intro"' not in intro()
+    assert 'id="own-intro"' not in page, "the intro never becomes part of the page"
+    assert page.index(FRAME) < page.index('class="hero"')
     sub = client.get("/domain-terms").get_data(as_text=True)
-    assert 'id="own-intro"' not in sub
+    assert FRAME not in sub
     assert 'src="/brand/mark-dark.svg?v=' in sub            # top bar
 
 
@@ -126,7 +137,7 @@ def test_folder_brand_without_intro_has_none():
     make_brand(_repo / "plain")
     configure("brand: plain\n")
     page = home()
-    assert "brand-intro" not in page and "splash" not in page
+    assert FRAME not in page and intro() == ""
     assert "plain mark-light.svg" in served("mark-light.svg")
 
 
@@ -144,7 +155,7 @@ def _falls_back(value: str) -> None:
     configure(f"brand: {value}\n")
     page = home()
     assert served("mark-dark.svg") == (BRANDS / "systems42" / "mark-dark.svg").read_text(encoding="utf-8"), value
-    assert 'id="brand-intro"' in page, value
+    assert FRAME in page and 'id="brand-intro"' in intro(), value
     assert any("brand" in m and "systems42" in m for m in LOG.messages), (value, LOG.messages)
 
 
@@ -169,11 +180,39 @@ def test_incomplete_folder_falls_back():
     _falls_back("half/")
 
 
-def test_only_the_marks_are_served():
+def test_only_the_marks_and_the_intro_are_served():
     make_brand(_repo / "brand", intro="<div hidden></div>")
     configure("brand: brand/\n")
-    for bad in ("intro.html", "README.md", "..%2Fwiki.yaml", "nope.svg"):
+    for bad in ("README.md", "..%2Fwiki.yaml", "nope.svg", "intro"):
         assert client.get(f"/brand/{bad}").status_code == 404, bad
+
+
+def test_the_intro_runs_without_the_dashboards_rights():
+    """intro.html holds script from a folder of the wiki repository. It is a
+    document of its own, sandboxed into an origin of its own (issue #34)."""
+    hostile = '<div id="own-intro" hidden></div><script>fetch("/settings", {method: "POST", body: "HOSTILE"})</script>'
+    make_brand(_repo / "brand", intro=hostile)
+    configure("brand: brand/\n")
+    page = home()
+    assert "HOSTILE" not in page and 'id="own-intro"' not in page
+    assert 'setAttribute("sandbox", "allow-scripts")' in page
+    resp = client.get("/brand/intro.html")
+    assert resp.status_code == 200 and resp.mimetype == "text/html"
+    csp = resp.headers["Content-Security-Policy"]
+    directives = {d.split()[0]: d.split()[1:] for d in csp.split(";") if d.strip()}
+    assert directives["sandbox"] == ["allow-scripts"], csp      # no allow-same-origin
+    assert directives["default-src"] == ["'none'"], csp         # so: no fetch, no XHR
+    assert "connect-src" not in directives and "form-action" not in directives, csp
+    assert directives["frame-ancestors"] == ["'self'"], csp
+    assert resp.headers["X-Frame-Options"] == "SAMEORIGIN"
+    body = resp.get_data(as_text=True)
+    assert hostile in body and "brand-intro-done" in body
+    # the theme tokens come inline, for both themes, and nothing is loaded
+    assert "--bg:" in body and ':root[data-theme="light"] {' in body
+    assert "<link" not in body and "@font-face" not in body and "url(" not in body
+    assert '<html lang="en">' in body
+    assert '<html lang="en" data-theme="light">' in client.get("/brand/intro.html?theme=light").get_data(as_text=True)
+    assert '<html lang="en">' in client.get('/brand/intro.html?theme="><script>').get_data(as_text=True)
 
 
 def test_intro_off_hides_every_intro():
@@ -182,11 +221,9 @@ def test_intro_off_hides_every_intro():
     for brand, own in markers.items():
         for off in ("off", '"off"', "false", "no"):
             configure(f"brand: {brand}\nintro: {off}\n")
-            page = home()
-            for marker in markers.values():
-                assert marker not in page, (brand, off, marker)
+            assert FRAME not in home() and intro() == "", (brand, off)
         configure(f"brand: {brand}\nintro: on\n")
-        assert own in home(), brand
+        assert FRAME in home() and own in intro(), brand
 
 
 def test_footer_shows_the_dashboard_version():
@@ -244,7 +281,7 @@ def test_non_string_brand_is_warned_about_and_falls_back():
         configure(f"brand: {value}\n")
         assert app.wiki_config()["brand"] == "systems42", value
         page = home()
-        assert 'id="brand-intro"' in page, value
+        assert FRAME in page and 'id="brand-intro"' in intro(), value
         assert any("brand must be a name or a folder path" in m for m in LOG.messages), (value, LOG.messages)
 
 
@@ -272,7 +309,8 @@ if __name__ == "__main__":
     test_symlink_out_of_the_repository_is_refused()
     test_missing_folder_falls_back()
     test_incomplete_folder_falls_back()
-    test_only_the_marks_are_served()
+    test_only_the_marks_and_the_intro_are_served()
+    test_the_intro_runs_without_the_dashboards_rights()
     test_intro_off_hides_every_intro()
     test_footer_shows_the_dashboard_version()
     test_matching_dashboard_version_says_nothing_more()
