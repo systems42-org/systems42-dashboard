@@ -51,7 +51,8 @@ Unreleased changes sit at the top until the next Starter Kit release.
   notations. This repository's own wiki and schema are migrated separately.
 
 ### Security
-- Dashboard hardening after 0.10.1 (issue #34):
+- Dashboard release 0.11.1 (`_system/apps/dashboard/VERSION`): hardening
+  after 0.10.1 (issue #34):
   - A brand's `intro.html` runs in a sandboxed frame, in an origin of its
     own. It cannot read the page, call the dashboard, use the viewer's
     storage or load anything. Existing intros keep working. The home page
