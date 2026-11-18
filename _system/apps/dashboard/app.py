@@ -3412,15 +3412,16 @@ def page_detail(folder, stem):
     # takes any single path segment, and `..` or `.` would otherwise reach a
     # markdown file beside or above wiki/ (the repository root under
     # `dashboard.sh local`, /repo under Docker).
+    # Use cases are functional requirements in the use-case notation (DR-038):
+    # a former /page/use-cases/ link lands on the requirement that kept its file
+    # name (wiki/use-cases/ is usually gone by then, so before the folder
+    # check). A wiki that still has the page there shows it as it is.
+    if (folder == "use-cases" and not (WIKI_DIR / folder / f"{stem}.md").is_file()
+            and (WIKI_DIR / "functional-requirements" / f"{stem}.md").is_file()):
+        return redirect(f"/functional-requirements/{stem}", code=301)
     if not _is_wiki_folder(folder):
         abort(404)
     path = WIKI_DIR / folder / f"{stem}.md"
-    # Use cases are functional requirements in the use-case notation (DR-038):
-    # a former /page/use-cases/ link lands on the requirement that kept its file
-    # name. A wiki that still has wiki/use-cases/ shows the page as it is.
-    if (folder == "use-cases" and not path.is_file()
-            and (WIKI_DIR / "functional-requirements" / f"{stem}.md").is_file()):
-        return redirect(f"/functional-requirements/{stem}", code=301)
     page = _parse(path, folder) if path.is_file() else None
     if not page:
         abort(404)
