@@ -41,6 +41,16 @@ Unreleased changes sit at the top until the next Starter Kit release.
   The files served as they are, `/brand/<file>` and `/about/files/<path>`,
   carry a sandboxing Content-Security-Policy and `nosniff`, so an SVG or HTML
   file opened directly cannot run script with the dashboard's rights.
+- Dashboard: symlinks that lead out of the wiki are no longer followed. A
+  committed page such as `wiki/glossary/GLO-002-x.md -> /outside/notes.md`
+  was served on `/page` and listed in search, and a linked folder passed as a
+  wiki folder; pages and provenance records are now read only when their
+  resolved path stays inside `wiki/` (or `raw/sources/`). Symlinks that point
+  elsewhere inside the wiki still work.
+- Dashboard: every HTML page sends `Content-Security-Policy: frame-ancestors
+  'none'` and `X-Frame-Options: DENY`, so no other site can frame the
+  dashboard and trick a viewer into clicking its controls. A decision-record
+  link on `/metamodel` is escaped like every other wiki link.
 - Not covered: a brand's `intro.html` is inserted as it is, script included,
   as `brands/README.md` specifies; it stays trusted content, to be reviewed
   like code.
