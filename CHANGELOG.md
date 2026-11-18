@@ -13,10 +13,12 @@ Unreleased changes sit at the top until the next Starter Kit release.
 ## [Unreleased]
 
 ### Added
-- Dashboard repository: `make publish` publishes the release that `VERSION`
-  names. It sets and pushes the tag only when `main` is clean and equal to
-  `origin/main`, the release does not exist yet and is not lower than the
-  newest one, `CHANGELOG.md` names it and the tests pass.
+- Dashboard repository: a release takes `make version V=1.2.3`, a merge and
+  `make publish`. `version` raises `VERSION` and opens the pull request.
+  `publish` sets and pushes the tag only when the release does not exist yet
+  and is not lower than the newest one, `CHANGELOG.md` names it and the tests
+  pass. Both bring `main` up to date first, and every refusal says what to do
+  next.
 
 ### Changed
 - Dashboard release 0.11.0 (`_system/apps/dashboard/VERSION`): requirement

@@ -59,11 +59,16 @@ press Ctrl+C. It refuses to start while something already answers on port 8000.
 
 ### Releases
 
-To publish a release, raise `VERSION`, name the release in `CHANGELOG.md`,
-merge that to `main`, then run `make publish` there. It sets the tag
-`vX.Y.Z` and pushes it, but only when `main` is clean and equal to
-`origin/main`, the release does not exist yet and is not lower than the
-newest one, and the tests pass.
+A release takes three steps, all from `main`:
+
+1. `make version V=1.2.3` raises `VERSION` and names the release in
+   `CHANGELOG.md`, on a branch `release-1.2.3`, and opens a pull request.
+   Without `V` it says which version is next.
+2. Merge that pull request.
+3. `make publish` sets the tag `v1.2.3` and pushes it. It first brings `main`
+   up to date, and it refuses when the release exists already, is lower than
+   the newest one, is missing in `CHANGELOG.md`, or the tests fail. Each
+   refusal says what to do next.
 
 A git tag `vX.Y.Z` that matches `VERSION` runs `.github/workflows/release.yml`:
 the tests, then an image for amd64 and arm64 under
