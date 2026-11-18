@@ -23,7 +23,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 FROM base AS test
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends make nodejs \
+    && apt-get install -y --no-install-recommends make nodejs git \
     && rm -rf /var/lib/apt/lists/*
 
 FROM base
