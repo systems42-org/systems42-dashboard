@@ -210,15 +210,25 @@ def test_features_and_stories_may_refine_a_use_case():
     """DR-038 amendment: an Agile feature or story may name a sea- or fish-level
     use case as parent. The use case becomes a root beside the epics, its page
     shows what realizes it, and the children are no orphans. A kite-level use
-    case takes no Agile children, so a story under one stays an orphan."""
+    case takes no Agile children, so a story under one stays an orphan, and
+    neither does an epic: an epic naming a use case stays an epic root. Goal
+    inheritance reads the same edge: a feature with goal: [] serves the goals
+    of a sea- or fish-level parent use case, never those of a kite."""
+    goal = 'goal: ["[[GOAL-002-faster-lending]]"]\n'
     pages = {
-        "UC-010-borrow": "notation: use-case\nlevel: sea\n",
+        "UC-010-borrow": "notation: use-case\nlevel: sea\n" + goal,
         "FR-091-scan": "notation: agile\nlevel: story\nparent: [\"[[UC-010-borrow]]\"]\n",
         "FR-092-renew": "notation: agile\nlevel: feature\nparent: [\"[[UC-010-borrow]]\"]\n",
         "FR-093-renew-online": "notation: agile\nlevel: story\nparent: [\"[[FR-092-renew]]\"]\n",
-        "UC-011-run-library": "notation: use-case\nlevel: kite\n",
+        "UC-011-run-library": "notation: use-case\nlevel: kite\n" + goal,
         "FR-094-under-kite": "notation: agile\nlevel: story\nparent: [\"[[UC-011-run-library]]\"]\n",
+        "FR-097-feature-under-kite": "notation: agile\nlevel: feature\nlane: backbone\ngoal: []\n"
+                                     "parent: [\"[[UC-011-run-library]]\"]\n",
         "UC-012-reserve": "notation: use-case\nlevel: sea\n",
+        "UC-013-pick-shelf": "notation: use-case\nlevel: fish\n" + goal,
+        "FR-095-scan-shelf": "notation: agile\nlevel: feature\nlane: backbone\ngoal: []\n"
+                             "parent: [\"[[UC-013-pick-shelf]]\"]\n",
+        "FR-096-epic-under-uc": "notation: agile\nlevel: epic\nparent: [\"[[UC-010-borrow]]\"]\n",
     }
     with tempfile.TemporaryDirectory() as tmp:
         wiki = Path(tmp) / "wiki"
@@ -235,17 +245,29 @@ def test_features_and_stories_may_refine_a_use_case():
             uc_page = client.get("/functional-requirements/UC-010-borrow").get_data(as_text=True)
             overview = client.get("/req42/functional-requirements").get_data(as_text=True)
             crumbs = [a["id"] for a in app._fr_ancestors("FR-093-renew-online")]
+            goals = app.load_goals()
         finally:
             app.WIKI_DIR = saved
 
     ucs = {u["id"]: u for u in bl["use_cases"]}
-    assert set(ucs) == {"UC-010"}, ucs
+    assert set(ucs) == {"UC-010", "UC-013"}, ucs
+    # fish level: a root like sea
+    assert [f["id"] for f in ucs["UC-013"]["features"]] == ["FR-095"], ucs["UC-013"]
+    assert app._fr_hierarchy_node(bl, "UC-013-pick-shelf")[1] == "fish"
+    # an epic under a use case is still an epic root, not part of its breakdown
+    assert "FR-096" in {e["id"] for e in bl["epics"]}, bl["epics"]
+    assert app._fr_hierarchy_node(bl, "FR-096-epic-under-uc")[1] == "epic"
     uc = ucs["UC-010"]
     assert [f["id"] for f in uc["features"]] == ["FR-092"], uc["features"]
     assert [s["id"] for s in uc["features"][0]["stories"]] == ["FR-093"], uc["features"]
     assert [s["id"] for s in uc["direct_stories"]] == ["FR-091"], uc["direct_stories"]
     assert (uc["n_features"], uc["n_stories"]) == (1, 2), uc
-    assert {o["id"] for o in bl["orphans"]} == {"FR-094"}, bl["orphans"]
+    assert {o["id"] for o in bl["orphans"]} == {"FR-094", "FR-097"}, bl["orphans"]
+    # goal inheritance agrees with the story map
+    served = {p.id for p in goals["coverage"]["GOAL-002"]}
+    assert "FR-095" in served and "FR-097" not in served, served
+    untraced = {p.id for p in goals["untraced"]}
+    assert "FR-097" in untraced and "FR-095" not in untraced, untraced
     other = {o["id"] for o in bl["other_notations"]}
     assert "UC-010" not in other and {"UC-011", "UC-012"} <= other, other
     assert "UC-010" not in {e["id"] for e in bl["epics"]}

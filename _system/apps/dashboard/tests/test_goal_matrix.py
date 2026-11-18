@@ -49,6 +49,8 @@ _page("goals", "GOAL-004-draft", "Draft goal", "draft", stereotype="objective")
 _page("goals", "GOAL-005-features-only", "Served by a feature only", "accepted", stereotype="objective")
 _page("goals", "GOAL-006-draft-epic-agreed-feature", "Draft epic, agreed feature", "accepted",
       stereotype="objective")
+_page("goals", "GOAL-007-ears-only", "Served by an EARS requirement only", "accepted",
+      stereotype="objective")
 
 _FR = "functional-requirements"
 _page(_FR, "FR-001-served-epic", "Served epic", "accepted",
@@ -88,6 +90,9 @@ _page(_FR, "FR-013-draft-epic-for-six", "Draft epic for six", "draft",
 _page(_FR, "FR-014-agreed-feature-for-six", "Agreed feature for six", "accepted",
       notation="agile", level="feature", lane="backbone", parent='["[[FR-013-draft-epic-for-six]]"]',
       goal='["[[GOAL-006-draft-epic-agreed-feature]]"]')
+# the only requirement serving GOAL-007: another notation (DR-038), no column
+_page(_FR, "FR-015-ears-shall", "The system shall", "draft", notation="ears", level="requirement",
+      parent="[]", goal='["[[GOAL-007-ears-only]]"]')
 # a use case is a functional requirement in the use-case notation (DR-038)
 _page(_FR, "UC-001-borrow", "Borrow", "draft", notation="use-case", level="sea",
       goal='["[[GOAL-004-draft]]"]')
@@ -224,6 +229,20 @@ def test_goal_served_only_by_features_is_no_gap():
     assert re.sub(r"<[^>]+>", "", notes[0][1]) == "Served by features FR-008", notes
     assert 'href="/functional-requirements/FR-008-feature-only"' in notes[0][1], notes
     assert "No requirement yet" not in row
+
+
+def test_goal_served_only_by_another_notation_is_no_gap():
+    # an EARS or prose requirement is no column, but it serves the goal
+    row = _rows()["GOAL-007"]
+    assert "gm-dot" not in row and "gm-gap" not in _head("GOAL-007"), _head("GOAL-007")
+    notes = _view(row, "all")
+    assert [(c, re.sub(r"<[^>]+>", "", t)) for c, t in notes] == [
+        ("gm-served", "Served by other requirements FR-015")], notes
+    assert 'href="/functional-requirements/FR-015-ears-shall"' in notes[0][1], notes
+    # it is a draft: with drafts hidden the goal is a gap
+    assert 'data-gap-accepted' in _head("GOAL-007")
+    data = app.load_goals()
+    assert "FR-015" not in {p.id for p in data["enablers"] + data["untraced"]}
 
 
 def test_agreed_only_counts_agreed_pages():

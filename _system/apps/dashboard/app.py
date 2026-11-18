@@ -1792,7 +1792,9 @@ def load_goals() -> dict:
     all_frs = sorted(load_folder("functional-requirements"), key=lambda p: p.id)
     ucs = [p for p in all_frs if _fr_notation(p) == "use-case"]
     frs = [p for p in all_frs if _fr_notation(p) != "use-case"]
-    uc_by_stem = {u.stem: u for u in ucs}
+    # the use cases Agile features and stories may refine (DR-038 amendment),
+    # the same set the story map roots them under
+    uc_by_stem = {u.stem: u for u in ucs if _fr_level(u) in UC_REFINABLE_LEVELS}
     coverage: dict[str, list[Page]] = {o.id: [] for o in objectives}
     objective_by_stem = {o.stem: o for o in objectives}
 
@@ -1805,10 +1807,11 @@ def load_goals() -> dict:
     untraced: list[Page] = []
     for fr in frs:
         gids = served(fr)
-        if not gids:
-            # a feature/story refining a use case serves that use case's goals
-            uc = next((uc_by_stem[s] for s in links_of(fr, "parent") if s in uc_by_stem), None)
-            gids = served(uc) if uc else []
+        if not gids and _fr_notation(fr) == "agile" and _fr_level(fr) in ("feature", "story"):
+            # an Agile feature/story whose first parent is a sea- or fish-level
+            # use case serves that use case's goals (rule-fr-traces-to-goal)
+            first = _fr_first_parent(fr)
+            gids = served(uc_by_stem[first]) if first in uc_by_stem else []
         if is_enabler(fr, gids):
             enablers.append(fr)
         elif breaks_fr_traces_to_goal(fr, gids):
@@ -1888,6 +1891,18 @@ AGILE_LEVELS = ("epic", "feature", "story")
 UC_REFINABLE_LEVELS = ("sea", "fish")
 
 
+def _fr_first_parent(p: "Page") -> str | None:
+    """The stem of an FR's first `parent:`. The story map is a tree: a page
+    with several parents is placed under its first; multi-parent graphs are
+    out of scope for this view. Goal inheritance from a use case reads the
+    same edge, so the two always agree."""
+    for ref in p.as_list("parent"):
+        stem = _fr_stem_from_ref(ref)
+        if stem:
+            return stem
+    return None
+
+
 def _fr_sort_key(p: "Page"):
     """Hierarchy order: numeric `order:` field, then id as a stable tiebreak."""
     try:
@@ -1942,15 +1957,7 @@ def build_fr_hierarchy() -> dict:
     uc_by_stem = {p.stem: p for p in all_pages
                   if _fr_notation(p) == "use-case" and _fr_level(p) in UC_REFINABLE_LEVELS}
 
-    def parent_stem(p: "Page") -> str | None:
-        # The hierarchy is a tree: we take the first parent only. A page with
-        # multiple parents is placed under its first; multi-parent graphs are
-        # out of scope for this view.
-        for ref in p.as_list("parent"):
-            stem = _fr_stem_from_ref(ref)
-            if stem:
-                return stem
-        return None
+    parent_stem = _fr_first_parent
 
     children: dict[str, list["Page"]] = {}
     for p in pages:
