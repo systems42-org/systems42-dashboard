@@ -4,7 +4,7 @@ type: constraint
 title: The dashboard is a proof of concept, not production-ready for every environment
 status: draft
 created: 2026-11-10
-updated: 2026-11-10
+updated: 2026-11-18
 sources: ["[[SRC-001-stakeholders-of-the-systems42-dashboard]]", "[[SRC-002-grilling-session-on-stakeholders]]"]
 related: ["[[STK-001-product-owners]]", "[[STK-004-development-teams]]", "[[STK-020-data-protection-and-security-officers]]", "[[STK-021-builders-of-project-specific-dashboards]]", "[[STK-023-keyholder]]"]
 tags: [constraint]
@@ -33,6 +33,10 @@ their own dashboards ([[STK-021-builders-of-project-specific-dashboards]]).
   after the last browser tab closes ([[SRC-001-stakeholders-of-the-systems42-dashboard]]).
 - Without a login, the Keyholder ([[STK-023-keyholder]]) is whoever connected
   first, not an identified person.
+- Saving the settings and "Disconnect all" check only the client id a browser
+  states about itself, and carry no token against forged requests from another
+  site. Accepted as long as there is no login
+  ([issue #34](https://github.com/systems42-org/systems42-dashboard/issues/34), point 5).
 
 > [!assumption]
 > A login could be added later, for example an OAuth sign-in through GitHub, GitLab

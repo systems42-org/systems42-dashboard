@@ -253,3 +253,7 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Issues raised: [[ISS-004-where-the-metamodel-declares-its-version]] (meta #39), [[ISS-005-the-method-lint-imports-dashboard-code]] (meta #40), [[ISS-006-other-container-engines-than-docker]] (#24). All three were asked first and opened at Gernot Starke's request.
 - Updated: FR-029 (launcher wording, children), FR-031, FR-032, CON-003, FR-017 child list, FR-023 and CON-004 (links), `_system/index.md`.
 - Parked: sync this repository's metamodel from meta. Move meta's dashboard requirements and decisions here (DR-005). Type prefixes and labels in `app.py` fall under CON-006 and have no requirement yet. The priority of FR-043 follows its epic and was not asked.
+
+## [2026-11-18] change | CON-001 states what the missing login means for the settings
+- Source: issue #34, point 5, raised by Gernot Starke. No file in `raw/`, no grill: one accepted limit, stated where the issue asks for it.
+- Updated: CON-001 (one impact line). Points 1 to 4 and 6 of the issue are code, pull request #37.
