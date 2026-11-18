@@ -1,7 +1,7 @@
 <!-- mermaid.js, vendored for offline use (static/vendor/mermaid.min.js, DR-013/ISS-010).
-     The UMD build exposes globalThis.mermaid; classic <script> so no CDN at runtime. -->
+     The UMD build exposes globalThis.mermaid; classic <script nonce="{{ csp_nonce() }}"> so no CDN at runtime. -->
 <script src="{{ url_for('static', filename='vendor/mermaid.min.js') }}"></script>
-<script>
+<script nonce="{{ csp_nonce() }}">
   (function () {
     if (!window.mermaid) { console.error("mermaid failed to load"); return; }
 

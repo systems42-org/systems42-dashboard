@@ -1,7 +1,12 @@
 # Three stages: `base` holds Python and the requirements, `test` adds what the
 # test scripts call (make, node), and the last, unnamed stage is the image
 # that ships. `docker build .` and compose build the last stage.
-FROM python:3.12-slim AS base
+#
+# The base image is named by digest, so every build starts from the same
+# files. To move to a newer python:3.12-slim, take the digest from
+#   docker buildx imagetools inspect python:3.12-slim
+# (the index digest, which covers amd64 and arm64).
+FROM python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b AS base
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
@@ -38,6 +43,13 @@ COPY VERSION .
 COPY templates ./templates
 COPY static ./static
 COPY brands ./brands
+
+# The dashboard does not run as root. The launcher starts the container as
+# the user who called it (`--user`), so that the one file the dashboard
+# writes, the mounted _system/dashboard.yaml, stays writable and keeps its
+# owner. Started without `--user`, the container runs as this user.
+RUN useradd --system --uid 10001 --no-create-home dashboard
+USER 10001
 
 EXPOSE 8000
 

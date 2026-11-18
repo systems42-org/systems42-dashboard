@@ -62,6 +62,7 @@ def test_it_starts_the_release_the_wiki_names_with_one_mount():
         assert f"-v {root}:/repo:ro" in start[0], start[0]
         assert f"-v {root}/_system/dashboard.yaml:/repo/_system/dashboard.yaml" in start[0], start[0]
         assert start[0].count(" -v ") == 2, start[0]
+        assert f"--user {os.getuid()}:{os.getgid()}" in start[0], "the container must not run as root"
         assert "--name systems42-dashboard-mywiki" in start[0], start[0]
         assert "build" not in called, called
         # Docker would make a folder of a missing settings file

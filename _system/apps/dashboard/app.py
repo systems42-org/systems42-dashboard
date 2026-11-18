@@ -11,6 +11,7 @@ import functools
 import mimetypes
 import os
 import re
+import secrets
 import signal
 import socket
 import threading
@@ -26,8 +27,8 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import markdown as md
 import nh3
 import yaml
-from flask import (Flask, abort, g, has_request_context, jsonify, redirect,
-                   render_template, request, send_file, url_for)
+from flask import (Flask, abort, g, has_request_context, jsonify, make_response,
+                   redirect, render_template, request, send_file, url_for)
 from markupsafe import Markup, escape
 
 import catalog  # the section catalog (DR-033)
@@ -334,15 +335,40 @@ def _inert_file(resp):
     return resp
 
 
+# The policy of every HTML page the dashboard renders. Script runs only from
+# the dashboard's own files and from the inline blocks of its templates, which
+# carry the nonce of this response: markup that slips past sanitize_html()
+# still cannot run. Everything a page loads comes from the dashboard itself,
+# which also keeps it offline. `style-src 'unsafe-inline'` stays, because
+# mermaid and the maturity bars write inline styles, and CSS cannot run script.
+_PAGE_CSP = ("default-src 'self'; script-src 'self' 'nonce-{nonce}'; "
+             "style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; "
+             "font-src 'self' data:; connect-src 'self'; frame-src 'self'; "
+             "object-src 'none'; base-uri 'none'; form-action 'self'; "
+             "frame-ancestors 'none'")
+
+
+def csp_nonce() -> str:
+    """The nonce of this response's inline scripts, made on first use.
+    Templates write it as `<script nonce="{{ csp_nonce() }}">`."""
+    if "csp_nonce" not in g:
+        g.csp_nonce = secrets.token_urlsafe(16)
+    return g.csp_nonce
+
+
+app.jinja_env.globals["csp_nonce"] = csp_nonce
+
+
 @app.after_request
-def _no_framing(resp):
-    """No HTML page of the dashboard may be shown inside another site's frame
-    (clickjacking the settings or Disconnect-all controls). A response that
-    already has a policy (the file routes) keeps it and gains the directive."""
+def _page_policy(resp):
+    """Every HTML page gets the page policy (_PAGE_CSP). No page may be shown
+    inside another site's frame (clickjacking the settings or Disconnect-all
+    controls). A response that already has a policy (the file routes, the
+    brand intro) keeps it and gains the framing directive if it has none."""
     if resp.mimetype == "text/html":
         csp = resp.headers.get("Content-Security-Policy")
         if not csp:
-            resp.headers["Content-Security-Policy"] = "frame-ancestors 'none'"
+            resp.headers["Content-Security-Policy"] = _PAGE_CSP.format(nonce=csp_nonce())
         elif "frame-ancestors" not in csp:
             resp.headers["Content-Security-Policy"] = f"{csp}; frame-ancestors 'none'"
         resp.headers.setdefault("X-Frame-Options", "DENY")
@@ -366,25 +392,84 @@ def _brand_url(folder: Path, name: str) -> str:
 @app.context_processor
 def inject_identity():
     """Make the project identity and the active brand available to every
-    template. `active_brand.intro_html` is the intro fragment, inserted as it
-    is (never rendered as a template), or "" when there is none or `intro: off`."""
+    template. `active_brand.intro_url` is the address of the brand's intro
+    (brand_intro), or "" when there is none or `intro: off`."""
     cfg = wiki_config()
     folder = brand_dir(cfg["brand"])
     intro = _brand_file(folder, BRAND_INTRO) if cfg["intro"] else None
-    try:
-        intro_html = Markup(intro.read_text(encoding="utf-8")) if intro else ""
-    except (OSError, UnicodeDecodeError):
-        intro_html = ""
     cfg["active_brand"] = {
         "mark_dark": _brand_url(folder, "mark-dark.svg"),
         "mark_light": _brand_url(folder, "mark-light.svg"),
         "favicon": _brand_url(folder, "favicon.svg"),
-        "intro_html": intro_html,
+        "intro_url": _brand_url(folder, BRAND_INTRO) if intro else "",
     }
     cfg["dashboard_version_own"] = DASHBOARD_VERSION
     # `local` is the code of this repository, built by the launcher: no release to differ from.
     cfg["dashboard_version_differs"] = cfg["dashboard_version"] not in ("", "local", DASHBOARD_VERSION)
     return cfg
+
+
+# A brand's intro.html comes from a folder of the wiki repository and holds
+# script. It never becomes part of a dashboard page. The home page shows it in
+# a frame (templates/index.html), and this response is sandboxed without
+# `allow-same-origin`: its script runs in an origin of its own, so it cannot
+# read the page around it, call /settings or use the viewer's storage, and it
+# can load nothing at all. The document carries the theme tokens of
+# static/style.css inline, so the intro's `var(--bg)` and the like still work.
+_INTRO_CSP = ("default-src 'none'; script-src 'unsafe-inline'; "
+              "style-src 'unsafe-inline'; img-src data:; "
+              "sandbox allow-scripts; frame-ancestors 'self'")
+_THEME_TOKENS_RE = re.compile(r'^:root(?:\[data-theme="light"\])? \{.*?^\}', re.M | re.S)
+
+
+def _theme_tokens() -> str:
+    """The `:root` blocks of static/style.css: the colour and size tokens of
+    the dark and the light theme, without any other rule or font."""
+    try:
+        css = (Path(app.static_folder) / "style.css").read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    return "\n".join(_THEME_TOKENS_RE.findall(css))
+
+# What the frame's document adds after the intro: it tells the home page when
+# the intro is over, which is when the intro has removed its element (the
+# brand contract) or shows nothing (a hidden element, reduced motion).
+_INTRO_DONE_SCRIPT = """<script>
+(function () {
+  function shown(el) { return !el.hidden && getComputedStyle(el).display !== "none"; }
+  function check() {
+    var parts = document.body.querySelectorAll(":scope > :not(style):not(script)");
+    if (!Array.prototype.some.call(parts, shown)) parent.postMessage("brand-intro-done", "*");
+  }
+  new MutationObserver(check).observe(document.body, { childList: true });
+  setTimeout(check, 100);
+})();
+</script>"""
+
+
+@app.route("/brand/intro.html")
+def brand_intro():
+    """The active brand's intro as a document of its own, for the frame on the
+    home page. 404 when the brand has none or `intro: off`."""
+    cfg = wiki_config()
+    path = _brand_file(brand_dir(cfg["brand"]), BRAND_INTRO) if cfg["intro"] else None
+    try:
+        intro = path.read_text(encoding="utf-8") if path else None
+    except (OSError, UnicodeDecodeError):
+        intro = None
+    if intro is None:
+        abort(404)
+    theme = ' data-theme="light"' if request.args.get("theme") == "light" else ""
+    html = (f'<!doctype html>\n<html lang="en"{theme}>\n<head>\n<meta charset="utf-8">\n'
+            f'<style>\n{_theme_tokens()}\n'
+            'html, body { margin: 0; background: transparent; }\n</style>\n'
+            f'</head>\n<body>\n{intro}\n{_INTRO_DONE_SCRIPT}\n</body>\n</html>\n')
+    resp = make_response(html)
+    resp.headers["Content-Security-Policy"] = _INTRO_CSP
+    resp.headers["X-Frame-Options"] = "SAMEORIGIN"
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
 
 
 @app.route("/brand/<name>")

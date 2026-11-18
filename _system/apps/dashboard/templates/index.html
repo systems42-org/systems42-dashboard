@@ -3,10 +3,46 @@
 {% from "_macros.html" import plural, noun %}
 {% from "_empty.html" import empty_state %}
 {% block content %}
-{# The brand's intro (its intro.html, inserted as it is), before the hero so
-   it covers the page from the first paint. Empty when the brand has none or
-   wiki.yaml says `intro: off`. Contract: brands/README.md. #}
-{{ active_brand.intro_html }}
+{# The brand's intro, before the hero so it covers the page from the first
+   paint. Its intro.html never becomes part of this page: it runs in a frame
+   without this page's rights (app.py, brand_intro). This script shows it at
+   most once per browser tab and never under reduced motion, and takes the
+   frame away when the intro says it is over, on any key, or after 4 seconds.
+   Nothing here when the brand has no intro or wiki.yaml says `intro: off`.
+   Contract: brands/README.md. #}
+{% if active_brand.intro_url %}
+<script nonce="{{ csp_nonce() }}">
+(function () {
+  if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  try {
+    if (sessionStorage.getItem("brand-intro-seen")) return;
+    sessionStorage.setItem("brand-intro-seen", "1");
+  } catch (e) { /* storage blocked: show every time */ }
+  var frame = document.createElement("iframe"), cap;
+  function done() {
+    if (!frame) return;
+    window.removeEventListener("message", said);
+    document.removeEventListener("keydown", done, true);
+    clearTimeout(cap);
+    frame.remove(); frame = null;
+  }
+  function said(e) { if (frame && e.source === frame.contentWindow && e.data === "brand-intro-done") done(); }
+  frame.className = "brand-intro-frame";
+  frame.setAttribute("sandbox", "allow-scripts");
+  frame.setAttribute("aria-hidden", "true");
+  frame.tabIndex = -1;
+  var url = {{ active_brand.intro_url | tojson }};
+  if (document.documentElement.getAttribute("data-theme") === "light")
+    url += (url.indexOf("?") < 0 ? "?" : "&") + "theme=light";
+  frame.src = url;
+  frame.addEventListener("load", function () { if (frame) frame.classList.add("is-loaded"); });
+  window.addEventListener("message", said);
+  document.addEventListener("keydown", done, true);
+  cap = setTimeout(done, 4000);
+  document.currentScript.parentNode.insertBefore(frame, document.currentScript);
+})();
+</script>
+{% endif %}
 <header class="hero">
   <div class="hero-row">
     {% if about_href %}<a class="hero-mark-link" href="{{ about_href }}" title="{{ about_label }}">{% endif %}

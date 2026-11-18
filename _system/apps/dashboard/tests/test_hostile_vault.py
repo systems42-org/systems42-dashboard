@@ -154,7 +154,9 @@ def _get(path):
 def _plain_get_routes():
     return sorted(str(r) for r in app.app.url_map.iter_rules()
                   if "GET" in r.methods and "<" not in str(r)
-                  and str(r) not in ("/presence/count", "/presence/list"))
+                  # /brand/intro.html: this vault's intro is a symlink out, so 404
+                  # is right (test_file_routes_stay_inside_their_folder)
+                  and str(r) not in ("/presence/count", "/presence/list", "/brand/intro.html"))
 
 
 def test_no_route_breaks_on_a_bad_page():
@@ -297,6 +299,35 @@ def test_decision_links_are_escaped():
     assert 'href="/page/decisions/DR-002-quote&#34; onmouseover=&#34;x"' in html, html
 
 
+def test_pages_run_only_the_dashboards_own_script():
+    """Every HTML page carries the page policy: script from the dashboard's
+    files and from inline blocks with this response's nonce, nothing loaded
+    from outside (issue #34)."""
+    import re
+    client = app.app.test_client()
+    nonces = set()
+    for url in ("/", "/page/glossary/GLO-004-linker", "/metamodel", "/about", "/search", "/no-such-page"):
+        resp = client.get(url)
+        csp = resp.headers.get("Content-Security-Policy", "")
+        d = {x.split()[0]: x.split()[1:] for x in csp.split(";") if x.strip()}
+        assert d["default-src"] == ["'self'"], (url, csp)
+        assert len(d["script-src"]) == 2 and d["script-src"][0] == "'self'", (url, csp)
+        nonce = re.fullmatch(r"'nonce-([\w-]{16,})'", d["script-src"][1]).group(1)
+        assert d["img-src"] == ["'self'", "data:", "blob:"], (url, csp)
+        assert d["object-src"] == ["'none'"] and d["base-uri"] == ["'none'"], (url, csp)
+        assert "unsafe-eval" not in csp and "http" not in csp and "*" not in csp, (url, csp)
+        body = resp.get_data(as_text=True)
+        # every inline script that runs carries the nonce; data blocks need none
+        for tag in re.findall(r"<script\b[^>]*>", body):
+            if "src=" in tag or 'type="application/json"' in tag:
+                continue
+            assert f'nonce="{nonce}"' in tag, (url, tag)
+        nonces.add(nonce)
+    assert len(nonces) == 6, "one nonce per response"
+    # a script that wiki content smuggled in would have no nonce
+    assert "<script>" not in client.get("/page/glossary/GLO-004-linker").get_data(as_text=True)
+
+
 def test_pages_refuse_to_be_framed():
     client = app.app.test_client()
     for url in ("/", "/page/glossary/GLO-004-linker", "/metamodel", "/about", "/no-such-page"):
@@ -322,5 +353,6 @@ if __name__ == "__main__":
     test_symlinks_out_of_the_wiki_are_not_followed()
     test_symlinks_inside_the_wiki_still_work()
     test_decision_links_are_escaped()
+    test_pages_run_only_the_dashboards_own_script()
     test_pages_refuse_to_be_framed()
     print("OK: broken, oddly typed and hostile pages render safely")

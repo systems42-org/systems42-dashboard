@@ -68,11 +68,11 @@
 <!-- WebCola's browser build exposes window.cola; cytoscape-cola's UMD reads
      window.webcola at load time — bridge the name so the plugin gets the real
      module and auto-registers the 'cola' layout cleanly. -->
-<script>window.webcola = window.webcola || window.cola;</script>
+<script nonce="{{ csp_nonce() }}">window.webcola = window.webcola || window.cola;</script>
 <script src="{{ url_for('static', filename='vendor/cytoscape-cola.js') }}"></script>
 <script src="{{ url_for('static', filename='glossary-graph.js') }}"></script>
 <script id="graph-data" type="application/json">{{ graph | tojson }}</script>
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function () {
   var data = JSON.parse(document.getElementById('graph-data').textContent);
   if (!window.cytoscape) { console.error('cytoscape failed to load'); return; }

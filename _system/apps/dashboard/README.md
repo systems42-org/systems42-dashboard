@@ -136,9 +136,17 @@ reload. The dashboard only reads a wiki's brand folder and serves its marks at
 `/brand/<file>`. A folder outside the repository, missing or without all three
 marks falls back to `systems42` with a log warning, as does a `brand:` that is
 not text (`brand: on`). Marks are served with a one-year cache while the URL's
-`?v=` matches the file's checksum. A brand's `intro.html` and marks run in every
-viewer's browser, so review them like code. `brands/README.md` states
-what a brand must contain and what its intro must do.
+`?v=` matches the file's checksum. A brand's `intro.html` never becomes part of a
+page: the home page shows it in a sandboxed frame, where its script has none
+of the dashboard's rights. `brands/README.md` states what a brand must
+contain and what its intro must do.
+
+Every HTML page carries a Content Security Policy. Script runs only from the
+dashboard's own files and from the inline blocks of its templates, which carry
+a nonce: write an inline script in a template as
+`<script nonce="{{ csp_nonce() }}">`, or it will not run. Pages load nothing
+from outside the dashboard. Wiki content keeps an image only when its `src` is
+a path of the dashboard, and no style that loads something (`url()`).
 
 ## Home, areas and tiles
 

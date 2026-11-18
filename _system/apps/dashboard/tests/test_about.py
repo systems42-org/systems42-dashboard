@@ -100,9 +100,10 @@ def test_about_page_carries_no_brand_animation():
     a brand ships one, belongs to the home page only (brands/README.md)."""
     for brand, marker in (("systems42", 'id="brand-intro"'),):
         configure(f"about: docs/brand/README.md\nbrand: {brand}\n")
-        assert marker in client.get("/").get_data(as_text=True), brand   # the marker is real
+        assert marker in client.get("/brand/intro.html").get_data(as_text=True), brand   # the marker is real
+        assert "brand-intro-frame" in client.get("/").get_data(as_text=True), brand
         about = client.get("/about").get_data(as_text=True)
-        assert marker not in about, brand
+        assert marker not in about and "brand-intro-frame" not in about, brand
 
 
 if __name__ == "__main__":

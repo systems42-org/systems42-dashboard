@@ -1192,6 +1192,12 @@ html.etsu-disconnected {
   box-shadow: 0 2px 8px rgba(0,0,0,.25); pointer-events: none; }
 
 /* text hero — replaces the artwork banner in the neutral starter */
+/* The brand intro's frame (index.html): over the whole window, in the page's
+   background until its document has loaded, then see-through, so the intro's
+   own fade-out shows the page underneath. */
+.brand-intro-frame { position: fixed; inset: 0; z-index: 10000; width: 100%; height: 100%;
+  border: 0; background: var(--bg); }
+.brand-intro-frame.is-loaded { background: transparent; }
 .hero { margin: var(--space-1) 0 var(--space-4); }
 /* Mark + title/tagline side by side rather than stacked — shorter hero,
    less scrolling before the tiles on a projector. */

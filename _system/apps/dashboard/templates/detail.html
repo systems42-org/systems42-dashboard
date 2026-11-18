@@ -101,11 +101,11 @@
 <script src="{{ url_for('static', filename='vendor/cose-base.js') }}"></script>
 <script src="{{ url_for('static', filename='vendor/cytoscape-fcose.js') }}"></script>
 <script src="{{ url_for('static', filename='vendor/cola.min.js') }}"></script>
-<script>window.webcola = window.webcola || window.cola;</script>
+<script nonce="{{ csp_nonce() }}">window.webcola = window.webcola || window.cola;</script>
 <script src="{{ url_for('static', filename='vendor/cytoscape-cola.js') }}"></script>
 <script src="{{ url_for('static', filename='glossary-graph.js') }}"></script>
 <script id="ego-data" type="application/json">{{ ego_graph | tojson }}</script>
-<script>
+<script nonce="{{ csp_nonce() }}">
   (function () {
     if (!window.AQ_GLOSSARY_GRAPH) return;
     AQ_GLOSSARY_GRAPH.mountEgo({

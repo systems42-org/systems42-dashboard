@@ -91,7 +91,10 @@ case "$cmd" in
     docker rm -f "$NAME" >/dev/null 2>&1 || true
     # One mount: the repository, read-only. The settings file is the one thing
     # the dashboard writes, so it is mounted writable on top (DR-033).
+    # The container runs as the calling user, not as root, so the settings
+    # file stays writable and keeps its owner.
     docker run -d --name "$NAME" -p "$PORT:8000" \
+      --user "$(id -u):$(id -g)" \
       -e TZ="${TZ:-UTC}" -e DASH_PUBLIC_URL="$public" \
       -v "$ROOT:/repo:ro" \
       -v "$SETTINGS:/repo/_system/dashboard.yaml" \
