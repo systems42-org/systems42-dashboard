@@ -17,8 +17,13 @@ from pathlib import Path
 
 import yaml
 
+# The metamodel of the repository the dashboard runs on (CON-006): its own
+# variable, else `_system/metamodel/` under REPO_DIR (the one mount, FR-042),
+# else next to this file's repository for a local run.
 _env = os.environ.get("METAMODEL_DIR")
+_repo = os.environ.get("REPO_DIR")
 METAMODEL_DIR = (Path(_env) if _env
+                 else Path(_repo) / "_system" / "metamodel" if _repo
                  else Path(__file__).resolve().parents[2] / "metamodel")
 
 _FM = re.compile(r"^---\s*\n(.*?)\n---\s*\n?(.*)$", re.DOTALL)
@@ -191,9 +196,8 @@ def type_for_folder(folder: str) -> str | None:
 # /metamodel and links every `[[MADR]]` there (FR-035); it adds nothing to
 # them (CON-004).
 
-# The anchors sit next to the metamodel folder (`_system/anchors/`). In the
-# container both are mounted, `/metamodel` and `/anchors`, so the default is
-# worked out from METAMODEL_DIR, never from this file's own place.
+# The anchors sit next to the metamodel folder (`_system/anchors/`), so the
+# default is worked out from METAMODEL_DIR, never from this file's own place.
 _aenv = os.environ.get("ANCHORS_DIR")
 ANCHORS_DIR = Path(_aenv) if _aenv else METAMODEL_DIR.parent / "anchors"
 

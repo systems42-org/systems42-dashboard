@@ -37,7 +37,7 @@ KEPT = [
     "harvest-foo.patch",
     ".git/.DS_Store",
     ".obsidian/workspace.json",
-    "_system/apps/dashboard/compose.yaml",
+    "_system/apps/dashboard/Dockerfile",
     "_system/apps/dashboard/app.py",
 ]
 
@@ -80,9 +80,11 @@ def test_removes_rebuildable_and_keeps_everything_else():
         subprocess.run(["make", "-C", str(root), "clean"], env=env, check=True, capture_output=True)
         _assert_only_rebuildable_gone(root)
         called = log.read_text(encoding="utf-8")
-        assert "compose" in called and "down --rmi local" in called, called
-        # never the volumes or every image: this wiki's own container and image only
-        assert "--volumes" not in called and "--rmi all" not in called, called
+        assert "rm -f systems42-dashboard-vault" in called, called
+        assert "rmi systems42-dashboard:local" in called, called
+        # never the volumes or a pulled release image: this wiki's own container
+        # and the image built from this repository only
+        assert "--volumes" not in called and "ghcr.io" not in called and "prune" not in called, called
 
 
 def test_docker_daemon_down_still_cleans_files_and_says_so():

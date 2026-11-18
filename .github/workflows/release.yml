@@ -1,0 +1,55 @@
+# Publishes a dashboard release (DR-004, FR-030): a git tag vX.Y.Z builds the
+# image ghcr.io/systems42-org/dashboard:X.Y.Z for amd64 and arm64, after the
+# tests have passed, and creates the GitHub release that
+# `./dashboard.sh update` asks for.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: The tag matches VERSION
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          own="$(cat _system/apps/dashboard/VERSION)"
+          if [ "$version" != "$own" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match VERSION ($own)." >&2
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Tests
+        run: ./dashboard.sh test
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: _system/apps/dashboard
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/systems42-org/dashboard:${{ env.VERSION }}
+            ghcr.io/systems42-org/dashboard:latest
+
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "$GITHUB_REF_NAME" --title "$VERSION" --generate-notes

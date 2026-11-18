@@ -12,9 +12,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # `make test` (dashboard.sh test) runs the test scripts in this stage, with
-# the repository mounted. It holds no dashboard code and sets none of the
-# folder variables below, so the tests see the code as it is in the
-# repository, on the Python and the libraries of the shipped image.
+# the repository mounted. It holds no dashboard code and does not set
+# REPO_DIR, so the tests see the code as it is in the repository, on the
+# Python and the libraries of the shipped image.
 FROM base AS test
 
 RUN apt-get update \
@@ -23,16 +23,16 @@ RUN apt-get update \
 
 FROM base
 
-ENV WIKI_DIR=/wiki \
-    RAW_SOURCES_DIR=/sources \
-    DOCS_DIR=/docs \
-    METAMODEL_DIR=/metamodel \
-    ANCHORS_DIR=/anchors \
-    REPO_DIR=/repo
+# One mount (FR-042): the launcher mounts the wiki repository read-only at
+# /repo, and its _system/dashboard.yaml writable on top. The dashboard finds
+# every folder below /repo by convention (CON-005).
+ENV REPO_DIR=/repo
 
 COPY app.py .
 COPY catalog.py .
 COPY metamodel.py .
+COPY preflight.py .
+COPY gunicorn.conf.py .
 COPY help.md .
 COPY VERSION .
 COPY templates ./templates
