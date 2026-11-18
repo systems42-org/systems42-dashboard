@@ -334,6 +334,20 @@ def _inert_file(resp):
     return resp
 
 
+@app.after_request
+def _no_framing(resp):
+    """No HTML page of the dashboard may be shown inside another site's frame
+    (clickjacking the settings or Disconnect-all controls). A response that
+    already has a policy (the file routes) keeps it and gains the directive."""
+    if resp.mimetype == "text/html":
+        csp = resp.headers.get("Content-Security-Policy")
+        if not csp:
+            resp.headers["Content-Security-Policy"] = "frame-ancestors 'none'"
+        elif "frame-ancestors" not in csp:
+            resp.headers["Content-Security-Policy"] = f"{csp}; frame-ancestors 'none'"
+        resp.headers.setdefault("X-Frame-Options", "DENY")
+    return resp
+
 
 def _brand_checksum(path: Path | None) -> str:
     try:

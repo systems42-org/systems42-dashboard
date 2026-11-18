@@ -297,6 +297,18 @@ def test_decision_links_are_escaped():
     assert 'href="/page/decisions/DR-002-quote&#34; onmouseover=&#34;x"' in html, html
 
 
+def test_pages_refuse_to_be_framed():
+    client = app.app.test_client()
+    for url in ("/", "/page/glossary/GLO-004-linker", "/metamodel", "/about", "/no-such-page"):
+        resp = client.get(url)
+        assert resp.mimetype == "text/html", url
+        assert "frame-ancestors 'none'" in resp.headers.get("Content-Security-Policy", ""), url
+        assert resp.headers.get("X-Frame-Options") == "DENY", url
+    # a file route's stricter policy is kept, not replaced
+    resp = client.get("/about/files/page.html")
+    csp = resp.headers.get("Content-Security-Policy", "")
+    assert "sandbox" in csp and "default-src 'none'" in csp and "frame-ancestors 'none'" in csp, csp
+
 
 if __name__ == "__main__":
     test_no_route_breaks_on_a_bad_page()
@@ -310,4 +322,5 @@ if __name__ == "__main__":
     test_symlinks_out_of_the_wiki_are_not_followed()
     test_symlinks_inside_the_wiki_still_work()
     test_decision_links_are_escaped()
+    test_pages_refuse_to_be_framed()
     print("OK: broken, oddly typed and hostile pages render safely")
