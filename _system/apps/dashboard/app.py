@@ -245,6 +245,8 @@ def wiki_config() -> dict:
         "about_href": "/about" if about else "",
         "about_label": str(data.get("about_label") or "").strip()
                        or f"About {name or DEFAULT_SYSTEM_NAME}",
+        # the notation new functional requirements get (FR-004, DR-038); agile when unset
+        "default_notation": str(data.get("default_notation") or "").strip().lower() or "agile",
     }
 
 
@@ -4840,8 +4842,6 @@ def _mm_inline(text: str, anchors: dict[str, str]) -> str:
     return html
 
 
-_MM_BODY_H1_RE = re.compile(r"^#\s+[^\n]*\n", re.MULTILINE)
-
 # Which page of a folder serves as the example: the most mature first, then the
 # lowest ID — the page a reader would open first anyway.
 _MM_EXAMPLE_RANK = {"accepted": 0, "review": 1, "draft": 2,
@@ -4864,7 +4864,8 @@ def _mm_example(t: dict) -> dict:
         return {"count": 0}
     best = min(pages, key=lambda p: (_MM_EXAMPLE_RANK.get(p.status, 9), p.id))
     return {"count": len(pages), "id": best.id, "title": best.title, "url": url(best),
-            "status": best.status, "stereotype": best.meta.get("stereotype") or ""}
+            "status": best.status, "stereotype": best.meta.get("stereotype") or "",
+            "notation": best.meta.get("notation") or "", "level": best.meta.get("level") or ""}
 
 
 def build_metamodel_graph(mm: dict) -> dict:
@@ -5027,28 +5028,36 @@ def metamodel_view():
             "summary_html": _mm_inline(pr.get("_summary") or "", anchors),
         })
 
-    alt = mm["altitude"]
-    altitude = None
-    if alt:
-        altitude = {
-            "rungs": alt.get("rungs") or [],
-            "assignments": [{"type": _mm_type_label(a.get("type"), by_name),
-                             "type_anchor": anchors.get(str(a.get("type")), ""),
-                             "stereotype": a.get("stereotype") or "", "field": a.get("field") or "",
-                             "rung": a.get("rung") or "", "status": a.get("status") or "",
-                             "note": a.get("note") or ""} for a in alt.get("assignments") or []],
-            "body_html": _mm_html(_MM_BODY_H1_RE.sub("", alt.get("_body") or "", count=1), anchors),
-        }
+    # requirement notations (DR-038): the default one first, then by name
+    default_notation = wiki_config()["default_notation"]
+    notations = []
+    for n in sorted(mm["notations"], key=lambda n: (n["name"] != default_notation, n["name"])):
+        notations.append({
+            "name": n["name"], "anchor": f"notation-{n['name']}",
+            "title": n.get("title") or n["name"], "default": n["name"] == default_notation,
+            "levels": n.get("levels") or [],
+            "sections": n.get("_sections") or [],
+            "fields": [f for f in n.get("fields") or [] if isinstance(f, dict)],
+            "summary_html": _mm_inline(str(n.get("summary") or ""), anchors),
+        })
+
+    def _qualifier(ap: dict) -> str:
+        # a rule may narrow its type by stereotype, notation and level
+        parts = []
+        for key in ("stereotype", "notation", "level"):
+            v = ap.get(key)
+            if v:
+                parts.append(f"{key} " + ", ".join(str(x) for x in (v if isinstance(v, list) else [v])))
+        return "; ".join(parts)
 
     rules = []
     for ru in mm["rules"]:
         ap = ru.get("applies_to") or {}
-        st = ap.get("stereotype")
         rules.append({
             "name": ru["name"], "anchor": f"rule-{ru['name']}",
             "applies_type": _mm_type_label(ap.get("type"), by_name),
             "applies_anchor": anchors.get(str(ap.get("type")), ""),
-            "applies_stereotype": ", ".join(st) if isinstance(st, list) else (st or ""),
+            "applies_qualifier": _qualifier(ap),
             "check": _mm_inline(str(ru.get("check") or ""), anchors),
             "confidence": ru.get("confidence") or "", "action": ru.get("action") or "",
             "source": ru.get("source") or "",
@@ -5059,7 +5068,7 @@ def metamodel_view():
     n_in = sum(1 for b in mm["blocks"] if b.get("scope") == "in")
     return render_template(
         "metamodel.html", present=mm["present"], types=types, relations=relations,
-        projections=projections, altitude=altitude, rules=rules, graph=graph,
+        projections=projections, notations=notations, rules=rules, graph=graph,
         method_anchors=build_mm_anchors(mm, anchors),
         universal=graph["universal"], universal_fields=universal_fields,
         lifecycles=meta.get("lifecycles") or {}, constructs=meta.get("constructs") or [],

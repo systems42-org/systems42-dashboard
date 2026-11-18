@@ -7,7 +7,9 @@ Run from the dashboard dir:
 
 WIKI_DIR points at tests/fixtures/wiki; the metamodel is the real one, since
 the page's whole point is to agree with it. The anchors are a temporary
-folder of their own (ANCHORS_DIR).
+folder of their own (ANCHORS_DIR). The requirement notations (DR-038) are
+tested in test_notations.py, against fixture notation files: this
+repository's own metamodel declares none until it is migrated.
 """
 import os
 import sys
@@ -38,7 +40,9 @@ def test_loader_reads_every_construct():
     mm = metamodel.load()
     assert mm["present"]
     assert len(mm["types"]) == 18, [t["name"] for t in mm["types"]]
-    assert mm["relations"] and mm["projections"] and mm["rules"] and mm["altitude"]
+    assert mm["relations"] and mm["projections"] and mm["rules"]
+    assert "altitude" not in mm                  # removed by DR-038
+    assert isinstance(mm["notations"], list)
     assert [f["name"] for f in mm["frameworks"]] == ["req42", "commons", "arc42"]
     # types come in block order: goals (R1) first, the blockless source last
     assert mm["types"][0]["name"] == "goal" and mm["types"][-1]["name"] == "source"
@@ -82,7 +86,7 @@ def test_page_renders_tables_graph_and_examples():
     assert r.status_code == 200
     body = r.get_data(as_text=True)
     for section in ("id=\"graph\"", "id=\"types\"", "id=\"relations\"", "id=\"projections\"",
-                    "id=\"altitude\"", "id=\"rules\"", "id=\"language\""):
+                    "id=\"notations\"", "id=\"rules\"", "id=\"language\""):
         assert section in body, section
     # one row per type, anchored by construct-prefixed ids
     for t in metamodel.load()["types"]:
@@ -101,8 +105,8 @@ def test_page_renders_tables_graph_and_examples():
         assert 'href="/page/decisions/DR-001-carts-expire-after-a-day">DR-001</a>' in app._mm_wikilinks(
             "[[DR-001-carts-expire-after-a-day|DR-001]]", {})
     assert '<a class="mm-anchor" href="#anchor-pam"' in body and 'id="anchor-pam"' in body
-    # the open altitude question is shown as such
-    assert "mm-assign-open" in body and "use cases versus epics" in body.lower()
+    # the altitude scale is gone (DR-038); requirement notations replace it
+    assert 'id="altitude"' not in body and "Requirement notations" in body
     # the graph script and data are on the page
     assert "metamodel-graph.js" in body and 'id="mm-graph-data"' in body
 

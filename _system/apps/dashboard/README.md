@@ -244,8 +244,10 @@ declared relation as a labelled arrow (`static/metamodel-graph.js`, same
 visual language as the term network), then tables — types with definition,
 fields, stereotypes and a live example page of the vault; relations with
 direction, cardinality and whether the reverse side is stored; projections
-with the fields they read and the route that renders them; the granularity
-scale with its open assignments; the rules; and the meta-meta language
+with the fields they read and the route that renders them; the requirement
+notations (DR-038) with their levels, extra fields and level-marked page
+sections, read from `_system/metamodel/notations/` and a project's own
+`_system/notations/`, the `default_notation:` of `wiki.yaml` first; the rules; and the meta-meta language
 (constructs, universal fields, lifecycles). Metamodel wikilinks resolve to
 in-page anchors, decision-record links to `/decisions`, method anchors to
 chips. It is the metamodel of the repository the dashboard runs on

@@ -20,7 +20,7 @@ framework-agnostic — and the req42 instances, which is everything else on this
   <a href="#types">Types</a>
   <a href="#relations">Relations</a>
   <a href="#projections">Projections</a>
-  <a href="#altitude">Granularity</a>
+  <a href="#notations">Requirement notations</a>
   <a href="#rules">Rules</a>
   <a href="#anchors">Anchors</a>
   <a href="#language">Language</a>
@@ -109,7 +109,7 @@ that type in this wiki ({{ n_examples }} of {{ types|length }} types have one so
     <td class="mm-c-example">
       {% if t.example.count %}
       <a class="term term-link" href="{{ t.example.url }}"><code>{{ t.example.id }}</code> {{ t.example.title }}</a>
-      <span class="aliases">{% if t.example.stereotype %}{{ t.example.stereotype }} · {% endif %}<span class="status status-{{ t.example.status }}">{{ t.example.status }}</span> · {{ t.example.count }} page{{ 's' if t.example.count != 1 }}</span>
+      <span class="aliases">{% if t.example.notation %}{{ t.example.notation }}{% if t.example.level %} · {{ t.example.level }}{% endif %} · {% elif t.example.stereotype %}{{ t.example.stereotype }} · {% endif %}<span class="status status-{{ t.example.status }}">{{ t.example.status }}</span> · {{ t.example.count }} page{{ 's' if t.example.count != 1 }}</span>
       {% else %}<span class="muted">none yet</span>{% endif %}
     </td>
   </tr>
@@ -188,24 +188,28 @@ got persisted would have become a type.</p>
 </div>
 </section>
 
-{# ------------------------------------------------------------- altitude #}
-<section class="mm-section" id="altitude">
-<h2 class="mm-h2">Granularity</h2>
-{% if altitude %}
-<p class="mm-lead">One scale, coarse to fine, so that items of different types can be
-compared — once their assignments are agreed.</p>
-<ol class="mm-rungs">
-  {% for r in altitude.rungs %}<li><span class="mm-rung">{{ r }}</span>
-    {% for a in altitude.assignments if a.rung == r %}<span class="mm-assign mm-assign-{{ a.status }}"><a class="wl" href="#{{ a.type_anchor }}">{{ a.type }}</a>{% if a.stereotype %} · {{ a.stereotype }}{% endif %} <span class="mm-assign-status">{{ a.status }}</span></span>{% endfor %}
-  </li>{% endfor %}
-</ol>
-{% set open = altitude.assignments | selectattr('status', 'equalto', 'open') | list %}
-{% if open %}
-<p class="mm-small">Not placed yet: {% for a in open %}<span class="mm-assign mm-assign-open"><a class="wl" href="#{{ a.type_anchor }}">{{ a.type }}</a>{% if a.field %} · by its <code>{{ a.field }}</code>{% endif %} <span class="mm-assign-status">open</span></span>{% endfor %}</p>
-{% endif %}
-<div class="mm-prose">{{ altitude.body_html | safe }}</div>
+{# --------------------------------------------------------- FR notations #}
+<section class="mm-section" id="notations">
+<h2 class="mm-h2">Requirement notations <span class="count-pill">{{ notations|length }}</span></h2>
+<p class="mm-lead">Every functional requirement stores its <code>notation:</code> and one of
+that notation's <code>level:</code> values (DR-038). Each notation file defines its ordered
+levels, extra fields and anchors, and is the page template itself. <code>parent:</code> stays
+a separate graph and may skip levels. Project notations live in <code>_system/notations/</code>.</p>
+{% if notations %}
+<div class="table-card mm-table">
+<table><thead><tr><th>Notation</th><th>Levels</th><th>Extra fields</th><th>Sections (levels)</th></tr></thead><tbody>
+{% for n in notations %}
+<tr id="{{ n.anchor }}" class="mm-row">
+  <td class="c-term"><span class="term">{{ n.title }}</span>{% if n.default %} <span class="badge">default</span>{% endif %}<span class="aliases"><code>{{ n.name }}</code></span>{{ n.summary_html|safe }}</td>
+  <td>{{ n.levels|join(' → ') }}</td>
+  <td>{% for f in n.fields %}<code>{{ f.name }}</code>{% if f.required %} *{% endif %}{% if not loop.last %}, {% endif %}{% else %}—{% endfor %}</td>
+  <td>{% for s in n.sections %}<code>{{ s.heading }}</code>{% if s.levels|length < n.levels|length %} <span class="aliases">{{ s.levels|join(', ') }}</span>{% endif %}{% if not loop.last %}, {% endif %}{% else %}—{% endfor %}</td>
+</tr>
+{% endfor %}
+</tbody></table>
+</div>
 {% else %}
-<p class="muted">No altitude scale declared.</p>
+<p class="muted">No requirement notations declared in <code>_system/metamodel/notations/</code>.</p>
 {% endif %}
 </section>
 
@@ -227,7 +231,7 @@ what it tests, and what the agent may do about it. Enforcement is advisory —
   {% for r in rules %}
   <tr id="{{ r.anchor }}" class="mm-row">
     <td class="c-term"><span class="term">{{ r.name }}</span><span class="aliases">{{ r.source }}</span></td>
-    <td class="mm-c-applies">{% if r.applies_anchor %}<a class="wl" href="#{{ r.applies_anchor }}">{{ r.applies_type }}</a>{% else %}{{ r.applies_type }}{% endif %}{% if r.applies_stereotype %}<span class="aliases">{{ r.applies_stereotype }}</span>{% endif %}</td>
+    <td class="mm-c-applies">{% if r.applies_anchor %}<a class="wl" href="#{{ r.applies_anchor }}">{{ r.applies_type }}</a>{% else %}{{ r.applies_type }}{% endif %}{% if r.applies_qualifier %}<span class="aliases">{{ r.applies_qualifier }}</span>{% endif %}</td>
     <td class="c-def">{{ r.check | safe }}{% if r.summary_html %}<span class="aliases">{{ r.summary_html | safe }}</span>{% endif %}</td>
     <td class="mm-c-action"><span class="badge mm-action mm-action-{{ r.action }}">{{ r.action }}</span><span class="aliases">confidence {{ r.confidence }}</span></td>
   </tr>
