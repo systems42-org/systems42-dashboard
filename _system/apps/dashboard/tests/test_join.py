@@ -11,7 +11,7 @@ from pathlib import Path
 
 WIKI_FOLDERS = [
     "glossary", "goals", "stakeholders", "context", "external-interfaces",
-    "data-models", "activity-models", "use-cases", "functional-requirements",
+    "data-models", "activity-models", "functional-requirements",
     "quality-requirements", "constraints", "issues",
 ]
 

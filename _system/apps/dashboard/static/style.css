@@ -1387,20 +1387,6 @@ a.mm-anchor:hover { color: var(--accent); border-color: var(--accent); }
 .mm-reads-fields { display: inline; }
 .mm-reads-fields code { margin-right: .25rem; color: var(--ink-soft); white-space: normal; overflow-wrap: anywhere; }
 .mm-c-where { overflow-wrap: anywhere; }
-/* granularity */
-.mm-rungs { list-style: none; margin: 0 0 var(--space-3); padding: 0; display: grid; gap: .4rem; }
-.mm-rungs li { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding: .55rem .9rem;
-  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
-.mm-rungs li:nth-child(2) { margin-left: 1.5rem; }
-.mm-rungs li:nth-child(3) { margin-left: 3rem; }
-.mm-rung { font-weight: 650; min-width: 7.5rem; }
-.mm-assign { display: inline-flex; align-items: center; gap: .35rem; font-size: .85rem; padding: .15rem .6rem;
-  border-radius: 999px; border: 1px solid var(--line); background: var(--card-2); }
-.mm-assign-status { font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-dim); }
-.mm-assign-proposed { border-style: dashed; }
-.mm-assign-open { border-style: dotted; border-color: var(--warn); }
-.mm-assign-open .mm-assign-status { color: var(--warn); }
-.mm-assign-agreed { border-color: var(--accent-2); }
 .mm-prose { max-width: 60rem; color: var(--ink-soft); }
 .mm-prose h2 { font-size: var(--step-1); color: var(--ink); margin: var(--space-3) 0 var(--space-1); }
 .mm-prose strong { color: var(--ink); }

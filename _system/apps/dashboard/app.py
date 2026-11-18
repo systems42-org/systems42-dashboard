@@ -1689,7 +1689,7 @@ def build_relations_panel(stem: str, exclude: set[str] | None = None) -> dict:
 # keyed off an ID list — a vault may hold any number of objectives at any IDs,
 # and all of them must reach the screen.
 # The Goal↔Epic edge is pinned at the Epic (`goal:` field on each FR, DR-018),
-# and a use case carries the same field (DR-011); coverage and tile counters are
+# and a use case carries the same field (DR-038); coverage and tile counters are
 # pure projections from those edges.
 
 
@@ -2447,7 +2447,7 @@ def build_trace(stem: str, folder: str) -> dict:
     architecture pages and decision records, the arc42 forward and reverse
     links, addressed-by on a requirement. Empty lists where a panel does not
     apply."""
-    keys = ("drivers", "shaped_by", "used_by", "addressed_by", "realized_by", "replaced_by", "replaces",
+    keys = ("drivers", "shaped_by", "used_by", "addressed_by", "replaced_by", "replaces",
             "applies_to", "governed_by", "hosts", "deployed_on", "takes_part_in")
     trace: dict = {k: [] for k in keys}
     me = (next((p for p in load_folder(folder) if p.stem == stem), None)
@@ -2478,8 +2478,7 @@ def build_trace(stem: str, folder: str) -> dict:
         trace["hosts"] = _link_groups(links_of(me, "hosts"))
     if folder in _ADDRESSABLE:
         trace["addressed_by"] = build_addressed_by(stem)
-    # what realizes a use case is its breakdown on the FR page (DR-038), so
-    # `realized_by` stays empty here
+    # what realizes a use case is its breakdown on the FR page (DR-038)
     return trace
 
 
@@ -3919,8 +3918,8 @@ def data_model_entities() -> list[dict]:
 
 
 # Block 05 collapses the underlying entity pages (data-models/,
-# activity-models/) into one row per *model type* — use cases moved to block 04
-# (DR-011). Each row links to its own
+# activity-models/) into one row per *model type* — use cases are functional
+# requirements in block 04 (DR-038). Each row links to its own
 # overview page; types with no content yet are skipped from the listing.
 SUPPORTING_MODEL_TYPES = [
     {"folder": "data-models", "label": "Entity diagram", "code": "DM", "href": "/entity-diagram"},
