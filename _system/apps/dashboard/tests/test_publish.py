@@ -206,6 +206,15 @@ def test_failing_tests_publish_nothing():
         assert git(work, "tag", "-l") == ""
 
 
+def test_no_variable_runs_into_a_non_ascii_character():
+    """macOS ships bash 3.2, which reads `$version…` as a variable named
+    `version…` and stops. The tests run on a newer bash and do not see it."""
+    import re
+    for script in (HERE / "dev.sh", HERE.parents[2] / "dashboard.sh"):
+        text = script.read_text(encoding="utf-8")
+        assert not re.findall(r"\$[A-Za-z_][A-Za-z0-9_]*[^\x00-\x7f]", text), script.name
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):
