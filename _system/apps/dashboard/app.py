@@ -470,16 +470,27 @@ class Page:
 
     @property
     def title(self) -> str:
-        return self.meta.get("title", self.stem)
+        # a blank `title:` (YAML null) falls back to the file name like a
+        # missing one; a number or date is shown as written
+        t = self.meta.get("title")
+        return str(t) if t not in (None, "") else self.stem
 
     @property
     def status(self) -> str:
-        return self.meta.get("status", "")
+        return str(self.meta.get("status") or "")
 
     @property
     def aliases(self) -> list[str]:
-        a = self.meta.get("aliases") or []
-        return [x for x in a if x]
+        return [str(x) for x in self.as_list("aliases") if x]
+
+    def as_list(self, field: str) -> list:
+        """A list-valued frontmatter field as a list, whatever was written:
+        blank → [], a single value → [value] (`tags: draft` is one tag, and
+        `parent: 7` must not crash an iteration)."""
+        v = self.meta.get(field)
+        if v is None or v == "":
+            return []
+        return v if isinstance(v, list) else [v]
 
     def link_targets(self) -> set[str]:
         """Distinct wiki pages this page points to (frontmatter + body),
@@ -529,7 +540,14 @@ def _parse(path: Path, folder: str) -> Page | None:
     cached = _PARSE_CACHE.get(path)
     if cached is not None and cached[0] == mtime:
         return cached[1]
-    text = path.read_text(encoding="utf-8")
+    # One broken file must never take the whole dashboard down: every page
+    # render walks the full vault (title/link indexes), so an exception here
+    # is a 500 everywhere. Bytes that are not UTF-8 show as U+FFFD; a file
+    # that vanished between stat and read is simply skipped (not cached).
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
     m = FRONTMATTER_RE.match(text)
     if not m:
         page = None
@@ -538,6 +556,8 @@ def _parse(path: Path, folder: str) -> Page | None:
             meta = yaml.safe_load(m.group(1)) or {}
         except yaml.YAMLError:
             meta = {}
+        if not isinstance(meta, dict):
+            meta = {}                         # `--- just a string ---` or a list: no fields
         page = Page(stem=path.stem, meta=meta, body=m.group(2), folder=folder,
                     mtime=mtime)
     _PARSE_CACHE[path] = (mtime, page)
@@ -660,9 +680,7 @@ def provenance(page: Page) -> list[dict]:
     entries are kept (url=None) so the chip can say so instead of vanishing."""
     idx = source_index()
     rows = []
-    refs = page.meta.get("sources") or []
-    if not isinstance(refs, list):
-        refs = [refs]                            # a bare string is one entry, not a list of characters
+    refs = page.as_list("sources")          # a bare string is one entry, not a list of characters
     for ref in refs:
         base = _fr_stem_from_ref(ref)           # '[[raw/sources/SRC-001-x]]' -> 'SRC-001-x'
         if not base:
@@ -1157,7 +1175,7 @@ def _eif_flows(p) -> tuple[list[dict], list[dict], list[dict]]:
     """(inbound, outbound, all-in-document-order) flow dicts for one interface.
     The third is what labels the edge, so the label reads in the order the author
     wrote the flows rather than in-then-out."""
-    flows = [f for f in (p.meta.get("flows") or []) if isinstance(f, dict)]
+    flows = [f for f in p.as_list("flows") if isinstance(f, dict)]
     d = lambda f: str(f.get("direction", "")).lower()
     return ([f for f in flows if d(f) in ("inbound", "bidirectional")],
             [f for f in flows if d(f) in ("outbound", "bidirectional")],
@@ -1219,7 +1237,7 @@ def build_context_diagram(center: str | None = None) -> str | None:
 
     groups: dict[str, dict] = {}   # label -> {prov, recv, cls, order}
     for p in load_folder("stakeholders"):
-        prov, recv = p.meta.get("provides") or [], p.meta.get("receives") or []
+        prov, recv = p.as_list("provides"), p.as_list("receives")
         if not (prov or recv):
             continue
         raw_role = p.meta.get("context_role")
@@ -1351,7 +1369,7 @@ def build_glossary_graph(edge_filter: str = "all") -> dict:
 
     for p in glossary:                       # src is always a GLO page
         src = p.stem
-        for raw in (p.meta.get("related") or []) if edge_filter != "structured" else []:
+        for raw in p.as_list("related") if edge_filter != "structured" else []:
             tgt = _stem_of_link(raw)
             if not tgt or tgt == src or tgt not in by_stem:
                 continue                     # self / dangling / non-page
@@ -1767,7 +1785,7 @@ def build_fr_hierarchy() -> dict:
         # The hierarchy is a tree: we take the first parent only. A page with
         # multiple parents is placed under its first; multi-parent graphs are
         # out of scope for this view.
-        for ref in (p.meta.get("parent") or []):
+        for ref in p.as_list("parent"):
             stem = _fr_stem_from_ref(ref)
             if stem:
                 return stem
@@ -2007,7 +2025,7 @@ def _fr_ancestors(stem: str) -> list[dict]:
     cur, seen = pages.get(stem), {stem}
     while cur:
         ps = None
-        for ref in (cur.meta.get("parent") or []):
+        for ref in cur.as_list("parent"):
             ps = _fr_stem_from_ref(ref)
             if ps:
                 break
@@ -3182,8 +3200,8 @@ def stakeholders_view():
             "title": p.title,
             "role": p.meta.get("role", ""),
             "snapshot": extract_labeled(p, "Snapshot", titles, links),
-            "influence": p.meta.get("influence", ""),
-            "interest": p.meta.get("interest", ""),
+            "influence": str(p.meta.get("influence") or ""),
+            "interest": str(p.meta.get("interest") or ""),
             "rel_links": rel[:_REL_MAX],
             "rel_more": max(0, len(rel) - _REL_MAX),
             "status": p.status,
@@ -3261,7 +3279,7 @@ def page_detail(folder, stem):
     return render_template(
         "detail.html", kind=kind, id=page.id, title=page.title,
         status=page.status, created=str(page.meta.get("created", "")),
-        updated=str(page.meta.get("updated", "")), tags=page.meta.get("tags") or [],
+        updated=str(page.meta.get("updated", "")), tags=page.as_list("tags"),
         body_html=body_html, **_section_crumb(folder),
         context_diagram=context_diagram, context_flows=context_flows,
         relations=build_relations_panel(stem, exclude=trace_stems(trace)),
@@ -3311,7 +3329,7 @@ def source_detail(stem):
     body_html = f'<dl class="source-facts">{facts_html}<dt>Ingested pages</dt><dd>{ingested}</dd></dl>' + render_markdown(body, titles)
     return render_template("detail.html", kind="Source", id=src.id, title=src.title, status=src.status,
                            created=str(src.meta.get("created", "")), updated=str(src.meta.get("updated", "")),
-                           tags=src.meta.get("tags") or [], body_html=body_html, crumb=None, crumb_href=None,
+                           tags=src.as_list("tags"), body_html=body_html, crumb=None, crumb_href=None,
                            context_diagram=None, context_flows=None,
                            relations=None, ego_graph=None, ego_layers=None,
                            needs_mermaid=False, sources=None)
@@ -3477,7 +3495,7 @@ def data_model_nodes() -> list[dict]:
         if p.folder != "data-models":
             continue
         claimed.add(p.title.strip().lower())
-        for raw in (p.meta.get("related") or []):
+        for raw in p.as_list("related"):
             stem = _stem_of_link(raw)
             if stem:
                 claimed.add(stem)
@@ -3525,12 +3543,12 @@ def data_model_edges() -> list[dict]:
         # A sum-type variant already names its sum type in `parent:` (DR-019).
         # Draw that as the inheritance it is, rather than make the author repeat
         # it as a relationship entry — one fact, one place.
-        for raw in (p.meta.get("parent") or []):
+        for raw in p.as_list("parent"):
             tgt = _stem_of_link(raw)
             if tgt and tgt in by_stem and tgt != p.stem:
                 out.append({"source": p.stem, "target": tgt, "verb": "",
                             "cardinality": "", "kind": "inheritance"})
-        for entry in (p.meta.get("relationships") or []):
+        for entry in p.as_list("relationships"):
             if not isinstance(entry, dict):
                 continue
             tgt = _stem_of_link(entry.get("to") or entry.get("target"))
@@ -3867,7 +3885,7 @@ def goals_view():
         "url": _page_url(vision.folder, vision.stem),
         "stereotype": "Vision",
         "maturity": None,
-        "beneficiary": _wikilink_list(vision.meta.get("beneficiary")),
+        "beneficiary": _wikilink_list(vision.as_list("beneficiary")),
         # Vision card shows the prose of the `## Vision` section — the
         # objectives list and impact block from the wiki page are projected
         # below as separate objective cards and the coverage matrix.
@@ -3893,7 +3911,7 @@ def goals_view():
             "metric": _inline(o.meta.get("metric")),
             "target": _inline(o.meta.get("target")),
             "baseline": _inline(o.meta.get("baseline")),
-            "beneficiary": _wikilink_list(o.meta.get("beneficiary")),
+            "beneficiary": _wikilink_list(o.as_list("beneficiary")),
             # every requirement that serves the goal, features and stories
             # too: a superset of its matrix marks, as text (FR-036)
             "epics": [{"id": p.id, "title": p.title, "url": _page_url(p.folder, p.stem)}
@@ -3970,7 +3988,7 @@ def functional_requirements_view():
         "priority": str(p.meta.get("priority") or ""),
         "status": p.status,
         "goals": [{"id": _goal_id_from_ref(g), "anchor": f"/goals#{_goal_id_from_ref(g)}"}
-                  for g in (p.meta.get("goal") or [])],
+                  for g in p.as_list("goal")],
         "n_features": uc_kids.get(p.id, {}).get("n_features", 0),
         "n_stories": uc_kids.get(p.id, {}).get("n_stories", 0),
     } for p in goals["ucs"]]
