@@ -262,4 +262,4 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Source: a request by Gernot Starke in chat, no file in `raw/`. Grill gate: the wiki was checked first (DR-004, FR-030, FR-042 exist, none states what the published image must offer), then four questions in one round, all answered. No Issues.
 - Human decisions (2026-11-18): extend FR-030 instead of a new page. Priority Must. The image is pulled without a login. It runs on amd64 and arm64.
 - Created: SRC-029. Updated: FR-030 (three lines, success metric, scope, priority Should to Must), `_system/index.md`.
-- Checked against today's state: releases 0.9.0 to 0.11.2 are published for both platforms, and the package is public.
+- Checked against today's state: release 0.11.2 holds an amd64 and an arm64 image and is pulled without a login. Older releases were not checked again.
