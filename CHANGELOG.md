@@ -13,6 +13,9 @@ Unreleased changes sit at the top until the next Starter Kit release.
 ## [Unreleased]
 
 ### Changed
+- Dashboard release 0.10.0 (`_system/apps/dashboard/VERSION`): unified
+  domain terms with the terminology graph and entity diagram (meta #36), the
+  renamed domain-term routes, and the atrium brand out of the image (FR-032).
 - Dashboard: the image ships one brand, `systems42`. The atrium brand moved
   to the isaqb-atrium repository, which names its own folder in `brand:`
   (FR-032). A wiki that still says `brand: atrium` shows the systems42 brand
