@@ -35,7 +35,7 @@ def _page(folder, stem, typ, title, status, extra="", related="", body=""):
 
 
 _page("stakeholders", "STK-001-aerztin", "stakeholder", "Ärztin", "draft")
-_page("functional-requirements", "FR-001-suche", "functional-requirement", "Suche", "draft", "stereotype: feature\n")
+_page("functional-requirements", "FR-001-suche", "functional-requirement", "Suche", "draft", "notation: agile\nlevel: feature\n")
 _page("quality-requirements", "QR-001-ruhig", "quality-requirement", "Ruhig", "draft")
 _page("issues", "ISS-001-im-text", "issue", "Im Text verlinkt", "open",
       "severity: major\nkind: question\n", body="Betrifft [[STK-001-aerztin]].")

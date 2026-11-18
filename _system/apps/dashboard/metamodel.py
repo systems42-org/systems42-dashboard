@@ -25,10 +25,18 @@ _repo = os.environ.get("REPO_DIR")
 METAMODEL_DIR = (Path(_env) if _env
                  else Path(_repo) / "_system" / "metamodel" if _repo
                  else Path(__file__).resolve().parents[2] / "metamodel")
+# The project's own requirement notations (`_system/notations/`, FR-023,
+# DR-038): its own variable, else the sibling of the metamodel folder.
+_env_n = os.environ.get("NOTATIONS_DIR")
+NOTATIONS_DIR = Path(_env_n) if _env_n else METAMODEL_DIR.parent / "notations"
 
 _FM = re.compile(r"^---\s*\n(.*?)\n---\s*\n?(.*)$", re.DOTALL)
 _H1 = re.compile(r"^#\s+.*$", re.MULTILINE)
 _H2 = re.compile(r"^##\s+(.*)$", re.MULTILINE)
+# A notation body is a page template cut into blocks by `<!-- levels: a, b -->`
+# markers; a block is named by its first `## heading` or `**Label.**`.
+_LEVELS = re.compile(r"^<!--\s*levels:\s*(.*?)\s*-->\s*$", re.MULTILINE)
+_BLOCK_NAME = re.compile(r"^(?:##\s+(.+?)|\*\*(.+?)\*\*.*)$", re.MULTILINE)
 
 # Framework order on the page and in the graph: the problem space first, then
 # what both peaks share, then the planned solution space.
@@ -89,6 +97,40 @@ def summary_of(body: str) -> str:
     return " ".join(line.strip() for line in head.splitlines())
 
 
+def notation_sections(body: str) -> list[dict]:
+    """The level-marked blocks of a notation body, in order: `{heading,
+    levels}`. Text before the first marker (the Capture comment, the title)
+    belongs to every level and is not a section."""
+    marks = list(_LEVELS.finditer(body))
+    out = []
+    for i, m in enumerate(marks):
+        end = marks[i + 1].start() if i + 1 < len(marks) else len(body)
+        name = _BLOCK_NAME.search(body, m.end(), end)
+        heading = (name.group(1) or name.group(2)).strip().rstrip(".") if name else ""
+        out.append({"heading": heading,
+                    "levels": [s.strip() for s in m.group(1).split(",") if s.strip()]})
+    return out
+
+
+def notations() -> list[dict]:
+    """The requirement notations (DR-038), by name: the shipped ones in
+    `notations/` of the metamodel, then a project's own in `_system/notations/`.
+    Each carries `_sections` (its level-marked page-template blocks)."""
+    out = _load("notations", "notation")
+    if NOTATIONS_DIR.is_dir():
+        for p in sorted(NOTATIONS_DIR.glob("*.md")):
+            n = _read(p)
+            if n and n.get("construct") == "notation":
+                out.append(n)
+    out = [n for n in out if str(n.get("name") or "").strip()]   # a nameless file defines nothing
+    for n in out:
+        n["name"] = str(n["name"]).strip()
+        n["_sections"] = notation_sections(str(n.get("_body") or ""))
+        levels = n.get("levels")
+        n["levels"] = [str(v) for v in levels] if isinstance(levels, list) else []
+    return sorted(out, key=lambda n: n["name"].lower())
+
+
 def _load(folder: str, construct: str) -> list[dict]:
     d = METAMODEL_DIR / folder
     if not d.is_dir():
@@ -109,8 +151,8 @@ def load() -> dict:
       blocks       flat, in framework order, each with `framework` added
       types        in block order (then page order); `block_title` added
       relations    page order; `edges` as declared
+      notations    shipped and project-specific FR notation definitions (DR-038)
       projections  page order
-      altitude     the altitude-scale page or {}
       rules        page order
       present      False when the folder is missing or empty
     """
@@ -132,18 +174,14 @@ def load() -> dict:
         t["block_area"] = b["area"] if b else None
     types.sort(key=lambda t: (block_pos.get(t.get("block"), len(blocks)), t.get("name", "")))
 
-    altitude = _read(METAMODEL_DIR / "altitude.md") or {}
-    if altitude.get("construct") != "altitude-scale":
-        altitude = {}
-
     return {
         "meta": meta,
         "frameworks": frameworks,
         "blocks": blocks,
         "types": types,
+        "notations": notations(),
         "relations": _load("relations", "relation"),
         "projections": _load("projections", "projection"),
-        "altitude": altitude,
         "rules": _load("rules", "rule"),
         "present": bool(types),
     }
@@ -283,20 +321,15 @@ def anchor_index(found: list[dict]) -> dict[str, dict]:
 def anchors(mm: dict) -> dict[str, str]:
     """Every page name and alias → the in-page anchor id the `/metamodel` page
     gives that construct (`type-goal`, `rel-goal`, `proj-…`, `rule-…`,
-    `fw-…`, `altitude`), for resolving the `[[wikilinks]]` metamodel pages use
+    `fw-…`, `notation-agile`), for resolving the `[[wikilinks]]` metamodel pages use
     among themselves. Prefixed, because a type and a relation may share a name."""
     out: dict[str, str] = {}
     # types last, so a bare `[[goal]]` means the type, not the relation
     for key, prefix in (("relations", "rel-"), ("frameworks", "fw-"), ("projections", "proj-"),
-                        ("rules", "rule-"), ("types", "type-")):
+                        ("rules", "rule-"), ("notations", "notation-"), ("types", "type-")):
         for p in mm[key]:
             anchor = prefix + str(p["name"])
             out[str(p["name"])] = anchor
             for a in p.get("aliases") or []:
                 out[str(a)] = anchor
-    if mm["altitude"]:
-        out["altitude"] = "altitude"
-        out[str(mm["altitude"].get("name"))] = "altitude"
-        for a in mm["altitude"].get("aliases") or []:
-            out[str(a)] = "altitude"
     return out

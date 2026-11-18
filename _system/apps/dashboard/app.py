@@ -245,6 +245,8 @@ def wiki_config() -> dict:
         "about_href": "/about" if about else "",
         "about_label": str(data.get("about_label") or "").strip()
                        or f"About {name or DEFAULT_SYSTEM_NAME}",
+        # the notation new functional requirements get (FR-004, DR-038); agile when unset
+        "default_notation": str(data.get("default_notation") or "").strip().lower() or "agile",
     }
 
 
@@ -1202,7 +1204,6 @@ FOLDER_LABELS = {
     "context": "Context",
     "external-interfaces": "External interface",
     "functional-requirements": "Functional requirement",
-    "use-cases": "Use case",
     "activity-models": "Activity model",
     "data-models": "Data model",
     "quality-requirements": "Quality requirement",
@@ -1463,7 +1464,7 @@ _TYPE_FOLDER = {
     "DT": "domain-terms", "GLO": "glossary", "DM": "data-models", "STK": "stakeholders",
     "EIF": "external-interfaces", "GOAL": "goals", "CTX": "context",
     "FR": "functional-requirements", "CON": "constraints", "ISS": "issues",
-    "UC": "use-cases", "ACT": "activity-models", "QR": "quality-requirements",
+    "UC": "functional-requirements", "ACT": "activity-models", "QR": "quality-requirements",
     "DR": "decisions", "BB": "building-blocks", "CC": "concepts",
     "RS": "runtime-scenarios", "DN": "deployment-nodes",
 }
@@ -1688,7 +1689,7 @@ def build_relations_panel(stem: str, exclude: set[str] | None = None) -> dict:
 # keyed off an ID list — a vault may hold any number of objectives at any IDs,
 # and all of them must reach the screen.
 # The Goal↔Epic edge is pinned at the Epic (`goal:` field on each FR, DR-018),
-# and a use case carries the same field (DR-011); coverage and tile counters are
+# and a use case carries the same field (DR-038); coverage and tile counters are
 # pure projections from those edges.
 
 
@@ -1751,9 +1752,9 @@ def is_enabler(fr: Page, goals: list) -> bool:
 
 
 def breaks_fr_traces_to_goal(fr: Page, goals: list) -> bool:
-    """rule-fr-traces-to-goal: an epic or feature serves a goal (`goals`, its
-    own or its use-case parent's) or is an enabler. Advisory only."""
-    if str(fr.meta.get("stereotype") or "").strip().lower() not in ("epic", "feature"):
+    """rule-fr-traces-to-goal: an Agile epic or feature serves a goal (`goals`,
+    its own or its use-case parent's) or is an enabler. Advisory only."""
+    if _fr_notation(fr) != "agile" or _fr_level(fr) not in ("epic", "feature"):
         return False
     return not goals and not _in_enabler_lane(fr)
 
@@ -1764,12 +1765,13 @@ def load_goals() -> dict:
     Shape:
       vision     — the goal Page with `stereotype: vision`, or None
       objectives — every other goal Page, ordered by id (GOAL-002, -003, …)
-      coverage   — { 'GOAL-NNN': [FR- or UC-Page, ...] } from goal: backlinks
+      coverage   — { 'GOAL-NNN': [FR-Page, ...] } from goal: backlinks
       enablers   — FR-Pages that serve no goal, in lane platform or display
       untraced   — FR-Pages that break rule-fr-traces-to-goal
-      frs        — all FR-Pages sorted by id (column order for the matrix)
-      ucs        — all use-case Pages sorted by id (DR-011: use cases are FRs;
-                   a UC with goal: [] is simply untraced, not an enabler)
+      frs        — every FR-Page that is not a use case, sorted by id
+      ucs        — the FR-Pages in the use-case notation, sorted by id
+                   (DR-038; a use case with goal: [] is simply untraced, not
+                   an enabler)
 
     Derived entirely from the vault, never from a fixed ID list: a group may
     capture any number of objectives at any IDs and every one of them shows up.
@@ -1787,9 +1789,12 @@ def load_goals() -> dict:
     vision = visions[0] if visions else None
     objectives = [p for p in goals if p is not vision]
 
-    frs = sorted(load_folder("functional-requirements"), key=lambda p: p.id)
-    ucs = sorted(load_folder("use-cases"), key=lambda p: p.id)
-    uc_by_stem = {u.stem: u for u in ucs}
+    all_frs = sorted(load_folder("functional-requirements"), key=lambda p: p.id)
+    ucs = [p for p in all_frs if _fr_notation(p) == "use-case"]
+    frs = [p for p in all_frs if _fr_notation(p) != "use-case"]
+    # the use cases Agile features and stories may refine (DR-038 amendment),
+    # the same set the story map roots them under
+    uc_by_stem = {u.stem: u for u in ucs if _fr_level(u) in UC_REFINABLE_LEVELS}
     coverage: dict[str, list[Page]] = {o.id: [] for o in objectives}
     objective_by_stem = {o.stem: o for o in objectives}
 
@@ -1802,10 +1807,11 @@ def load_goals() -> dict:
     untraced: list[Page] = []
     for fr in frs:
         gids = served(fr)
-        if not gids:
-            # a feature/story refining a use case serves that use case's goals
-            uc = next((uc_by_stem[s] for s in links_of(fr, "parent") if s in uc_by_stem), None)
-            gids = served(uc) if uc else []
+        if not gids and _fr_notation(fr) == "agile" and _fr_level(fr) in ("feature", "story"):
+            # an Agile feature/story whose first parent is a sea- or fish-level
+            # use case serves that use case's goals (rule-fr-traces-to-goal)
+            first = _fr_first_parent(fr)
+            gids = served(uc_by_stem[first]) if first in uc_by_stem else []
         if is_enabler(fr, gids):
             enablers.append(fr)
         elif breaks_fr_traces_to_goal(fr, gids):
@@ -1851,12 +1857,16 @@ def build_vision_tile(data: dict, titles: dict[str, str]) -> dict:
     }
 
 
-# --- functional requirements (req42 block 04: Epic→Feature→Story hierarchy) ---
+# --- functional requirements (req42 block 04) ----------------------------
 #
-# One content type `functional-requirement` with stereotype epic|feature|story
-# (DR-012). The hierarchy edge is the `parent:` wikilink field; build_fr_hierarchy
-# is a pure projection over those edges — the single source for both the home
-# tile and the /req42/functional-requirements page (cf. load_goals / _mermaid_goal_tree).
+# One content type `functional-requirement`; every page stores its `notation:`
+# (agile, use-case, ears, prose or a project's own) and one of that notation's
+# `level:` values (DR-038). The hierarchy edge is the `parent:` wikilink field,
+# a graph independent of notation and level. build_fr_hierarchy is the story
+# map: a pure projection over the Agile epic/feature/story pages (plus the use
+# cases Agile features and stories refine) — the single source for both the
+# home tile and the /req42/functional-requirements page. Everything it cannot
+# place is listed under the other notations.
 
 def _fr_stem_from_ref(ref: object) -> str:
     """From '[[FR-009-foo]]' / 'FR-009-foo' / a bare stem, return the page stem
@@ -1866,8 +1876,31 @@ def _fr_stem_from_ref(ref: object) -> str:
     return (m.group(1) if m else s).split("/")[-1].strip()
 
 
-def _fr_stereotype(p: "Page") -> str:
-    return str(p.meta.get("stereotype") or "").strip().lower()
+def _fr_level(p: "Page") -> str:
+    return str(p.meta.get("level") or "").strip().lower()
+
+
+def _fr_notation(p: "Page") -> str:
+    # No fallback: a page without `notation:` is unplaced, not silently Agile.
+    return str(p.meta.get("notation") or "").strip().lower()
+
+
+AGILE_LEVELS = ("epic", "feature", "story")
+# use-case levels an Agile feature or story may refine (DR-038 amendment): a
+# kite-level use case summarises others and takes no Agile children
+UC_REFINABLE_LEVELS = ("sea", "fish")
+
+
+def _fr_first_parent(p: "Page") -> str | None:
+    """The stem of an FR's first `parent:`. The story map is a tree: a page
+    with several parents is placed under its first; multi-parent graphs are
+    out of scope for this view. Goal inheritance from a use case reads the
+    same edge, so the two always agree."""
+    for ref in p.as_list("parent"):
+        stem = _fr_stem_from_ref(ref)
+        if stem:
+            return stem
+    return None
 
 
 def _fr_sort_key(p: "Page"):
@@ -1884,6 +1917,7 @@ def _fr_node(p: "Page") -> dict:
     return {
         "id": p.id, "title": p.title, "stem": p.stem,
         "priority": str(p.meta.get("priority") or "").strip(),
+        "level": _fr_level(p), "notation": _fr_notation(p),
         "status": p.status,
     }
 
@@ -1899,29 +1933,31 @@ def build_fr_hierarchy() -> dict:
                        stories plus the stories of its direct features — exactly
                        what the page renders), plus priority/release/status.
       total_epics / total_features / total_stories — aggregate counters.
-      use_cases      — use cases with FR children (rel-parent, DR-011): same
-                       shape as an epic row (features, direct_stories, counts).
-                       A feature or story may name a use case as its parent.
-      orphans        — feature/story pages whose parent does not resolve to a
-                       known FR or use case (normally empty; surfaced for visibility).
+      use_cases      — use cases (use-case notation, level sea or fish) that
+                       Agile features or stories name as `parent:` (DR-038
+                       amendment), shaped like an epic row (features,
+                       direct_stories, counts); a use case without such
+                       children stays under other_notations only.
+      orphans        — Agile feature/story pages whose parent does not resolve
+                       to an Agile FR or a refinable use case (normally empty;
+                       surfaced for visibility).
+      other_notations — every live FR the story map cannot place: other
+                       notations, and pages with a missing or unknown notation
+                       or level (still visible, never silently Agile).
     """
     # A deprecated item has been retired — split, superseded or withdrawn — so it
     # is not part of the live hierarchy and must not be counted, drawn, or listed as
     # an orphan. Same rule as the context projection applies to a deprecated
     # interface. A live child of a retired parent correctly becomes an orphan.
-    pages = [p for p in load_folder("functional-requirements")
-             if p.status != "deprecated"]
+    all_pages = [p for p in load_folder("functional-requirements")
+                 if p.status != "deprecated"]
+    pages = [p for p in all_pages
+             if _fr_notation(p) == "agile" and _fr_level(p) in AGILE_LEVELS]
     by_stem = {p.stem: p for p in pages}
+    uc_by_stem = {p.stem: p for p in all_pages
+                  if _fr_notation(p) == "use-case" and _fr_level(p) in UC_REFINABLE_LEVELS}
 
-    def parent_stem(p: "Page") -> str | None:
-        # The hierarchy is a tree: we take the first parent only. A page with
-        # multiple parents is placed under its first; multi-parent graphs are
-        # out of scope for this view.
-        for ref in p.as_list("parent"):
-            stem = _fr_stem_from_ref(ref)
-            if stem:
-                return stem
-        return None
+    parent_stem = _fr_first_parent
 
     children: dict[str, list["Page"]] = {}
     for p in pages:
@@ -1929,11 +1965,11 @@ def build_fr_hierarchy() -> dict:
         if ps:
             children.setdefault(ps, []).append(p)
 
-    def kids(stem: str, stereo: str) -> list["Page"]:
-        return sorted((c for c in children.get(stem, []) if _fr_stereotype(c) == stereo),
+    def kids(stem: str, level: str) -> list["Page"]:
+        return sorted((c for c in children.get(stem, []) if _fr_level(c) == level),
                       key=_fr_sort_key)
 
-    epics = sorted((p for p in pages if _fr_stereotype(p) == "epic"), key=_fr_sort_key)
+    epics = sorted((p for p in pages if _fr_level(p) == "epic"), key=_fr_sort_key)
     epic_rows = []
     total_features = total_stories = 0
 
@@ -1964,28 +2000,27 @@ def build_fr_hierarchy() -> dict:
         epic_rows.append({**_fr_node(e),
                           "release": str(e.meta.get("release") or "").strip(), **b})
 
-    # A use case is a functional requirement in its own form (DR-011); features
-    # and stories that refine it name it in `parent:`. Only use cases that have
-    # such children appear here — the others are listed on their own.
+    # A use case at level sea or fish that Agile features or stories refine
+    # (DR-038 amendment) is a root beside the epics; an epic never names a use
+    # case. Use cases without such children are listed under other_notations.
     uc_rows = []
-    for u in sorted((q for q in load_folder("use-cases") if q.status != "deprecated"),
-                    key=lambda q: q.id):
-        if u.stem not in children:
+    for u in sorted(uc_by_stem.values(), key=_fr_sort_key):
+        if not (kids(u.stem, "feature") or kids(u.stem, "story")):
             continue
         b = breakdown(u)
         total_features += b["n_features"]
         total_stories += b["n_stories"]
-        uc_rows.append({**_fr_node(u), "url": _page_url("use-cases", u.stem), **b})
-    uc_stems = {u["stem"] for u in uc_rows}
+        uc_rows.append({**_fr_node(u), "url": _page_url("functional-requirements", u.stem), **b})
 
     orphans = []
     for p in pages:
-        st = _fr_stereotype(p)
+        st = _fr_level(p)
         if st in ("feature", "story"):
             ps = parent_stem(p)
-            if ps is None or (ps not in by_stem and ps not in uc_stems):
-                orphans.append({**_fr_node(p), "stereotype": st})
+            if ps is None or (ps not in by_stem and ps not in uc_by_stem):
+                orphans.append(_fr_node(p))
 
+    placed = set(by_stem) | {u["stem"] for u in uc_rows}
     return {
         "epics": epic_rows,
         "use_cases": uc_rows,
@@ -1993,6 +2028,8 @@ def build_fr_hierarchy() -> dict:
         "total_features": total_features,
         "total_stories": total_stories,
         "orphans": orphans,
+        "other_notations": sorted((_fr_node(p) for p in all_pages if p.stem not in placed),
+                                  key=lambda r: r["id"]),
     }
 
 
@@ -2004,11 +2041,11 @@ def _mermaid_goal_epic_tree(goals: dict, hierarchy: dict) -> str | None:
     levels only — it must stay readable as the hierarchy grows, which is exactly
     why the old full Epic→Feature→Story tree was split out to the epic pages.
     Goal nodes jump to their card on /goals; epic nodes open their epic page.
-    Use cases with a `goal:` (DR-011) hang under their goals beside the epics.
+    Use cases with a `goal:` (DR-038) hang under their goals beside the epics.
     Returns None when there are neither epics nor goal-linked use cases."""
     epics = hierarchy.get("epics") or []
     coverage = goals.get("coverage") or {}
-    has_uc = any(p.folder == "use-cases" for ps in coverage.values() for p in ps)
+    has_uc = any(_fr_notation(p) == "use-case" for ps in coverage.values() for p in ps)
     if not epics and not has_uc:
         return None
     epic_by_id = {e["id"]: e for e in epics}
@@ -2037,7 +2074,7 @@ def _mermaid_goal_epic_tree(goals: dict, hierarchy: dict) -> str | None:
             return
         label = _clean_label(uc.title)
         lines.append(f'  {parent_nid} --> {nid}["{uc.id}<br/>{label}"]:::usecase')
-        lines.append(f'  click {nid} "{_page_url("use-cases", uc.stem)}"')
+        lines.append(f'  click {nid} "{_page_url(uc.folder, uc.stem)}"')
         seen.add(uc.id)
 
     for o in objectives:
@@ -2046,7 +2083,7 @@ def _mermaid_goal_epic_tree(goals: dict, hierarchy: dict) -> str | None:
         lines.append(f'  {gid}["{o.id}<br/>{glabel}"]:::goal')
         lines.append(f'  click {gid} "/goals#{o.id}"')
         for fr in coverage.get(o.id, []):
-            if fr.folder == "use-cases":
+            if _fr_notation(fr) == "use-case":
                 uc_edge(gid, fr)
                 continue
             e = epic_by_id.get(fr.id)
@@ -2120,39 +2157,30 @@ def _mermaid_fr_subtree(node: dict | None) -> str | None:
 
 def _fr_hierarchy_node(hierarchy: dict, stem: str) -> tuple[dict | None, str | None]:
     """Locate the built hierarchy node for a stem within build_fr_hierarchy()'s tree.
-    Returns (node, kind) with kind ∈ {epic, feature, story}; (None, None) if the
-    stem is not an FR in the hierarchy (e.g. an orphan or unknown page)."""
-    for e in hierarchy["epics"]:
-        if e["stem"] == stem:
-            return e, "epic"
-        for f in e["features"]:
+    Returns (node, level) with level ∈ {epic, feature, story}, or the use case's
+    own level (sea, fish) for a use case that roots Agile children; (None, None)
+    if the stem is not an FR in the hierarchy (e.g. an orphan or unknown page)."""
+    use_cases = hierarchy.get("use_cases") or []
+    for root, is_uc in [(e, False) for e in hierarchy["epics"]] + [(u, True) for u in use_cases]:
+        if root["stem"] == stem:
+            return root, (root["level"] if is_uc else "epic")
+        for f in root["features"]:
             if f["stem"] == stem:
                 return f, "feature"
             for s in f["stories"]:
                 if s["stem"] == stem:
                     return s, "story"
-        for s in e["direct_stories"]:
-            if s["stem"] == stem:
-                return s, "story"
-    for u in hierarchy.get("use_cases") or []:
-        for f in u["features"]:
-            if f["stem"] == stem:
-                return f, "feature"
-            for s in f["stories"]:
-                if s["stem"] == stem:
-                    return s, "story"
-        for s in u["direct_stories"]:
+        for s in root["direct_stories"]:
             if s["stem"] == stem:
                 return s, "story"
     return None, None
 
 
 def _fr_ancestors(stem: str) -> list[dict]:
-    """The parent chain for an FR (root epic or use case first), walked over the
-    first-parent `parent:` edge. Powers the FR-page breadcrumb. Cycle-guarded.
-    A use case (DR-011) is always the top of its chain."""
+    """The parent chain for an FR (root first), walked over the first-parent
+    `parent:` edge across notations (a story may sit under a use case,
+    DR-038). Powers the FR-page breadcrumb. Cycle-guarded."""
     pages = {p.stem: p for p in load_folder("functional-requirements")}
-    ucs = {p.stem: p for p in load_folder("use-cases")}
     out: list[dict] = []
     cur, seen = pages.get(stem), {stem}
     while cur:
@@ -2164,11 +2192,6 @@ def _fr_ancestors(stem: str) -> list[dict]:
         if not ps or ps in seen:
             break
         seen.add(ps)
-        if ps in ucs:
-            u = ucs[ps]
-            out.append({"id": u.id, "title": u.title, "stem": u.stem,
-                        "url": _page_url("use-cases", u.stem)})
-            break
         parent = pages.get(ps)
         if not parent:
             break
@@ -2422,7 +2445,7 @@ def build_addressed_by(stem: str) -> list[dict]:
 
 
 # Requirement folders a `drivers:` link may point at (rel-drivers).
-_ADDRESSABLE = {"goals", "use-cases", "functional-requirements", "quality-requirements", "constraints",
+_ADDRESSABLE = {"goals", "functional-requirements", "quality-requirements", "constraints",
                 "activity-models"}
 
 
@@ -2431,7 +2454,7 @@ def build_trace(stem: str, folder: str) -> dict:
     architecture pages and decision records, the arc42 forward and reverse
     links, addressed-by on a requirement. Empty lists where a panel does not
     apply."""
-    keys = ("drivers", "shaped_by", "used_by", "addressed_by", "realized_by", "replaced_by", "replaces",
+    keys = ("drivers", "shaped_by", "used_by", "addressed_by", "replaced_by", "replaces",
             "applies_to", "governed_by", "hosts", "deployed_on", "takes_part_in")
     trace: dict = {k: [] for k in keys}
     me = (next((p for p in load_folder(folder) if p.stem == stem), None)
@@ -2462,11 +2485,7 @@ def build_trace(stem: str, folder: str) -> dict:
         trace["hosts"] = _link_groups(links_of(me, "hosts"))
     if folder in _ADDRESSABLE:
         trace["addressed_by"] = build_addressed_by(stem)
-    if folder == "use-cases":
-        # features and stories refining this use case (rel-parent, DR-011)
-        trace["realized_by"] = _link_groups(
-            [p.stem for p in sorted(load_folder("functional-requirements"), key=lambda q: q.id)
-             if p.status != "deprecated" and stem in links_of(p, "parent")])
+    # what realizes a use case is its breakdown on the FR page (DR-038)
     return trace
 
 
@@ -2832,7 +2851,7 @@ def deployment_view():
 
 # Frontmatter fields searched as plain words (FR-006). Link fields (parent,
 # sources, related, drivers …) are left out: their values are file names.
-SEARCH_FIELDS = ["tags", "status", "stereotype", "priority", "kind", "state",
+SEARCH_FIELDS = ["tags", "status", "stereotype", "notation", "level", "priority", "kind", "state",
                  "category", "dimensions"]
 
 _MD_LINK_RE = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")
@@ -2984,24 +3003,24 @@ def build_section_tile(section: dict) -> dict:
                   "label": "Vision & Goals", "scope": "in", "colors": section["colors"]})
     elif sid == "R3":
         hierarchy = build_fr_hierarchy()
-        ucs = sorted(load_folder("use-cases"), key=lambda p: p.id)
-        # the headline counts every functional requirement — all FR pages
-        # (orphans included) plus use cases (DR-011); the breakdown names only
-        # the kinds that exist, so an empty kind never reads "0 epics".
+        frs = load_folder("functional-requirements")
+        ucs = sorted((p for p in frs if _fr_notation(p) == "use-case"), key=lambda p: p.id)
+        # the headline counts every functional requirement of every notation
+        # (orphans included, DR-038); the breakdown names only the kinds that
+        # exist, so an empty kind never reads "0 epics".
         breakdown = [{"n": hierarchy["total_epics"], "one": "epic", "many": None},
                      {"n": hierarchy["total_features"], "one": "feature", "many": None},
                      {"n": hierarchy["total_stories"], "one": "story", "many": "stories"},
                      {"n": len(ucs), "one": "use case", "many": None}]
-        t.update({"count": len(load_folder("functional-requirements")) + len(ucs),
+        t.update({"count": len(frs),
                   "unit": "requirement",
                   # counted nouns, not a pre-built string: the template runs
                   # each through `plural`, so one feature reads "1 feature".
                   "sub_units": [u for u in breakdown if u["n"]],
                   "epic_rows": [{"id": e["id"], "title": e["title"], "n_features": e["n_features"],
                                  "n_stories": e["n_stories"]} for e in hierarchy["epics"]],
-                  # use cases are functional requirements too (DR-011)
-                  "uc_rows": [{"id": p.id, "title": p.title,
-                               "level": str(p.meta.get("level") or "")} for p in ucs]})
+                  # use cases are functional requirements too (DR-038)
+                  "uc_rows": [{"id": p.id, "title": p.title, "level": _fr_level(p)} for p in ucs]})
     elif sid == "R4":
         # `relations` there is a page count per model type, not a link count
         models = _supporting_model_entries()
@@ -3393,6 +3412,13 @@ def page_detail(folder, stem):
     # takes any single path segment, and `..` or `.` would otherwise reach a
     # markdown file beside or above wiki/ (the repository root under
     # `dashboard.sh local`, /repo under Docker).
+    # Use cases are functional requirements in the use-case notation (DR-038):
+    # a former /page/use-cases/ link lands on the requirement that kept its file
+    # name (wiki/use-cases/ is usually gone by then, so before the folder
+    # check). A wiki that still has the page there shows it as it is.
+    if (folder == "use-cases" and not (WIKI_DIR / folder / f"{stem}.md").is_file()
+            and (WIKI_DIR / "functional-requirements" / f"{stem}.md").is_file()):
+        return redirect(f"/functional-requirements/{stem}", code=301)
     if not _is_wiki_folder(folder):
         abort(404)
     path = WIKI_DIR / folder / f"{stem}.md"
@@ -3900,8 +3926,8 @@ def data_model_entities() -> list[dict]:
 
 
 # Block 05 collapses the underlying entity pages (data-models/,
-# activity-models/) into one row per *model type* — use cases moved to block 04
-# (DR-011). Each row links to its own
+# activity-models/) into one row per *model type* — use cases are functional
+# requirements in block 04 (DR-038). Each row links to its own
 # overview page; types with no content yet are skipped from the listing.
 SUPPORTING_MODEL_TYPES = [
     {"folder": "data-models", "label": "Entity diagram", "code": "DM", "href": "/entity-diagram"},
@@ -3942,7 +3968,7 @@ def _goal_matrix(data: dict) -> tuple[list[dict], list[dict]]:
     enabler_ids = {fr.id for fr in data["enablers"]}
     untraced_ids = {fr.id for fr in data["untraced"]}
     epics = [fr for fr in data["frs"]
-             if str(fr.meta.get("stereotype") or "").strip().lower() == "epic"]
+             if _fr_notation(fr) == "agile" and _fr_level(fr) == "epic"]
 
     def col(p: Page) -> dict:
         return {"id": p.id, "title": p.title, "url": _page_url(p.folder, p.stem),
@@ -3961,9 +3987,14 @@ def _goal_matrix(data: dict) -> tuple[list[dict], list[dict]]:
         if not any(p.id in col_ids for p in serving):
             for kind, label in (("feature", "features"), ("story", "stories")):
                 links = [{"id": p.id, "url": _page_url(p.folder, p.stem)} for p in serving
-                         if str(p.meta.get("stereotype") or "").strip().lower() == kind]
+                         if _fr_notation(p) == "agile" and _fr_level(p) == kind]
                 if links:
                     groups.append({"label": label, "links": links})
+            # requirements in another notation (EARS, prose …) are no column either
+            others = [{"id": p.id, "url": _page_url(p.folder, p.stem)} for p in serving
+                      if _fr_notation(p) not in ("agile", "use-case")]
+            if others:
+                groups.append({"label": "other requirements", "links": others})
         return {"gap": not serving, "served": groups}
 
     rows = []
@@ -4119,7 +4150,9 @@ def area_view(area_key):
 
 @app.route("/req42/functional-requirements")
 def functional_requirements_view():
-    """req42 block 04 — Functional Requirements as the Epic→Feature→Story hierarchy.
+    """req42 block 04 — Functional Requirements across notation-specific levels
+    (DR-038): the Agile story map (epics, and the use cases Agile features and
+    stories refine), then every requirement the story map cannot place.
     A dedicated rich view for the `functional-requirements` slug (the other /req42/<slug> blocks
     use the generic list). Flask matches this static rule ahead of the dynamic
     /req42/<slug>. Doubles as the home `functional-requirements` tile's click-target."""
@@ -4127,33 +4160,19 @@ def functional_requirements_view():
     goals = load_goals()
     diagram = _mermaid_goal_epic_tree(goals, hierarchy)
     block = REQ42_BY_SLUG.get("functional-requirements")
-    uc_kids = {u["id"]: u for u in hierarchy["use_cases"]}
-    use_cases = [{
-        "id": p.id, "title": p.title, "url": _page_url("use-cases", p.stem),
-        "level": str(p.meta.get("level") or ""),
-        "priority": str(p.meta.get("priority") or ""),
-        "status": p.status,
-        "goals": [{"id": _goal_id_from_ref(g), "anchor": f"/goals#{_goal_id_from_ref(g)}"}
-                  for g in p.as_list("goal")],
-        "n_features": uc_kids.get(p.id, {}).get("n_features", 0),
-        "n_stories": uc_kids.get(p.id, {}).get("n_stories", 0),
-    } for p in goals["ucs"]]
-    # the flat list under the hierarchy (FR-021): every requirement and use
-    # case once, sortable by priority, release and order
+    # the flat list under the hierarchy (FR-021): every requirement of every
+    # notation once, sortable by priority, release and order
     rows = []
     for p in sorted(load_folder("functional-requirements"), key=lambda q: q.id):
         rows.append({"id": p.id, "title": p.title, "url": f"/functional-requirements/{p.stem}",
-                     "kind": _fr_stereotype(p), "priority": str(p.meta.get("priority") or "").strip(),
+                     "notation": _fr_notation(p), "level": _fr_level(p),
+                     "priority": str(p.meta.get("priority") or "").strip(),
                      "release": str(p.meta.get("release") or "").strip(),
                      "order": str(p.meta.get("order") if p.meta.get("order") is not None else "").strip(),
                      "status": p.status})
-    for p in goals["ucs"]:
-        rows.append({"id": p.id, "title": p.title, "url": _page_url("use-cases", p.stem),
-                     "kind": "use case", "priority": str(p.meta.get("priority") or "").strip(),
-                     "release": "", "order": "", "status": p.status})
     return render_template(
         "functional-requirements.html", hierarchy=hierarchy, diagram=diagram,
-        block=block, use_cases=use_cases, needs_mermaid=bool(diagram), rows=rows,
+        block=block, needs_mermaid=bool(diagram), rows=rows,
     )
 
 
@@ -4165,10 +4184,11 @@ def backlog_redirect():
 
 @app.route("/functional-requirements/<stem>")
 def fr_view(stem):
-    """Rich detail page for one functional requirement of any stereotype
-    (epic/feature/story), mirroring the wiki/functional-requirements/ folder.
+    """Rich detail page for a functional requirement of any notation and level
+    (DR-038), mirroring the wiki/functional-requirements/ folder.
     Shows the FR's full text plus — for non-leaf FRs — its own Feature→Story
-    breakdown (mermaid + cards). Every FR node in the hierarchy diagrams clicks
+    breakdown (mermaid + cards); for a use case, the Agile features and
+    stories that realize it. Every FR node in the hierarchy diagrams clicks
     here, so the whole hierarchy lives under one sprechenden path with a
     'Functional Requirements' breadcrumb (instead of the generic /page 'Search' crumb).
     404 if `stem` is not an FR page."""
@@ -4184,7 +4204,8 @@ def fr_view(stem):
     node, kind = _fr_hierarchy_node(hierarchy, stem)
     fr = {
         "id": page.id, "title": page.title, "stem": stem,
-        "stereotype": kind or _fr_stereotype(page) or "story",
+        "notation": _fr_notation(page),
+        "level": kind or _fr_level(page),
         "priority": str(page.meta.get("priority") or "").strip(),
         "release": str(page.meta.get("release") or "").strip(),
         "status": page.status,
@@ -4840,8 +4861,6 @@ def _mm_inline(text: str, anchors: dict[str, str]) -> str:
     return html
 
 
-_MM_BODY_H1_RE = re.compile(r"^#\s+[^\n]*\n", re.MULTILINE)
-
 # Which page of a folder serves as the example: the most mature first, then the
 # lowest ID — the page a reader would open first anyway.
 _MM_EXAMPLE_RANK = {"accepted": 0, "review": 1, "draft": 2,
@@ -4864,7 +4883,8 @@ def _mm_example(t: dict) -> dict:
         return {"count": 0}
     best = min(pages, key=lambda p: (_MM_EXAMPLE_RANK.get(p.status, 9), p.id))
     return {"count": len(pages), "id": best.id, "title": best.title, "url": url(best),
-            "status": best.status, "stereotype": best.meta.get("stereotype") or ""}
+            "status": best.status, "stereotype": best.meta.get("stereotype") or "",
+            "notation": best.meta.get("notation") or "", "level": best.meta.get("level") or ""}
 
 
 def build_metamodel_graph(mm: dict) -> dict:
@@ -5027,28 +5047,38 @@ def metamodel_view():
             "summary_html": _mm_inline(pr.get("_summary") or "", anchors),
         })
 
-    alt = mm["altitude"]
-    altitude = None
-    if alt:
-        altitude = {
-            "rungs": alt.get("rungs") or [],
-            "assignments": [{"type": _mm_type_label(a.get("type"), by_name),
-                             "type_anchor": anchors.get(str(a.get("type")), ""),
-                             "stereotype": a.get("stereotype") or "", "field": a.get("field") or "",
-                             "rung": a.get("rung") or "", "status": a.get("status") or "",
-                             "note": a.get("note") or ""} for a in alt.get("assignments") or []],
-            "body_html": _mm_html(_MM_BODY_H1_RE.sub("", alt.get("_body") or "", count=1), anchors),
-        }
+    # requirement notations (DR-038): the default one first, then by name.
+    # Names compare without case, as an FR's `notation:` does (_fr_notation).
+    default_notation = wiki_config()["default_notation"]
+    notations = []
+    for n in sorted(mm["notations"], key=lambda n: (n["name"].lower() != default_notation,
+                                                    n["name"].lower())):
+        notations.append({
+            "name": n["name"], "anchor": f"notation-{n['name']}",
+            "title": n.get("title") or n["name"], "default": n["name"].lower() == default_notation,
+            "levels": n.get("levels") or [],
+            "sections": n.get("_sections") or [],
+            "fields": [f for f in n.get("fields") or [] if isinstance(f, dict)],
+            "summary_html": _mm_inline(str(n.get("summary") or ""), anchors),
+        })
+
+    def _qualifier(ap: dict) -> str:
+        # a rule may narrow its type by stereotype, notation and level
+        parts = []
+        for key in ("stereotype", "notation", "level"):
+            v = ap.get(key)
+            if v:
+                parts.append(f"{key} " + ", ".join(str(x) for x in (v if isinstance(v, list) else [v])))
+        return "; ".join(parts)
 
     rules = []
     for ru in mm["rules"]:
         ap = ru.get("applies_to") or {}
-        st = ap.get("stereotype")
         rules.append({
             "name": ru["name"], "anchor": f"rule-{ru['name']}",
             "applies_type": _mm_type_label(ap.get("type"), by_name),
             "applies_anchor": anchors.get(str(ap.get("type")), ""),
-            "applies_stereotype": ", ".join(st) if isinstance(st, list) else (st or ""),
+            "applies_qualifier": _qualifier(ap),
             "check": _mm_inline(str(ru.get("check") or ""), anchors),
             "confidence": ru.get("confidence") or "", "action": ru.get("action") or "",
             "source": ru.get("source") or "",
@@ -5059,7 +5089,7 @@ def metamodel_view():
     n_in = sum(1 for b in mm["blocks"] if b.get("scope") == "in")
     return render_template(
         "metamodel.html", present=mm["present"], types=types, relations=relations,
-        projections=projections, altitude=altitude, rules=rules, graph=graph,
+        projections=projections, notations=notations, rules=rules, graph=graph,
         method_anchors=build_mm_anchors(mm, anchors),
         universal=graph["universal"], universal_fields=universal_fields,
         lifecycles=meta.get("lifecycles") or {}, constructs=meta.get("constructs") or [],

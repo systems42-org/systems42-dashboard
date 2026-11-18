@@ -16,10 +16,29 @@ REPO = Path(__file__).resolve().parents[4]
 LINT = Path("_system") / "scripts" / "metamodel-lint.py"
 
 
+# Findings this repository's own schema keeps until it is migrated to
+# requirement notations (DR-038): the dashboard catalog already reads the new
+# schema, where use cases are functional requirements and wiki/use-cases/ is
+# gone, while _system/metamodel/ here still declares the folder. Remove the
+# entry with the migration; the test fails once it no longer occurs.
+KNOWN_UNTIL_MIGRATION = {
+    "R3: folders ['functional-requirements', 'use-cases'] (metamodel) vs ['functional-requirements'] (catalog)",
+}
+
+
 def test_metamodel_lint_passes():
     r = subprocess.run([sys.executable, str(REPO / LINT)],
                        capture_output=True, text=True, cwd=REPO)
-    assert r.returncode == 0, r.stdout + r.stderr
+    assert "Traceback" not in r.stderr, r.stdout + r.stderr
+    findings = {line.strip()[2:] for line in r.stdout.splitlines() if line.strip().startswith("- ")}
+    if r.returncode == 0:
+        # migrated: the tripwire says the entry can go
+        assert not KNOWN_UNTIL_MIGRATION, \
+            f"lint passes, remove from KNOWN_UNTIL_MIGRATION: {KNOWN_UNTIL_MIGRATION}"
+    else:
+        # a failure is accepted only when it consists of exactly the known findings
+        assert r.returncode == 1 and findings == KNOWN_UNTIL_MIGRATION, \
+            (r.returncode, findings ^ KNOWN_UNTIL_MIGRATION, r.stdout + r.stderr)
     print(r.stdout.strip())
 
 

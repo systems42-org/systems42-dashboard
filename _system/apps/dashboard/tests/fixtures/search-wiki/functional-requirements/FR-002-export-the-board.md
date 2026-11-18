@@ -3,7 +3,8 @@ id: FR-002
 type: functional-requirement
 title: Export the board
 status: draft
-stereotype: feature
+notation: agile
+level: feature
 priority: Must
 tags: [functional-requirement]
 ---

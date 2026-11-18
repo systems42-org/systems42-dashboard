@@ -20,7 +20,7 @@ from pathlib import Path
 
 _tmp = Path(tempfile.mkdtemp())
 _wiki = _tmp / "wiki"
-for _f in ("goals", "functional-requirements", "use-cases"):
+for _f in ("goals", "functional-requirements"):
     (_wiki / _f).mkdir(parents=True)
 (_tmp / "wiki.yaml").write_text("system_name: System X\n", encoding="utf-8")
 os.environ["WIKI_DIR"] = str(_wiki)
@@ -49,46 +49,53 @@ _page("goals", "GOAL-004-draft", "Draft goal", "draft", stereotype="objective")
 _page("goals", "GOAL-005-features-only", "Served by a feature only", "accepted", stereotype="objective")
 _page("goals", "GOAL-006-draft-epic-agreed-feature", "Draft epic, agreed feature", "accepted",
       stereotype="objective")
+_page("goals", "GOAL-007-ears-only", "Served by an EARS requirement only", "accepted",
+      stereotype="objective")
 
 _FR = "functional-requirements"
 _page(_FR, "FR-001-served-epic", "Served epic", "accepted",
-      stereotype="epic", lane="backbone", parent="[]", goal='["[[GOAL-002-served]]"]')
+      notation="agile", level="epic", lane="backbone", parent="[]", goal='["[[GOAL-002-served]]"]')
 _page(_FR, "FR-002-untraced-epic", "Untraced epic", "draft",
-      stereotype="epic", lane="backbone", parent="[]", goal="[]")
+      notation="agile", level="epic", lane="backbone", parent="[]", goal="[]")
 _page(_FR, "FR-003-platform-epic", "Platform epic", "accepted",
-      stereotype="epic", lane="platform", parent="[]", goal="[]")
+      notation="agile", level="epic", lane="platform", parent="[]", goal="[]")
 _page(_FR, "FR-004-feature", "A feature", "accepted",
-      stereotype="feature", lane="backbone", parent='["[[FR-001-served-epic]]"]',
+      notation="agile", level="feature", lane="backbone", parent='["[[FR-001-served-epic]]"]',
       goal='["[[GOAL-002-served]]"]')
 _page(_FR, "FR-005-display-epic", "Display epic", "draft",
-      stereotype="epic", lane="display", parent="[]", goal="[]")
+      notation="agile", level="epic", lane="display", parent="[]", goal="[]")
 _page(_FR, "FR-006-draft-epic", "Draft epic", "draft",
-      stereotype="epic", lane="backbone", parent="[]", goal='["[[GOAL-002-served]]"]')
+      notation="agile", level="epic", lane="backbone", parent="[]", goal='["[[GOAL-002-served]]"]')
 # lane platform, but it names a goal: no enabler (rel-goal)
 _page(_FR, "FR-007-platform-with-goal", "Platform epic with a goal", "draft",
-      stereotype="epic", lane="platform", parent="[]", goal='["[[GOAL-004-draft]]"]')
+      notation="agile", level="epic", lane="platform", parent="[]", goal='["[[GOAL-004-draft]]"]')
 # the only requirement serving GOAL-005: a feature, no matrix column
 _page(_FR, "FR-008-feature-only", "Feature for goal five", "draft",
-      stereotype="feature", lane="backbone", parent='["[[FR-001-served-epic]]"]',
+      notation="agile", level="feature", lane="backbone", parent='["[[FR-001-served-epic]]"]',
       goal='["[[GOAL-005-features-only]]"]')
 # goal: values that look truthy but name no objective, and two odd spellings
 # that do: each backbone epic is either marked "no goal" or marks its goal
 _page(_FR, "FR-009-names-the-vision", "Names the vision", "draft",
-      stereotype="epic", lane="backbone", parent="[]", goal='["[[GOAL-001-vision]]"]')
+      notation="agile", level="epic", lane="backbone", parent="[]", goal='["[[GOAL-001-vision]]"]')
 _page(_FR, "FR-010-names-a-missing-goal", "Names a missing goal", "draft",
-      stereotype="epic", lane="backbone", parent="[]", goal='["[[GOAL-099-x]]"]')
+      notation="agile", level="epic", lane="backbone", parent="[]", goal='["[[GOAL-099-x]]"]')
 _page(_FR, "FR-011-unquoted-goal", "Unquoted goal", "draft",
-      stereotype="epic", lane="backbone", parent="[]", goal="[[GOAL-002-served]]")
+      notation="agile", level="epic", lane="backbone", parent="[]", goal="[[GOAL-002-served]]")
 _page(_FR, "FR-012-scalar-goal", "Scalar goal", "draft",
-      stereotype="epic", lane="backbone", parent="[]", goal='"[[GOAL-002-served]]"')
+      notation="agile", level="epic", lane="backbone", parent="[]", goal='"[[GOAL-002-served]]"')
 # GOAL-006: a draft epic and an agreed feature
 _page(_FR, "FR-013-draft-epic-for-six", "Draft epic for six", "draft",
-      stereotype="epic", lane="backbone", parent="[]",
+      notation="agile", level="epic", lane="backbone", parent="[]",
       goal='["[[GOAL-006-draft-epic-agreed-feature]]"]')
 _page(_FR, "FR-014-agreed-feature-for-six", "Agreed feature for six", "accepted",
-      stereotype="feature", lane="backbone", parent='["[[FR-013-draft-epic-for-six]]"]',
+      notation="agile", level="feature", lane="backbone", parent='["[[FR-013-draft-epic-for-six]]"]',
       goal='["[[GOAL-006-draft-epic-agreed-feature]]"]')
-_page("use-cases", "UC-001-borrow", "Borrow", "draft", goal='["[[GOAL-004-draft]]"]')
+# the only requirement serving GOAL-007: another notation (DR-038), no column
+_page(_FR, "FR-015-ears-shall", "The system shall", "draft", notation="ears", level="requirement",
+      parent="[]", goal='["[[GOAL-007-ears-only]]"]')
+# a use case is a functional requirement in the use-case notation (DR-038)
+_page(_FR, "UC-001-borrow", "Borrow", "draft", notation="use-case", level="sea",
+      goal='["[[GOAL-004-draft]]"]')
 
 BODY = app.app.test_client().get("/goals").get_data(as_text=True)
 
@@ -143,7 +150,7 @@ def test_header_links_and_tooltip():
     assert 'href="/functional-requirements/FR-001-served-epic"' in h, h
     assert 'data-tooltip="Served epic"' in h, h
     uc = next(x for x in _headers() if "UC-001" in x)
-    assert 'href="/page/use-cases/UC-001-borrow"' in uc, uc
+    assert 'href="/functional-requirements/UC-001-borrow"' in uc, uc
 
 
 def test_enablers_by_lane():
@@ -222,6 +229,20 @@ def test_goal_served_only_by_features_is_no_gap():
     assert re.sub(r"<[^>]+>", "", notes[0][1]) == "Served by features FR-008", notes
     assert 'href="/functional-requirements/FR-008-feature-only"' in notes[0][1], notes
     assert "No requirement yet" not in row
+
+
+def test_goal_served_only_by_another_notation_is_no_gap():
+    # an EARS or prose requirement is no column, but it serves the goal
+    row = _rows()["GOAL-007"]
+    assert "gm-dot" not in row and "gm-gap" not in _head("GOAL-007"), _head("GOAL-007")
+    notes = _view(row, "all")
+    assert [(c, re.sub(r"<[^>]+>", "", t)) for c, t in notes] == [
+        ("gm-served", "Served by other requirements FR-015")], notes
+    assert 'href="/functional-requirements/FR-015-ears-shall"' in notes[0][1], notes
+    # it is a draft: with drafts hidden the goal is a gap
+    assert 'data-gap-accepted' in _head("GOAL-007")
+    data = app.load_goals()
+    assert "FR-015" not in {p.id for p in data["enablers"] + data["untraced"]}
 
 
 def test_agreed_only_counts_agreed_pages():

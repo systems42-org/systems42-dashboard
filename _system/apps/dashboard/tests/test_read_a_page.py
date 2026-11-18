@@ -39,7 +39,7 @@ def _page(folder, stem, typ, title, status, extra="", related="", body=""):
 _page("stakeholders", "STK-001-leserin", "stakeholder", "Leserin", "draft",
       body="Siehe [[ISS-003-verworfen]] und [[FR-001-suche]].")
 _page("functional-requirements", "FR-001-suche", "functional-requirement", "Suche", "draft",
-      "stereotype: feature\n")
+      "notation: agile\nlevel: feature\n")
 _page("issues", "ISS-001-offen", "issue", "Offen", "open", "severity: major\n",
       body="Betrifft [[STK-001-leserin]] und [[FR-001-suche]].")
 _page("issues", "ISS-002-erledigt", "issue", "Erledigt", "resolved", "severity: minor\n",

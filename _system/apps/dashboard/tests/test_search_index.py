@@ -58,7 +58,8 @@ def test_plain_has_no_headings_or_labels():
 def test_fields():
     fields = _rec("FR-001")["fields"]
     assert fields["priority"] == ["must"], fields
-    assert fields["stereotype"] == ["feature"] and fields["status"] == ["accepted"], fields
+    assert fields["notation"] == ["agile"] and fields["level"] == ["feature"], fields
+    assert fields["status"] == ["accepted"], fields
     assert _rec("FR-004")["fields"]["tags"] == ["functional-requirement", "navigation"]
     assert "priority" not in _rec("STK-003")["fields"]  # missing keys left out
 

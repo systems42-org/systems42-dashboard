@@ -3,7 +3,8 @@ id: FR-009
 type: functional-requirement
 title: Reach
 status: draft
-stereotype: feature
+notation: agile
+level: feature
 priority: Should
 tags: [functional-requirement]
 ---

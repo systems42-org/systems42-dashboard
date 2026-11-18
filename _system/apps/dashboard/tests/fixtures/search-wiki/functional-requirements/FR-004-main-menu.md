@@ -3,7 +3,8 @@ id: FR-004
 type: functional-requirement
 title: Main menu
 status: draft
-stereotype: feature
+notation: agile
+level: feature
 priority: Could
 tags: [functional-requirement, navigation]
 ---

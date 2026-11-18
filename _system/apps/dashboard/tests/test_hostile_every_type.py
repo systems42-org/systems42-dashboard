@@ -120,6 +120,26 @@ for n, kept in enumerate((True, False), start=1):
     meta = {k: _hostile(v, kept and k in STRUCTURAL) for k, v in _dt_fields.items()}
     meta.update(id=f"DT-00{n}", title=PAYLOAD)
     _write(_wiki / "domain-terms" / f"DT-00{n}-hostile.md", meta)
+# requirement notations (DR-038): one page per place the FR views put it —
+# Agile epic → feature, a sea-level use case refined by an Agile story (a root
+# with "Realized by"), another notation, and a notation and level that are
+# the payload themselves (listed outside the Agile hierarchy)
+_fr = {k: _hostile(v, k in STRUCTURAL) for k, v in _template_fields("functional-requirement").items()}
+_fr.pop("stereotype", None)
+for _stem, _extra in (
+        ("FR-011-agile-epic", {"notation": "agile", "level": "epic", "parent": []}),
+        ("FR-012-agile-feature", {"notation": "agile", "level": "feature",
+                                  "parent": ["[[FR-011-agile-epic]]"]}),
+        ("UC-011-use-case", {"notation": "use-case", "level": "sea", "parent": [],
+                             "primary-actor": "[[STK-001-hostile]]",
+                             "scope-building-block": "[[BB-001-hostile]]"}),
+        ("FR-013-story-under-use-case", {"notation": "agile", "level": "story",
+                                         "parent": "[[UC-011-use-case]]", "goal": []}),
+        ("FR-014-ears", {"notation": "ears", "level": "requirement", "parent": []}),
+        ("FR-015-payload-notation", {"notation": PAYLOAD, "level": PAYLOAD, "parent": [PAYLOAD]})):
+    _write(_wiki / "functional-requirements" / f"{_stem}.md",
+           {**_fr, "id": _stem[:6], "title": PAYLOAD, **_extra})
+
 _src = {k: _hostile(v, k in {"id", "type"}) for k, v in _template_fields("source").items()}
 _src.update(id="SRC-001", title=PAYLOAD,
             **{"ingested-pages": [PAYLOAD, "[[GLO-001-hostile]]"]})
@@ -138,6 +158,18 @@ for stem, title in (("hostile", "HOSTILE"), ("payload", PAYLOAD)):
 # paragraph (the summaries) and in every doc / note / check string
 _mm = _tmp / "metamodel"
 shutil.copytree(ROOT / "_system" / "metamodel", _mm)
+# the shipped requirement notations (this repository's metamodel has none yet)
+shutil.copytree(HERE / "fixtures" / "notations", _mm / "notations")
+# a project notation that is the payload through and through (DR-038)
+_own_notations = _tmp / "notations"
+_own_notations.mkdir()
+(_own_notations / "notation-hostile.md").write_text(
+    "---\n" + yaml.safe_dump({"type": "metamodel", "construct": "notation", "name": PAYLOAD,
+                              "title": PAYLOAD, "summary": PAYLOAD, "levels": [PAYLOAD, "x"],
+                              "fields": [{"name": PAYLOAD, "required": True, "doc": PAYLOAD}]},
+                             allow_unicode=True)
+    + f"---\n\n# {{{{title}}}}\n\n<!-- levels: {PAYLOAD} -->\n## {PAYLOAD}\n\n"
+      f"<!-- levels: x -->\n**{PAYLOAD}.** text\n", encoding="utf-8")
 
 
 def _poison(value):
@@ -163,6 +195,7 @@ for _p in _mm.rglob("*.md"):
 (_docs / "about.md").write_text(f"# {PAYLOAD}\n\n{PAYLOAD}\n\n![m](m.svg)\n", encoding="utf-8")
 (_docs / "m.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg"/>', encoding="utf-8")
 (_tmp / "wiki.yaml").write_text(yaml.safe_dump({"system_name": PAYLOAD, "tagline": PAYLOAD,
+                                                "default_notation": PAYLOAD,
                                                 "about_label": PAYLOAD, "about": "docs/about.md"}),
                                 encoding="utf-8")
 
@@ -173,6 +206,7 @@ os.environ["DASHBOARD_CONFIG"] = str(_tmp / "dashboard.yaml")
 os.environ["RAW_SOURCES_DIR"] = str(_sources)
 os.environ["DOCS_DIR"] = str(_docs)
 os.environ["METAMODEL_DIR"] = str(_mm)
+os.environ["NOTATIONS_DIR"] = str(_own_notations)
 os.environ["ANCHORS_DIR"] = str(_anchors)
 # without a browser heartbeat the watchdog SIGTERMs this process (DR-022)
 os.environ["DASH_STARTUP_GRACE"] = "3600"
@@ -277,9 +311,18 @@ def test_the_payload_was_actually_rendered():
     # guard against a vacuous pass: the hostile text must reach the pages, escaped
     client = app.app.test_client()
     for url in ("/page/glossary/GLO-001-hostile", "/metamodel", "/about", "/goals",
-                "/page/runtime-scenarios/RS-002-hostile"):
+                "/page/runtime-scenarios/RS-002-hostile", "/req42/functional-requirements",
+                "/functional-requirements/UC-011-use-case"):
         body = client.get(url).get_data(as_text=True)
         assert MARK in body and "&lt;script&gt;" in body, url
+    # the notation pages reached the projections they were written for
+    h = app.build_fr_hierarchy()
+    assert [e["id"] for e in h["epics"]] == ["FR-011"], h["epics"]
+    assert [u["id"] for u in h["use_cases"]] == ["UC-011"], h["use_cases"]
+    assert {"FR-014", "FR-015"} <= {o["id"] for o in h["other_notations"]}, h["other_notations"]
+    assert "Realized by" in client.get("/functional-requirements/UC-011-use-case").get_data(as_text=True)
+    body = client.get("/metamodel").get_data(as_text=True)
+    assert body.count('class="mm-row"') and 'id="notation-agile"' in body
 
 
 if __name__ == "__main__":

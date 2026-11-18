@@ -80,8 +80,10 @@ which views are only ever projected from them is declared in
 projection and rule. **[Metamodel](/metamodel)** shows it: the types as a
 network grouped by section, with the relations as arrows, and tables with
 each construct's definition, its fields and a live example page from this wiki.
-It is also where the granularity scale and its open question (use cases versus
-epics) are shown.
+It also lists the requirement notations: every functional requirement names
+its `notation:` (Agile, use case, EARS, prose or a project's own) and one of
+that notation's `level:` values, and each notation file defines its levels,
+extra fields and page sections.
 
 ## From requirements to architecture
 

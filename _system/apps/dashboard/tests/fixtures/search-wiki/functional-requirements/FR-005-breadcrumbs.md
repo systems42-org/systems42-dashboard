@@ -3,7 +3,8 @@ id: FR-005
 type: functional-requirement
 title: Breadcrumbs
 status: draft
-stereotype: feature
+notation: agile
+level: feature
 priority: Could
 tags: [functional-requirement]
 ---

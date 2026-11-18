@@ -9,7 +9,8 @@ sources: []
 related:
   - "[[GLO-001-book]]"
 tags: [functional-requirement]
-stereotype: story
+notation: agile
+level: story
 parent:
   - "[[FR-002-checkout]]"
 priority: Must
