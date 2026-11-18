@@ -4,11 +4,12 @@ Served as static files so the dashboard renders diagrams **offline** (no CDN at 
 
 ## mermaid.min.js
 - **Library:** mermaid (diagramming) — <https://mermaid.js.org>
-- **Version:** 11.15.0
+- **Version:** 11.17.2 (bundles DOMPurify 3.4.12)
 - **Build:** minified UMD/IIFE; exposes `globalThis.mermaid`, loaded via a classic
   `<script>` in `templates/_mermaid.html`.
 - **License:** MIT (© mermaid contributors).
-- **Source:** `https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js`
+- **Source:** `https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js` (byte-identical
+  to `dist/mermaid.min.js` in the npm tarball, whose sha512 integrity was checked)
 - **Used by:** the live-projected system-context diagram (DR-013, ISS-010) on the
   context detail page and `/req42/scope`, plus any ` ```mermaid ` block in a page body.
 
