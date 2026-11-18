@@ -8,12 +8,13 @@
 
 .DEFAULT_GOAL := help
 
-.PHONY: help dev down clean
+.PHONY: help dev down clean test
 
 help::
 	@echo "make dev      build + start the dashboard (Docker), opens your browser"
 	@echo "make down     stop the dashboard"
 	@echo "make clean    remove what can be rebuilt (container, image, .venv, caches); never content"
+	@echo "make test     run the dashboard's test scripts (Docker)"
 
 dev:
 	./dashboard.sh up
@@ -23,5 +24,8 @@ down:
 
 clean:
 	./dashboard.sh clean
+
+test:
+	./dashboard.sh test
 
 -include meta.mk

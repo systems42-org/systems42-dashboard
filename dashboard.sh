@@ -10,6 +10,7 @@
 #   ./dashboard.sh local    run Flask directly (no Docker) at http://localhost:8000
 #   ./dashboard.sh clean    remove what can be rebuilt: container, image, .venv,
 #                           __pycache__, .DS_Store. Never wiki/, raw/ or settings.
+#   ./dashboard.sh test     run the dashboard's test scripts in Docker
 #
 # The dashboard stops itself a few seconds after you close its browser tab/window
 # (DR-022), so it won't linger as an orphan. `down` stays available to remove a
@@ -148,6 +149,18 @@ case "$cmd" in
     open_browser_at "$LOCAL_URL"
     wait "$server_pid" || true
     ;;
+  test)
+    # The test stage of the Dockerfile: the shipped image's Python and
+    # libraries, plus make and node, which some scripts call. The repository
+    # is mounted read-only and copied inside the container, so the tests run
+    # against the code as it is here and cannot change a file on the host
+    # (one script touches a metamodel file).
+    docker build -q --target test -t systems42-dashboard-test "$ROOT/_system/apps/dashboard" >/dev/null
+    docker run --rm -v "$ROOT:/repo:ro" systems42-dashboard-test sh -c '
+      mkdir /work &&
+      tar -C /repo --exclude=./.git --exclude=.venv --exclude=__pycache__ -cf - . | tar -C /work -xf - &&
+      sh /work/_system/apps/dashboard/tests/run-all.sh'
+    ;;
   clean)
     # Only what `up` and `local` rebuild. --rmi local takes this wiki's own
     # compose-built image, no other wiki's; no --volumes, the mounts are the content.
@@ -166,7 +179,7 @@ case "$cmd" in
     ;;
   *)
     echo "Unknown command: $cmd" >&2
-    echo "Usage: ./dashboard.sh [up|down|logs|rebuild|local|clean]" >&2
+    echo "Usage: ./dashboard.sh [up|down|logs|rebuild|local|clean|test]" >&2
     exit 2
     ;;
 esac
