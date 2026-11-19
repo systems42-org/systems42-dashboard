@@ -4,7 +4,7 @@ type: decision-record
 title: The dashboard lives in its own repository, with its requirements and its code
 status: review
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-19
 sources: ["[[SRC-027-dashboard-distribution-and-metamodel-contract]]", "[[SRC-028-grilling-session-on-dashboard-distribution]]"]
 related: ["[[DR-004-releases-are-container-images-pinned-per-wiki]]", "[[FR-029-the-dashboard-as-a-product]]", "[[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]]", "[[ISS-005-the-method-lint-imports-dashboard-code]]", "[[STK-012-maintainers]]"]
 tags: [decision-record]
@@ -49,7 +49,7 @@ Chosen option: **1, own repository**, because requirements and code stay togethe
 - Good: one home for the code and one wiki for its requirements.
 - Good: the dependency has to run one way ([[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]]).
 - Bad: a change that spans method and dashboard needs a pull request in each repository and a version step ([[FR-043-the-dashboard-checks-the-metamodel-version]]).
-- Bad: meta's dashboard requirements and decisions (its FR-010, FR-011, FR-034, DR-022 to DR-025, DR-032, DR-033) have to move here under new IDs.
+- Bad: meta's dashboard requirements and decisions (its FR-011, FR-012, FR-013, FR-034, QR-004, DR-022, DR-023, DR-025, DR-032 and DR-033) have to move here under new IDs. FR-010, BB-001 and DR-024 stay in meta, as the product-level description.
 - Bad: meta must drop its copy of the code and stop depending on it ([[ISS-005-the-method-lint-imports-dashboard-code]]).
 
 ## Pros and Cons of the Options
@@ -61,5 +61,5 @@ Chosen option: **1, own repository**, because requirements and code stay togethe
 ## More Information
 
 Follow-ups:
-- Move meta's dashboard requirements and decisions into this wiki.
+- Move meta's dashboard requirements and decisions into this wiki. Done on 2026-11-19 ([[SRC-034-pages-moved-from-meta]]).
 - Reconsider when the metamodel is stable or the dashboard gets maintainers of its own: the cost of option 1 falls with both.

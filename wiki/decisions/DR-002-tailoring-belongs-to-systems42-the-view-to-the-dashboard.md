@@ -4,7 +4,7 @@ type: decision-record
 title: Tailoring belongs to Systems42, the view belongs to the dashboard
 status: accepted
 created: 2026-11-11
-updated: 2026-11-11
+updated: 2026-11-19
 sources: ["[[SRC-012-conversation-on-tailoring-and-the-view]]"]
 related: ["[[STK-023-keyholder]]", "[[STK-003-requirements-engineers]]", "[[STK-006-ai-agents]]", "[[FR-001-search-the-wiki]]", "[[FR-012-guided-path-through-the-wiki]]"]
 tags: [decision-record]
@@ -15,7 +15,7 @@ decision-makers: [Gernot Starke]
 consulted: [Claude]
 informed: []
 drivers: ["[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[GOAL-001-trusted-answers]]", "[[GOAL-002-show-what-systems42-can-do]]"]
-amends: []
+amends: ["[[DR-010-dashboard-three-areas-two-levels-hide-list]]"]
 superseded-by: []
 ---
 

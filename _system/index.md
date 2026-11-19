@@ -100,11 +100,13 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-044-sections-come-from-the-repositorys-metamodel]] Sections come from the repository's metamodel (feature, Must, draft)
 - [[FR-045-a-prompt-template-for-a-brand]] A prompt template for a brand (feature, Could, draft)
 - [[FR-046-shared-session-in-a-workshop]] Shared session in a workshop (feature, Should, draft)
+- [[FR-047-see-the-requirements-hierarchy-as-a-diagram]] See the requirements hierarchy as a diagram (story, Should, draft)
 
 ## Quality requirements
 
 - [[QR-001-usable-on-phone-and-tablet]] Usable on phone and tablet (usable, flexible, should, draft)
 - [[QR-002-runs-alike-on-linux-and-macos]] Runs alike on Linux and macOS (flexible, operable, should, draft)
+- [[QR-003-current-browser-support]] Current browser support (flexible, reliable, must, draft)
 
 ## Constraints
 
@@ -122,6 +124,11 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[DR-003-quality-requirements-are-classified-by-q42-dimensions]] Quality requirements are classified by Q42 dimensions (accepted)
 - [[DR-004-releases-are-container-images-pinned-per-wiki]] Releases are container images, pinned per wiki (accepted)
 - [[DR-005-the-dashboard-lives-in-its-own-repository]] The dashboard lives in its own repository, with its requirements and its code (review)
+- [[DR-006-dashboard-self-shutdown-lifecycle]] The dashboard shuts itself down once the browser tab is closed (accepted)
+- [[DR-007-glossary-term-network-force-graph]] Glossary term network as an interactive force graph (accepted)
+- [[DR-008-dashboard-req42-home-and-visual-identity]] The home page follows req42's reading order, with a persistent nav and a flat vendored-font identity (accepted, replaced in part)
+- [[DR-009-dashboard-short-nav-and-command-k-search]] Five nav entries, the brand once on the home page, ⌘K focuses search (accepted, replaced in part)
+- [[DR-010-dashboard-three-areas-two-levels-hide-list]] Three areas, two levels, a hide list the dashboard writes (accepted, changed in part)
 
 ## Issues
 
@@ -167,3 +174,4 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-031-grilling-session-on-the-default-brand]] Grilling session on the default brand (interview)
 - [[SRC-032-shared-session-in-a-workshop]] Shared session in a workshop (document)
 - [[SRC-033-grilling-session-on-the-shared-session]] Grilling session on the shared session (interview)
+- [[SRC-034-pages-moved-from-meta]] Pages moved from meta (document)

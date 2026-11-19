@@ -288,3 +288,12 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Created: [[FR-046-shared-session-in-a-workshop]], SRC-032, SRC-033.
 - Updated: ISS-001 (resolved), STK-023, CON-002 (one impact line), FR-010 (child list), FR-015 and FR-023 (links), `_system/index.md`.
 - Parked: Q5 and Q6 are not built. Configure still saves to `_system/dashboard.yaml`, noted in FR-046. DR-002 is accepted and was not edited, so it does not link FR-046. The success metric of FR-046 is a proposal by Claude.
+
+## [2026-11-19] capture | Pages moved from meta
+- Source: meta's dashboard pages at `c04fcfe`, recorded as [[SRC-034-pages-moved-from-meta]]. This is step 1 of meta issue #38 and a follow-up of [[DR-005-the-dashboard-lives-in-its-own-repository]]. Grill gate: Gernot Starke decided page by page, with the rule "less is better".
+- Moved as decision records, accepted, text verbatim, links remapped: meta DR-022 → [[DR-006-dashboard-self-shutdown-lifecycle]], DR-023 → [[DR-007-glossary-term-network-force-graph]] (driver FR-040), DR-025 → [[DR-008-dashboard-req42-home-and-visual-identity]], DR-032 → [[DR-009-dashboard-short-nav-and-command-k-search]], DR-033 → [[DR-010-dashboard-three-areas-two-levels-hide-list]]. DR-008, DR-009 and DR-010 say at the top which parts later pages replaced. [[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]] now amends DR-010.
+- Moved and shortened: meta QR-004 → [[QR-003-current-browser-support]], meta FR-012 → [[FR-047-see-the-requirements-hierarchy-as-a-diagram]].
+- Not moved as pages: meta FR-011 is covered by [[FR-046-shared-session-in-a-workshop]]. Meta FR-013 became the plain-reading bullet of [[FR-034-read-a-page-with-its-links]]. Meta FR-034 became the delivery badge there and the delivery filter of [[FR-022-lists-keep-sort-and-filter-in-their-address]].
+- Stakeholders mapped: meta's workshop facilitator → STK-007, subject matter experts → STK-008, business analysts → STK-002. Merging this wiki's stakeholders is the next step (#38, step 3).
+- DR-005: the list of moved pages is corrected. FR-010, BB-001 and DR-024 stay in meta.
+- Parked: the goal of FR-047 is a proposal by Claude. Links to pages that stay in meta are plain URLs until cross-wiki links exist (meta #47).

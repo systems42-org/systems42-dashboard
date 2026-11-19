@@ -4,8 +4,8 @@ type: functional-requirement
 title: Lists keep sort and filter in their address
 status: draft
 created: 2026-11-12
-updated: 2026-11-12
-sources: ["[[SRC-013-browse-by-area-and-section]]", "[[SRC-014-grilling-session-on-browsing]]"]
+updated: 2026-11-19
+sources: ["[[SRC-013-browse-by-area-and-section]]", "[[SRC-014-grilling-session-on-browsing]]", "[[SRC-034-pages-moved-from-meta]]"]
 related: ["[[FR-021-sort-lists]]", "[[FR-023-areas-and-sections-follow-the-tailoring]]", "[[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]"]
 tags: ["functional-requirement", "navigation"]
 stereotype: feature
@@ -26,13 +26,14 @@ As a [[STK-001-product-owners]] **product owner** I want **to send a colleague t
 **PROBLEM / GOAL**
 
 - Every list can be filtered by status, at least to "agreed only" ([[GOAL-006-source-and-status-on-every-statement]]).
+- A list of requirements can also be filtered by [delivery status](https://github.com/systems42-org/meta/blob/main/wiki/functional-requirements/FR-031-track-requirement-delivery.md): implemented, partial or outdated.
 - The list's address carries its sort order and its filter. A reader copies the address into a chat, an email or a ticket, or bookmarks it. Opening it shows exactly the same list, also after a reload and on another device.
 - The dashboard sends nothing itself. There is no share button and no recipient ([[CON-002-dashboard-never-writes-to-the-wiki]]).
 - A section the view has hidden stays reachable by its address ([[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]]).
 
 **Success metric(s).** On a test wiki, a sorted and filtered list's address, opened in another browser, shows the same rows in the same order. "Agreed only" leaves only accepted pages.
 
-**Scope.** in: every section list · out: sending from the dashboard, and filters other than status.
+**Scope.** in: every section list · out: sending from the dashboard, and filters other than status and delivery status.
 
 ## Hierarchy
 
@@ -40,8 +41,10 @@ As a [[STK-001-product-owners]] **product owner** I want **to send a colleague t
 - **Children:** none.
 
 > [!note] Open points
-> None.
+> Not built yet: the delivery filter.
 
 ## History
 
 > First called "share". Renamed in [[SRC-014-grilling-session-on-browsing]], because the dashboard shares nothing itself: the address does.
+
+> On 2026-11-19 the delivery filter came over from meta [FR-034](https://github.com/systems42-org/meta/blob/main/wiki/functional-requirements/FR-034-show-delivery-status-on-the-dashboard.md) ([[SRC-034-pages-moved-from-meta]]).
