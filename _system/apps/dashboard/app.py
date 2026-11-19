@@ -995,8 +995,57 @@ def _anchor_link(a: dict, label: str) -> str:
 # (section 5, black box)". More than 3 spaces before the ">" is indented code.
 _FOLLOWS_RE = re.compile(r"^ {0,3}>[ \t]*follows[ \t]+(\S.*?)[ \t]*$")
 _FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
+# an inline code span: a run of backticks closed by a run of the same length,
+# within one paragraph. A backslash before the opening run escapes it.
+_CODE_SPAN_RE = re.compile(r"(?<![`\\])(`+)(?!`)((?:[^\n]|\n(?![ \t]*\n))+?)(?<!`)\1(?!`)")
 # a note without a link names its format in a few words, not a sentence
 _FOLLOWS_PLAIN_MAX_WORDS = 6
+
+
+def _fenced_lines(lines: list[str]) -> list[bool]:
+    """For each line, whether it belongs to fenced code (``` or ~~~), the
+    fence lines included. A fence closes on a fence of the same character at
+    least as long as the opening one. An unclosed fence runs to the end."""
+    out = []
+    fence = ""
+    for line in lines:
+        f = _FENCE_RE.match(line)
+        if fence:
+            if f and f.group(1)[0] == fence[0] and len(f.group(1)) >= len(fence):
+                fence = ""
+            out.append(True)
+        elif f:
+            fence = f.group(1)
+            out.append(True)
+        else:
+            out.append(False)
+    return out
+
+
+def outside_code(text: str, sub) -> str:
+    """Apply `sub` to the markdown outside fenced code and inline code spans,
+    so a wikilink quoted as code stays literal text."""
+    lines = text.split("\n")
+    fenced = _fenced_lines(lines)
+    blocks: list[tuple[bool, list[str]]] = []
+    for line, f in zip(lines, fenced):
+        if blocks and blocks[-1][0] == f:
+            blocks[-1][1].append(line)
+        else:
+            blocks.append((f, [line]))
+    out = []
+    for f, block_lines in blocks:
+        block = "\n".join(block_lines)
+        if f:
+            out.append(block)
+            continue
+        parts, pos = [], 0
+        for m in _CODE_SPAN_RE.finditer(block):
+            parts += [sub(block[pos:m.start()]), m.group(0)]
+            pos = m.end()
+        parts.append(sub(block[pos:]))
+        out.append("".join(parts))
+    return "\n".join(out)
 
 
 def _follows_notes(body: str) -> list[tuple[int, str]]:
@@ -1004,15 +1053,9 @@ def _follows_notes(body: str) -> list[tuple[int, str]]:
     fenced code. The one test both the page (drop_follows, format_labels) and
     search (search_plain) use, so both leave out exactly the same lines."""
     out = []
-    fence = ""
-    for i, line in enumerate(body.split("\n")):
-        f = _FENCE_RE.match(line)
-        if fence:
-            if f and f.group(1)[0] == fence[0] and len(f.group(1)) >= len(fence):
-                fence = ""
-            continue
-        if f:
-            fence = f.group(1)
+    lines = body.split("\n")
+    for i, (line, fenced) in enumerate(zip(lines, _fenced_lines(lines))):
+        if fenced:
             continue
         m = _FOLLOWS_RE.match(line)
         if not m:
@@ -1072,7 +1115,7 @@ CALLOUT_RE = re.compile(r"^>[ \t]*\[!(\w+)\][ \t]*(.*)$", re.MULTILINE)
 # Lines that START a markdown block. A prose line that follows one of these
 # is left for Markdown's own lazy-continuation rules; a prose line that
 # follows another prose line is a hard wrap in the source file and is joined.
-_BLOCK_START_RE = re.compile(r"^(\s*([-*+]|\d+[.)])\s|\s*#|\s*>|\s*\||\s*```|\s{4,}\S|\t|\s*<)")
+_BLOCK_START_RE = re.compile(r"^(\s*([-*+]|\d+[.)])\s|\s*#|\s*>|\s*\||\s*```|\s*~~~|\s{4,}\S|\t|\s*<)")
 _LIST_START_RE = re.compile(r"^\s*([-*+]|\d+[.)])\s")
 # A GFM table separator row: "---|---", "|---|:---:|", "| --- | --- |". Must
 # contain at least one "|" — a bare "---" is a thematic break, not a table.
@@ -1108,17 +1151,13 @@ def _unwrap_prose(body: str) -> str:
                 table_lines.add(j)
                 j += 1
 
+    fenced = _fenced_lines(lines)
     out: list[str] = []
-    in_fence = False
     in_list = False
     for idx, line in enumerate(lines):
         stripped = line.strip()
-        if stripped.startswith("```"):
-            in_fence = not in_fence
+        if fenced[idx]:
             in_list = False
-            out.append(line)
-            continue
-        if in_fence:
             out.append(line)
             continue
         if not stripped:
@@ -1160,7 +1199,9 @@ def render_markdown(body: str, titles: dict[str, str]) -> str:
     # [[...]] into an <a>, which would otherwise look like an HTML block start
     body = _unwrap_prose(body)
     # full-text bodies get real hyperlinks; inline-snippet helpers keep spans
-    body = render_wikilinks(body, titles, link_index())
+    # a wikilink quoted as code stays as written
+    links = link_index()
+    body = outside_code(body, lambda t: render_wikilinks(t, titles, links))
     # turn Obsidian callouts `> [!type] title` into a bold label line
     body = CALLOUT_RE.sub(lambda m: f"> **{m.group(2) or m.group(1).title()}**", body)
     return sanitize_html(md.markdown(body, extensions=["extra", "sane_lists"]))
@@ -4925,7 +4966,7 @@ def _mm_wikilinks(text: str, anchors: dict[str, str]) -> str:
         if _MM_DR_RE.match(base):
             return _mm_dr_link(base, alias)
         return f'<span class="mm-anchor">{escape(alias or base)}</span>'
-    return WIKILINK_RE.sub(repl, text)
+    return outside_code(text, lambda t: WIKILINK_RE.sub(repl, t))
 
 
 def _mm_html(text: str, anchors: dict[str, str]) -> str:

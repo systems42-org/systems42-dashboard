@@ -13,6 +13,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
 ## [Unreleased]
 
 ### Fixed
+- Dashboard: a wikilink inside inline code or a fenced code block shows as written, on wiki pages and on /metamodel, instead of as an escaped link tag. A `~~~` fence renders as code instead of being joined into the paragraph around it.
 - Dashboard: on a functional requirement page the sources row no longer overlaps the row of pills above it.
 
 ### Added
