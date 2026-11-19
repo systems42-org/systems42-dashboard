@@ -316,3 +316,7 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
   - STK-006 (AI agents) is dropped. STK-020 and STK-023 stay.
 - Updated: every link to a retired ID, `_system/index.md`. User stories keep their role as the link label. FR-011 and FR-033 had STK-022 as actor and now name STK-013. The `make new` and `make sync` mentions left with the merged pages, because those targets no longer exist here.
 - Not changed: `raw/sources/` and older log entries still name the retired IDs.
+
+## [2026-11-19] inspect | STK-001 and STK-023 promoted
+- Gernot Starke promoted [[STK-001-readers]] and [[STK-023-keyholder]] to `accepted`.
+- STK-023 gets the alias "Yoda". Its naming paragraph now says both aliases name the role.

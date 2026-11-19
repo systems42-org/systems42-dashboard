@@ -2,13 +2,13 @@
 id: STK-023
 type: stakeholder
 title: Keyholder
-status: draft
+status: accepted
 created: 2026-11-10
 updated: 2026-11-19
 sources: ["[[SRC-001-stakeholders-of-the-systems42-dashboard]]", "[[SRC-002-grilling-session-on-stakeholders]]", "[[SRC-033-grilling-session-on-the-shared-session]]"]
 related: ["[[STK-008-workshop-participants-and-facilitators]]", "[[STK-010-operators]]", "[[CON-001-proof-of-concept-not-production-ready]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[ISS-001-who-holds-the-keys-in-parallel-work]]", "[[FR-046-shared-session-in-a-workshop]]"]
 tags: ["stakeholder"]
-aliases: ["Jedi Master"]
+aliases: ["Jedi Master", "Yoda"]
 role: Person who started the dashboard app
 influence: low
 interest: medium
@@ -43,10 +43,10 @@ the usual way to become Keyholder.
 
 **The name.** It replaces "facilitator" for this right. Rejected: Host (a
 deployment-node stereotype), Owner (clashes with product owner), Admin and Moderator
-(both suggest a login, and there is none). The alias "Jedi Master" is a joke. Yoda is
+(both suggest a login, and there is none). The aliases "Jedi Master" and "Yoda" are a joke. Yoda is
 the Jedi Master in Star Wars. The first holder is called Yoda, but a later holder
-keeps its own nickname, so "Jedi Master" names the role and "Yoda" only its first
-holder.
+keeps its own nickname. Both aliases name the role, so search finds the Keyholder
+by either.
 
 **With a login.** If a login is added ([[CON-001-proof-of-concept-not-production-ready]]), the Keyholder becomes an identified
 person instead of whoever connected first.
