@@ -22,7 +22,7 @@ context_role: Keyholder
 
 **Snapshot.** The person who started the dashboard app. Their browser tab holds the
 dashboard's control rights. Only the Keyholder can save the visibility settings
-(Configure) and end the session for everyone (Disconnect all).
+(View) and end the session for everyone (Disconnect all).
 
 **Goals.**
 - Control one session: what is shown, and when it ends.

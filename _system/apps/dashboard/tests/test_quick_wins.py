@@ -25,7 +25,6 @@ _wiki = _tmp / "wiki"
 for _f in ("glossary", "quality-requirements", "constraints", "issues", "decisions"):
     (_wiki / _f).mkdir(parents=True)
 (_tmp / "sources").mkdir()
-os.environ["DASHBOARD_CONFIG"] = str(_tmp / "dashboard.yaml")
 os.environ["WIKI_DIR"] = str(_wiki)
 os.environ["RAW_SOURCES_DIR"] = str(_tmp / "sources")
 os.environ["WIKI_CONFIG"] = str(_tmp / "wiki.yaml")

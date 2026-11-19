@@ -25,8 +25,7 @@ related: ["[[DT-003-review]]"]
             f"---\nid: {name[:6]}\ntype: domain-term\nstatus: draft\n"
             f"{fields}---\n\n**Definition.** Meaning of {name}.\n", encoding="utf-8"
         )
-    os.environ.update(WIKI_DIR=str(wiki), DASH_STARTUP_GRACE="3600",
-                      DASHBOARD_CONFIG=str(Path(temp) / "dashboard.yaml"))
+    os.environ.update(WIKI_DIR=str(wiki), DASH_STARTUP_GRACE="3600")
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     import app
 

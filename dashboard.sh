@@ -80,8 +80,6 @@ case "$cmd" in
       image="$IMAGE_REPO:$version"
       docker image inspect "$image" >/dev/null 2>&1 || docker pull "$image"
     fi
-    # Docker would create a directory in place of a missing file.
-    [ -f "$SETTINGS" ] || printf 'hidden: []\n' > "$SETTINGS"
     # Footer time in the host's zone: containers default to UTC.
     if [ -z "${TZ:-}" ] && [ -L /etc/localtime ]; then
       TZ="$(readlink /etc/localtime | sed 's#.*/zoneinfo/##')"
@@ -89,15 +87,17 @@ case "$cmd" in
     ip="$(lan_ip 2>/dev/null || true)"
     public="${DASH_PUBLIC_URL:-http://${ip:-localhost}:$PORT}"
     docker rm -f "$NAME" >/dev/null 2>&1 || true
-    # One mount: the repository, read-only. The settings file is the one thing
-    # the dashboard writes, so it is mounted writable on top (DR-033).
-    # The container runs as the calling user, not as root, so the settings
-    # file stays writable and keeps its owner.
+    # One mount: the repository, read-only. The dashboard writes nothing there
+    # (FR-046). Releases up to 0.11.4 saved the view in the settings file, so a
+    # wiki that still has one gets it mounted writable for them.
+    # The container runs as the calling user, not as root.
+    settings=""
+    if [ -f "$SETTINGS" ]; then settings="$SETTINGS:/repo/_system/dashboard.yaml"; fi
     docker run -d --name "$NAME" -p "$PORT:8000" \
       --user "$(id -u):$(id -g)" \
       -e TZ="${TZ:-UTC}" -e DASH_PUBLIC_URL="$public" \
       -v "$ROOT:/repo:ro" \
-      -v "$SETTINGS:/repo/_system/dashboard.yaml" \
+      ${settings:+-v "$settings"} \
       "$image" >/dev/null
     if ! wait_for_dashboard; then
       echo "✗ The dashboard did not start. Last log lines:" >&2

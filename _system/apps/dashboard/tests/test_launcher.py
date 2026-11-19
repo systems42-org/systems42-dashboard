@@ -60,14 +60,27 @@ def test_it_starts_the_release_the_wiki_names_with_one_mount():
         assert len(start) == 1, called
         assert start[0].endswith("ghcr.io/systems42-org/dashboard:0.9.0"), start[0]
         assert f"-v {root}:/repo:ro" in start[0], start[0]
-        assert f"-v {root}/_system/dashboard.yaml:/repo/_system/dashboard.yaml" in start[0], start[0]
-        assert start[0].count(" -v ") == 2, start[0]
+        assert start[0].count(" -v ") == 1, start[0]
         assert f"--user {os.getuid()}:{os.getgid()}" in start[0], "the container must not run as root"
         assert "--name systems42-dashboard-mywiki" in start[0], start[0]
         assert "build" not in called, called
-        # Docker would make a folder of a missing settings file
-        assert (root / "_system" / "dashboard.yaml").is_file()
+        # the dashboard writes nothing, so the launcher creates no settings file (FR-046)
+        assert not (root / "_system" / "dashboard.yaml").exists()
         assert "Dashboard 0.9.0 running" in run.stdout, run.stdout
+
+
+def test_a_settings_file_of_an_older_release_is_still_mounted():
+    """Releases up to 0.11.4 save the view in _system/dashboard.yaml. A wiki
+    that still has the file can keep running them."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _wiki(tmp, 'system_name: "X"\ndashboard_version: "0.9.0"\n')
+        (root / "_system" / "dashboard.yaml").write_text("hidden: []\n", encoding="utf-8")
+        bin_dir, log = _stubs(tmp)
+        run = _run(root, bin_dir)
+        assert run.returncode == 0, run.stderr
+        start = [l for l in log.read_text(encoding="utf-8").splitlines() if l.startswith("run ")]
+        assert f"-v {root}/_system/dashboard.yaml:/repo/_system/dashboard.yaml" in start[0], start[0]
+        assert start[0].count(" -v ") == 2, start[0]
 
 
 def test_an_unquoted_version_is_read_too():

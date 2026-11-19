@@ -26,9 +26,6 @@ from pathlib import Path
 
 _FIXTURE = Path(__file__).resolve().parent / "fixtures" / "wiki"
 os.environ["WIKI_DIR"] = str(_FIXTURE)
-# own (absent) settings file: the project's _system/dashboard.yaml may hide
-# sections the Configure dialog was last used on, which is not this test's business
-os.environ["DASHBOARD_CONFIG"] = str(_FIXTURE.parent / "dashboard-absent.yaml")
 os.environ["DASH_STARTUP_GRACE"] = "3600"
 os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 

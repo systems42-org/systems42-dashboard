@@ -67,7 +67,6 @@ os.environ["METAMODEL_DIR"] = str(_mm)
 os.environ["NOTATIONS_DIR"] = str(_own)
 os.environ["WIKI_DIR"] = str(HERE / "fixtures" / "wiki")
 os.environ["WIKI_CONFIG"] = str(_cfg)
-os.environ["DASHBOARD_CONFIG"] = str(_tmp / "dashboard.yaml")
 os.environ["DASH_STARTUP_GRACE"] = "3600"
 os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(HERE.parent))

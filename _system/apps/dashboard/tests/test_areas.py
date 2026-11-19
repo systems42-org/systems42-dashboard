@@ -19,11 +19,9 @@ _wiki = _tmp / "wiki"
 for _f in WIKI_FOLDERS:
     (_wiki / _f).mkdir(parents=True)
 (_tmp / "sources").mkdir()
-_cfg = _tmp / "dashboard.yaml"
 os.environ["WIKI_DIR"] = str(_wiki)
 os.environ["RAW_SOURCES_DIR"] = str(_tmp / "sources")
 os.environ["WIKI_CONFIG"] = str(_tmp / "wiki.yaml")
-os.environ["DASHBOARD_CONFIG"] = str(_cfg)
 os.environ["DASH_STARTUP_GRACE"] = "3600"
 os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -57,8 +55,7 @@ def _tiles(body):
 
 
 def test_requirements_area_lists_its_sections_in_order():
-    if _cfg.exists():
-        _cfg.unlink()
+    app.set_view([])
     code, body = _get("/req42")
     assert code == 200
     assert _tiles(body) == ["r1", "r2", "r3", "r4", "r5", "r6"], _tiles(body)
@@ -82,21 +79,21 @@ def test_commons_area_lists_c1_to_c7():
 
 
 def test_hidden_section_drops_tile_but_route_stays():
-    _cfg.write_text("hidden: [C4, R2]\n", encoding="utf-8")
+    app.set_view(["C4", "R2"])
     _, body = _get("/commons")
     assert "c4" not in _tiles(body) and "c1" in _tiles(body)
     _, body = _get("/req42")
     assert "r2" not in _tiles(body)
     code, _ = _get("/stakeholders")
     assert code == 200
-    _cfg.unlink()
+    app.set_view([])
 
 
 def test_hidden_area_page_still_renders_by_url():
-    _cfg.write_text("hidden: [architecture]\n", encoding="utf-8")
+    app.set_view(["architecture"])
     code, body = _get("/arc42")
     assert code == 200 and _tiles(body) == ["a1", "a2", "a3", "a4", "a5"]
-    _cfg.unlink()
+    app.set_view([])
 
 
 def test_breadcrumbs_carry_the_area():

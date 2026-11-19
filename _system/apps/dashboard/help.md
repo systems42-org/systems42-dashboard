@@ -22,17 +22,17 @@ row tells you which area you are in.
 **Nav and search.** The top row leads to content: Requirements, Architecture,
 Domain Terms, Decisions and Issues. ⌘K (Ctrl K) jumps to search.
 
-**Menu (≡).** *Configure* opens the visibility dialog; *Theme* switches
+**Menu (≡).** *View* opens the visibility dialog; *Theme* switches
 light/dark for this browser; *Who's here* lists connected clients; *Reload*
 re-reads the wiki from disk; *Disconnect all* (facilitator only) ends the
 session for everyone.
 
-**Configure.** Untick an area or a section to hide it from the home page,
+**View.** Untick an area or a section to hide it from the home page,
 the area pages and the nav. Hidden pages stay reachable by URL and in search.
 Only the **facilitator** — the first connected client, "Yoda" (or, once Yoda
-has left, whoever inherited the role under their own name) — can save; the
-dialog writes `_system/dashboard.yaml`, which you can also edit by hand. It is
-the only file the dashboard ever writes; the wiki itself is read-only here.
+has left, whoever inherited the role under their own name) — can save. The
+view lasts until the dashboard stops: after a restart everything shows again.
+The dashboard writes no file, and the wiki is read-only here.
 
 **Brand.** The mark, the favicon and the intro animation on the home page come
 from `brand:` in `_system/wiki.yaml`: `systems42` or a folder of the

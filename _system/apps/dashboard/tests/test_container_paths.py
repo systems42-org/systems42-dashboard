@@ -24,12 +24,12 @@ SCRIPT = (HERE.parents[2] / "dashboard.sh").read_text(encoding="utf-8")
 
 def test_the_image_names_one_folder_and_the_launcher_mounts_it():
     """One mount (FR-042): the image sets REPO_DIR and no other folder
-    variable, and the launcher mounts the repository there, read-only, with
-    the settings file writable on top."""
+    variable, and the launcher mounts the repository there, read-only. The settings
+    file of releases up to 0.11.4 is mounted only where a wiki still has one."""
     dirs = dict(re.findall(r"\b([A-Z_]+_DIR)=(/\S+)", DOCKERFILE))
     assert dirs == {"REPO_DIR": "/repo"}, dirs
     mounts = re.findall(r'-v "([^"]+)"', SCRIPT)
-    assert mounts == ["$ROOT:/repo:ro", "$SETTINGS:/repo/_system/dashboard.yaml"], mounts
+    assert mounts == ["$ROOT:/repo:ro", "$settings"], mounts
 
 
 def test_every_folder_is_found_below_the_repository():
@@ -38,14 +38,14 @@ def test_every_folder_is_found_below_the_repository():
     tmp = Path(tempfile.mkdtemp())
     env = {k: v for k, v in os.environ.items()
            if k not in ("WIKI_DIR", "RAW_SOURCES_DIR", "DOCS_DIR", "METAMODEL_DIR", "ANCHORS_DIR",
-                        "WIKI_CONFIG", "DASHBOARD_CONFIG")}
+                        "WIKI_CONFIG")}
     env["REPO_DIR"] = str(tmp)
     code = ("import app, metamodel\n"
             "for p in (app.WIKI_DIR, app.SOURCES_DIR, app.DOCS_DIR, app.CONFIG_PATH,"
-            " app.DASHBOARD_CONFIG_PATH, metamodel.METAMODEL_DIR, metamodel.ANCHORS_DIR): print(p)")
+            " metamodel.METAMODEL_DIR, metamodel.ANCHORS_DIR): print(p)")
     out = subprocess.run([sys.executable, "-c", code], cwd=HERE, env=env, capture_output=True, text=True)
     assert out.returncode == 0, out.stderr
-    want = ["wiki", "raw/sources", "docs", "_system/wiki.yaml", "_system/dashboard.yaml",
+    want = ["wiki", "raw/sources", "docs", "_system/wiki.yaml",
             "_system/metamodel", "_system/anchors"]
     assert out.stdout.split() == [str(tmp / w) for w in want], out.stdout
 

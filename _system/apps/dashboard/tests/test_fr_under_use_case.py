@@ -81,7 +81,6 @@ goal: []
 """)
 
 os.environ["WIKI_DIR"] = str(_VAULT)
-os.environ["DASHBOARD_CONFIG"] = str(_FIXTURE.parent / "dashboard-absent.yaml")
 os.environ["DASH_STARTUP_GRACE"] = "3600"
 os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 

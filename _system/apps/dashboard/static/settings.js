@@ -1,4 +1,5 @@
-// Configure dialog: the hide list behind _system/dashboard.yaml (DR-033).
+// View dialog: the hide list of this session (FR-046). It lives in the
+// running dashboard only.
 // Everyone can look; only the facilitator (the tab base.html's ping marked
 // data-facilitator="1") can save. Posts the same client_id the heartbeat uses.
 (function () {
@@ -47,7 +48,7 @@
     fetch("/settings").then(function (r) { return r.json(); }).then(function (data) {
       render(data);
       dlg.showModal();
-    }).catch(function () { window.alert("Could not load the settings."); });
+    }).catch(function () { window.alert("Could not load the view."); });
   });
   cancel.addEventListener("click", function () { dlg.close(); });
 
@@ -62,7 +63,7 @@
       .then(function (r) { if (!r.ok) { throw new Error(r.status); } window.location.reload(); })
       .catch(function (err) {
         save.disabled = false; save.textContent = "Save";
-        window.alert(String(err.message) === "403" ? "Only the facilitator can save." : "Could not save the settings.");
+        window.alert(String(err.message) === "403" ? "Only the facilitator can save." : "Could not save the view.");
       });
   });
 })();

@@ -21,6 +21,13 @@ Unreleased changes sit at the top until the next Starter Kit release.
   next.
 
 ### Changed
+- Dashboard: the Configure dialog is now called View, and the view lives in
+  the running dashboard only (FR-046, DR-002). The dashboard writes no file
+  any more. After a restart everything the project uses shows again.
+  `_system/dashboard.yaml` is no longer read. A wiki on this release or a
+  newer one can delete the file. The launcher creates it no longer and mounts
+  it only where it exists, for releases up to 0.11.4. The variable
+  `DASHBOARD_CONFIG` is gone.
 - Dashboard release 0.11.4 (`_system/apps/dashboard/VERSION`).
 - Dashboard: the shipped brand shows the Peaks intro again (FR-032). Release
   0.11.3 had replaced it with the systems42 logo and a fly-in wordmark, which

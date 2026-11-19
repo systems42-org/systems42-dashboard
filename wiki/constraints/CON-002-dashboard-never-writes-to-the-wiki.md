@@ -14,8 +14,7 @@ category: technical
 # The dashboard never writes to the wiki
 
 **Constraint.** The dashboard never changes the wiki's content, that is `wiki/` and
-`raw/`. The only file it writes is `_system/dashboard.yaml`, its own visibility
-settings, when the Keyholder ([[STK-023-keyholder]]) saves them.
+`raw/`. It writes no file in the wiki's repository.
 
 **Rationale / origin.** The wiki files are the shared record that people and AI
 agents ([[STK-006-ai-agents]]) write. A viewer that writes could damage them
@@ -26,7 +25,7 @@ read-only view ([[GOAL-001-trusted-answers]]).
 - Every correction happens outside the dashboard, as requirements engineers
   ([[STK-003-requirements-engineers]]) note.
 - Status changes, such as promoting a page to `accepted`, also happen outside it.
-- [[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]] moves the view
-  settings out of the wiki's repository. Then the dashboard writes nothing there,
-  and the exception for `_system/dashboard.yaml` falls away.
-- The view then lives in the running dashboard only and is written to no file ([[FR-046-shared-session-in-a-workshop]]).
+- Until release 0.11.4 the dashboard wrote one file, `_system/dashboard.yaml`, the view the
+  Keyholder saved. [[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]] moved the
+  view out of the repository. It now lives in the running dashboard only
+  ([[FR-046-shared-session-in-a-workshop]]).

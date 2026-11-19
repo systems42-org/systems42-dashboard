@@ -202,7 +202,6 @@ for _p in _mm.rglob("*.md"):
 os.environ["REPO_DIR"] = str(_tmp)
 os.environ["WIKI_DIR"] = str(_wiki)
 os.environ["WIKI_CONFIG"] = str(_tmp / "wiki.yaml")
-os.environ["DASHBOARD_CONFIG"] = str(_tmp / "dashboard.yaml")
 os.environ["RAW_SOURCES_DIR"] = str(_sources)
 os.environ["DOCS_DIR"] = str(_docs)
 os.environ["METAMODEL_DIR"] = str(_mm)

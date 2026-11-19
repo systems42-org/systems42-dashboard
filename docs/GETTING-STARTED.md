@@ -55,9 +55,8 @@ handy for a quick check or for showing someone else without installing anything.
 with Python on `http://localhost:8000` instead.) In the dashboard, <kbd>⌘K</kbd>
 (<kbd>Ctrl K</kbd> on Windows/Linux) jumps to search from any page. The dashboard follows the Systems42 sections
 model: Requirements and Architecture as two areas, plus the Commons they share.
-The ≡ menu holds Configure, Theme, Who's here, Help, Reload and Disconnect all;
-Configure (facilitator only) hides sections you do not need, saved to the
-hand-editable `_system/dashboard.yaml`. Hidden sections stay reachable by URL
+The ≡ menu holds View, Theme, Who's here, Help, Reload and Disconnect all;
+View (facilitator only) hides sections for the running session. Hidden sections stay reachable by URL
 and search.
 
 ### 4. Check what's still unknown
@@ -122,7 +121,6 @@ Ask for what you need, e.g.:
 ├── _templates/         ← page structures the AI follows when filing
 ├── _system/            ← workflows, anchors, index.md & log.md (bookkeeping)
 │   ├── wiki.yaml       ← project identity (system name, tagline) read by the dashboard
-│   ├── dashboard.yaml  ← dashboard settings (hide list)
 │   ├── scripts/        ← new-project.sh (spawn / refresh another wiki) and friends
 │   └── apps/dashboard/ ← the live dashboard (Flask)
 ├── docs/               ← this guide and other human documentation

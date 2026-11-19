@@ -19,11 +19,9 @@ _wiki = _tmp / "wiki"
 for _f in WIKI_FOLDERS:
     (_wiki / _f).mkdir(parents=True)
 (_tmp / "sources").mkdir()
-_cfg = _tmp / "dashboard.yaml"
 os.environ["WIKI_DIR"] = str(_wiki)
 os.environ["RAW_SOURCES_DIR"] = str(_tmp / "sources")
 os.environ["WIKI_CONFIG"] = str(_tmp / "wiki.yaml")
-os.environ["DASHBOARD_CONFIG"] = str(_cfg)
 os.environ["DASH_STARTUP_GRACE"] = "3600"
 os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -37,8 +35,7 @@ def _get(path):
 
 
 def test_bar_on_section_and_area_pages_only():
-    if _cfg.exists():
-        _cfg.unlink()
+    app.set_view([])
     assert 'class="area-bar area-bar-req"' in _get("/goals")           # R1 is org-coloured, but the BAR is the area's
     assert 'class="area-bar area-bar-req"' in _get("/req42/functional-requirements")
     assert 'class="area-bar area-bar-2 area-bar-req area-bar-arc"' in _get("/stakeholders")
@@ -48,11 +45,11 @@ def test_bar_on_section_and_area_pages_only():
 
 
 def test_hidden_area_has_no_bar_but_still_renders():
-    _cfg.write_text("hidden: [commons]\n", encoding="utf-8")
+    app.set_view(["commons"])
     body = _get("/stakeholders")
     assert 'class="area-bar' not in body
     assert 'class="mainnav"' in body
-    _cfg.unlink()
+    app.set_view([])
 
 
 if __name__ == "__main__":

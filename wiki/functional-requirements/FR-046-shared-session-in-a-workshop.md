@@ -44,9 +44,8 @@ As a [[STK-007-workshop-facilitators|workshop facilitator]] I want **the group t
 - **Children:** [[FR-050-stop-the-dashboard-when-nobody-is-watching]]
 
 > [!note] Open points
-> - Not built yet: the dialog is still called Configure and saves the view in `_system/dashboard.yaml`. All other points are built.
-> - The success metric is a proposal by Claude. Nobody has agreed it yet.
+> None. `tests/test_view.py` checks the success metric.
 
 ## History
 
-> Extracted from the dashboard code on 2026-11-10 ([[SRC-032-shared-session-in-a-workshop]]). Gernot Starke decided on 2026-11-19: one feature, Should, the view lasts until the dashboard stops, the dialog is called View, and the nickname "Yoda" stays with the first holder ([[SRC-033-grilling-session-on-the-shared-session]]).
+> Extracted from the dashboard code on 2026-11-10 ([[SRC-032-shared-session-in-a-workshop]]). Gernot Starke decided on 2026-11-19: one feature, Should, the view lasts until the dashboard stops, the dialog is called View, and the nickname "Yoda" stays with the first holder ([[SRC-033-grilling-session-on-the-shared-session]]). He agreed the success metric the same day, on condition that it is simple to test.

@@ -28,8 +28,6 @@ _wiki = _tmp / "wiki"
 for _f in WIKI_FOLDERS:
     (_wiki / _f).mkdir(parents=True)
 (_tmp / "sources").mkdir()
-_cfg = _tmp / "dashboard.yaml"
-os.environ["DASHBOARD_CONFIG"] = str(_cfg)
 os.environ["WIKI_DIR"] = str(_wiki)
 os.environ["RAW_SOURCES_DIR"] = str(_tmp / "sources")
 os.environ["WIKI_CONFIG"] = str(_tmp / "wiki.yaml")
@@ -79,8 +77,7 @@ def _home():
 
 
 def test_home_shows_two_peaks_the_valley_and_commons_in_order():
-    if _cfg.exists():
-        _cfg.unlink()
+    app.set_view([])
     body = _home()
     positions = [body.index(k) for k in ORDER]
     assert positions == sorted(positions), positions
@@ -139,34 +136,24 @@ def test_valley_carries_status_changes_issues_and_decisions_link():
 
 
 def test_hidden_area_and_section_leave_home():
-    _cfg.write_text("hidden: [architecture, C6]\n", encoding="utf-8")
+    app.set_view(["architecture", "C6"])
     try:
         body = _home()
         assert "area-tile-architecture" not in body
         com = body[body.index("area-tile-commons"):]
         assert "C6" not in com and "C5" in com
     finally:
-        _cfg.unlink()
+        app.set_view([])
 
 
 def test_area_with_every_section_hidden_reads_not_captured_yet():
-    _cfg.write_text("hidden: [A1, A2, A3, A4, A5]\n", encoding="utf-8")
+    app.set_view(["A1", "A2", "A3", "A4", "A5"])
     try:
         body = _home()
         arc = body[body.index("area-tile-architecture"):body.index("area-tile-commons")]
         assert "Not captured yet" in arc and "0 pages" not in arc, arc
     finally:
-        _cfg.unlink()
-
-
-def test_unknown_hide_entry_is_a_warning_not_an_error():
-    _cfg.write_text("hidden: [bogus]\n", encoding="utf-8")
-    try:
-        body = _home()
-        assert 'class="config-warning"' in body and "bogus" in body
-    finally:
-        _cfg.unlink()
-    assert 'class="config-warning"' not in _home()
+        app.set_view([])
 
 
 def test_every_page_has_the_main_nav():
@@ -296,7 +283,6 @@ if __name__ == "__main__":
     test_valley_carries_status_changes_issues_and_decisions_link()
     test_hidden_area_and_section_leave_home()
     test_area_with_every_section_hidden_reads_not_captured_yet()
-    test_unknown_hide_entry_is_a_warning_not_an_error()
     test_every_page_has_the_main_nav()
     test_nav_is_short_and_brand_is_not_duplicated_on_home()
     test_changes_lists_a_backdated_page_with_relative_time()

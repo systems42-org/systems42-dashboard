@@ -34,7 +34,7 @@ A reader reaches the search box from every page with the key ⌘K (Ctrl K on oth
 - The example queries of every child feature pass an automated test on a fixed test wiki.
 - In a workshop, the metric of [[GOAL-003-answers-without-asking-a-colleague]] holds: someone new to the wiki answers 8 of 10 prepared questions within 60 seconds each. Search is the main lever for it.
 
-**Scope.** in: every wiki page, including pages of sections hidden in Configure · out: meaning-based search with an embedding model, and answers written by an AI. Both are Won't, because they are not affordable for now (Gernot Starke, 2026-11-11). They would also need a network or a model download ([[CON-001-proof-of-concept-not-production-ready]]). Filter syntax such as `status:open` in the search box is out too, see [[FR-009-more-filters-on-the-full-results-page]].
+**Scope.** in: every wiki page, including pages of sections hidden in the view · out: meaning-based search with an embedding model, and answers written by an AI. Both are Won't, because they are not affordable for now (Gernot Starke, 2026-11-11). They would also need a network or a model download ([[CON-001-proof-of-concept-not-production-ready]]). Filter syntax such as `status:open` in the search box is out too, see [[FR-009-more-filters-on-the-full-results-page]].
 
 ## Hierarchy
 
