@@ -15,7 +15,6 @@ _tmp = Path(tempfile.mkdtemp())
 os.environ["WIKI_DIR"] = str(_FIXTURE)
 os.environ["RAW_SOURCES_DIR"] = str(_tmp / "sources")
 os.environ["WIKI_CONFIG"] = str(_tmp / "wiki.yaml")
-os.environ["DASHBOARD_CONFIG"] = str(_tmp / "dashboard.yaml")
 os.environ["DASH_STARTUP_GRACE"] = "3600"
 os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))

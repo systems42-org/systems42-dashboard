@@ -20,7 +20,6 @@ for _f in ("issues", "stakeholders"):
     (_wiki / _f).mkdir(parents=True)
 os.environ["WIKI_DIR"] = str(_wiki)
 os.environ["WIKI_CONFIG"] = str(_tmp / "wiki.yaml")
-os.environ["DASHBOARD_CONFIG"] = str(_tmp / "dashboard.yaml")
 os.environ["RAW_SOURCES_DIR"] = str(_tmp / "sources")
 os.environ["DASH_STARTUP_GRACE"] = "3600"
 os.environ["DASH_HEARTBEAT_GRACE"] = "3600"

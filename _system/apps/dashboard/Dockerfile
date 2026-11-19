@@ -29,7 +29,7 @@ RUN apt-get update \
 FROM base
 
 # One mount (FR-042): the launcher mounts the wiki repository read-only at
-# /repo, and its _system/dashboard.yaml writable on top. The dashboard finds
+# /repo. The dashboard writes nothing there. It finds
 # every folder below /repo by convention (CON-005).
 ENV REPO_DIR=/repo
 
@@ -45,9 +45,8 @@ COPY static ./static
 COPY brands ./brands
 
 # The dashboard does not run as root. The launcher starts the container as
-# the user who called it (`--user`), so that the one file the dashboard
-# writes, the mounted _system/dashboard.yaml, stays writable and keeps its
-# owner. Started without `--user`, the container runs as this user.
+# the user who called it (`--user`), who can read the mounted repository.
+# Started without `--user`, the container runs as this user.
 RUN useradd --system --uid 10001 --no-create-home dashboard
 USER 10001
 

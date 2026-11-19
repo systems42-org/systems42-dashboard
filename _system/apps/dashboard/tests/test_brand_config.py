@@ -26,7 +26,6 @@ os.environ["WIKI_DIR"] = str(_repo / "wiki")
 os.environ["RAW_SOURCES_DIR"] = str(_repo / "sources")
 os.environ["REPO_DIR"] = str(_repo)
 os.environ["WIKI_CONFIG"] = str(_cfg)
-os.environ["DASHBOARD_CONFIG"] = str(_tmp / "dashboard.yaml")
 os.environ["DASH_STARTUP_GRACE"] = "3600"
 os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 

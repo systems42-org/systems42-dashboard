@@ -67,7 +67,6 @@
   {% endif %}
 </header>
 
-{% for w in valley.warnings %}<p class="config-warning">{{ w }} — see <code>_system/dashboard.yaml</code>.</p>{% endfor %}
 {{ maturity_legend() }}
 
 {% macro area_tile(a, wide=False) %}

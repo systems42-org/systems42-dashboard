@@ -11,7 +11,6 @@ FIXTURE = HERE / "fixtures/wiki"
 with tempfile.TemporaryDirectory() as temp:
     os.environ.update(
         WIKI_DIR=str(FIXTURE),
-        DASHBOARD_CONFIG=str(Path(temp) / "dashboard.yaml"),
         DASH_STARTUP_GRACE="3600",
         DASH_HEARTBEAT_GRACE="3600",
     )

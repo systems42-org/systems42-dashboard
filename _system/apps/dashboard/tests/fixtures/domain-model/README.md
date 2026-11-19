@@ -7,13 +7,11 @@ From `_system/apps/dashboard/`, start with `uv` installed:
 
 ```sh
 fixture_dir="$PWD/tests/fixtures/domain-model"
-fixture_settings="$(mktemp -d)/dashboard.yaml"
 WIKI_DIR="$fixture_dir/wiki" \
 WIKI_CONFIG="$fixture_dir/wiki.yaml" \
 RAW_SOURCES_DIR="$fixture_dir/raw/sources" \
 DOCS_DIR="$fixture_dir/docs" \
 REPO_DIR="$fixture_dir" \
-DASHBOARD_CONFIG="$fixture_settings" \
 uv run --with-requirements requirements.txt python app.py
 ```
 

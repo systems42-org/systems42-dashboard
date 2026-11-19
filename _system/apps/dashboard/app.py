@@ -53,21 +53,12 @@ REPO_DIR = Path(_env_repo) if _env_repo else Path(__file__).resolve().parents[3]
 DISPLAY_TZ = os.environ.get("TZ") or ""
 
 
-# Dashboard settings — the ONE file the dashboard writes (DR-033). A hide
-# list of area keys / section IDs; everything is visible by default. Read per
-# call like wiki.yaml (the Configure dialog and hand edits both land on the
-# next request); written in place because under Docker it is a bind-mounted
-# single file, and a temp-and-rename would swap the inode out from under the
-# mount.
-_env_dash = os.environ.get("DASHBOARD_CONFIG")
-DASHBOARD_CONFIG_PATH = Path(_env_dash) if _env_dash else REPO_DIR / "_system" / "dashboard.yaml"
-
-_DASHBOARD_CONFIG_HEADER = """\
-# Dashboard settings — written by the dashboard's Configure dialog (facilitator
-# only); hand-editable too. Everything is visible unless listed here.
-# `hidden` takes area keys (requirements | architecture | commons) and/or
-# section IDs (R1-R6, A1-A5, C1-C7) from the Systems42 sections catalog.
-"""
+# The view (FR-046, DR-002): what the Keyholder hides for this session. A hide
+# list of area keys / section IDs; everything is visible by default. It lives
+# in this process only: no file holds it, and it ends when the dashboard
+# stops. One gunicorn worker serves every request (Dockerfile), so this one
+# list is the view for everyone.
+_view_hidden: list[str] = []
 
 _VALID_HIDE_KEYS = [a["key"] for a in catalog.AREAS] + [s["id"] for s in catalog.SECTIONS]
 
@@ -114,19 +105,9 @@ def _validate_hidden(entries) -> tuple[list[str], list[str]]:
     return [k for k in _VALID_HIDE_KEYS if k in valid], unknown
 
 
-@_request_cached
 def dashboard_config() -> dict:
-    """`hidden`: valid area keys / section IDs, deduped, in catalog order.
-    `unknown`: entries that match nothing — reported on the home page, never
-    an error. A missing, empty or malformed file hides nothing."""
-    try:
-        data = yaml.safe_load(DASHBOARD_CONFIG_PATH.read_text(encoding="utf-8")) or {}
-    except (OSError, yaml.YAMLError):
-        data = {}
-    if not isinstance(data, dict):
-        data = {}
-    hidden, unknown = _validate_hidden(data.get("hidden"))
-    return {"hidden": hidden, "unknown": unknown}
+    """`hidden`: the view's area keys / section IDs, in catalog order."""
+    return {"hidden": list(_view_hidden)}
 
 
 def is_hidden(key_or_id: str) -> bool:
@@ -145,13 +126,10 @@ def visible_sections(area_key: str) -> list[dict]:
     return [s for s in catalog.sections_of(area_key) if not is_hidden(s["id"])]
 
 
-def write_dashboard_config(hidden: list[str]) -> None:
-    """Rewrite the settings file in place (see the note above)."""
-    valid, _ = _validate_hidden(list(hidden))
-    body = _DASHBOARD_CONFIG_HEADER + yaml.safe_dump(
-        {"hidden": valid}, default_flow_style=None, sort_keys=False)
-    with open(DASHBOARD_CONFIG_PATH, "w", encoding="utf-8") as fh:
-        fh.write(body)
+def set_view(hidden: list[str]) -> None:
+    """Replace the view. Unknown entries are dropped. Nothing is written."""
+    global _view_hidden
+    _view_hidden, _ = _validate_hidden(list(hidden))
 
 
 @app.context_processor
@@ -3196,7 +3174,6 @@ def build_valley() -> dict:
     open_issues = sorted((i for i in issues if is_open_issue(i.status)),
                          key=lambda i: ({"blocker": 0, "major": 1, "minor": 2}
                                         .get(str(i.meta.get("severity") or ""), 3), i.id))
-    cfg = dashboard_config()
     return {
         "status": vault_status(),
         "changes": recent_changes(4),
@@ -3205,7 +3182,6 @@ def build_valley() -> dict:
                          "severity": str(i.meta.get("severity") or "")} for i in open_issues[:5]],
         "open_total": len(open_issues),
         "decision_count": len(load_folder("decisions")),
-        "warnings": [f"Unknown entry in dashboard.yaml: {u}" for u in cfg["unknown"]],
     }
 
 
@@ -4816,7 +4792,7 @@ def reload_caches():
 
 @app.route("/settings", methods=["GET"])
 def settings_get():
-    """The Configure dialog's data: the catalog grouped by area plus the
+    """The View dialog's data: the catalog grouped by area plus the
     current hide list. Open to every viewer (it is the same information the
     home page shows); saving is facilitator-only (POST below)."""
     cfg = dashboard_config()
@@ -4832,10 +4808,10 @@ def settings_get():
 
 @app.route("/settings", methods=["POST"])
 def settings_post():
-    """Facilitator-only: replace the hide list and rewrite dashboard.yaml.
+    """Facilitator-only: replace the view's hide list (in memory, FR-046).
     Same self-asserted client_id check as /disconnect-all — the facilitator is
     whoever connected first and is still here. Unknown IDs are a 400 and
-    nothing is written; the dialog only ever sends catalog IDs, so a 400 here
+    nothing changes; the dialog only ever sends catalog IDs, so a 400 here
     means a stale page or a hand-crafted request."""
     cid = _client_id(request)
     with _lifecycle_lock:
@@ -4848,9 +4824,7 @@ def settings_post():
     valid, unknown = _validate_hidden(data.get("hidden"))
     if unknown or not isinstance(data.get("hidden"), list):
         return {"error": "unknown", "unknown": unknown}, 400
-    write_dashboard_config(valid)
-    if has_request_context():             # drop this request's memoised config
-        g.get("_build_cache", {}).pop(("dashboard_config", ()), None)
+    set_view(valid)
     _PARSE_CACHE.clear()
     if app.jinja_env.cache is not None:
         app.jinja_env.cache.clear()

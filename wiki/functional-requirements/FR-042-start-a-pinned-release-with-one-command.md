@@ -4,7 +4,7 @@ type: functional-requirement
 title: Start a pinned release with one command
 status: draft
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-19
 sources: ["[[SRC-027-dashboard-distribution-and-metamodel-contract]]", "[[SRC-028-grilling-session-on-dashboard-distribution]]"]
 related: ["[[DR-004-releases-are-container-images-pinned-per-wiki]]", "[[FR-030-numbered-releases]]", "[[CON-005-the-dashboard-works-on-systems42-derivatives-only]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[CON-003-docker-is-the-supported-way-to-run-it]]"]
 tags: ["functional-requirement", "product"]
@@ -27,7 +27,7 @@ As a [[STK-010-people-who-run-the-dashboard|person who runs the dashboard]] I wa
 
 - **The launcher is the only dashboard code in a wiki.** Currently it is `dashboard.sh`. A repository may add a Makefile that calls it.
 - **It does four things.** It reads `dashboard_version:` from `_system/wiki.yaml`, starts that published image ([[DR-004-releases-are-container-images-pinned-per-wiki]]), waits until the dashboard answers, and opens the browser.
-- **One mount.** It passes the repository root read-only, and `_system/dashboard.yaml` writable. The dashboard finds everything else by convention ([[CON-005-the-dashboard-works-on-systems42-derivatives-only]]).
+- **One mount.** It passes the repository root read-only. The dashboard writes nothing there ([[FR-046-shared-session-in-a-workshop]]). It finds everything else by convention ([[CON-005-the-dashboard-works-on-systems42-derivatives-only]]).
 - **Update.** `./dashboard.sh update` sets `dashboard_version:` to the newest release. The launcher writes that line, not the dashboard, so [[CON-002-dashboard-never-writes-to-the-wiki]] holds.
 
 **Success metric(s).** In a Systems42 derivative that holds no dashboard code except the launcher, `./dashboard.sh` shows the dashboard in the release the wiki names. After `./dashboard.sh update` and a restart, the footer shows the newest release.

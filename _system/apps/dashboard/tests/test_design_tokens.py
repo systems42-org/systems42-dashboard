@@ -139,7 +139,7 @@ def test_area_tokens_exist_and_pass_aa_on_cards():
 
 
 def test_chip_text_passes_aa_on_every_chip_background():
-    """The Configure dialog paints section IDs on area-coloured chips. Those
+    """The View dialog paints section IDs on area-coloured chips. Those
     colours are pale in the dark theme and deep in the light one, so the chip
     text needs its own per-theme token rather than the QR plate's ink."""
     for theme_block in (_block(":root"), _block(':root[data-theme="light"]')):

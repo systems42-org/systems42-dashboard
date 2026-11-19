@@ -48,7 +48,7 @@
     <details class="menu" id="menu">
       <summary class="menu-btn" aria-label="Menu" title="Menu"><span class="menu-bars" aria-hidden="true"></span></summary>
       <ul class="menu-list" role="menu">
-        <li><button type="button" class="menu-item" id="open-settings" role="menuitem">Configure…</button></li>
+        <li><button type="button" class="menu-item" id="open-settings" role="menuitem">View…</button></li>
         <li><button type="button" class="menu-item" id="theme-toggle" role="menuitem"><span class="theme-toggle-label">Light theme</span></button></li>
         <li><a class="menu-item" href="/who" role="menuitem">Who's here</a></li>
         <li><a class="menu-item" href="/help" role="menuitem">Help</a></li>
@@ -68,10 +68,10 @@
   </main>
   <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title">
     <form id="settings-form" method="dialog">
-      <h2 id="settings-title">Configure the dashboard</h2>
-      <p class="settings-lead">Untick an area or a section to hide it from the home page, the area pages and the nav. Hidden pages stay reachable by URL and in search.</p>
+      <h2 id="settings-title">View</h2>
+      <p class="settings-lead">Untick an area or a section to hide it from the home page, the area pages and the nav. Hidden pages stay reachable by URL and in search. The view lasts until the dashboard stops.</p>
       <div id="settings-groups" class="settings-groups"></div>
-      <p id="settings-note" class="settings-note" hidden>Only the facilitator (Yoda) can change this. Edit <code>_system/dashboard.yaml</code> by hand otherwise.</p>
+      <p id="settings-note" class="settings-note" hidden>Only the facilitator (Yoda) can change this.</p>
       <div class="settings-actions">
         <button type="button" class="btn" id="settings-cancel">Cancel</button>
         <button type="submit" class="btn btn-primary" id="settings-save" disabled>Save</button>

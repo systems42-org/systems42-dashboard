@@ -2,8 +2,7 @@
 
 A dashboard over the `wiki/` layer, read-only
 as far as the wiki goes. It parses the markdown pages live on each request —
-nothing in the wiki is ever written back; the one file it writes is its own
-settings file (see Configure) — and renders them as tiles.
+nothing in the repository is ever written — and renders them as tiles.
 
 ## Run
 
@@ -23,9 +22,8 @@ It reads `dashboard_version:` from `_system/wiki.yaml` and starts the image
 `update` asks GitHub for the newest release and writes that one line. A wiki
 that names no release is told to run `update`.
 
-**One mount.** The launcher mounts the repository read-only at `/repo`, and
-`_system/dashboard.yaml` writable on top (the one file the dashboard writes,
-see Configure). The image sets `REPO_DIR=/repo`, and the dashboard finds
+**One mount.** The launcher mounts the repository read-only at `/repo`. The
+dashboard writes nothing there (see View). The image sets `REPO_DIR=/repo`, and the dashboard finds
 `wiki/`, `raw/sources/`, `docs/`, `_system/metamodel/`, `_system/anchors/` and
 `_system/wiki.yaml` below it. So the dashboard always shows the current state
 of the wiki: refresh the browser after editing.
@@ -115,7 +113,7 @@ where a page belongs (FR-020). Pages outside the sections read `Home › Page`.
 
 A 3 px bar under the topbar carries the area colour (green Requirements, blue
 Architecture, red organisation) on pages of an area; home, help and
-search have none. The ≡ menu holds Configure · Theme · Who's here · Help ·
+search have none. The ≡ menu holds View · Theme · Who's here · Help ·
 Reload · Disconnect all. The footer holds formalities only: "Read-only
 dashboard for Systems42 LLM wiki" (linked to the help section on the LLM
 wiki), the live dot with the client count, the refresh time, Metamodel, Help, the
@@ -172,7 +170,7 @@ Help. **Commons** runs full-width underneath. Each peak links to its area page.
 The area pages `/req42`, `/arc42` and `/commons` show one tile per section,
 rendered by `templates/_tile.html`. A tile carries the section ID, its title,
 a count or short list of its pages and links to the section route. Sections
-hidden in `_system/dashboard.yaml` drop off the tiles; a hidden area loses its
+hidden in the view drop off the tiles; a hidden area loses its
 colour bar but its page still renders. A section's scope is `in` (captured in
 wiki folders), `out` (deliberately not captured, an inactive tile) or `planned`
 (arc42, no wiki folders yet; "not captured yet").
@@ -217,23 +215,20 @@ links. An issue counts as **closed** when its status is `resolved` or `wontfix`.
 freshly regenerated vault shows up on the next page refresh. The status strip's
 source count comes from `raw/sources/`.
 
-## Configure
+## View
 
-The ≡ menu's Configure dialog (`static/settings.js`, `GET`/`POST /settings`)
-lists every area and section with a checkbox; unchecked ones form the hide list
-in `_system/dashboard.yaml`, for example `hidden: [R2, R5, R6]`. Everyone can
-open the dialog; only the facilitator ("Yoda") can save. The file is
-hand-editable, an unknown entry is a warning rather than an error, and a
-missing file hides nothing. It is the only file the dashboard writes, rewritten
-in place through a read-write bind mount of that one file; `dashboard.sh` and
-`make new` create it, `make sync` leaves it alone. Hidden sections keep their
+The ≡ menu's View dialog (`static/settings.js`, `GET`/`POST /settings`) lists
+every area and section with a checkbox; unchecked ones form the hide list of
+this session (FR-046). Everyone can open the dialog; only the facilitator
+("Yoda") can save. The view lives in the running dashboard only: no file holds
+it, and after a restart everything shows again. Hidden sections keep their
 routes and search hits. `POST /settings` rejects unknown IDs with 400 and
-writes nothing. `wiki.yaml` stays project identity only.
+changes nothing. `wiki.yaml` stays project identity only.
 
-Hand edits made with an editor that saves via temp-file-and-rename may not
-reach the running container (the single-file bind mount keeps the old inode);
-restart with `./dashboard.sh down && ./dashboard.sh`. Hand-written comments in
-the file are replaced by the standard header on the next Configure save.
+Releases up to 0.11.4 saved the view in `_system/dashboard.yaml`. This release
+ignores the file. The launcher still mounts it where a wiki has one, so an
+older release keeps working. A wiki that runs this release or a newer one can
+delete it.
 
 ## Help
 
@@ -326,7 +321,7 @@ _system/apps/dashboard/
                              table[data-list] adds sort orders, "agreed only" and
                              keeps both in the address (?sort=, ?status=)
   static/metamodel-graph.js  the cytoscape metamodel network on /metamodel
-  static/settings.js   the Configure dialog
+  static/settings.js   the View dialog
   static/systems42-sections.svg   the sections diagram shown on /help
   static/systems42-logo.svg, systems42-favicon.png   the Systems42 mark
   brands/            the shipped brand systems42 (marks, favicon, intro.html)
@@ -403,11 +398,9 @@ abbreviations, DR-025 is indexed), and two contracts that would otherwise
 drift in silence — `_templates/` against `app.py`'s parser, and the skills the
 workflows name against the ones vendored under `.agents/skills/`. The
 three-area restructure is pinned by `test_catalog.py` (every wiki folder
-belongs to exactly one section), `test_dashboard_config.py` (the hide list and
-its in-place write), `test_areas.py`, `test_area_chrome.py` (breadcrumbs,
+belongs to exactly one section), `test_view.py` (the view, its lifetime
+and the success metric of FR-046), `test_areas.py`, `test_area_chrome.py` (breadcrumbs,
 colour bar), `test_menu.py`, `test_help.py` and `test_home_layout.py`.
-`test_config_isolation.py` keeps every script that imports `app` on its own
-`DASHBOARD_CONFIG`, so a project's hide list never reaches the tests.
 The metamodel is pinned twice: `test_metamodel_lint.py` runs
 `_system/scripts/metamodel-lint.py` (templates, folders, anchors and the
 catalog must agree with `_system/metamodel/`), and `test_metamodel_page.py`

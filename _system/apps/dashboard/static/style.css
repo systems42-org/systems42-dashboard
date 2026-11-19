@@ -211,7 +211,7 @@ h2 { letter-spacing: -.01em; }
 .menu-item:disabled { color: var(--ink-dim); cursor: not-allowed; opacity: .7; }
 .menu-item[hidden] { display: none; }
 
-/* Configure dialog */
+/* View dialog */
 .settings-dialog { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius);
   padding: var(--space-4); width: min(36rem, 92vw); }
 .settings-dialog::backdrop { background: rgba(0,0,0,.5); }
@@ -222,7 +222,7 @@ h2 { letter-spacing: -.01em; }
 .settings-section { display: block; padding-left: var(--space-4); font-size: var(--step--1); }
 .settings-note { color: var(--warn); font-size: var(--step--1); }
 .settings-actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-3); }
-/* Configure dialog colour: each cabinet carries its area colour (left rule,
+/* View dialog colour: each cabinet carries its area colour (left rule,
    heading, checkbox accent); each section row carries its own section colour
    on the ID chip, so the dialog reads like the sections diagram. */
 .settings-group { border-left-width: 4px; }
@@ -1287,7 +1287,6 @@ html.etsu-disconnected {
 .valley-h { font-size: var(--step-0); margin: 0 0 var(--space-1); }
 .valley-h a { color: inherit; text-decoration: none; }
 .valley-foot { margin: auto 0 0; font-size: var(--step--1); color: var(--ink-dim); }
-.config-warning { color: var(--warn); font-size: var(--step--1); margin: 0 0 var(--space-3); }
 @media (max-width: 900px) { .home-grid { grid-template-columns: 1fr; } .valley { order: 4; } .area-tile-wide { grid-column: auto; } }
 
 /* Help page (rendered from help.md) */

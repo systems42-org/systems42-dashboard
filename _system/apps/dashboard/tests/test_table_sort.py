@@ -17,8 +17,6 @@ from pathlib import Path
 
 _DASH = Path(__file__).resolve().parents[1]
 os.environ["WIKI_DIR"] = str(_DASH / "tests" / "fixtures" / "wiki")
-# own (absent) settings file: the project's _system/dashboard.yaml may hide sections
-os.environ["DASHBOARD_CONFIG"] = str(_DASH / "tests" / "fixtures" / "dashboard-absent.yaml")
 os.environ["DASH_STARTUP_GRACE"] = "3600"
 os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(_DASH))
