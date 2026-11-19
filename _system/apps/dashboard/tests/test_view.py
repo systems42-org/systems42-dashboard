@@ -181,6 +181,16 @@ def test_the_dialog_is_called_view():
 
 
 
+def test_the_dialog_puts_section_metadata_in_as_text():
+    # ids and titles come from the repository's metamodel (FR-044): the
+    # dialog builds its nodes with textContent, never by concatenating markup
+    js = (HERE / "static" / "settings.js").read_text(encoding="utf-8")
+    assert "innerHTML" not in js and "outerHTML" not in js and "insertAdjacentHTML" not in js
+    assert "n.textContent = text" in js
+    assert 'el("code", "settings-id " + chip, s.id)' in js and 'el("span", "", s.title)' in js
+    assert 'el("strong", "", a.label)' in js
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

@@ -25,6 +25,8 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - Dashboard: `/req42/<slug>` answers 404 for the arc42 sections, which live under `/arc42/`.
 - Dashboard: `/issues?section=` ignores case, so `c2` filters like `C2`.
 - Dashboard: the metamodel page links a projection's route only when it is a path on this site.
+- Dashboard: the View dialog puts section ids and titles in as text, so
+  markup in a framework file cannot reach the page.
 - Dashboard: on a functional requirement page the sources row no longer overlaps the row of pills above it.
 
 ### Added

@@ -20,22 +20,38 @@
   }
   function facilitator() { return document.documentElement.dataset.facilitator === "1"; }
 
+  // Section ids and titles come from the repository's metamodel, so every
+  // value goes in as text, never as markup.
+  function el(tag, className, text) {
+    var n = document.createElement(tag);
+    if (className) { n.className = className; }
+    if (text !== undefined) { n.textContent = text; }
+    return n;
+  }
+  function checkbox(name, value, checked) {
+    var i = el("input");
+    i.type = "checkbox";
+    i.name = name;
+    i.value = value;
+    i.checked = checked;
+    return i;
+  }
+
   function render(data) {
     var hidden = {};
     data.hidden.forEach(function (k) { hidden[k] = true; });
-    groups.innerHTML = "";
+    groups.textContent = "";
     data.areas.forEach(function (a) {
-      var fs = document.createElement("fieldset");
-      fs.className = "settings-group settings-group-" + (a.key === "commons" ? "commons" : a.colors[0]);
-      var lg = document.createElement("label");
-      lg.className = "settings-area settings-area-" + (a.key === "commons" ? "commons" : a.colors[0]);
-      lg.innerHTML = '<input type="checkbox" name="area" value="' + a.key + '"' + (hidden[a.key] ? "" : " checked") + "> <strong>" + a.label + "</strong>";
+      var tone = a.key === "commons" ? "commons" : a.colors[0];
+      var fs = el("fieldset", "settings-group settings-group-" + tone);
+      var lg = el("label", "settings-area settings-area-" + tone);
+      lg.append(checkbox("area", a.key, !hidden[a.key]), " ", el("strong", "", a.label));
       fs.appendChild(lg);
       a.sections.forEach(function (s) {
-        var l = document.createElement("label");
-        l.className = "settings-section settings-section-" + s.colors[0] + (s.scope === "in" ? "" : " is-out");
+        var l = el("label", "settings-section settings-section-" + s.colors[0] + (s.scope === "in" ? "" : " is-out"));
         var chip = s.colors.map(function (c) { return "settings-id-" + c; }).join(" ");
-        l.innerHTML = '<input type="checkbox" name="section" value="' + s.id + '"' + (hidden[s.id] ? "" : " checked") + '> <code class="settings-id ' + chip + '">' + s.id + "</code> <span>" + s.title + "</span>";
+        l.append(checkbox("section", s.id, !hidden[s.id]), " ",
+                 el("code", "settings-id " + chip, s.id), " ", el("span", "", s.title));
         fs.appendChild(l);
       });
       groups.appendChild(fs);
