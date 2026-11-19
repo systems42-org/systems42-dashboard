@@ -18,13 +18,13 @@ every capture (`_system/workflows/capture.md`, step 7).
 
 ## Stakeholders
 
-- [[STK-001-readers]] Readers, everyone who reads the wiki in everyday work (draft)
+- [[STK-001-readers]] Readers, everyone who reads the wiki in everyday work (accepted)
 - [[STK-008-workshop-participants-and-facilitators]] Workshop participants and facilitators (draft)
 - [[STK-010-operators]] Operators, who set up a project wiki and run its dashboard (draft)
 - [[STK-012-maintainers]] Maintainers, including builders of project-specific dashboards (draft)
 - [[STK-013-people-learning-or-presenting-systems42]] People learning or presenting Systems42 (draft)
 - [[STK-020-data-protection-and-security-officers]] Data protection and security officers (draft)
-- [[STK-023-keyholder]] Keyholder, the person who started the dashboard app (draft)
+- [[STK-023-keyholder]] Keyholder, the person who started the dashboard app (accepted)
 
 ## Context
 

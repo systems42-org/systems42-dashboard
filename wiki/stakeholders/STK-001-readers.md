@@ -2,7 +2,7 @@
 id: STK-001
 type: stakeholder
 title: Readers
-status: draft
+status: accepted
 created: 2026-11-10
 updated: 2026-11-19
 sources: ["[[SRC-001-stakeholders-of-the-systems42-dashboard]]", "[[SRC-002-grilling-session-on-stakeholders]]"]
