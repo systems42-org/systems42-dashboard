@@ -274,3 +274,17 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
   - Q4: FR-032 names the meta brand.
 - Created: SRC-030, SRC-031. Updated: FR-031, FR-032, `_system/index.md`.
 - Background: release 0.11.3 shipped meta's intro as the default (pull request #43). Pull request #46 restored the Peaks intro, meta pull request #46 gave meta its own brand folder.
+
+## [2026-11-19] capture | Shared session in a workshop
+- Source: `raw/fr-12-shared-session-in-a-workshop.md`, extracted from the dashboard code on 2026-11-10, now [[SRC-032-shared-session-in-a-workshop]] in `raw/ingested/`. The answers are [[SRC-033-grilling-session-on-the-shared-session]].
+- Grill gate: the source's "Today" list was checked against the code of release 0.11.4 and still holds. The client count is already FR-015. DR-002 had left the view's place, lifetime and dialog name open. Gernot Starke answered questions 1 to 6 in two rounds. No new Issues.
+- Decisions:
+  - Q1: one feature under FR-010, no epic of its own.
+  - Q2: GOAL-002 covers workshops. The vision stays as it is.
+  - Q3: Should.
+  - Q4: ISS-001 resolved with option 1. The code stays: the first tab holds the rights, "Yoda" names only the first holder.
+  - Q5: the view lasts until the dashboard stops and is written to no file.
+  - Q6: the dialog is called View.
+- Created: [[FR-046-shared-session-in-a-workshop]], SRC-032, SRC-033.
+- Updated: ISS-001 (resolved), STK-023, CON-002 (one impact line), FR-010 (child list), FR-015 and FR-023 (links), `_system/index.md`.
+- Parked: Q5 and Q6 are not built. Configure still saves to `_system/dashboard.yaml`, noted in FR-046. DR-002 is accepted and was not edited, so it does not link FR-046. The success metric of FR-046 is a proposal by Claude.

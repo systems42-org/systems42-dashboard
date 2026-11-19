@@ -2,18 +2,18 @@
 id: ISS-001
 type: issue
 title: Who holds the keys when two people work in parallel
-status: open
+status: resolved
 created: 2026-11-10
-updated: 2026-11-12
-sources: ["[[SRC-002-grilling-session-on-stakeholders]]"]
-related: ["[[STK-023-keyholder]]", "[[STK-007-workshop-facilitators]]", "[[STK-010-people-who-run-the-dashboard]]"]
+updated: 2026-11-19
+sources: ["[[SRC-002-grilling-session-on-stakeholders]]", "[[SRC-033-grilling-session-on-the-shared-session]]"]
+related: ["[[STK-023-keyholder]]", "[[STK-007-workshop-facilitators]]", "[[STK-010-people-who-run-the-dashboard]]", "[[FR-046-shared-session-in-a-workshop]]"]
 tags: [issue]
 severity: minor
 kind: question
 category: requirements
 raised-by: Gernot Starke
 owner:
-resolved: null
+resolved: 2026-11-19
 ---
 
 # Who holds the keys when two people work in parallel
@@ -41,4 +41,4 @@ both on purpose.
 3. Tie the rights to whoever started the app, not to the first tab. This closes the
    gap between definition and code.
 
-**Resolution.**
+**Resolution.** Option 1, decided by Gernot Starke on 2026-11-19 ([[SRC-033-grilling-session-on-the-shared-session]]). The code stays as it is: the first tab to connect holds the rights, and "Yoda" names only the first holder. [[FR-046-shared-session-in-a-workshop]] and [[STK-023-keyholder]] state the rule.

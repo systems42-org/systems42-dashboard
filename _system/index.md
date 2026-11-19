@@ -99,6 +99,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-043-the-dashboard-checks-the-metamodel-version]] The dashboard checks the metamodel version (feature, Should, draft)
 - [[FR-044-sections-come-from-the-repositorys-metamodel]] Sections come from the repository's metamodel (feature, Must, draft)
 - [[FR-045-a-prompt-template-for-a-brand]] A prompt template for a brand (feature, Could, draft)
+- [[FR-046-shared-session-in-a-workshop]] Shared session in a workshop (feature, Should, draft)
 
 ## Quality requirements
 
@@ -124,7 +125,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 
 ## Issues
 
-- [[ISS-001-who-holds-the-keys-in-parallel-work]] Who holds the keys when two people work in parallel (open)
+- [[ISS-001-who-holds-the-keys-in-parallel-work]] Who holds the keys when two people work in parallel (resolved)
 - [[ISS-002-define-the-clarify-loop]] Define the clarify loop (open)
 - [[ISS-003-goal-coverage-projection-cites-decisions-from-another-wiki]] The goal coverage projection cites decisions from another wiki (open, systems42, meta #37)
 - [[ISS-004-where-the-metamodel-declares-its-version]] Where the metamodel declares its version (open, systems42, meta #39)
@@ -164,3 +165,5 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-029-grilling-session-on-the-published-image]] Grilling session on the published image (interview)
 - [[SRC-030-default-brand-and-instance-brands]] Default brand and instance brands (document)
 - [[SRC-031-grilling-session-on-the-default-brand]] Grilling session on the default brand (interview)
+- [[SRC-032-shared-session-in-a-workshop]] Shared session in a workshop (document)
+- [[SRC-033-grilling-session-on-the-shared-session]] Grilling session on the shared session (interview)

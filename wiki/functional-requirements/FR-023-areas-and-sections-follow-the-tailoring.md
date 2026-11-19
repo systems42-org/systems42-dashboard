@@ -4,9 +4,9 @@ type: functional-requirement
 title: Areas and sections follow the tailoring
 status: draft
 created: 2026-11-12
-updated: 2026-11-17
+updated: 2026-11-19
 sources: ["[[SRC-013-browse-by-area-and-section]]", "[[SRC-014-grilling-session-on-browsing]]"]
-related: ["[[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]]", "[[FR-012-guided-path-through-the-wiki]]", "[[STK-011-people-who-set-up-a-project-wiki]]", "[[FR-044-sections-come-from-the-repositorys-metamodel]]"]
+related: ["[[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]]", "[[FR-012-guided-path-through-the-wiki]]", "[[STK-011-people-who-set-up-a-project-wiki]]", "[[FR-044-sections-come-from-the-repositorys-metamodel]]", "[[FR-046-shared-session-in-a-workshop]]"]
 tags: ["functional-requirement", "navigation"]
 stereotype: feature
 parent: ["[[FR-017-browse-by-area-and-section]]"]
@@ -35,7 +35,7 @@ In Systems42 the metamodel is configurable. A project adapts it to its needs ([[
 
 **Success metric(s).** On a test wiki with one section left out, that section appears nowhere, the three areas still show, and its address shows the note.
 
-**Scope.** in: sections inside the areas · out: leaving out whole areas, and the view a session host sets (DR-002).
+**Scope.** in: sections inside the areas · out: leaving out whole areas, and the view a session host sets (DR-002, [[FR-046-shared-session-in-a-workshop]]).
 
 ## Hierarchy
 

@@ -4,9 +4,9 @@ type: functional-requirement
 title: Read the formalities in the footer
 status: draft
 created: 2026-11-11
-updated: 2026-11-11
+updated: 2026-11-19
 sources: ["[[SRC-010-header-and-footer-on-every-page]]", "[[SRC-011-grilling-session-on-header-and-footer]]"]
-related: ["[[STK-013-people-learning-or-presenting-systems42]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]"]
+related: ["[[STK-013-people-learning-or-presenting-systems42]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[FR-046-shared-session-in-a-workshop]]"]
 tags: ["functional-requirement", "page-frame"]
 stereotype: story
 parent: ["[[FR-013-header-and-footer-on-every-page]]"]
