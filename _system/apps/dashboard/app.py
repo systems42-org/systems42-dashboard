@@ -60,7 +60,9 @@ DISPLAY_TZ = os.environ.get("TZ") or ""
 # list is the view for everyone.
 _view_hidden: list[str] = []
 
-_VALID_HIDE_KEYS = [a["key"] for a in catalog.AREAS] + [s["id"] for s in catalog.SECTIONS]
+
+def _valid_hide_keys() -> list[str]:
+    return [a["key"] for a in catalog.AREAS] + [s["id"] for s in catalog.SECTIONS]
 
 
 def _normalise_hide_entry(raw) -> str | None:
@@ -102,7 +104,7 @@ def _validate_hidden(entries) -> tuple[list[str], list[str]]:
             valid.add(key)
         else:
             unknown.append(str(raw))
-    return [k for k in _VALID_HIDE_KEYS if k in valid], unknown
+    return [k for k in _valid_hide_keys() if k in valid], unknown
 
 
 def dashboard_config() -> dict:
@@ -487,14 +489,26 @@ def inject_area():
     return {"current_area": area}
 
 
+@app.before_request
+def read_sections():
+    """The sections come from the repository's metamodel (FR-044). Reading
+    them per request shows an edited framework file on the next page load."""
+    catalog.refresh()
+
+
 # Nav entries tagged with the area or section each one opens, so a hidden one
 # leaves the nav. Order is the nav order. The header carries content only:
 # the two peaks, then the three Commons sections a reader looks up by name.
 # Labels come from the catalog, so a section has one name everywhere (FR-017).
-_NAV_ENTRIES = [(a, catalog.AREA_BY_KEY[a]["href"], catalog.AREA_BY_KEY[a]["label"])
-                for a in ("requirements", "architecture")] + \
-               [(s, catalog.SECTION_BY_ID[s]["href"], catalog.SECTION_BY_ID[s]["title"])
-                for s in ("C5", "C7", "C6")]
+# A section the metamodel does not declare, or one without a page, has no entry.
+def _nav_entries() -> list[tuple[str, str, str]]:
+    out = [(a, catalog.AREA_BY_KEY[a]["href"], catalog.AREA_BY_KEY[a]["label"])
+           for a in ("requirements", "architecture")]
+    for sid in ("C5", "C7", "C6"):
+        s = catalog.SECTION_BY_ID.get(sid)
+        if s and s["href"]:
+            out.append((sid, s["href"], s["title"]))
+    return out
 
 
 def _nav_current(key: str, href: str, path: str, area: dict | None) -> bool:
@@ -503,7 +517,7 @@ def _nav_current(key: str, href: str, path: str, area: dict | None) -> bool:
     every page of that section, its wiki pages included (FR-014)."""
     here = catalog.section_for_path(path)
     if key in catalog.AREA_BY_KEY:
-        own = bool(here) and any(k == here["id"] and not is_hidden(k) for k, _, _ in _NAV_ENTRIES)
+        own = bool(here) and any(k == here["id"] and not is_hidden(k) for k, _, _ in _nav_entries())
         return bool(area and area["key"] == key and not own)
     return bool(here and here["id"] == key) or path.startswith(href)
 
@@ -512,10 +526,10 @@ def _nav_current(key: str, href: str, path: str, area: dict | None) -> bool:
 def inject_nav():
     """`nav_items` for base.html: (href, label, current), hidden entries dropped."""
     if not has_request_context():
-        return {"nav_items": [(h, l, False) for _, h, l in _NAV_ENTRIES]}
+        return {"nav_items": [(h, l, False) for _, h, l in _nav_entries()]}
     area = catalog.area_for_path(request.path)
     return {"nav_items": [(h, l, _nav_current(k, h, request.path, area))
-                          for k, h, l in _NAV_ENTRIES if not is_hidden(k)]}
+                          for k, h, l in _nav_entries() if not is_hidden(k)]}
 
 
 def static_url(filename: str) -> str:
@@ -1353,12 +1367,13 @@ def load_decisions() -> list[dict]:
 
 # --- Systems42 sections (DR-033) ------------------------------------------
 #
-# The section catalog (catalog.py) is the single source: three areas
-# (Requirements, Architecture, Commons), eighteen sections R1-R6, A1-A5, C1-C7.
-# Each section maps to zero or more wiki folders; an "entry" is one page in
-# those folders. "href" is where the section's "View all" link points: an
-# existing rich view where one exists (glossary/stakeholders/issues), otherwise
-# a generic /req42/<slug> list.
+# The section catalog (catalog.py) holds three areas (Requirements,
+# Architecture, Commons) and the sections the repository's metamodel declares
+# (FR-044). Each section maps to zero or more wiki folders; an "entry" is one
+# page in those folders. "href" is where the section's "View all" link points:
+# an existing rich view where one exists (glossary/stakeholders/issues), a
+# /req42/<slug> list for the other known sections, and /section/<id> for a
+# section the dashboard has no view for.
 
 # Human-readable type label per wiki folder, for the "Type" column.
 FOLDER_LABELS = {
@@ -1366,6 +1381,7 @@ FOLDER_LABELS = {
     "context": "Context",
     "external-interfaces": "External interface",
     "functional-requirements": "Functional requirement",
+    "use-cases": "Use case",
     "activity-models": "Activity model",
     "data-models": "Data model",
     "quality-requirements": "Quality requirement",
@@ -1380,12 +1396,6 @@ FOLDER_LABELS = {
     "runtime-scenarios": "Runtime scenario",
     "deployment-nodes": "Deployment node",
 }
-
-# Only the sections whose own page is /req42/<slug>. The arc42 sections have
-# slugs too, but their pages live under /arc42/.
-REQ42_BY_SLUG = {slug: s for slug, s in catalog.SECTION_BY_SLUG.items()
-                 if s["href"] == f"/req42/{slug}"}
-
 
 def _block_pages(block: dict) -> list[Page]:
     """All wiki pages feeding one req42 block, sorted by id."""
@@ -2927,7 +2937,7 @@ def trace_stems(trace: dict) -> set[str]:
 @app.route("/arc42/building-blocks")
 def building_blocks_view():
     """A2 Building Block View: the level tree and the level-1 white box."""
-    block = catalog.SECTION_BY_SLUG["building-blocks"]
+    block = catalog.SECTION_BY_SLUG.get("building-blocks") or abort(404)
     pages = load_folder("building-blocks")
     rows = [_arch_row(p, "building-blocks") for p in sorted(pages, key=lambda q: q.id)]
     return render_template(
@@ -2951,7 +2961,7 @@ def _arch_row(p: Page, folder: str) -> dict:
 @app.route("/arc42/concepts")
 def concepts_view():
     """A5 Crosscutting Concepts: grouped by arc42 topic, with what each governs."""
-    block = catalog.SECTION_BY_SLUG["concepts"]
+    block = catalog.SECTION_BY_SLUG.get("concepts") or abort(404)
     pages = sorted(load_folder("concepts"), key=lambda q: q.id)
     known = dict(_CONCEPT_CATEGORIES)
     groups = []
@@ -2981,7 +2991,7 @@ def concepts_view():
 @app.route("/arc42/runtime")
 def runtime_view():
     """A4 Runtime View: the scenarios and the requirements they realise."""
-    block = catalog.SECTION_BY_SLUG["runtime"]
+    block = catalog.SECTION_BY_SLUG.get("runtime") or abort(404)
     pages = sorted(load_folder("runtime-scenarios"), key=lambda q: q.id)
     rows = []
     for p in pages:
@@ -2997,7 +3007,7 @@ def runtime_view():
 def deployment_view():
     """A3 Deployment View: one projected diagram of everything relevant today —
     existing, planned and replaced — and the node levels."""
-    block = catalog.SECTION_BY_SLUG["deployment"]
+    block = catalog.SECTION_BY_SLUG.get("deployment") or abort(404)
     pages = load_folder("deployment-nodes")
     rows = []
     for p in sorted(pages, key=lambda q: q.id):
@@ -4297,13 +4307,17 @@ def functional_requirements_view():
     hierarchy = build_fr_hierarchy()
     goals = load_goals()
     diagram = _mermaid_goal_epic_tree(goals, hierarchy)
-    block = REQ42_BY_SLUG.get("functional-requirements")
+    block = catalog.SECTION_BY_SLUG.get("functional-requirements") or abort(404)
     # the flat list under the hierarchy (FR-021): every requirement of every
     # notation once, sortable by priority, release and order
     rows = []
-    for p in sorted(load_folder("functional-requirements"), key=lambda q: q.id):
-        rows.append({"id": p.id, "title": p.title, "url": f"/functional-requirements/{p.stem}",
-                     "notation": _fr_notation(p), "level": _fr_level(p),
+    # a wiki before DR-038 keeps use cases in wiki/use-cases/, also part of R3
+    old_ucs = load_folder("use-cases") if "use-cases" in block["folders"] else []
+    for p in sorted(load_folder("functional-requirements") + old_ucs, key=lambda q: q.id):
+        fr_page = p.folder == "functional-requirements"
+        rows.append({"id": p.id, "title": p.title,
+                     "url": f"/functional-requirements/{p.stem}" if fr_page else _page_url(p.folder, p.stem),
+                     "notation": _fr_notation(p) if fr_page else "use-case", "level": _fr_level(p),
                      "priority": str(p.meta.get("priority") or "").strip(),
                      "release": str(p.meta.get("release") or "").strip(),
                      "order": str(p.meta.get("order") if p.meta.get("order") is not None else "").strip(),
@@ -4400,9 +4414,26 @@ def _qr_details(page: Page, titles: dict[str, str],
 @app.route("/req42/<slug>")
 def req42_block_view(slug):
     """All entries of one req42 block, for blocks without their own rich view."""
-    block = REQ42_BY_SLUG.get(slug)
-    if not block:
+    block = catalog.SECTION_BY_SLUG.get(slug)
+    # the arc42 sections have slugs too, but their pages live under /arc42/
+    if not block or block["href"] != f"/req42/{slug}":
         abort(404)
+    return _block_list(block, slug)
+
+
+@app.route("/section/<sid>")
+def section_view(sid):
+    """A section the dashboard has no view for (FR-044): the generic list of
+    its pages. A section with a view of its own redirects there."""
+    block = catalog.SECTION_BY_ID.get(sid) or catalog.SECTION_BY_ID.get(sid.upper())
+    if not block or not block["href"]:
+        abort(404)
+    if block["href"] != f"/section/{block['id']}":
+        return redirect(block["href"])
+    return _block_list(block, None)
+
+
+def _block_list(block: dict, slug: str | None):
     titles, links = title_index(), link_index()
     rows = [
         {"id": p.id, "type": FOLDER_LABELS.get(p.folder, p.folder),

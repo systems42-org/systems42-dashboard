@@ -50,6 +50,17 @@ Unreleased changes sit at the top until the next Starter Kit release.
   pass. Both bring `main` up to date first, and every refusal says what to do
   next.
 
+### Changed
+- Dashboard: the sections come from the repository's metamodel
+  (`_system/metamodel/frameworks/`, FR-044), not from a list in `catalog.py`.
+  A renamed or added section shows on the home page, the area pages and in
+  the lists without a code change, and the header takes the new titles of C5,
+  C6 and C7. A section the dashboard has no
+  view for gets a generic tile and list at `/section/<id>`, in the area of its
+  framework file. Pages in `wiki/use-cases/` now count in R3.
+- Metamodel lint: it no longer imports the dashboard's `catalog.py` and runs
+  without dashboard code (ISS-005).
+
 ### Removed
 - Wiki: 23 stakeholders merged into 7 (meta issue #38). Retired IDs, never
   reused: STK-002, STK-003, STK-004, STK-005, STK-006, STK-007, STK-009,

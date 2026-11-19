@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -25,6 +26,8 @@ for _f in WIKI_FOLDERS:
     (_repo / "wiki" / _f).mkdir(parents=True)
 (_repo / "raw" / "sources").mkdir(parents=True)
 (_repo / "_system").mkdir()
+# the sections come from the repository's metamodel (FR-044)
+shutil.copytree(Path(__file__).resolve().parents[3] / "metamodel", _repo / "_system" / "metamodel")
 (_repo / "_system" / "wiki.yaml").write_text('system_name: "Demo"\n', encoding="utf-8")
 for _var in ("WIKI_DIR", "RAW_SOURCES_DIR", "WIKI_CONFIG", "DOCS_DIR"):
     os.environ.pop(_var, None)
@@ -175,6 +178,7 @@ def test_the_dialog_is_called_view():
     html = app.app.test_client().get("/").get_data(as_text=True)
     assert ">View…<" in html and '<h2 id="settings-title">View</h2>' in html
     assert "Configure" not in html and "dashboard.yaml" not in html
+
 
 
 if __name__ == "__main__":

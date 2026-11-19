@@ -264,6 +264,27 @@ def load() -> dict:
     }
 
 
+def blocks() -> list[dict]:
+    """Every framework block, the source of the dashboard's sections (FR-044).
+    Frameworks by file name, blocks in file order. Each block keeps its own
+    keys and gets `framework`, `area` (the framework's `area:`) and `folders`:
+    the wiki folder of each type it lists, from the type page's `folder:`.
+    A type without a page adds no folder."""
+    folder_of = {str(t.get("name")): Path(str(t.get("folder") or "")).name
+                 for t in _load("types", "type") if t.get("folder")}
+    out: list[dict] = []
+    for fw in _load("frameworks", "framework"):
+        for b in fw.get("blocks") or []:
+            if not isinstance(b, dict) or not str(b.get("id") or "").strip():
+                continue
+            names = b.get("types") or []
+            names = [names] if isinstance(names, str) else names if isinstance(names, list) else []
+            folders = [folder_of[str(n)] for n in names if str(n) in folder_of]
+            out.append({**b, "id": str(b["id"]).strip(), "framework": fw.get("name"),
+                        "area": fw.get("area"), "folders": folders})
+    return out
+
+
 def sort_orders(type_name: str) -> list[dict]:
     """The useful list orders a type page declares (FR-021), as
     `[{label, keys}]`. A type without any, or an unknown type, has none."""

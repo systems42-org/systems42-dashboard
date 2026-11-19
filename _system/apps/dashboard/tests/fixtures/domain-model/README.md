@@ -12,6 +12,7 @@ WIKI_CONFIG="$fixture_dir/wiki.yaml" \
 RAW_SOURCES_DIR="$fixture_dir/raw/sources" \
 DOCS_DIR="$fixture_dir/docs" \
 REPO_DIR="$fixture_dir" \
+METAMODEL_DIR="$PWD/../../metamodel" \
 uv run --with-requirements requirements.txt python app.py
 ```
 

@@ -1,7 +1,8 @@
 """The metamodel (DR-035) and its consumers — templates, wiki folders,
-anchors, this dashboard's catalog — must agree. `_system/scripts/metamodel-lint.py`
-diffs them; this test just runs it so the drift shows up with the other
-contract tests. No pytest dependency.
+anchors — must agree. `_system/scripts/metamodel-lint.py` diffs them; this
+test runs it so the drift shows up with the other contract tests. The lint
+is part of the method and needs no dashboard code (CON-006, ISS-005). No
+pytest dependency.
 
 Run from the dashboard dir:
     .venv/bin/python tests/test_metamodel_lint.py
@@ -16,30 +17,26 @@ REPO = Path(__file__).resolve().parents[4]
 LINT = Path("_system") / "scripts" / "metamodel-lint.py"
 
 
-# Findings this repository's own schema keeps until it is migrated to
-# requirement notations (DR-038): the dashboard catalog already reads the new
-# schema, where use cases are functional requirements and wiki/use-cases/ is
-# gone, while _system/metamodel/ here still declares the folder. Remove the
-# entry with the migration; the test fails once it no longer occurs.
-KNOWN_UNTIL_MIGRATION = {
-    "R3: folders ['functional-requirements', 'use-cases'] (metamodel) vs ['functional-requirements'] (catalog)",
-}
-
-
 def test_metamodel_lint_passes():
     r = subprocess.run([sys.executable, str(REPO / LINT)],
                        capture_output=True, text=True, cwd=REPO)
     assert "Traceback" not in r.stderr, r.stdout + r.stderr
-    findings = {line.strip()[2:] for line in r.stdout.splitlines() if line.strip().startswith("- ")}
-    if r.returncode == 0:
-        # migrated: the tripwire says the entry can go
-        assert not KNOWN_UNTIL_MIGRATION, \
-            f"lint passes, remove from KNOWN_UNTIL_MIGRATION: {KNOWN_UNTIL_MIGRATION}"
-    else:
-        # a failure is accepted only when it consists of exactly the known findings
-        assert r.returncode == 1 and findings == KNOWN_UNTIL_MIGRATION, \
-            (r.returncode, findings ^ KNOWN_UNTIL_MIGRATION, r.stdout + r.stderr)
+    assert r.returncode == 0, r.stdout + r.stderr
     print(r.stdout.strip())
+
+
+def test_the_lint_needs_no_dashboard_code():
+    # it imports no dashboard module, and passes on a copy without _system/apps/
+    assert "catalog" not in (REPO / LINT).read_text(encoding="utf-8")
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for rel in ("_system/metamodel", "_system/anchors", "_templates", "wiki"):
+            shutil.copytree(REPO / rel, root / rel)
+        (root / "raw" / "sources").mkdir(parents=True)
+        (root / LINT).parent.mkdir(parents=True)
+        shutil.copy(REPO / LINT, root / LINT)
+        r = subprocess.run([sys.executable, str(root / LINT)], capture_output=True, text=True, cwd=root)
+    assert r.returncode == 0 and "Traceback" not in r.stderr, r.stdout + r.stderr
 
 
 def test_broken_input_is_a_finding_not_a_crash():
@@ -49,9 +46,8 @@ def test_broken_input_is_a_finding_not_a_crash():
         root = Path(tmp)
         for rel in ("_system/metamodel", "_system/anchors", "_templates"):
             shutil.copytree(REPO / rel, root / rel)
-        for rel in (LINT, Path("_system/apps/dashboard/catalog.py")):
-            (root / rel).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy(REPO / rel, root / rel)
+        (root / LINT).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(REPO / LINT, root / LINT)
         (root / "_templates" / "goal.md").write_text("# no frontmatter\n", encoding="utf-8")
         (root / "_system" / "metamodel" / "altitude.md").unlink()
         fw = root / "_system" / "metamodel" / "frameworks" / "fw-commons.md"
@@ -72,9 +68,8 @@ def test_sort_order_naming_an_unknown_field_is_a_finding():
         root = Path(tmp)
         for rel in ("_system/metamodel", "_system/anchors", "_templates", "wiki"):
             shutil.copytree(REPO / rel, root / rel)
-        for rel in (LINT, Path("_system/apps/dashboard/catalog.py")):
-            (root / rel).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy(REPO / rel, root / rel)
+        (root / LINT).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(REPO / LINT, root / LINT)
         t = root / "_system" / "metamodel" / "types" / "type-issue.md"
         text = t.read_text(encoding="utf-8")
         assert "sort_orders:" in text, "type-issue.md declares no sort_orders"
@@ -104,6 +99,7 @@ def test_sort_orders_per_type():
 
 if __name__ == "__main__":
     test_metamodel_lint_passes()
+    test_the_lint_needs_no_dashboard_code()
     test_broken_input_is_a_finding_not_a_crash()
     test_sort_order_naming_an_unknown_field_is_a_finding()
     test_sort_orders_per_type()
