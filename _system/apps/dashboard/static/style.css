@@ -829,7 +829,7 @@ pre.mermaid:not([data-processed]) { color: transparent; min-height: 2rem; }
 .foot-title { color: var(--ink-soft); font-weight: 600; letter-spacing: .02em; }
 .foot-sub { margin-top: .25rem; }
 /* shown only when wiki.yaml names a dashboard_version other than this one */
-.version-mismatch { margin-top: .25rem; color: var(--warn); }
+.version-mismatch, .metamodel-mismatch { margin-top: .25rem; color: var(--warn); }
 
 /* small "built with" credit: the two-colour Python mark (static/python-logo.svg) */
 .stack-badge { display: inline-flex; align-items: center; gap: .3rem; vertical-align: bottom; }

@@ -10,6 +10,32 @@ is only ever <em>projected</em> from them. Every cell below is read live from
 Two levels: the <a href="#language">language</a> a metamodel is written in — seven constructs,
 framework-agnostic — and the req42 instances, which is everything else on this page.</p>
 
+{# ------------------------------------------------------------- version #}
+{# FR-043: the footer notice links here when the version is not supported. #}
+{% set mc = metamodel_check %}
+{% set dash = ("Dashboard " ~ dashboard_version_own) if dashboard_version_own else "This dashboard" %}
+{% set dash_mid = dash if dashboard_version_own else "this dashboard" %}
+<section class="mm-section" id="version">
+<h2 class="mm-h2">Metamodel version</h2>
+<dl class="mm-field-list">
+  <dt>This wiki</dt>
+  <dd>{% if mc.version %}<code>{{ mc.version }}</code>, from <code>_system/metamodel/{{ mc.file }}</code>{% elif mc.file %}none: <code>_system/metamodel/{{ mc.file }}</code> has no <code>version:</code>{% else %}none: neither <code>_system/metamodel/metamodel-version.md</code> nor <code>meta-metamodel.md</code> exists{% endif %}</dd>
+  <dt>{{ dash }} supports</dt>
+  <dd>{% for v in mc.supported %}<code>{{ v }}</code>{% if not loop.last %}, {% endif %}{% endfor %}</dd>
+</dl>
+{% if mc.state == "supported" %}
+<p class="mm-small">{{ dash }} supports this metamodel version.</p>
+{% else %}
+<p class="mm-lead">{% if mc.state == "missing" %}The metamodel declares no version, so {{ dash_mid }} cannot tell whether it supports it.{% else %}{{ dash }} does not support metamodel version {{ mc.version }}.{% endif %}
+Pages built from the metamodel may show wrong or missing content. The dashboard keeps showing the wiki.</p>
+<p class="mm-lead">To fix it, do one of these:</p>
+<ul>
+  <li>{% if mc.state == "missing" %}Update the metamodel in <code>_system/metamodel/</code> to one that declares its version as <code>version:</code> in the frontmatter of <code>metamodel-version.md</code> or <code>meta-metamodel.md</code>.{% else %}Update the metamodel in <code>_system/metamodel/</code> to a version {{ dash_mid }} supports.{% endif %}</li>
+  <li>{% if mc.state == "missing" %}Name a dashboard release that supports this wiki's metamodel{% else %}Name a dashboard release that supports version {{ mc.version }}{% endif %} in <code>dashboard_version:</code> of <code>_system/wiki.yaml</code>. <code>CHANGELOG.md</code> of the dashboard names the versions each release supports.</li>
+</ul>
+{% endif %}
+</section>
+
 {% if not present %}
 <p class="empty-state">No metamodel found — expected one page per type under
 <code>_system/metamodel/types/</code> (DR-035).</p>

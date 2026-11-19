@@ -118,7 +118,10 @@ Reload · Disconnect all. The footer holds formalities only: "Read-only
 dashboard for Systems42 LLM wiki" (linked to the help section on the LLM
 wiki), the live dot with the client count, the refresh time, Metamodel, Help, the
 dashboard's own release (`VERSION`) and the Python mark. When `dashboard_version:`
-in `wiki.yaml` names another release, one more line says so. Quote the value
+in `wiki.yaml` names another release, one more line says so. When the
+repository's metamodel version is not one this release supports
+(`SUPPORTED_VERSIONS` in `metamodel.py`), or declares none, another line says
+so and links to the version section of `/metamodel` (FR-043). Quote the value
 (`dashboard_version: "1.10.0"`): unquoted, YAML reads `1.10` as the number 1.1,
 and the dashboard logs a warning. The dot pulses while the server answers and stops, grey, when the
 connection is lost.
