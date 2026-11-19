@@ -21,7 +21,7 @@ goal: ["[[GOAL-008-one-way-into-every-systems42-wiki]]"]
 
 ## Story
 
-As a [[STK-010-people-who-run-the-dashboard|person who runs the dashboard]] I want **my wiki to name the dashboard release it uses**, so that **an update happens only when I ask for it**.
+As a [[STK-010-operators|person who runs the dashboard]] I want **my wiki to name the dashboard release it uses**, so that **an update happens only when I ask for it**.
 
 **PROBLEM / GOAL**
 

@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-12
 updated: 2026-11-12
 sources: ["[[SRC-015-see-what-is-still-open]]", "[[SRC-016-grilling-session-on-open-issues]]"]
-related: ["[[FR-025-issue-list-with-filters]]", "[[FR-017-browse-by-area-and-section]]", "[[STK-001-product-owners]]"]
+related: ["[[FR-025-issue-list-with-filters]]", "[[FR-017-browse-by-area-and-section]]", "[[STK-001-readers]]"]
 tags: ["functional-requirement", "issues"]
 stereotype: feature
 parent: ["[[FR-024-see-what-is-still-open]]"]
@@ -21,7 +21,7 @@ goal: ["[[GOAL-006-source-and-status-on-every-statement]]"]
 
 ## Story
 
-As a [[STK-001-product-owners|product owner]] I want **every issue to show which part of the work it touches**, so that **I hand it to the right people**.
+As a [[STK-001-readers|product owner]] I want **every issue to show which part of the work it touches**, so that **I hand it to the right people**.
 
 **PROBLEM / GOAL**
 

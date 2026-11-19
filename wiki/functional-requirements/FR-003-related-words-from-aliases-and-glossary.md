@@ -21,7 +21,7 @@ goal: ["[[GOAL-003-answers-without-asking-a-colleague]]"]
 
 ## Story
 
-As a [[STK-015-newcomers]] **newcomer** I want **search to understand my word even when the wiki uses another one**, so that **I land on the right page without knowing the project's language**.
+As a [[STK-001-readers|newcomer]] I want **search to understand my word even when the wiki uses another one**, so that **I land on the right page without knowing the project's language**.
 
 **PROBLEM / GOAL**
 

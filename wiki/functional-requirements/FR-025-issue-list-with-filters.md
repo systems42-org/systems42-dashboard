@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-12
 updated: 2026-11-12
 sources: ["[[SRC-015-see-what-is-still-open]]", "[[SRC-016-grilling-session-on-open-issues]]"]
-related: ["[[FR-019-section-at-a-glance]]", "[[FR-021-sort-lists]]", "[[FR-022-lists-keep-sort-and-filter-in-their-address]]", "[[FR-026-issues-carry-a-category]]", "[[FR-028-who-answers-an-issue]]", "[[STK-003-requirements-engineers]]"]
+related: ["[[FR-019-section-at-a-glance]]", "[[FR-021-sort-lists]]", "[[FR-022-lists-keep-sort-and-filter-in-their-address]]", "[[FR-026-issues-carry-a-category]]", "[[FR-028-who-answers-an-issue]]", "[[STK-001-readers]]"]
 tags: ["functional-requirement", "issues"]
 stereotype: feature
 parent: ["[[FR-024-see-what-is-still-open]]"]
@@ -21,7 +21,7 @@ goal: ["[[GOAL-006-source-and-status-on-every-statement]]"]
 
 ## Story
 
-As a [[STK-003-requirements-engineers|requirements engineer]] I want **one list of all issues that I can narrow down**, so that **I see exactly the open points I have to work on**.
+As a [[STK-001-readers|requirements engineer]] I want **one list of all issues that I can narrow down**, so that **I see exactly the open points I have to work on**.
 
 **PROBLEM / GOAL**
 

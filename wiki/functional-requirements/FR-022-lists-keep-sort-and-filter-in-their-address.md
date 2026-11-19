@@ -21,7 +21,7 @@ goal: ["[[GOAL-003-answers-without-asking-a-colleague]]", "[[GOAL-006-source-and
 
 ## Story
 
-As a [[STK-001-product-owners]] **product owner** I want **to send a colleague the address of a list exactly as I sorted and filtered it**, so that **we both look at the same list**.
+As a [[STK-001-readers|product owner]] I want **to send a colleague the address of a list exactly as I sorted and filtered it**, so that **we both look at the same list**.
 
 **PROBLEM / GOAL**
 

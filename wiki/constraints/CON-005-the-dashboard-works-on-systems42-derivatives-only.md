@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-17
 updated: 2026-11-17
 sources: ["[[SRC-027-dashboard-distribution-and-metamodel-contract]]", "[[SRC-028-grilling-session-on-dashboard-distribution]]"]
-related: ["[[FR-042-start-a-pinned-release-with-one-command]]", "[[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]]", "[[FR-029-the-dashboard-as-a-product]]", "[[STK-011-people-who-set-up-a-project-wiki]]"]
+related: ["[[FR-042-start-a-pinned-release-with-one-command]]", "[[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]]", "[[FR-029-the-dashboard-as-a-product]]", "[[STK-010-operators]]"]
 tags: [constraint]
 category: technical
 ---

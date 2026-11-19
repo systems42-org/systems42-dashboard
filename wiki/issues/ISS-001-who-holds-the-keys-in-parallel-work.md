@@ -6,7 +6,7 @@ status: resolved
 created: 2026-11-10
 updated: 2026-11-19
 sources: ["[[SRC-002-grilling-session-on-stakeholders]]", "[[SRC-033-grilling-session-on-the-shared-session]]"]
-related: ["[[STK-023-keyholder]]", "[[STK-007-workshop-facilitators]]", "[[STK-010-people-who-run-the-dashboard]]", "[[FR-046-shared-session-in-a-workshop]]"]
+related: ["[[STK-023-keyholder]]", "[[STK-008-workshop-participants-and-facilitators]]", "[[STK-010-operators]]", "[[FR-046-shared-session-in-a-workshop]]"]
 tags: [issue]
 severity: minor
 kind: question
@@ -23,8 +23,8 @@ people use the dashboard at the same time and the Keyholder closes their tab. Th
 Keyholder and Yoda concept also needs a fuller explanation. Gernot Starke deferred
 both on purpose.
 
-**Affects.** [[STK-023-keyholder]], [[STK-007-workshop-facilitators]],
-[[STK-010-people-who-run-the-dashboard]].
+**Affects.** [[STK-023-keyholder]], [[STK-008-workshop-participants-and-facilitators]],
+[[STK-010-operators]].
 
 **Context / evidence.**
 - Gernot Starke expects the other person to become Yoda.

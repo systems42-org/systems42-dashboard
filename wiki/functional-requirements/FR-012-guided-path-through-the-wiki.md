@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-11
 updated: 2026-11-11
 sources: ["[[SRC-009-guided-path-through-the-wiki]]", "[[SRC-008-grilling-session-on-showing-the-method]]"]
-related: ["[[FR-011-explain-the-three-loops]]", "[[STK-015-newcomers]]", "[[STK-008-workshop-participants]]", "[[STK-013-people-learning-or-presenting-systems42]]", "[[STK-022-prospective-adopters]]", "[[STK-023-keyholder]]"]
+related: ["[[FR-011-explain-the-three-loops]]", "[[STK-001-readers]]", "[[STK-008-workshop-participants-and-facilitators]]", "[[STK-013-people-learning-or-presenting-systems42]]", "[[STK-023-keyholder]]"]
 tags: ["functional-requirement", "method"]
 stereotype: feature
 parent: ["[[FR-010-show-the-method]]"]
@@ -21,7 +21,7 @@ goal: ["[[GOAL-002-show-what-systems42-can-do]]", "[[GOAL-003-answers-without-as
 
 ## Story
 
-As a [[STK-015-newcomers]] **newcomer** I want **a guided path through the wiki, step by step**, so that **I understand what the system is about without knowing which page to open next**.
+As a [[STK-001-readers|newcomer]] I want **a guided path through the wiki, step by step**, so that **I understand what the system is about without knowing which page to open next**.
 
 **PROBLEM / GOAL**
 

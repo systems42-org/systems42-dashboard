@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-19
 updated: 2026-11-19
 sources: ["[[SRC-034-dashboard-requirements-moved-from-meta]]", "[[SRC-035-grilling-session-on-the-requirements-moved-from-meta]]"]
-related: ["[[STK-014-domain-experts]]", "[[FR-034-read-a-page-with-its-links]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]"]
+related: ["[[STK-001-readers]]", "[[FR-034-read-a-page-with-its-links]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]"]
 tags: [functional-requirement, page-frame]
 notation: agile
 level: story
@@ -25,7 +25,7 @@ goal: ["[[GOAL-003-answers-without-asking-a-colleague]]"]
 
 > follows [[user-story-format]], [[INVEST]]
 
-As a [[STK-014-domain-experts|domain expert]] reading a page I want **to hide cross-references and metadata in the text**, so that **the requirement reads cleanly**.
+As a [[STK-001-readers|domain expert]] reading a page I want **to hide cross-references and metadata in the text**, so that **the requirement reads cleanly**.
 
 **Acceptance criteria.** > follows [[acceptance-criteria]]
 

@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-11
 updated: 2026-11-11
 sources: ["[[SRC-007-show-the-method]]", "[[SRC-008-grilling-session-on-showing-the-method]]"]
-related: ["[[ISS-002-define-the-clarify-loop]]", "[[STK-015-newcomers]]"]
+related: ["[[ISS-002-define-the-clarify-loop]]", "[[STK-001-readers]]"]
 tags: ["functional-requirement", "method"]
 stereotype: feature
 parent: ["[[FR-010-show-the-method]]"]
@@ -21,7 +21,7 @@ goal: ["[[GOAL-002-show-what-systems42-can-do]]"]
 
 ## Story
 
-As a [[STK-022-prospective-adopters]] **prospective adopter** I want **the dashboard to explain the loops that keep the wiki alive**, so that **I understand how the pages came about and how they stay correct**.
+As a [[STK-013-people-learning-or-presenting-systems42|person learning Systems42]] I want **the dashboard to explain the loops that keep the wiki alive**, so that **I understand how the pages came about and how they stay correct**.
 
 **PROBLEM / GOAL**
 

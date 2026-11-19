@@ -21,7 +21,7 @@ goal: ["[[GOAL-008-one-way-into-every-systems42-wiki]]", "[[GOAL-001-trusted-ans
 
 ## Story
 
-As a [[STK-010-people-who-run-the-dashboard|person who runs the dashboard]] I want **to be told when the dashboard release does not support my wiki's metamodel version**, so that **I know why something may look wrong and what to do about it**.
+As a [[STK-010-operators|person who runs the dashboard]] I want **to be told when the dashboard release does not support my wiki's metamodel version**, so that **I know why something may look wrong and what to do about it**.
 
 **PROBLEM / GOAL**
 

@@ -6,7 +6,7 @@ status: accepted
 created: 2026-11-12
 updated: 2026-11-12
 sources: ["[[SRC-018-grilling-session-on-phone-and-tablet]]"]
-related: ["[[QR-001-usable-on-phone-and-tablet]]", "[[STK-003-requirements-engineers]]", "[[STK-009-software-architects]]"]
+related: ["[[QR-001-usable-on-phone-and-tablet]]", "[[STK-001-readers]]"]
 tags: [decision-record]
 aliases: []
 kind: architecture

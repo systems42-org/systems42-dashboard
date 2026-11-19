@@ -21,7 +21,7 @@ goal: ["[[GOAL-003-answers-without-asking-a-colleague]]"]
 
 ## Story
 
-As a [[STK-015-newcomers|newcomer]] I want **to read a term's definition where I meet the term**, so that **I keep reading without leaving the page**.
+As a [[STK-001-readers|newcomer]] I want **to read a term's definition where I meet the term**, so that **I keep reading without leaving the page**.
 
 **PROBLEM / GOAL**
 

@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-11
 updated: 2026-11-19
 sources: ["[[SRC-005-search-the-wiki]]", "[[SRC-006-grilling-session-on-search]]", "[[SRC-035-grilling-session-on-the-requirements-moved-from-meta]]"]
-related: ["[[STK-004-development-teams]]", "[[STK-015-newcomers]]", "[[STK-008-workshop-participants]]", "[[STK-014-domain-experts]]", "[[CON-001-proof-of-concept-not-production-ready]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]"]
+related: ["[[STK-001-readers]]", "[[STK-008-workshop-participants-and-facilitators]]", "[[CON-001-proof-of-concept-not-production-ready]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]"]
 tags: ["functional-requirement", "search"]
 stereotype: epic
 parent: []
@@ -21,7 +21,7 @@ goal: ["[[GOAL-003-answers-without-asking-a-colleague]]"]
 
 ## Epic: Summary
 
-As a **reader** ([[STK-004-development-teams|development team]], [[STK-015-newcomers|newcomer]], [[STK-008-workshop-participants|workshop participant]], [[STK-014-domain-experts|domain expert]]) I want **to find the right page from every page of the dashboard, even when I don't know the wiki's word for the thing**, so that **I get the answer without asking a colleague**.
+As a [[STK-001-readers|reader]] (development team, newcomer, domain expert) or [[STK-008-workshop-participants-and-facilitators|workshop participant]] I want **to find the right page from every page of the dashboard, even when I don't know the wiki's word for the thing**, so that **I get the answer without asking a colleague**.
 
 **PROBLEM / GOAL**
 

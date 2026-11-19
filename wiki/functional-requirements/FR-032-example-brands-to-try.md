@@ -21,7 +21,7 @@ goal: ["[[GOAL-002-show-what-systems42-can-do]]"]
 
 ## Story
 
-As a [[STK-011-people-who-set-up-a-project-wiki|person who sets up a project wiki]] I want **worked examples of a brand**, so that **I see what a brand can do before I make my own**.
+As a [[STK-010-operators|person who sets up a project wiki]] I want **worked examples of a brand**, so that **I see what a brand can do before I make my own**.
 
 **PROBLEM / GOAL**
 

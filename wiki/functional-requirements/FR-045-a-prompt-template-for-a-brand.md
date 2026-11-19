@@ -21,7 +21,7 @@ goal: ["[[GOAL-008-one-way-into-every-systems42-wiki]]"]
 
 ## Story
 
-As a [[STK-011-people-who-set-up-a-project-wiki|person who sets up a project wiki]] I want **a ready prompt that makes an AI produce a brand folder for my project**, so that **my logo and intro meet the dashboard's rules at the first try**.
+As a [[STK-010-operators|person who sets up a project wiki]] I want **a ready prompt that makes an AI produce a brand folder for my project**, so that **my logo and intro meet the dashboard's rules at the first try**.
 
 **PROBLEM / GOAL**
 

@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-11
 updated: 2026-11-11
 sources: ["[[SRC-006-grilling-session-on-search]]"]
-related: ["[[FR-006-tags-and-fields-are-searched]]", "[[STK-001-product-owners]]", "[[STK-003-requirements-engineers]]"]
+related: ["[[FR-006-tags-and-fields-are-searched]]", "[[STK-001-readers]]"]
 tags: ["functional-requirement", "search"]
 stereotype: feature
 parent: ["[[FR-001-search-the-wiki]]"]
@@ -21,7 +21,7 @@ goal: ["[[GOAL-003-answers-without-asking-a-colleague]]"]
 
 ## Story
 
-As a [[STK-003-requirements-engineers]] **requirements engineer** I want **to narrow the full results by status, priority or tag**, so that **I get a precise list, such as all open issues about search**.
+As a [[STK-001-readers|requirements engineer]] I want **to narrow the full results by status, priority or tag**, so that **I get a precise list, such as all open issues about search**.
 
 **PROBLEM / GOAL**
 

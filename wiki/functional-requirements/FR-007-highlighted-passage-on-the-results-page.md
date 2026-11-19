@@ -21,7 +21,7 @@ goal: ["[[GOAL-003-answers-without-asking-a-colleague]]"]
 
 ## Story
 
-As a [[STK-014-domain-experts]] **domain expert** I want **each hit on the results page to show the sentence where my words matched**, so that **I often get the answer without opening the page**.
+As a [[STK-001-readers|domain expert]] I want **each hit on the results page to show the sentence where my words matched**, so that **I often get the answer without opening the page**.
 
 **PROBLEM / GOAL**
 

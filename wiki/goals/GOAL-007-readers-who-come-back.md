@@ -10,7 +10,7 @@ related: []
 tags: ["goal"]
 stereotype: objective
 parent: ["[[GOAL-001-trusted-answers]]"]
-beneficiary: ["[[STK-001-product-owners]]", "[[STK-002-business-analysts]]", "[[STK-003-requirements-engineers]]", "[[STK-004-development-teams]]", "[[STK-005-testers]]", "[[STK-007-workshop-facilitators]]", "[[STK-008-workshop-participants]]", "[[STK-009-software-architects]]", "[[STK-013-people-learning-or-presenting-systems42]]", "[[STK-014-domain-experts]]", "[[STK-015-newcomers]]", "[[STK-016-ux-designers]]", "[[STK-017-operations-staff]]", "[[STK-018-owners-of-neighbouring-systems]]", "[[STK-019-auditors-and-quality-assurance]]", "[[STK-022-prospective-adopters]]", "[[STK-023-keyholder]]"]
+beneficiary: ["[[STK-001-readers]]", "[[STK-008-workshop-participants-and-facilitators]]", "[[STK-013-people-learning-or-presenting-systems42]]", "[[STK-023-keyholder]]"]
 metric: "Share of the project team that opens the dashboard at least once a week without being asked, found by asking the team, since the dashboard does not track readers."
 baseline:
 target: "80 %"

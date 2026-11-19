@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-19
 updated: 2026-11-19
 sources: ["[[SRC-032-shared-session-in-a-workshop]]", "[[SRC-033-grilling-session-on-the-shared-session]]"]
-related: ["[[STK-023-keyholder]]", "[[STK-007-workshop-facilitators]]", "[[STK-008-workshop-participants]]", "[[STK-013-people-learning-or-presenting-systems42]]", "[[FR-015-read-the-formalities-in-the-footer]]", "[[FR-023-areas-and-sections-follow-the-tailoring]]", "[[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[CON-001-proof-of-concept-not-production-ready]]"]
+related: ["[[STK-023-keyholder]]", "[[STK-008-workshop-participants-and-facilitators]]", "[[STK-013-people-learning-or-presenting-systems42]]", "[[FR-015-read-the-formalities-in-the-footer]]", "[[FR-023-areas-and-sections-follow-the-tailoring]]", "[[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[CON-001-proof-of-concept-not-production-ready]]"]
 tags: ["functional-requirement", "method"]
 stereotype: feature
 parent: ["[[FR-010-show-the-method]]"]
@@ -21,7 +21,7 @@ goal: ["[[GOAL-002-show-what-systems42-can-do]]"]
 
 ## Story
 
-As a [[STK-007-workshop-facilitators|workshop facilitator]] I want **the group to open the same dashboard on their own devices, while one person decides what the group sees**, so that **everyone looks at the same wiki during the workshop**.
+As a [[STK-008-workshop-participants-and-facilitators|workshop facilitator]] I want **the group to open the same dashboard on their own devices, while one person decides what the group sees**, so that **everyone looks at the same wiki during the workshop**.
 
 **PROBLEM / GOAL**
 

@@ -10,7 +10,7 @@ related: []
 tags: ["goal"]
 stereotype: objective
 parent: ["[[GOAL-001-trusted-answers]]"]
-beneficiary: ["[[STK-001-product-owners]]", "[[STK-002-business-analysts]]", "[[STK-005-testers]]", "[[STK-004-development-teams]]"]
+beneficiary: ["[[STK-001-readers]]"]
 metric: "Time a product owner or tester needs to list the requirements of the next release, each with its goal and its acceptance criteria."
 baseline:
 target: under 2 minutes

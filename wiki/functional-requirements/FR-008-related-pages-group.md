@@ -21,7 +21,7 @@ goal: ["[[GOAL-003-answers-without-asking-a-colleague]]"]
 
 ## Story
 
-As a [[STK-015-newcomers]] **newcomer** I want **the results page to show the pages linked to my best hits**, so that **I find the answer even when it sits one link away from the words I typed**.
+As a [[STK-001-readers|newcomer]] I want **the results page to show the pages linked to my best hits**, so that **I find the answer even when it sits one link away from the words I typed**.
 
 **PROBLEM / GOAL**
 

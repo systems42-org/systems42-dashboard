@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-12
 updated: 2026-11-19
 sources: ["[[SRC-013-browse-by-area-and-section]]", "[[SRC-014-grilling-session-on-browsing]]"]
-related: ["[[FR-001-search-the-wiki]]", "[[FR-013-header-and-footer-on-every-page]]", "[[STK-015-newcomers]]", "[[STK-008-workshop-participants]]"]
+related: ["[[FR-001-search-the-wiki]]", "[[FR-013-header-and-footer-on-every-page]]", "[[STK-001-readers]]", "[[STK-008-workshop-participants-and-facilitators]]"]
 tags: ["functional-requirement", "navigation"]
 stereotype: epic
 parent: []
@@ -21,7 +21,7 @@ goal: ["[[GOAL-003-answers-without-asking-a-colleague]]"]
 
 ## Epic: Summary
 
-As a [[STK-015-newcomers|newcomer]] who doesn't know the right word I want **to reach any page in three steps: area, section, page**, so that **I find answers even when search can't help me**.
+As a [[STK-001-readers|newcomer]] who doesn't know the right word I want **to reach any page in three steps: area, section, page**, so that **I find answers even when search can't help me**.
 
 **PROBLEM / GOAL**
 

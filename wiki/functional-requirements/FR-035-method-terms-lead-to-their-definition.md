@@ -21,7 +21,7 @@ goal: ["[[GOAL-002-show-what-systems42-can-do]]", "[[GOAL-003-answers-without-as
 
 ## Story
 
-As a [[STK-015-newcomers|newcomer]] I want **a method term such as MADR, INVEST or MoSCoW to lead to its definition**, so that **I understand what the page follows without searching elsewhere**.
+As a [[STK-001-readers|newcomer]] I want **a method term such as MADR, INVEST or MoSCoW to lead to its definition**, so that **I understand what the page follows without searching elsewhere**.
 
 **PROBLEM / GOAL**
 

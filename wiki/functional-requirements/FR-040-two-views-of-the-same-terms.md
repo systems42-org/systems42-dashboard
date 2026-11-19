@@ -21,7 +21,7 @@ goal: ["[[GOAL-003-answers-without-asking-a-colleague]]"]
 
 ## Story
 
-As a [[STK-002-business-analysts|business analyst]] I want **to see the whole vocabulary as a network and the modelled part as a data model**, so that **I understand both the language and the structure of the domain**.
+As a [[STK-001-readers|business analyst]] I want **to see the whole vocabulary as a network and the modelled part as a data model**, so that **I understand both the language and the structure of the domain**.
 
 **PROBLEM / GOAL**
 

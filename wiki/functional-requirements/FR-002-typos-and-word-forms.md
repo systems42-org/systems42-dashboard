@@ -21,7 +21,7 @@ goal: ["[[GOAL-003-answers-without-asking-a-colleague]]"]
 
 ## Story
 
-As a [[STK-015-newcomers]] **newcomer** I want **search to forgive a typo or another form of the word**, so that **I find the page even when I spell the term wrong**.
+As a [[STK-001-readers|newcomer]] I want **search to forgive a typo or another form of the word**, so that **I find the page even when I spell the term wrong**.
 
 **PROBLEM / GOAL**
 
@@ -39,7 +39,7 @@ Readers misspell terms, such as `keyholdr`, and use other forms of a word, such 
 - `keyholdr` finds the Keyholder page.
 - `stakholdrs` finds a stakeholder page.
 - `requirement engineer` finds the requirements engineers page.
-- `STK-02` finds STK-020 to STK-023.
+- `STK-02` finds STK-020 and STK-023.
 - `test` ranks pages containing `test` above pages that only contain `text`.
 
 **Scope.** in: every query word, in all searched text · out: word forms of other languages, because the wiki is English ([[DR-001-english-brief-plain-writing]]).

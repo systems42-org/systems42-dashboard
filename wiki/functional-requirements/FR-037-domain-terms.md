@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-14
 updated: 2026-11-14
 sources: ["[[SRC-025-domain-terms-and-their-two-views]]", "[[SRC-026-grilling-session-on-domain-terms]]"]
-related: ["[[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]]", "[[FR-003-related-words-from-aliases-and-glossary]]", "[[FR-017-browse-by-area-and-section]]", "[[STK-015-newcomers]]", "[[STK-014-domain-experts]]", "[[STK-004-development-teams]]", "[[STK-002-business-analysts]]"]
+related: ["[[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]]", "[[FR-003-related-words-from-aliases-and-glossary]]", "[[FR-017-browse-by-area-and-section]]", "[[STK-001-readers]]"]
 tags: ["functional-requirement", "domain-terms"]
 stereotype: epic
 parent: []
@@ -21,7 +21,7 @@ goal: ["[[GOAL-003-answers-without-asking-a-colleague]]"]
 
 ## Epic: Summary
 
-As a [[STK-015-newcomers|newcomer]] I want **to find what a domain term means, what kind of term it is and how it relates to other terms**, so that **I understand the domain without asking a colleague**.
+As a [[STK-001-readers|newcomer]] I want **to find what a domain term means, what kind of term it is and how it relates to other terms**, so that **I understand the domain without asking a colleague**.
 
 **PROBLEM / GOAL**
 

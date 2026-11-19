@@ -24,6 +24,10 @@ Unreleased changes sit at the top until the next Starter Kit release.
   next.
 
 ### Removed
+- Wiki: 23 stakeholders merged into 7 (meta issue #38). Retired IDs, never
+  reused: STK-002, STK-003, STK-004, STK-005, STK-006, STK-007, STK-009,
+  STK-011, STK-014, STK-015, STK-016, STK-017, STK-018, STK-019, STK-021,
+  STK-022.
 - This repository no longer creates project wikis: `_system/scripts/new-project.sh`,
   its test `test-new-project.sh`, `migrate-decisions.py` and the `new-project`
   skill are gone. New projects come from the Systems42 meta repository.

@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-12
 updated: 2026-11-12
 sources: ["[[SRC-015-see-what-is-still-open]]", "[[SRC-016-grilling-session-on-open-issues]]"]
-related: ["[[FR-025-issue-list-with-filters]]", "[[FR-026-issues-carry-a-category]]", "[[STK-001-product-owners]]"]
+related: ["[[FR-025-issue-list-with-filters]]", "[[FR-026-issues-carry-a-category]]", "[[STK-001-readers]]"]
 tags: ["functional-requirement", "issues"]
 stereotype: feature
 parent: ["[[FR-024-see-what-is-still-open]]"]
@@ -21,7 +21,7 @@ goal: ["[[GOAL-006-source-and-status-on-every-statement]]"]
 
 ## Story
 
-As a [[STK-001-product-owners|product owner]] I want **to see who is expected to answer each issue**, so that **I spot the open points nobody takes care of**.
+As a [[STK-001-readers|product owner]] I want **to see who is expected to answer each issue**, so that **I spot the open points nobody takes care of**.
 
 **PROBLEM / GOAL**
 

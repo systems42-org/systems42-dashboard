@@ -21,7 +21,7 @@ goal: ["[[GOAL-008-one-way-into-every-systems42-wiki]]"]
 
 ## Story
 
-As a [[STK-010-people-who-run-the-dashboard|person who runs the dashboard]] I want **one small launcher in my wiki that starts the release the wiki names**, so that **I get the dashboard without its code and update it with one command**.
+As a [[STK-010-operators|person who runs the dashboard]] I want **one small launcher in my wiki that starts the release the wiki names**, so that **I get the dashboard without its code and update it with one command**.
 
 **PROBLEM / GOAL**
 
