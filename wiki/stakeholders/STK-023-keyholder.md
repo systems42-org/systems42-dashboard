@@ -41,9 +41,7 @@ connect" are usually the same. Where they differ, the first tab holds the rights
 holds the keys only if their tab connected first. Running the app ([[STK-010-operators]]) is
 the usual way to become Keyholder.
 
-**The name.** It replaces "facilitator" for this right. Rejected: Host (a
-deployment-node stereotype), Owner (clashes with product owner), Admin and Moderator
-(both suggest a login, and there is none). The aliases "Jedi Master" and "Yoda" are a joke. Yoda is
+**The name.** The aliases "Jedi Master" and "Yoda" are a joke. Yoda is
 the Jedi Master in Star Wars. The first holder is called Yoda, but a later holder
 keeps its own nickname. Both aliases name the role, so search finds the Keyholder
 by either.
