@@ -1374,7 +1374,10 @@ FOLDER_LABELS = {
     "deployment-nodes": "Deployment node",
 }
 
-REQ42_BY_SLUG = catalog.SECTION_BY_SLUG
+# Only the sections whose own page is /req42/<slug>. The arc42 sections have
+# slugs too, but their pages live under /arc42/.
+REQ42_BY_SLUG = {slug: s for slug, s in catalog.SECTION_BY_SLUG.items()
+                 if s["href"] == f"/req42/{slug}"}
 
 
 def _block_pages(block: dict) -> list[Page]:
@@ -3434,7 +3437,7 @@ def issues_view():
                      for i in items if i["owner_key"]}.items(), key=lambda o: o[1].lower())
     sections = [s for s in catalog.SECTIONS if s["folders"] and s["id"] != "C6"]
     arg = lambda name: request.args.get(name, "").strip()
-    section = catalog.SECTION_BY_ID.get(arg("section"))
+    section = catalog.SECTION_BY_ID.get(arg("section").upper())
     if section not in sections:
         section = None
     status = arg("status") or arg("filter")          # ?filter= was the former name
@@ -4177,24 +4180,6 @@ def goals_view():
                   "stereotype": str(g.meta.get("stereotype") or "").strip().lower(),
                   "horizon": str(g.meta.get("horizon") or "").strip(), "status": g.status}
                  for g in ([vision] if vision else []) + objectives]
-    if not vision:
-        # Empty vault: no `stereotype: vision` page yet. Render the empty
-        # state rather than a 404 — this route must work on workshop day one.
-        return render_template(
-            "goals.html",
-            diagram=None,
-            vision={
-                "id": "", "title": "No vision yet", "stereotype": "Vision",
-                "maturity": None, "beneficiary": [],
-                "html": "<p>No vision yet — capture a GOAL- page with "
-                        "<code>stereotype: vision</code>.</p>",
-            },
-            objectives=[],
-            fr_cols=[],
-            matrix_rows=[],
-            needs_mermaid=False,
-            goal_rows=goal_rows,
-        )
 
     def _wikilink_list(items) -> list[str]:
         """Render a frontmatter list of '[[X]]' refs as human-readable labels."""
@@ -4209,18 +4194,29 @@ def goals_view():
             out.append(alias.strip() if alias else titles.get(base, base))
         return out
 
-    vision_card = {
-        "id": vision.id,
-        "title": vision.title,
-        "url": _page_url(vision.folder, vision.stem),
-        "stereotype": "Vision",
-        "maturity": None,
-        "beneficiary": _wikilink_list(vision.as_list("beneficiary")),
-        # Vision card shows the prose of the `## Vision` section — the
-        # objectives list and impact block from the wiki page are projected
-        # below as separate objective cards and the coverage matrix.
-        "html": "".join(f"<p>{p}</p>" for p in _vision_paragraphs(vision, titles, links)),
-    }
+    if vision:
+        vision_card = {
+            "id": vision.id,
+            "title": vision.title,
+            "url": _page_url(vision.folder, vision.stem),
+            "stereotype": "Vision",
+            "maturity": None,
+            "beneficiary": _wikilink_list(vision.as_list("beneficiary")),
+            # Vision card shows the prose of the `## Vision` section — the
+            # objectives list and impact block from the wiki page are projected
+            # below as separate objective cards and the coverage matrix.
+            "html": "".join(f"<p>{p}</p>" for p in _vision_paragraphs(vision, titles, links)),
+        }
+    else:
+        # No `stereotype: vision` page yet: a hint takes the vision's place,
+        # and the objective cards and the matrix still show. The route must
+        # work on workshop day one.
+        vision_card = {
+            "id": "", "title": "No vision yet", "stereotype": "Vision",
+            "maturity": None, "beneficiary": [],
+            "html": "<p>No vision yet — capture a GOAL- page with "
+                    "<code>stereotype: vision</code>.</p>",
+        }
 
     def _inline(s) -> str:
         """Frontmatter strings may contain `[[wikilinks]]` — render them as
@@ -4386,6 +4382,15 @@ def fr_view(stem):
 
 
 _QR_SCENARIO = ("Source", "Stimulus", "Environment", "Response", "Measure")
+_EMPHASIS_RE = re.compile(r"\*(\S[^*]*?)\*")
+
+
+def _emphasis(html: str) -> str:
+    """Turn `*text*` into <em>text</em> in sanitised HTML. Only the text
+    between tags is touched, so a `*` inside a tag or an attribute stays as it
+    is, and an emphasis never spans a tag."""
+    return "".join(part if part.startswith("<") else _EMPHASIS_RE.sub(r"<em>\1</em>", part)
+                   for part in re.split(r"(<[^>]*>)", html))
 
 
 def _qr_details(page: Page, titles: dict[str, str],
@@ -4393,7 +4398,7 @@ def _qr_details(page: Page, titles: dict[str, str],
     """What a quality requirement needs on the block list besides its title:
     its Q42 dimensions (DR-003), the priority and its Q42 quality scenario, so
     the list reads without opening every page. Empty scenario parts are left out."""
-    scenario = [(label, re.sub(r"\*(\S[^*]*?)\*", r"<em>\1</em>", html)) for label in _QR_SCENARIO
+    scenario = [(label, _emphasis(html)) for label in _QR_SCENARIO
                 if (html := extract_pam_bullet(page, label, titles, links))]
     dims = page.meta.get("dimensions") or []
     if isinstance(dims, str):
@@ -4970,7 +4975,8 @@ def help_view():
 # from the metamodel pages, and the examples from the vault.
 
 _MM_DR_RE = re.compile(r"^DR-\d{3}\b")
-_MM_ROUTE_RE = re.compile(r"^(/\S*)")
+# a same-site path only: `//host` and `/\host` would leave the site
+_MM_ROUTE_RE = re.compile(r"^(/(?![/\\])\S*)")
 
 
 def _mm_dr_link(ref: str, label: str = "") -> str:
