@@ -41,7 +41,7 @@ GET_ROUTES = [
     "/search", "/goals", "/entity-diagram", "/req42", "/req42/functional-requirements", "/arc42/building-blocks",
     "/arc42/deployment", "/arc42/runtime", "/arc42/concepts",
     "/req42/scope", "/req42/models", "/req42/quality", "/req42/constraints",
-    "/arc42", "/commons", "/help", "/metamodel",
+    "/arc42", "/commons", "/help", "/metamodel", "/method",
 ]
 
 # Section titles per area page, HTML-escaped once the way Jinja's autoescape
@@ -121,21 +121,16 @@ def test_req42_block_leads_are_populated():
 
 
 def test_tile_unit_lines_agree_with_their_numbers():
-    """The fixture vault holds 2 epics, 1 feature and 3 stories — the exact
-    shape that used to render as "2 Epics · 1 Features · 3 Stories". Units are
-    lowercase nouns pluralised against their own count, so a count of 1 must
-    never be followed by a plural."""
-    body = _bodies()["/req42"]
-    units = re.findall(r'<span class="unit">(.*?)</span>', body, re.S)
-    assert units, body[:400]
-    joined = " | ".join(u.strip() for u in units)
-    assert "1 feature ·" in joined or joined.endswith("1 feature"), joined
-    assert "3 stories" in joined, joined
-    for bad in ("Epics", "Features", "Stories"):
-        assert bad not in joined, (bad, joined)
-    # a count of 1 followed by a word ending in -s is the bug, whichever tile
-    wrong = re.findall(r"\b1 ([a-z]+(?<!s)s)\b", joined)
-    assert not wrong, (wrong, joined)
+    """A tile's unit is a lowercase noun pluralised against the tile's own
+    count, so a count of 1 is never followed by a plural ("1 Features" was
+    the bug). Since FR-019 the unit carries no breakdown."""
+    for route in ("/req42", "/commons"):
+        body = _bodies()[route]
+        pairs = re.findall(r'<span class="num">(\d+)</span><span class="unit">(.*?)</span>', body, re.S)
+        assert pairs, body[:400]
+        for n, unit in pairs:
+            assert unit == unit.lower() and "·" not in unit, (route, n, unit)
+            assert unit.endswith("s") != (n == "1"), (route, n, unit)
 
 
 if __name__ == "__main__":

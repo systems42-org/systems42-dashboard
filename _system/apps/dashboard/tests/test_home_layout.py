@@ -230,29 +230,31 @@ def test_scope_tile_counts_interfaces_not_the_context_page():
         body = _area("/commons")
         scope = body[body.index("tile-c3"):body.index("tile-c4")]
         assert '<span class="num">2</span>' in scope, scope
-        assert "context described" in scope, scope
+        assert "context described" not in scope, "count and bar only (FR-019)"
     finally:
         for f in written:
             f.unlink()
 
 
-def test_supporting_model_rows_say_pages_not_links():
-    """`_supporting_model_entries()` reports pages per model type; only
-    `len(page.link_targets())` may ever be labelled a link."""
+def test_supporting_models_count_model_pages():
+    """R4 counts the pages per model type (`_supporting_model_entries()`)
+    and names none of them (FR-019)."""
     f = _write("activity-models", "ACT-001-borrow", id="ACT-001", type="activity-model", title="Borrow a book")
     try:
         body = _area("/req42")
         tile = body[body.index("tile-r4"):body.index("tile-r5")]
-        rows = tile[tile.index("<ul"):tile.index("</ul>")]   # the wrapper is a .tile-link
-        assert "1 page<" in rows, rows
-        assert "link" not in rows, rows
+        with app.app.test_request_context("/req42"):
+            n = sum(m["relations"] for m in app._supporting_model_entries())
+        assert n >= 1, n
+        assert f'<span class="num">{n}</span><span class="unit">model page' in tile, tile
+        assert "<ul" not in tile and "Borrow a book" not in tile, tile
     finally:
         f.unlink()
 
 
 def test_use_cases_are_functional_requirements():
     """DR-038: a use case is a functional requirement in the use-case
-    notation. It shows on the R3 tile, not R4, and counts once."""
+    notation. It counts on the R3 tile, not R4, and counts once."""
     f = _write("functional-requirements", "UC-001-borrow", id="UC-001",
                type="functional-requirement", title="Borrow a book")
     f.write_text(f.read_text(encoding="utf-8").replace(
@@ -262,18 +264,146 @@ def test_use_cases_are_functional_requirements():
         body = _area("/req42")
         r3 = body[body.index("tile-r3"):body.index("tile-r4")]
         r4 = body[body.index("tile-r4"):body.index("tile-r5")]
-        assert "UC-001" in r3 and "1 use case" in r3 and "use case · sea" in r3, r3
-        # the headline counts all functional requirements; empty kinds are not named
+        # the headline counts all functional requirements; the tile names none (FR-019)
         n_fr = len(app.load_folder("functional-requirements"))
         assert f'<span class="num">{n_fr}</span>' in r3, r3
         assert ("requirement" if n_fr == 1 else "requirements") in r3, r3
-        if not app.build_fr_hierarchy()["total_epics"]:
-            assert "0 epics" not in r3, r3
+        assert "UC-001" not in r3 and "use case" not in r3, r3
         assert "UC-001" not in r4 and "Use Cases" not in r4, r4
         page = app.app.test_client().get("/req42/functional-requirements").get_data(as_text=True)
         assert "UC-001" in page and "Borrow a book" in page
     finally:
         f.unlink()
+
+
+VISION = """---
+id: GOAL-007
+type: goal
+title: Answers for System X
+status: draft
+created: 2026-09-07
+updated: 2026-09-07
+sources: []
+related: []
+tags: [goal]
+stereotype: vision
+---
+
+# Answers for System X
+
+## Vision
+
+> follows the Geoffrey Moore format
+
+For **Role B**, [[GOAL-001-objective|System X]] answers e.g. any question about Entity A. A
+second sentence the hero leaves out.
+
+**Objectives.** See the `parent:` backlinks.
+"""
+
+
+def test_hero_shows_the_vision_sentence_or_the_tagline():
+    """FR-018: the hero shows the vision in one sentence. The vision is the
+    goal page with `stereotype: vision`, here GOAL-007 next to an objective
+    GOAL-001. Without a vision the tagline stands in."""
+    (_tmp / "wiki.yaml").write_text("system_name: System X\ntagline: Tagline of System X\n",
+                                    encoding="utf-8")
+    objective = _write("goals", "GOAL-001-objective", id="GOAL-001", type="goal", title="An objective")
+    vision = _wiki / "goals" / "GOAL-007-answers.md"
+    try:
+        hero = _home().split('<header class="hero">')[1].split("</header>")[0]
+        assert "Tagline of System X" in hero and "hero-vision" not in hero, hero
+        vision.write_text(VISION, encoding="utf-8")
+        hero = _home().split('<header class="hero">')[1].split("</header>")[0]
+        sentence = "For Role B, System X answers e.g. any question about Entity A."
+        assert f'<p class="lead hero-vision">{sentence}</p>' in hero, hero
+        assert "second sentence" not in hero and "Tagline of System X" not in hero, hero
+        assert "Take the guided path" not in hero, "/tour is not built yet (FR-012)"
+    finally:
+        for f in (objective, vision, _tmp / "wiki.yaml"):
+            f.unlink(missing_ok=True)
+
+
+def test_area_tiles_show_the_count_of_each_section():
+    """FR-018: each area tile lists its sections with the count their section
+    tile shows. A section that is not captured (R2, A1) shows none."""
+    written = [_write("constraints", f"CON-00{n}-c", id=f"CON-00{n}", type="constraint", title=f"C {n}")
+               for n in (1, 2)]
+    try:
+        body = _home()
+        com = body[body.index("area-tile-commons"):]
+        assert ('<code class="ml-id">C2</code> Constraints<span class="area-section-count" '
+                'title="2 constraints">2</span>') in com, com
+        assert 'title="0 terms">0</span>' in com, com
+        req = body[body.index("area-tile-requirements"):body.index("valley")]
+        r2 = req[req.index("tile-r2"):req.index("</li>", req.index("tile-r2"))]
+        assert "area-section-count" not in r2, r2
+        arc = body[body.index("area-tile-architecture"):body.index("area-tile-commons")]
+        a1 = arc[arc.index("tile-a1"):arc.index("</li>", arc.index("tile-a1"))]
+        assert "area-section-count" not in a1, a1
+        assert 'Building Block View<span class="area-section-count" title="0 pages">0</span>' in arc, arc
+    finally:
+        for f in written:
+            f.unlink()
+
+
+ISSUE = """---
+id: {id}
+type: issue
+title: {title}
+status: {status}
+created: 2026-09-07
+updated: 2026-09-07
+sources: []
+related: ["[[QR-001-fast-checkout]]"]
+tags: [issue]
+severity: minor
+---
+
+# {title}
+"""
+
+
+def test_section_tiles_show_count_bar_and_issue_link_only():
+    """FR-019: count, maturity bar and the open-issue link, no page names. R1
+    counts its goal pages. C6 counts every issue and flags the open ones."""
+    written = [
+        _wiki / "quality-requirements" / "QR-001-fast-checkout.md",
+        _write("quality-requirements", "QR-002-slow", id="QR-002", type="quality-requirement",
+               title="Slow report"),
+        _wiki / "issues" / "ISS-001-open.md",
+        _wiki / "issues" / "ISS-002-closed.md",
+        _write("goals", "GOAL-001-vision", id="GOAL-001", type="goal", title="Vision of X"),
+        _write("goals", "GOAL-002-objective", id="GOAL-002", type="goal", title="Objective of X"),
+    ]
+    written[0].write_text(QR.replace("status: draft", "status: accepted"), encoding="utf-8")
+    written[2].write_text(ISSUE.format(id="ISS-001", title="Open question", status="open"), encoding="utf-8")
+    written[3].write_text(ISSUE.format(id="ISS-002", title="Closed question", status="resolved"),
+                          encoding="utf-8")
+    try:
+        body = _area("/commons")
+        c1 = body[body.index('id="tile-c1"'):body.index('id="tile-c2"')]
+        assert '<span class="num">2</span><span class="unit">scenarios</span>' in c1, c1
+        assert 'maturity-accepted" style="flex-basis: 50%"' in c1, c1
+        assert 'maturity-draft" style="flex-basis: 50%"' in c1, c1
+        assert 'href="/issues?section=C1"' in c1 and "1 open issue<" in c1, c1
+        assert 'class="tile-stretch" href="/req42/quality"' in c1, c1
+        for gone in ("<ul", "Fast checkout", "Slow report", "QR-001"):
+            assert gone not in c1, (gone, c1)
+        c6 = body[body.index('id="tile-c6"'):body.index('id="tile-c7"')]
+        assert '<span class="num">2</span><span class="unit">issues</span>' in c6, c6
+        assert 'href="/issues?status=open"' in c6 and "1 open issue<" in c6, c6
+        assert 'class="tile-stretch" href="/issues"' in c6, c6
+        for gone in ("<ul", "Open question", "in total"):
+            assert gone not in c6, (gone, c6)
+        req = _area("/req42")
+        r1 = req[req.index('id="tile-r1"'):req.index('id="tile-r2"')]
+        assert '<span class="num">2</span><span class="unit">goals</span>' in r1, r1
+        for gone in ("<ul", "Objective of X", "GOAL-002", "No objectives yet"):
+            assert gone not in r1, (gone, r1)
+    finally:
+        for f in written:
+            f.unlink()
 
 
 if __name__ == "__main__":
@@ -288,6 +418,9 @@ if __name__ == "__main__":
     test_changes_lists_a_backdated_page_with_relative_time()
     test_recent_changes_shape()
     test_scope_tile_counts_interfaces_not_the_context_page()
-    test_supporting_model_rows_say_pages_not_links()
+    test_supporting_models_count_model_pages()
     test_use_cases_are_functional_requirements()
+    test_hero_shows_the_vision_sentence_or_the_tagline()
+    test_area_tiles_show_the_count_of_each_section()
+    test_section_tiles_show_count_bar_and_issue_link_only()
     print("OK: home layout, navigation and latest changes")

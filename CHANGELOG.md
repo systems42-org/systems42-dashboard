@@ -40,6 +40,9 @@ Unreleased changes sit at the top until the next Starter Kit release.
   and links to `/metamodel#version`, which names both versions and what to do.
   The dashboard reads `version:` from `_system/metamodel/metamodel-version.md`,
   else from `meta-metamodel.md`.
+- Dashboard: `/method` explains the three loops capture, inspect and clarify
+  on one screen (FR-011). The footer of every page links it. While ISS-002 is
+  open, the clarify part says the loop is being defined and links that issue.
 - Dashboard repository: a release takes `make version V=1.2.3`, a merge and
   `make publish`. `version` raises `VERSION` and opens the pull request.
   `publish` sets and pushes the tag only when the release does not exist yet
@@ -57,6 +60,14 @@ Unreleased changes sit at the top until the next Starter Kit release.
   skill are gone. New projects come from the Systems42 meta repository.
 
 ### Changed
+- Dashboard: the first page shows the first sentence of the vision under the
+  system's name, and the tagline only when there is no vision (FR-018). Each
+  area tile lists its sections with their counts.
+- Dashboard: section tiles on the area pages show a count, the maturity bar
+  and the open-issue link, and no page names (FR-019). R1 counts its goal
+  pages. C6 counts all issues and shows the open ones as its flag. The R1
+  claim line, the R3 breakdown by epic, feature, story and use case and the
+  C3 note on the context page are gone from the tiles.
 - Dashboard release 0.12.0 (`_system/apps/dashboard/VERSION`).
 - Dashboard: the Configure dialog is now called View, and the view lives in
   the running dashboard only (FR-046, DR-002). The dashboard writes no file

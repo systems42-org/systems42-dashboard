@@ -73,7 +73,6 @@ related: ["[[DT-003-review]]"]
     with app.app.test_request_context("/req42"):
         tile = app.build_section_tile(app.catalog.SECTION_BY_ID["R4"])
         assert tile["count"] == 3
-        assert next(row for row in tile["rows"] if row["title"] == "Entity diagram")["pages"] == 3
         assert 'Legacy --> "1..n" Policy' in app.build_data_model_full_diagram()
     with app.app.test_client() as client:
         models_page = client.get("/req42/models").get_data(as_text=True)

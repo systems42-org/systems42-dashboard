@@ -116,7 +116,7 @@ Architecture, red organisation) on pages of an area; home, help and
 search have none. The ≡ menu holds View · Theme · Who's here · Help ·
 Reload · Disconnect all. The footer holds formalities only: "Read-only
 dashboard for Systems42 LLM wiki" (linked to the help section on the LLM
-wiki), the live dot with the client count, the refresh time, Metamodel, Help, the
+wiki), the live dot with the client count, the refresh time, Method, Metamodel, Help, the
 dashboard's own release (`VERSION`) and the Python mark. When `dashboard_version:`
 in `wiki.yaml` names another release, one more line says so. When the
 repository's metamodel version is not one this release supports
@@ -165,14 +165,18 @@ a path of the dashboard, and no style that loads something (`url()`).
 The section structure follows the Systems42 sections diagram and lives in one
 place, `catalog.py`: three areas, eighteen sections (DR-033).
 
-The home page (`/`) opens with the vault name and its tagline. Below it come two
+The home page (`/`) opens with the vault name and the first sentence of the
+vision, the goal page with `stereotype: vision`. Without a vision it shows the
+tagline (FR-018). Below it come two
 peaks, **Requirements** and **Architecture**, and between them the *valley*:
 vault status, latest changes, open issues and links to the decisions and to
 Help. **Commons** runs full-width underneath. Each peak links to its area page.
+Each area tile lists its sections with the count their section tile shows.
 
 The area pages `/req42`, `/arc42` and `/commons` show one tile per section,
 rendered by `templates/_tile.html`. A tile carries the section ID, its title,
-a count or short list of its pages and links to the section route. Sections
+a count, the maturity bar and the open-issue flag, and links to the section
+route. It names no pages (FR-019). Sections
 hidden in the view drop off the tiles; a hidden area loses its
 colour bar but its page still renders. A section's scope is `in` (captured in
 wiki folders), `out` (deliberately not captured, an inactive tile) or `planned`
@@ -180,10 +184,10 @@ wiki folders), `out` (deliberately not captured, an inactive tile) or `planned`
 
 | ID | Area | Tile shows | Route |
 |----|------|------------|-------|
-| **R1** Vision & Goals | Requirements | the vision claim line and the objectives with covering epic/use-case counts | `/goals` |
+| **R1** Vision & Goals | Requirements | goal count, the vision and its objectives | `/goals` |
 | **R2** Resources & Staff | Requirements | out of scope, inactive tile | — |
-| **R3** Functional Requirements | Requirements | all functional requirements of every notation (DR-038), broken down by epic/feature/story/use case, a per-epic breakdown and the use cases | `/req42/functional-requirements` |
-| **R4** Supporting Models | Requirements | activity models and the entity diagram | `/req42/models` |
+| **R3** Functional Requirements | Requirements | count of all functional requirements of every notation (DR-038) | `/req42/functional-requirements` |
+| **R4** Supporting Models | Requirements | count of model pages: activity models and the entity diagram | `/req42/models` |
 | **R5** Team Structure | Requirements | out of scope, inactive tile | — |
 | **R6** Roadmap | Requirements | out of scope, inactive tile | — |
 | **A1** Solution Strategy | Architecture | planned, "not captured yet" | — |
@@ -191,12 +195,12 @@ wiki folders), `out` (deliberately not captured, an inactive tile) or `planned`
 | **A3** Deployment View | Architecture | planned | — |
 | **A4** Runtime View | Architecture | planned | — |
 | **A5** Crosscutting Concepts | Architecture | planned | — |
-| **C1** Quality Requirements | Commons | scenario count and list | `/req42/quality` |
-| **C2** Constraints | Commons | constraint count and list | `/req42/constraints` |
-| **C3** Scope & Context | Commons | external interfaces; system boundary and context diagram | `/req42/scope` |
-| **C4** Stakeholders | Commons | persona count and list; profile, influence, interest | `/stakeholders` |
-| **C5** Domain Terms | Commons | term count and a per-term relation list; term network at `/graph/domain-terms` | `/domain-terms` |
-| **C6** Issues | Commons | open issues, most severe first; filterable All / Open / Closed | `/issues` |
+| **C1** Quality Requirements | Commons | scenario count | `/req42/quality` |
+| **C2** Constraints | Commons | constraint count | `/req42/constraints` |
+| **C3** Scope & Context | Commons | external interface count | `/req42/scope` |
+| **C4** Stakeholders | Commons | persona count | `/stakeholders` |
+| **C5** Domain Terms | Commons | term count, links to the table and to the term network at `/graph/domain-terms` | `/domain-terms` |
+| **C6** Issues | Commons | count of all issues, the open ones as the flag (link to `/issues?status=open`) | `/issues` |
 | **C7** Decisions | Commons | decision records (`wiki/decisions/`, MADR); filterable by kind architecture / business / undefined, expands the full text of a row | `/decisions` |
 
 The sections diagram on `/help` still draws A6 Architecture Decisions; the
@@ -210,7 +214,7 @@ Requirements area page.
 Every tile that has no content yet renders a shared empty state naming the next
 step, rather than a placeholder — a fresh vault is the normal day-one state.
 
-The in-tile lists show ~4–5 rows and scroll for the rest. The relation count is
+The relation count is
 the number of distinct other wiki pages a page links to (frontmatter `related:`
 plus body `[[wikilinks]]`), excluding self-references and `raw/` provenance
 links. An issue counts as **closed** when its status is `resolved` or `wontfix`.
@@ -251,6 +255,12 @@ title (default "About <system_name>"). Relative image and link URLs in the page,
 `../` included, are resolved against its folder and served as
 `/about/files/<path under docs/>`. Paths are resolved before they are checked,
 so neither `..` nor a symlink reaches a file outside `docs/` (404).
+
+## Method page
+
+`/method` (footer) explains the three loops capture, inspect and clarify on one
+screen (FR-011). While `ISS-002-define-the-clarify-loop` is open, the clarify
+part says it is being defined and links that issue.
 
 ## Metamodel page
 
@@ -316,7 +326,7 @@ _system/apps/dashboard/
                      _maturity (maturity bar/legend), _mermaid (loader),
                      _provenance (sources chips), glossary, graph, stakeholders,
                      issues, decisions, search, detail, goals, functional_requirements, fr, data_model,
-                     req42_block, _tile (section tile), area (area pages), help, metamodel, join, who
+                     req42_block, _tile (section tile), area (area pages), help, method, metamodel, join, who
   static/style.css   dashboard styling
   static/glossary-graph.js   the cytoscape term network
   static/list-view.js        the shared list layer: a th[data-sort] sorts by its
