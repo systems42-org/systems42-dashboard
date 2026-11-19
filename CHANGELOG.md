@@ -21,6 +21,12 @@ Unreleased changes sit at the top until the next Starter Kit release.
   next.
 
 ### Changed
+- Dashboard: the systems42 brand has a new intro. The systems42 logo builds
+  itself (the arches swing in, the ribbon twists into place), then the letters
+  of the wordmark "systems42" fly in, spinning, and land; about 2 s, then a
+  fade. The earlier intro, in which the Peaks mark builds itself, is kept as
+  `brands/systems42/intro-peaks.html`; the dashboard reads only `intro.html`,
+  so renaming it back restores it.
 - Dashboard release 0.11.2 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.11.0 (`_system/apps/dashboard/VERSION`): requirement
   notations (DR-038), ported from the Systems42 meta repository.
