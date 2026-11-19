@@ -20,6 +20,9 @@ Unreleased changes sit at the top until the next Starter Kit release.
   request and push to `main` (`.github/workflows/ci.yml`). The test summary
   counts and names skipped scripts (exit code 77) instead of counting them as
   passed.
+- Dashboard repository: `make test` runs the browser test
+  (`test_mermaid_browser.py`). The Docker test stage installs Playwright 1.63.0
+  from `requirements-dev.txt` and its headless Chromium.
 - Dashboard repository: a release takes `make version V=1.2.3`, a merge and
   `make publish`. `version` raises `VERSION` and opens the pull request.
   `publish` sets and pushes the tag only when the release does not exist yet
