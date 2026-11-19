@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import os
 import re
+import threading
 from pathlib import Path
 
 import yaml
@@ -47,6 +48,17 @@ _FRAMEWORK_ORDER = ["req42", "commons", "arc42"]
 # metamodel per issue on every page view (FR-027), so a parse is kept until
 # its file changes, like the wiki pages in app.py's _PARSE_CACHE.
 _CACHE: dict[Path, tuple[tuple[int, int], dict | None]] = {}
+# Guards _CACHE and _ANCHOR_CACHE against gunicorn's request threads. Parsing
+# runs outside it: a duplicate parse is harmless, a torn update is not.
+_LOCK = threading.Lock()
+
+
+def _forget_missing(cache: dict, folder: Path, present: list[Path]) -> None:
+    """Drop the entries of files in `folder` that are no longer listed there."""
+    keep = set(present)
+    with _LOCK:
+        for path in [p for p in cache if p.parent == folder and p not in keep]:
+            del cache[path]
 
 
 def _read(path: Path) -> dict | None:
@@ -55,13 +67,16 @@ def _read(path: Path) -> dict | None:
     try:
         st = path.stat()
     except OSError:
-        _CACHE.pop(path, None)
+        with _LOCK:
+            _CACHE.pop(path, None)
         return None
     stamp = (st.st_mtime_ns, st.st_size)
-    hit = _CACHE.get(path)
+    with _LOCK:
+        hit = _CACHE.get(path)
     if hit is None or hit[0] != stamp:
         hit = (stamp, _parse(path))
-        _CACHE[path] = hit
+        with _LOCK:
+            _CACHE[path] = hit
     return dict(hit[1]) if hit[1] is not None else None
 
 
@@ -117,11 +132,12 @@ def notations() -> list[dict]:
     `notations/` of the metamodel, then a project's own in `_system/notations/`.
     Each carries `_sections` (its level-marked page-template blocks)."""
     out = _load("notations", "notation")
-    if NOTATIONS_DIR.is_dir():
-        for p in sorted(NOTATIONS_DIR.glob("*.md")):
-            n = _read(p)
-            if n and n.get("construct") == "notation":
-                out.append(n)
+    own = sorted(NOTATIONS_DIR.glob("*.md")) if NOTATIONS_DIR.is_dir() else []
+    _forget_missing(_CACHE, NOTATIONS_DIR, own)
+    for p in own:
+        n = _read(p)
+        if n and n.get("construct") == "notation":
+            out.append(n)
     out = [n for n in out if str(n.get("name") or "").strip()]   # a nameless file defines nothing
     for n in out:
         n["name"] = str(n["name"]).strip()
@@ -133,10 +149,10 @@ def notations() -> list[dict]:
 
 def _load(folder: str, construct: str) -> list[dict]:
     d = METAMODEL_DIR / folder
-    if not d.is_dir():
-        return []
+    paths = sorted(d.glob("*.md")) if d.is_dir() else []
+    _forget_missing(_CACHE, d, paths)
     out = []
-    for p in sorted(d.glob("*.md")):
+    for p in paths:
         fm = _read(p)
         if fm and fm.get("construct") == construct:
             out.append(fm)
@@ -290,19 +306,23 @@ def method_anchors() -> list[dict]:
     entry's id on /metamodel), `aliases`, `applies_to` (as written),
     `definition` (markdown, first prose paragraph) and `reference` (the first
     outside URL, or ""). Parsed again only when a file changes."""
-    if not ANCHORS_DIR.is_dir():
-        return []
+    paths = sorted(ANCHORS_DIR.glob("*.md")) if ANCHORS_DIR.is_dir() else []
+    _forget_missing(_ANCHOR_CACHE, ANCHORS_DIR, paths)
     out = []
-    for p in sorted(ANCHORS_DIR.glob("*.md")):
+    for p in paths:
         try:
             st = p.stat()
         except OSError:
+            with _LOCK:
+                _ANCHOR_CACHE.pop(p, None)
             continue
         stamp = (st.st_mtime_ns, st.st_size)
-        hit = _ANCHOR_CACHE.get(p)
+        with _LOCK:
+            hit = _ANCHOR_CACHE.get(p)
         if hit is None or hit[0] != stamp:
             hit = (stamp, _parse_anchor(p))
-            _ANCHOR_CACHE[p] = hit
+            with _LOCK:
+                _ANCHOR_CACHE[p] = hit
         if hit[1] is not None:
             out.append(dict(hit[1]))
     return sorted(out, key=lambda a: a["name"].lower())

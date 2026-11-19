@@ -18,7 +18,7 @@ import threading
 import time
 import unicodedata
 import zlib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import quote, unquote, urlsplit
@@ -555,6 +555,9 @@ class Page:
     # existing positional/keyword construction keeps working. Feeds the home
     # page's "Latest changes" tile — see recent_changes().
     mtime: float = 0.0
+    # link_targets() memo. A parsed Page is shared through _PARSE_CACHE and
+    # replaced, never edited, when its file changes, so the memo cannot go stale.
+    _targets: frozenset[str] | None = field(default=None, init=False, repr=False, compare=False)
 
     @property
     def id(self) -> str:
@@ -586,9 +589,12 @@ class Page:
             return []
         return v if isinstance(v, list) else [v]
 
-    def link_targets(self) -> set[str]:
+    def link_targets(self) -> frozenset[str]:
         """Distinct wiki pages this page points to (frontmatter + body),
-        excluding self-references and raw/ source provenance links."""
+        excluding self-references and raw/ source provenance links. Computed
+        once per Page: the relations panel asks every page in the wiki."""
+        if self._targets is not None:
+            return self._targets
         targets: set[str] = set()
         haystack = yaml.safe_dump(self.meta, allow_unicode=True) + "\n" + self.body
         for m in WIKILINK_RE.finditer(haystack):
@@ -599,7 +605,8 @@ class Page:
             if base == self.stem or base == self.id:
                 continue                            # self-reference
             targets.add(base)
-        return targets
+        self._targets = frozenset(targets)
+        return self._targets
 
 
 # --- caching ----------------------------------------------------------------
@@ -626,6 +633,25 @@ class Page:
 # deterministic from the path (always path.parent.name at every call site), so
 # the path alone is the key.
 _PARSE_CACHE: dict[Path, tuple[tuple[int, int], "Page | None"]] = {}
+# gunicorn serves requests on several threads (Dockerfile, `--threads 4`). The
+# lock covers each read, write and sweep of _PARSE_CACHE. Parsing runs outside
+# it: two threads parsing the same file waste a parse, nothing worse.
+_PARSE_LOCK = threading.Lock()
+
+
+def _forget(path: Path) -> None:
+    """Drop a file's cache entry: it is gone, unreadable or no longer served."""
+    with _PARSE_LOCK:
+        _PARSE_CACHE.pop(path, None)
+
+
+def _forget_missing(folder: Path, present: list[Path]) -> None:
+    """Drop the entries of files in `folder` that are no longer listed there.
+    A deleted page is never globbed again, so _parse() never sees it."""
+    keep = set(present)
+    with _PARSE_LOCK:
+        for path in [p for p in _PARSE_CACHE if p.parent == folder and p not in keep]:
+            del _PARSE_CACHE[path]
 
 
 def _resolves_inside(root: Path, path: Path) -> bool:
@@ -649,13 +675,16 @@ def _parse(path: Path, folder: str) -> Page | None:
     # checked before the cache: a symlink retargeted out of the wiki must not
     # keep serving the page it pointed to before
     if not _resolves_inside(_page_root(path), path):
+        _forget(path)
         return None
     try:
         st = path.stat()
     except OSError:
+        _forget(path)
         return None
     stamp = (st.st_mtime_ns, st.st_size)
-    cached = _PARSE_CACHE.get(path)
+    with _PARSE_LOCK:
+        cached = _PARSE_CACHE.get(path)
     if cached is not None and cached[0] == stamp:
         return cached[1]
     # One broken file must never take the whole dashboard down: every page
@@ -665,6 +694,7 @@ def _parse(path: Path, folder: str) -> Page | None:
     try:
         text = path.read_text(encoding="utf-8", errors="replace")
     except OSError:
+        _forget(path)
         return None
     m = FRONTMATTER_RE.match(text)
     if not m:
@@ -678,16 +708,17 @@ def _parse(path: Path, folder: str) -> Page | None:
             meta = {}                         # `--- just a string ---` or a list: no fields
         page = Page(stem=path.stem, meta=meta, body=m.group(2), folder=folder,
                     mtime=st.st_mtime)
-    _PARSE_CACHE[path] = (stamp, page)
+    with _PARSE_LOCK:
+        _PARSE_CACHE[path] = (stamp, page)
     return page
 
 
 @_request_cached
 def load_folder(folder: str) -> list[Page]:
     d = WIKI_DIR / folder
-    if not d.is_dir() or not _resolves_inside(WIKI_DIR, d):
-        return []
-    pages = [_parse(p, folder) for p in sorted(d.glob("*.md"))]
+    paths = sorted(d.glob("*.md")) if d.is_dir() and _resolves_inside(WIKI_DIR, d) else []
+    _forget_missing(d, paths)
+    pages = [_parse(p, folder) for p in paths]
     return [p for p in pages if p is not None]
 
 
@@ -696,9 +727,9 @@ def load_sources() -> list[Page]:
     """Provenance records from raw/sources/ — counted on the home page's status
     strip so the room can see how much material the wiki actually rests on.
     Not a wiki folder: it lives outside WIKI_DIR and is never rendered."""
-    if not SOURCES_DIR.is_dir():
-        return []
-    pages = [_parse(p, "sources") for p in sorted(SOURCES_DIR.glob("*.md"))]
+    paths = sorted(SOURCES_DIR.glob("*.md")) if SOURCES_DIR.is_dir() else []
+    _forget_missing(SOURCES_DIR, paths)
+    pages = [_parse(p, "sources") for p in paths]
     return [p for p in pages if p is not None]
 
 
@@ -750,15 +781,10 @@ def vault_status() -> dict:
 
 @_request_cached
 def title_index() -> dict[str, str]:
-    """Map every page stem -> human title, for resolving wikilinks to text."""
-    idx: dict[str, str] = {}
-    if not WIKI_DIR.is_dir():
-        return idx
-    for p in WIKI_DIR.rglob("*.md"):
-        page = _parse(p, p.parent.name)
-        if page:
-            idx[p.stem] = page.title
-    return idx
+    """Map every page stem -> human title, for resolving wikilinks to text.
+    Built from load_all_pages(), so it knows exactly the pages link_index()
+    and the lists know (a nested or root-level .md is none of them)."""
+    return {p.stem: p.title for p in load_all_pages()}
 
 
 def _page_url(folder: str, stem: str) -> str:
