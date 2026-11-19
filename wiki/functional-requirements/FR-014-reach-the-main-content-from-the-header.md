@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-11
 updated: 2026-11-19
 sources: ["[[SRC-010-header-and-footer-on-every-page]]", "[[SRC-011-grilling-session-on-header-and-footer]]"]
-related: ["[[STK-015-newcomers]]"]
+related: ["[[STK-001-readers]]"]
 tags: ["functional-requirement", "page-frame"]
 stereotype: story
 parent: ["[[FR-013-header-and-footer-on-every-page]]"]
@@ -21,7 +21,7 @@ goal: ["[[GOAL-003-answers-without-asking-a-colleague]]"]
 
 ## Story
 
-As a [[STK-015-newcomers]] **newcomer** I want **to reach the main content from the header of every page**, so that **I get there in one click, wherever I am**.
+As a [[STK-001-readers|newcomer]] I want **to reach the main content from the header of every page**, so that **I get there in one click, wherever I am**.
 
 > follows [[user-story-format]]
 

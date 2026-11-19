@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-13
 updated: 2026-11-14
 sources: ["[[SRC-023-goal-coverage-matrix]]", "[[SRC-024-grilling-session-on-the-goal-coverage-matrix]]"]
-related: ["[[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]]", "[[QR-001-usable-on-phone-and-tablet]]", "[[FR-022-lists-keep-sort-and-filter-in-their-address]]", "[[STK-001-product-owners]]", "[[STK-002-business-analysts]]"]
+related: ["[[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]]", "[[QR-001-usable-on-phone-and-tablet]]", "[[FR-022-lists-keep-sort-and-filter-in-their-address]]", "[[STK-001-readers]]"]
 tags: ["functional-requirement", "goals"]
 stereotype: feature
 parent: ["[[FR-017-browse-by-area-and-section]]"]
@@ -21,7 +21,7 @@ goal: ["[[GOAL-004-requirements-with-reasons-and-checks]]"]
 
 ## Story
 
-As a [[STK-001-product-owners|product owner]] I want **to see at a glance which requirements serve which goal**, so that **I spot goals nothing serves yet and requirements that serve no goal**.
+As a [[STK-001-readers|product owner]] I want **to see at a glance which requirements serve which goal**, so that **I spot goals nothing serves yet and requirements that serve no goal**.
 
 **PROBLEM / GOAL**
 

@@ -21,7 +21,7 @@ goal: ["[[GOAL-003-answers-without-asking-a-colleague]]", "[[GOAL-007-readers-wh
 
 ## Story
 
-As a [[STK-015-newcomers]] **newcomer** I want **the first page to tell me what this wiki is about and where to go**, so that **I start in the right place**. As a returning reader I want **to see what changed**, so that **I keep up without searching**.
+As a [[STK-001-readers|newcomer]] I want **the first page to tell me what this wiki is about and where to go**, so that **I start in the right place**. As a returning reader I want **to see what changed**, so that **I keep up without searching**.
 
 **PROBLEM / GOAL**
 

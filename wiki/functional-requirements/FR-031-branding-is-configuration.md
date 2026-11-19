@@ -21,7 +21,7 @@ goal: ["[[GOAL-008-one-way-into-every-systems42-wiki]]", "[[GOAL-002-show-what-s
 
 ## Story
 
-As a [[STK-011-people-who-set-up-a-project-wiki|person who sets up a project wiki]] I want **to give the dashboard my project's look without touching its code**, so that **I can keep using every new release**.
+As a [[STK-010-operators|person who sets up a project wiki]] I want **to give the dashboard my project's look without touching its code**, so that **I can keep using every new release**.
 
 **PROBLEM / GOAL**
 

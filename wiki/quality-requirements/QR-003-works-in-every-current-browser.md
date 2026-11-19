@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-19
 updated: 2026-11-19
 sources: ["[[SRC-034-dashboard-requirements-moved-from-meta]]", "[[SRC-035-grilling-session-on-the-requirements-moved-from-meta]]"]
-related: ["[[FR-050-stop-the-dashboard-when-nobody-is-watching]]", "[[QR-001-usable-on-phone-and-tablet]]", "[[QR-002-runs-alike-on-linux-and-macos]]", "[[STK-008-workshop-participants]]", "[[STK-007-workshop-facilitators]]"]
+related: ["[[FR-050-stop-the-dashboard-when-nobody-is-watching]]", "[[QR-001-usable-on-phone-and-tablet]]", "[[QR-002-runs-alike-on-linux-and-macos]]", "[[STK-008-workshop-participants-and-facilitators]]"]
 tags: [quality-requirement]
 dimensions: [flexible, reliable]
 priority: should
@@ -24,7 +24,7 @@ The dashboard behaves the same in every current desktop and mobile browser, not 
 - **Mobile:** Safari (iOS), Chrome (Android). Workshop participants join from their phones with the QR code ([[FR-046-shared-session-in-a-workshop]]).
 
 **Scenario (Q42 quality scenario).**  <!-- follows [[Q42]], https://quality.arc42.org -->
-- **Source.** A [[STK-007-workshop-facilitators|workshop facilitator]] on a laptop, or a [[STK-008-workshop-participants|participant]] on a phone.
+- **Source.** A [[STK-008-workshop-participants-and-facilitators|workshop facilitator]] on a laptop, or a [[STK-008-workshop-participants-and-facilitators|participant]] on a phone.
 - **Stimulus.** Opens and uses the dashboard in any supported browser.
 - **Environment.** A normal workshop; the dashboard runs on the facilitator's machine.
 - **Response.**

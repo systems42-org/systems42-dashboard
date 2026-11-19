@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-12
 updated: 2026-11-12
 sources: ["[[SRC-015-see-what-is-still-open]]", "[[SRC-016-grilling-session-on-open-issues]]"]
-related: ["[[FR-001-search-the-wiki]]", "[[FR-018-orientation-on-the-first-page]]", "[[FR-019-section-at-a-glance]]", "[[FR-021-sort-lists]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[STK-019-auditors-and-quality-assurance]]"]
+related: ["[[FR-001-search-the-wiki]]", "[[FR-018-orientation-on-the-first-page]]", "[[FR-019-section-at-a-glance]]", "[[FR-021-sort-lists]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[STK-001-readers]]"]
 tags: ["functional-requirement", "issues"]
 stereotype: epic
 parent: []
@@ -21,7 +21,7 @@ goal: ["[[GOAL-006-source-and-status-on-every-statement]]"]
 
 ## Epic: Summary
 
-As a [[STK-001-product-owners|product owner]] I want **to see which questions about the system are still open, overall and where they matter**, so that **nobody treats an open point as settled**.
+As a [[STK-001-readers|product owner]] I want **to see which questions about the system are still open, overall and where they matter**, so that **nobody treats an open point as settled**.
 
 **PROBLEM / GOAL**
 

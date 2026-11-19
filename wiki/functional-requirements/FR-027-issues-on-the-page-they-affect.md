@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-12
 updated: 2026-11-12
 sources: ["[[SRC-015-see-what-is-still-open]]", "[[SRC-016-grilling-session-on-open-issues]]"]
-related: ["[[FR-025-issue-list-with-filters]]", "[[STK-004-development-teams]]", "[[STK-019-auditors-and-quality-assurance]]"]
+related: ["[[FR-025-issue-list-with-filters]]", "[[STK-001-readers]]"]
 tags: ["functional-requirement", "issues"]
 stereotype: feature
 parent: ["[[FR-024-see-what-is-still-open]]"]
@@ -21,7 +21,7 @@ goal: ["[[GOAL-006-source-and-status-on-every-statement]]"]
 
 ## Story
 
-As a [[STK-004-development-teams|developer]] I want **a page to show the open issues that point at it**, so that **I know how firm it is before I build on it**.
+As a [[STK-001-readers|developer]] I want **a page to show the open issues that point at it**, so that **I know how firm it is before I build on it**.
 
 **PROBLEM / GOAL**
 

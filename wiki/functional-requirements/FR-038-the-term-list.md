@@ -21,7 +21,7 @@ goal: ["[[GOAL-003-answers-without-asking-a-colleague]]"]
 
 ## Story
 
-As a [[STK-014-domain-experts|domain expert]] I want **one list of all domain terms with their kind**, so that **I see the whole vocabulary and find the modelled terms quickly**.
+As a [[STK-001-readers|domain expert]] I want **one list of all domain terms with their kind**, so that **I see the whole vocabulary and find the modelled terms quickly**.
 
 **PROBLEM / GOAL**
 

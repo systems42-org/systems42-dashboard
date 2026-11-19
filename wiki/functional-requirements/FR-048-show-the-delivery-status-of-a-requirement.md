@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-19
 updated: 2026-11-19
 sources: ["[[SRC-034-dashboard-requirements-moved-from-meta]]", "[[SRC-035-grilling-session-on-the-requirements-moved-from-meta]]"]
-related: ["[[STK-007-workshop-facilitators]]", "[[GOAL-006-source-and-status-on-every-statement]]", "[[FR-047-see-the-requirements-as-a-story-map]]"]
+related: ["[[STK-008-workshop-participants-and-facilitators]]", "[[GOAL-006-source-and-status-on-every-statement]]", "[[FR-047-see-the-requirements-as-a-story-map]]"]
 tags: [functional-requirement, story-map]
 notation: agile
 level: story
@@ -25,7 +25,7 @@ goal: ["[[GOAL-006-source-and-status-on-every-statement]]"]
 
 > follows [[user-story-format]], [[INVEST]]
 
-As a [[STK-007-workshop-facilitators|workshop facilitator]] I want **the dashboard to show and filter requirements by delivery status**, so that **I see what is implemented, partial or outdated without opening each page**.
+As a [[STK-008-workshop-participants-and-facilitators|workshop facilitator]] I want **the dashboard to show and filter requirements by delivery status**, so that **I see what is implemented, partial or outdated without opening each page**.
 
 **Acceptance criteria.** > follows [[acceptance-criteria]]
 

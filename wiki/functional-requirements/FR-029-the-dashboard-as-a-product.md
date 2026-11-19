@@ -21,7 +21,7 @@ goal: ["[[GOAL-002-show-what-systems42-can-do]]", "[[GOAL-008-one-way-into-every
 
 ## Epic: Summary
 
-As a [[STK-011-people-who-set-up-a-project-wiki|person who sets up a project wiki]] I want **to use a released dashboard as it is and make it look like my project by configuration**, so that **my wiki gets every fix and feature without a private copy of the code**.
+As a [[STK-010-operators|person who sets up a project wiki]] I want **to use a released dashboard as it is and make it look like my project by configuration**, so that **my wiki gets every fix and feature without a private copy of the code**.
 
 **PROBLEM / GOAL**
 

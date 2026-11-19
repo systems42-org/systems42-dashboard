@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-13
 updated: 2026-11-13
 sources: ["[[SRC-019-the-dashboard-as-a-product]]", "[[SRC-020-grilling-session-on-the-dashboard-as-a-product]]"]
-related: ["[[FR-029-the-dashboard-as-a-product]]", "[[CON-003-docker-is-the-supported-way-to-run-it]]", "[[STK-008-workshop-participants]]", "[[GOAL-008-one-way-into-every-systems42-wiki]]"]
+related: ["[[FR-029-the-dashboard-as-a-product]]", "[[CON-003-docker-is-the-supported-way-to-run-it]]", "[[STK-008-workshop-participants-and-facilitators]]", "[[GOAL-008-one-way-into-every-systems42-wiki]]"]
 tags: [quality-requirement]
 dimensions: [flexible, operable]
 priority: should
@@ -20,7 +20,7 @@ testable: true
 One release of the dashboard starts the same way and shows the same pages on Linux and on macOS.
 
 **Scenario (Q42 quality scenario).**  <!-- follows [[Q42]], https://quality.arc42.org -->
-- **Source.** A [[STK-008-workshop-participants|workshop participant]].
+- **Source.** A [[STK-008-workshop-participants-and-facilitators|workshop participant]].
 - **Stimulus.** Runs `make dev` in a fresh starter kit on their own laptop.
 - **Environment.** A clean Linux or macOS machine with Docker installed, network available for the first start.
 - **Response.** The dashboard starts and shows the wiki.

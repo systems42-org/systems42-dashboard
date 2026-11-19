@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-11
 updated: 2026-11-19
 sources: ["[[SRC-007-show-the-method]]", "[[SRC-008-grilling-session-on-showing-the-method]]"]
-related: ["[[STK-013-people-learning-or-presenting-systems42]]", "[[STK-022-prospective-adopters]]", "[[STK-007-workshop-facilitators]]"]
+related: ["[[STK-013-people-learning-or-presenting-systems42]]", "[[STK-008-workshop-participants-and-facilitators]]"]
 tags: ["functional-requirement", "method"]
 stereotype: epic
 parent: []
@@ -21,7 +21,7 @@ goal: ["[[GOAL-002-show-what-systems42-can-do]]"]
 
 ## Epic: Summary
 
-As a [[STK-013-people-learning-or-presenting-systems42|person presenting Systems42]] I want **to show on a real wiki how Systems42 works, in a few minutes**, so that **[[STK-022-prospective-adopters|prospective adopters]] judge the method from a working example instead of slides**.
+As a [[STK-013-people-learning-or-presenting-systems42|person presenting Systems42]] I want **to show on a real wiki how Systems42 works, in a few minutes**, so that **prospective adopters judge the method from a working example instead of slides**.
 
 **PROBLEM / GOAL**
 

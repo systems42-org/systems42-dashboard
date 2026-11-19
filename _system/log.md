@@ -304,3 +304,15 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Created: [[FR-047-see-the-requirements-as-a-story-map]], [[FR-048-show-the-delivery-status-of-a-requirement]], [[FR-049-read-the-page-text-without-links-and-metadata]], [[FR-050-stop-the-dashboard-when-nobody-is-watching]], [[FR-051-reveal-related-page-types-layer-by-layer]], [[FR-052-see-a-terms-neighbourhood-on-its-page]], [[FR-053-reach-the-session-controls-and-the-theme-from-one-menu]], [[QR-003-works-in-every-current-browser]], [[DR-006-interactive-diagrams-are-projected-on-the-server-and-laid-out-in-the-browser]], SRC-034, SRC-035.
 - Updated: FR-001 (⌘K), FR-013, FR-017, FR-034, FR-040 (edge rule), FR-046 (child lists and a link to FR-050), `_system/index.md`.
 - Checked against the code of release 0.11.4: the context diagram, the data model, the goals diagram and the requirement breakdown are Mermaid, the term network and the metamodel page are cytoscape (DR-006); the menu of FR-053 exists with all its entries. Closing round: goals of the new pages confirmed by Peter Gerstbach; FR-040 and FR-046 are Gernot Starke's pages and were changed only in their child lists, a link and one edge rule. meta removes its copies in a pull request after this lands.
+
+## [2026-11-19] inspect | Stakeholders merged, 23 to 7
+- Origin: meta issue #38, step 3. Gernot Starke decided group by group.
+- Decisions:
+  - Readers: STK-002 to 005, 009 and 014 to 019 merge into [[STK-001-readers]]. Their roles become aliases, and four concerns stay.
+  - Workshop: STK-007 merges into [[STK-008-workshop-participants-and-facilitators]].
+  - Method audience: STK-022 (prospective adopters, an assumption) is dropped. [[STK-013-people-learning-or-presenting-systems42]] stays.
+  - Operators: STK-011 merges into [[STK-010-operators]].
+  - Maintainers: STK-021 merges into [[STK-012-maintainers]].
+  - STK-006 (AI agents) is dropped. STK-020 and STK-023 stay.
+- Updated: every link to a retired ID, `_system/index.md`. User stories keep their role as the link label. FR-011 and FR-033 had STK-022 as actor and now name STK-013. The `make new` and `make sync` mentions left with the merged pages, because those targets no longer exist here.
+- Not changed: `raw/sources/` and older log entries still name the retired IDs.

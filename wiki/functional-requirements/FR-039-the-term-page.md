@@ -21,7 +21,7 @@ goal: ["[[GOAL-003-answers-without-asking-a-colleague]]"]
 
 ## Story
 
-As a [[STK-004-development-teams|developer]] I want **one page per term with its meaning and, for a modelled term, its structure**, so that **I build what the domain means**.
+As a [[STK-001-readers|developer]] I want **one page per term with its meaning and, for a modelled term, its structure**, so that **I build what the domain means**.
 
 **PROBLEM / GOAL**
 

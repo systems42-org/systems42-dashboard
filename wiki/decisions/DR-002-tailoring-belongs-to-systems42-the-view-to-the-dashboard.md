@@ -6,7 +6,7 @@ status: accepted
 created: 2026-11-11
 updated: 2026-11-11
 sources: ["[[SRC-012-conversation-on-tailoring-and-the-view]]"]
-related: ["[[STK-023-keyholder]]", "[[STK-003-requirements-engineers]]", "[[STK-006-ai-agents]]", "[[FR-001-search-the-wiki]]", "[[FR-012-guided-path-through-the-wiki]]"]
+related: ["[[STK-023-keyholder]]", "[[STK-001-readers]]", "[[FR-001-search-the-wiki]]", "[[FR-012-guided-path-through-the-wiki]]"]
 tags: [decision-record]
 aliases: []
 kind: architecture
@@ -42,7 +42,7 @@ Where does each belong?
 
 ## Decision Drivers
 
-- The AI agent ([[STK-006-ai-agents]]) must know which parts the project uses, so capture writes no pages for left-out parts and inspect does not report them as missing.
+- The AI agent must know which parts the project uses, so capture writes no pages for left-out parts and inspect does not report them as missing.
 - The dashboard is a read-only view ([[CON-002-dashboard-never-writes-to-the-wiki]], [[GOAL-001-trusted-answers]]).
 - A presenter must be able to focus a demo without changing the project ([[GOAL-002-show-what-systems42-can-do]]).
 

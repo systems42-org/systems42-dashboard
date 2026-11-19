@@ -21,7 +21,7 @@ goal: ["[[GOAL-003-answers-without-asking-a-colleague]]"]
 
 ## Story
 
-As a [[STK-008-workshop-participants]] **workshop participant** I want **every page to show where it belongs**, so that **I don't get lost after a few clicks and can always go one level up**.
+As a [[STK-008-workshop-participants-and-facilitators|workshop participant]] I want **every page to show where it belongs**, so that **I don't get lost after a few clicks and can always go one level up**.
 
 **PROBLEM / GOAL**
 

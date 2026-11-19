@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-12
 updated: 2026-11-19
 sources: ["[[SRC-013-browse-by-area-and-section]]", "[[SRC-014-grilling-session-on-browsing]]"]
-related: ["[[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]]", "[[FR-012-guided-path-through-the-wiki]]", "[[STK-011-people-who-set-up-a-project-wiki]]", "[[FR-044-sections-come-from-the-repositorys-metamodel]]", "[[FR-046-shared-session-in-a-workshop]]"]
+related: ["[[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]]", "[[FR-012-guided-path-through-the-wiki]]", "[[STK-010-operators]]", "[[FR-044-sections-come-from-the-repositorys-metamodel]]", "[[FR-046-shared-session-in-a-workshop]]"]
 tags: ["functional-requirement", "navigation"]
 stereotype: feature
 parent: ["[[FR-017-browse-by-area-and-section]]"]
@@ -21,7 +21,7 @@ goal: ["[[GOAL-003-answers-without-asking-a-colleague]]"]
 
 ## Story
 
-As a [[STK-011-people-who-set-up-a-project-wiki]] **person setting up a project wiki** I want **the dashboard to show only the sections my project uses**, so that **readers don't stumble over parts of the method we left out**.
+As a [[STK-010-operators|person setting up a project wiki]] I want **the dashboard to show only the sections my project uses**, so that **readers don't stumble over parts of the method we left out**.
 
 **PROBLEM / GOAL**
 

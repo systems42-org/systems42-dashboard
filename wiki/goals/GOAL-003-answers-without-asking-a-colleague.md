@@ -10,7 +10,7 @@ related: []
 tags: ["goal"]
 stereotype: objective
 parent: ["[[GOAL-001-trusted-answers]]"]
-beneficiary: ["[[STK-004-development-teams]]", "[[STK-015-newcomers]]", "[[STK-008-workshop-participants]]", "[[STK-014-domain-experts]]"]
+beneficiary: ["[[STK-001-readers]]", "[[STK-008-workshop-participants-and-facilitators]]"]
 metric: Share of 10 prepared questions that a reader who has never seen the wiki answers correctly within 60 seconds each.
 baseline:
 target: 8 of 10

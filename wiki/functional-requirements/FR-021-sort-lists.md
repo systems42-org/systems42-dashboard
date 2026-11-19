@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-12
 updated: 2026-11-12
 sources: ["[[SRC-013-browse-by-area-and-section]]", "[[SRC-014-grilling-session-on-browsing]]"]
-related: ["[[FR-022-lists-keep-sort-and-filter-in-their-address]]", "[[STK-001-product-owners]]", "[[STK-005-testers]]"]
+related: ["[[FR-022-lists-keep-sort-and-filter-in-their-address]]", "[[STK-001-readers]]"]
 tags: ["functional-requirement", "navigation"]
 stereotype: feature
 parent: ["[[FR-017-browse-by-area-and-section]]"]
@@ -21,7 +21,7 @@ goal: ["[[GOAL-003-answers-without-asking-a-colleague]]", "[[GOAL-004-requiremen
 
 ## Story
 
-As a [[STK-001-product-owners]] **product owner** I want **to sort a list by several columns at once, such as priority, then release, then order**, so that **I see the list in the order my work needs**.
+As a [[STK-001-readers|product owner]] I want **to sort a list by several columns at once, such as priority, then release, then order**, so that **I see the list in the order my work needs**.
 
 **PROBLEM / GOAL**
 

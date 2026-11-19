@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-13
 updated: 2026-11-13
 sources: ["[[SRC-019-the-dashboard-as-a-product]]"]
-related: ["[[CON-003-docker-is-the-supported-way-to-run-it]]", "[[STK-022-prospective-adopters]]", "[[STK-008-workshop-participants]]"]
+related: ["[[CON-003-docker-is-the-supported-way-to-run-it]]", "[[STK-008-workshop-participants-and-facilitators]]"]
 tags: ["functional-requirement", "product"]
 stereotype: feature
 parent: ["[[FR-029-the-dashboard-as-a-product]]"]
@@ -21,7 +21,7 @@ goal: ["[[GOAL-002-show-what-systems42-can-do]]", "[[GOAL-008-one-way-into-every
 
 ## Story
 
-As a [[STK-022-prospective-adopters|prospective adopter]] I want **the Systems42 starter kit to start its dashboard right away**, so that **I see my first wiki without setting anything up**.
+As a [[STK-013-people-learning-or-presenting-systems42|person learning Systems42]] I want **the Systems42 starter kit to start its dashboard right away**, so that **I see my first wiki without setting anything up**.
 
 **PROBLEM / GOAL**
 

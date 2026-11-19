@@ -10,7 +10,7 @@ related: ["[[GOAL-002-show-what-systems42-can-do]]", "[[FR-029-the-dashboard-as-
 tags: ["goal"]
 stereotype: objective
 parent: ["[[GOAL-001-trusted-answers]]"]
-beneficiary: ["[[STK-011-people-who-set-up-a-project-wiki]]", "[[STK-010-people-who-run-the-dashboard]]", "[[STK-012-maintainers]]", "[[STK-007-workshop-facilitators]]", "[[STK-022-prospective-adopters]]"]
+beneficiary: ["[[STK-010-operators]]", "[[STK-012-maintainers]]", "[[STK-008-workshop-participants-and-facilitators]]"]
 metric:
 baseline:
 target:

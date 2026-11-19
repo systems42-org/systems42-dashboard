@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-19
 updated: 2026-11-19
 sources: ["[[SRC-034-dashboard-requirements-moved-from-meta]]", "[[SRC-035-grilling-session-on-the-requirements-moved-from-meta]]"]
-related: ["[[STK-002-business-analysts]]", "[[FR-017-browse-by-area-and-section]]", "[[FR-036-goal-coverage-matrix]]", "[[DR-006-interactive-diagrams-are-projected-on-the-server-and-laid-out-in-the-browser]]"]
+related: ["[[STK-001-readers]]", "[[FR-017-browse-by-area-and-section]]", "[[FR-036-goal-coverage-matrix]]", "[[DR-006-interactive-diagrams-are-projected-on-the-server-and-laid-out-in-the-browser]]"]
 tags: [functional-requirement, story-map]
 notation: agile
 level: feature
@@ -23,7 +23,7 @@ goal: ["[[GOAL-003-answers-without-asking-a-colleague]]"]
 
 ## Story
 
-As a [[STK-002-business-analysts|business analyst]] I want **to see the requirements hierarchy as a diagram, and a detail diagram for an element I select**, so that **I grasp the structure at a glance instead of reading lists**.
+As a [[STK-001-readers|business analyst]] I want **to see the requirements hierarchy as a diagram, and a detail diagram for an element I select**, so that **I grasp the structure at a glance instead of reading lists**.
 
 **PROBLEM / GOAL**
 

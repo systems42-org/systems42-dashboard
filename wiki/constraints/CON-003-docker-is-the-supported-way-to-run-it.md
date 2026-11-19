@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-13
 updated: 2026-11-17
 sources: ["[[SRC-019-the-dashboard-as-a-product]]", "[[SRC-020-grilling-session-on-the-dashboard-as-a-product]]", "[[SRC-027-dashboard-distribution-and-metamodel-contract]]", "[[SRC-028-grilling-session-on-dashboard-distribution]]"]
-related: ["[[FR-029-the-dashboard-as-a-product]]", "[[QR-002-runs-alike-on-linux-and-macos]]", "[[DR-004-releases-are-container-images-pinned-per-wiki]]", "[[STK-010-people-who-run-the-dashboard]]", "[[ISS-006-other-container-engines-than-docker]]"]
+related: ["[[FR-029-the-dashboard-as-a-product]]", "[[QR-002-runs-alike-on-linux-and-macos]]", "[[DR-004-releases-are-container-images-pinned-per-wiki]]", "[[STK-010-operators]]", "[[ISS-006-other-container-engines-than-docker]]"]
 tags: [constraint]
 category: technical
 ---

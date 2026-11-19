@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-10
 updated: 2026-11-18
 sources: ["[[SRC-001-stakeholders-of-the-systems42-dashboard]]", "[[SRC-002-grilling-session-on-stakeholders]]"]
-related: ["[[STK-001-product-owners]]", "[[STK-004-development-teams]]", "[[STK-020-data-protection-and-security-officers]]", "[[STK-021-builders-of-project-specific-dashboards]]", "[[STK-023-keyholder]]"]
+related: ["[[STK-001-readers]]", "[[STK-020-data-protection-and-security-officers]]", "[[STK-012-maintainers]]", "[[STK-023-keyholder]]"]
 tags: [constraint]
 category: organizational
 ---
@@ -15,7 +15,7 @@ category: organizational
 
 **Constraint.** The dashboard is one application. It serves workshops, demos and
 everyday work on requirements and architecture, for example by product owners
-([[STK-001-product-owners]]) and development teams ([[STK-004-development-teams]]).
+and development teams ([[STK-001-readers]]).
 It shows what Systems42 makes visible. It is not built to be production-ready for
 every environment.
 
@@ -23,7 +23,7 @@ It has no login for now. Use it only on a network you trust.
 
 **Rationale / origin.** Set by Gernot Starke ([[SRC-002-grilling-session-on-stakeholders]]).
 The dashboard exists to show the method at work. Projects that need more can build
-their own dashboards ([[STK-021-builders-of-project-specific-dashboards]]).
+their own dashboards ([[STK-012-maintainers]]).
 
 **Impact.**
 - Anyone on the same network who knows the address can read everything. The QR

@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-19
 updated: 2026-11-19
 sources: ["[[SRC-034-dashboard-requirements-moved-from-meta]]", "[[SRC-035-grilling-session-on-the-requirements-moved-from-meta]]"]
-related: ["[[STK-002-business-analysts]]", "[[FR-039-the-term-page]]", "[[FR-051-reveal-related-page-types-layer-by-layer]]"]
+related: ["[[STK-001-readers]]", "[[FR-039-the-term-page]]", "[[FR-051-reveal-related-page-types-layer-by-layer]]"]
 tags: [functional-requirement, domain-terms]
 notation: agile
 level: story
@@ -25,7 +25,7 @@ goal: ["[[GOAL-003-answers-without-asking-a-colleague]]"]
 
 > follows [[user-story-format]], [[INVEST]]
 
-As a [[STK-002-business-analysts|business analyst]] I want **each term page to show the term and the terms next to it as a small network**, so that **I see what the term sits among without leaving the page**.
+As a [[STK-001-readers|business analyst]] I want **each term page to show the term and the terms next to it as a small network**, so that **I see what the term sits among without leaving the page**.
 
 **Acceptance criteria.** > follows [[acceptance-criteria]]
 

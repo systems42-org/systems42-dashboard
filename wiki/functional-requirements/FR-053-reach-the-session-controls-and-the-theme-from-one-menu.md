@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-19
 updated: 2026-11-19
 sources: ["[[SRC-034-dashboard-requirements-moved-from-meta]]", "[[SRC-035-grilling-session-on-the-requirements-moved-from-meta]]"]
-related: ["[[STK-007-workshop-facilitators]]", "[[STK-023-keyholder]]", "[[FR-046-shared-session-in-a-workshop]]"]
+related: ["[[STK-008-workshop-participants-and-facilitators]]", "[[STK-023-keyholder]]", "[[FR-046-shared-session-in-a-workshop]]"]
 tags: [functional-requirement, page-frame]
 notation: agile
 level: story
@@ -25,7 +25,7 @@ goal: ["[[GOAL-002-show-what-systems42-can-do]]"]
 
 > follows [[user-story-format]], [[INVEST]]
 
-As a [[STK-007-workshop-facilitators|workshop facilitator]] I want **one menu on every page that holds the controls of the session and the theme**, so that **the header and the footer stay free of them**.
+As a [[STK-008-workshop-participants-and-facilitators|workshop facilitator]] I want **one menu on every page that holds the controls of the session and the theme**, so that **the header and the footer stay free of them**.
 
 **Acceptance criteria.** > follows [[acceptance-criteria]]
 

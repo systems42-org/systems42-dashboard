@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-19
 updated: 2026-11-19
 sources: ["[[SRC-034-dashboard-requirements-moved-from-meta]]", "[[SRC-035-grilling-session-on-the-requirements-moved-from-meta]]"]
-related: ["[[STK-010-people-who-run-the-dashboard]]", "[[FR-016-see-whether-the-page-is-still-connected]]", "[[QR-003-works-in-every-current-browser]]", "[[CON-003-docker-is-the-supported-way-to-run-it]]"]
+related: ["[[STK-010-operators]]", "[[FR-016-see-whether-the-page-is-still-connected]]", "[[QR-003-works-in-every-current-browser]]", "[[CON-003-docker-is-the-supported-way-to-run-it]]"]
 tags: [functional-requirement, session]
 notation: agile
 level: story
@@ -25,7 +25,7 @@ goal: ["[[GOAL-008-one-way-into-every-systems42-wiki]]"]
 
 > follows [[user-story-format]], [[INVEST]]
 
-As a [[STK-010-people-who-run-the-dashboard|person who runs the dashboard]] I want **the dashboard to end by itself when nobody is watching**, so that **no forgotten process holds my port**.
+As a [[STK-010-operators|person who runs the dashboard]] I want **the dashboard to end by itself when nobody is watching**, so that **no forgotten process holds my port**.
 
 **Acceptance criteria.** > follows [[acceptance-criteria]]
 

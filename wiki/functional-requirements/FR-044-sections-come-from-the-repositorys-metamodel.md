@@ -21,7 +21,7 @@ goal: ["[[GOAL-008-one-way-into-every-systems42-wiki]]", "[[GOAL-003-answers-wit
 
 ## Story
 
-As a [[STK-011-people-who-set-up-a-project-wiki|person who sets up a project wiki]] I want **the dashboard to show the sections my repository's metamodel declares**, so that **a released dashboard fits my wiki without a code change**.
+As a [[STK-010-operators|person who sets up a project wiki]] I want **the dashboard to show the sections my repository's metamodel declares**, so that **a released dashboard fits my wiki without a code change**.
 
 **PROBLEM / GOAL**
 

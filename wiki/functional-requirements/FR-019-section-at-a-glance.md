@@ -21,7 +21,7 @@ goal: ["[[GOAL-003-answers-without-asking-a-colleague]]", "[[GOAL-006-source-and
 
 ## Story
 
-As a [[STK-004-development-teams]] **developer** I want **to see how much a section holds and how far it is agreed, before I open it**, so that **I pick the right section and know how much to trust it**.
+As a [[STK-001-readers|developer]] I want **to see how much a section holds and how far it is agreed, before I open it**, so that **I pick the right section and know how much to trust it**.
 
 **PROBLEM / GOAL**
 

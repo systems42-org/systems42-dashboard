@@ -21,7 +21,7 @@ goal: ["[[GOAL-003-answers-without-asking-a-colleague]]"]
 
 ## Story
 
-As a [[STK-004-development-teams]] **developer** I want **to see why a hit is in the list when it doesn't contain my exact words**, so that **I trust the hit instead of taking it for a mistake**.
+As a [[STK-001-readers|developer]] I want **to see why a hit is in the list when it doesn't contain my exact words**, so that **I trust the hit instead of taking it for a mistake**.
 
 **PROBLEM / GOAL**
 

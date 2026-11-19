@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-12
 updated: 2026-11-12
 sources: ["[[SRC-017-usable-on-phone-and-tablet]]", "[[SRC-018-grilling-session-on-phone-and-tablet]]"]
-related: ["[[GOAL-003-answers-without-asking-a-colleague]]", "[[GOAL-007-readers-who-come-back]]", "[[STK-008-workshop-participants]]", "[[STK-001-product-owners]]", "[[STK-004-development-teams]]", "[[STK-013-people-learning-or-presenting-systems42]]", "[[DR-003-quality-requirements-are-classified-by-q42-dimensions]]"]
+related: ["[[GOAL-003-answers-without-asking-a-colleague]]", "[[GOAL-007-readers-who-come-back]]", "[[STK-008-workshop-participants-and-facilitators]]", "[[STK-001-readers]]", "[[STK-013-people-learning-or-presenting-systems42]]", "[[DR-003-quality-requirements-are-classified-by-q42-dimensions]]"]
 tags: [quality-requirement]
 dimensions: [usable, flexible]
 priority: should
@@ -20,7 +20,7 @@ testable: true
 Every page of the dashboard is easy to read and use on a phone or a tablet, not only on a laptop. The layout adapts to the screen.
 
 **Scenario (Q42 quality scenario).**  <!-- follows [[Q42]], https://quality.arc42.org -->
-- **Source.** A [[STK-008-workshop-participants|workshop participant]].
+- **Source.** A [[STK-008-workshop-participants-and-facilitators|workshop participant]].
 - **Stimulus.** Opens a link to a dashboard page on a phone.
 - **Environment.** Phone in portrait, 320 CSS pixels wide, normal workshop use.
 - **Response.** The page fits the screen. Search, menu, lists, filters and links all work by touch.

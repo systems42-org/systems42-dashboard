@@ -10,7 +10,7 @@ related: []
 tags: ["goal"]
 stereotype: objective
 parent: ["[[GOAL-001-trusted-answers]]"]
-beneficiary: ["[[STK-009-software-architects]]", "[[STK-004-development-teams]]", "[[STK-017-operations-staff]]"]
+beneficiary: ["[[STK-001-readers]]"]
 metric: "Share of `drivers:` links shown on both linked pages."
 baseline:
 target: "100 %"

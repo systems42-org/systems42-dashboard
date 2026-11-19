@@ -21,7 +21,7 @@ goal: ["[[GOAL-003-answers-without-asking-a-colleague]]"]
 
 ## Story
 
-As a [[STK-001-product-owners]] **product owner** I want **search to find pages by their tags and by values such as `Must` or `security`**, so that **I find pages by what they are labelled with, not only by their wording**.
+As a [[STK-001-readers|product owner]] I want **search to find pages by their tags and by values such as `Must` or `security`**, so that **I find pages by what they are labelled with, not only by their wording**.
 
 **PROBLEM / GOAL**
 

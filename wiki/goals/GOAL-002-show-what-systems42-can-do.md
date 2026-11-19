@@ -10,7 +10,7 @@ related: ["[[CON-001-proof-of-concept-not-production-ready]]"]
 tags: [goal]
 stereotype: objective
 parent: ["[[GOAL-001-trusted-answers]]"]
-beneficiary: ["[[STK-013-people-learning-or-presenting-systems42]]", "[[STK-022-prospective-adopters]]"]
+beneficiary: ["[[STK-013-people-learning-or-presenting-systems42]]"]
 metric:
 baseline:
 target:

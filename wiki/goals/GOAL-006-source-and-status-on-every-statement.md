@@ -10,7 +10,7 @@ related: []
 tags: ["goal"]
 stereotype: objective
 parent: ["[[GOAL-001-trusted-answers]]"]
-beneficiary: ["[[STK-003-requirements-engineers]]", "[[STK-001-product-owners]]", "[[STK-019-auditors-and-quality-assurance]]"]
+beneficiary: ["[[STK-001-readers]]"]
 metric: Share of 10 statements for which a reader correctly names the status and the source.
 baseline:
 target: 10 of 10

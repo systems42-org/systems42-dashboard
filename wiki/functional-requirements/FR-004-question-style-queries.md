@@ -21,7 +21,7 @@ goal: ["[[GOAL-003-answers-without-asking-a-colleague]]"]
 
 ## Story
 
-As a [[STK-008-workshop-participants]] **workshop participant** I want **to type my question as I would ask it**, so that **search finds the answer without me guessing keywords**.
+As a [[STK-008-workshop-participants-and-facilitators|workshop participant]] I want **to type my question as I would ask it**, so that **search finds the answer without me guessing keywords**.
 
 **PROBLEM / GOAL**
 

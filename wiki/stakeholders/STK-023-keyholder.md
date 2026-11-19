@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-10
 updated: 2026-11-19
 sources: ["[[SRC-001-stakeholders-of-the-systems42-dashboard]]", "[[SRC-002-grilling-session-on-stakeholders]]", "[[SRC-033-grilling-session-on-the-shared-session]]"]
-related: ["[[STK-007-workshop-facilitators]]", "[[STK-010-people-who-run-the-dashboard]]", "[[CON-001-proof-of-concept-not-production-ready]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[ISS-001-who-holds-the-keys-in-parallel-work]]", "[[FR-046-shared-session-in-a-workshop]]"]
+related: ["[[STK-008-workshop-participants-and-facilitators]]", "[[STK-010-operators]]", "[[CON-001-proof-of-concept-not-production-ready]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[ISS-001-who-holds-the-keys-in-parallel-work]]", "[[FR-046-shared-session-in-a-workshop]]"]
 tags: ["stakeholder"]
 aliases: ["Jedi Master"]
 role: Person who started the dashboard app
@@ -37,8 +37,8 @@ back to an earlier holder. "The person who started the app" and "the first tab t
 connect" are usually the same. Where they differ, the first tab holds the rights
 ([[ISS-001-who-holds-the-keys-in-parallel-work]], resolved). The session is described in [[FR-046-shared-session-in-a-workshop]].
 
-**Not the facilitator.** The workshop facilitator ([[STK-007-workshop-facilitators]]) leads the workshop and
-holds the keys only if their tab connected first. Running the app ([[STK-010-people-who-run-the-dashboard]]) is
+**Not the facilitator.** The workshop facilitator ([[STK-008-workshop-participants-and-facilitators]]) leads the workshop and
+holds the keys only if their tab connected first. Running the app ([[STK-010-operators]]) is
 the usual way to become Keyholder.
 
 **The name.** It replaces "facilitator" for this right. Rejected: Host (a
