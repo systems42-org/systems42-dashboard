@@ -21,6 +21,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
   next.
 
 ### Changed
+- Dashboard release 0.11.3 (`_system/apps/dashboard/VERSION`).
 - Dashboard: the systems42 brand has a new intro. The systems42 logo builds
   itself (the arches swing in, the ribbon twists into place), then the letters
   of the wordmark "systems42" fly in, spinning, and land; about 2 s, then a
