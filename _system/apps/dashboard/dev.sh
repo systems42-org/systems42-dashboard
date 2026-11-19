@@ -194,7 +194,9 @@ case "${1:-}" in
   $raise"
     fi
     grep -qF "$version" CHANGELOG.md || stop "CHANGELOG.md does not name release $version. Add a line for it, by pull request."
-    echo "→ Running the tests before release $version…"
+    # ${version}, not $version: macOS bash 3.2 under a UTF-8 locale reads the
+    # bytes of "…" as part of the name and stops with "unbound variable".
+    echo "→ Running the tests before release ${version}…"
     "$0" test || stop "The tests failed. Nothing was published."
     git tag "$tag"
     git push -q origin "$tag" || { git tag -d "$tag" >/dev/null; stop "Could not push the tag. Nothing was published."; }
