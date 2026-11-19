@@ -20,6 +20,11 @@ Unreleased changes sit at the top until the next Starter Kit release.
   pass. Both bring `main` up to date first, and every refusal says what to do
   next.
 
+### Removed
+- This repository no longer creates project wikis: `_system/scripts/new-project.sh`,
+  its test `test-new-project.sh`, `migrate-decisions.py` and the `new-project`
+  skill are gone. New projects come from the Systems42 meta repository.
+
 ### Changed
 - Dashboard: the Configure dialog is now called View, and the view lives in
   the running dashboard only (FR-046, DR-002). The dashboard writes no file
