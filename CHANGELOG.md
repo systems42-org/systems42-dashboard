@@ -26,6 +26,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
   skill are gone. New projects come from the Systems42 meta repository.
 
 ### Changed
+- Dashboard release 0.12.0 (`_system/apps/dashboard/VERSION`).
 - Dashboard: the Configure dialog is now called View, and the view lives in
   the running dashboard only (FR-046, DR-002). The dashboard writes no file
   any more. After a restart everything the project uses shows again.
