@@ -4,7 +4,7 @@ type: functional-requirement
 title: Header and footer on every page
 status: draft
 created: 2026-11-11
-updated: 2026-11-11
+updated: 2026-11-19
 sources: ["[[SRC-010-header-and-footer-on-every-page]]", "[[SRC-011-grilling-session-on-header-and-footer]]"]
 related: ["[[STK-015-newcomers]]", "[[FR-001-search-the-wiki]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]"]
 tags: ["functional-requirement", "page-frame"]
@@ -39,7 +39,7 @@ The header and the footer grew item by item. Until 2026-11-11 the footer mixed l
 ## Hierarchy
 
 - **Parent:** none.
-- **Children:** [[FR-014-reach-the-main-content-from-the-header]], [[FR-015-read-the-formalities-in-the-footer]], [[FR-016-see-whether-the-page-is-still-connected]].
+- **Children:** [[FR-014-reach-the-main-content-from-the-header]], [[FR-015-read-the-formalities-in-the-footer]], [[FR-016-see-whether-the-page-is-still-connected]], [[FR-053-reach-the-session-controls-and-the-theme-from-one-menu]].
 
 > [!note] Open points
 > None.

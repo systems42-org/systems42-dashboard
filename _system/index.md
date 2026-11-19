@@ -100,11 +100,19 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-044-sections-come-from-the-repositorys-metamodel]] Sections come from the repository's metamodel (feature, Must, draft)
 - [[FR-045-a-prompt-template-for-a-brand]] A prompt template for a brand (feature, Could, draft)
 - [[FR-046-shared-session-in-a-workshop]] Shared session in a workshop (feature, Should, draft)
+- [[FR-047-see-the-requirements-as-a-story-map]] See the requirements as a story map (feature, Should, draft)
+- [[FR-048-show-the-delivery-status-of-a-requirement]] Show the delivery status of a requirement (story, Could, draft)
+- [[FR-049-read-the-page-text-without-links-and-metadata]] Read the page text without links and metadata (story, Should, draft)
+- [[FR-050-stop-the-dashboard-when-nobody-is-watching]] Stop the dashboard when nobody is watching (story, Should, draft)
+- [[FR-051-reveal-related-page-types-layer-by-layer]] Reveal related page types layer by layer (story, Should, draft)
+- [[FR-052-see-a-terms-neighbourhood-on-its-page]] See a term's neighbourhood on its page (story, Should, draft)
+- [[FR-053-reach-the-session-controls-and-the-theme-from-one-menu]] Reach the session controls and the theme from one menu (story, Could, draft)
 
 ## Quality requirements
 
 - [[QR-001-usable-on-phone-and-tablet]] Usable on phone and tablet (usable, flexible, should, draft)
 - [[QR-002-runs-alike-on-linux-and-macos]] Runs alike on Linux and macOS (flexible, operable, should, draft)
+- [[QR-003-works-in-every-current-browser]] Works in every current browser (flexible, reliable, should, draft)
 
 ## Constraints
 
@@ -122,6 +130,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[DR-003-quality-requirements-are-classified-by-q42-dimensions]] Quality requirements are classified by Q42 dimensions (accepted)
 - [[DR-004-releases-are-container-images-pinned-per-wiki]] Releases are container images, pinned per wiki (accepted)
 - [[DR-005-the-dashboard-lives-in-its-own-repository]] The dashboard lives in its own repository, with its requirements and its code (review)
+- [[DR-006-interactive-diagrams-are-projected-on-the-server-and-laid-out-in-the-browser]] Interactive diagrams are projected on the server and laid out in the browser (draft)
 
 ## Issues
 
@@ -167,3 +176,5 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-031-grilling-session-on-the-default-brand]] Grilling session on the default brand (interview)
 - [[SRC-032-shared-session-in-a-workshop]] Shared session in a workshop (document)
 - [[SRC-033-grilling-session-on-the-shared-session]] Grilling session on the shared session (interview)
+- [[SRC-034-dashboard-requirements-moved-from-meta]] Dashboard requirements that still lived in meta (document)
+- [[SRC-035-grilling-session-on-the-requirements-moved-from-meta]] Grilling session on the requirements moved from meta (interview)

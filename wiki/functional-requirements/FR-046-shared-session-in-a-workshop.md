@@ -31,7 +31,7 @@ As a [[STK-007-workshop-facilitators|workshop facilitator]] I want **the group t
 - **View.** A dialog called View shows everyone which areas and sections are shown. Only the Keyholder changes it. A hidden section leaves the home page, the area pages and the top bar, but stays reachable by address and search.
 - The view offers only what the tailoring includes ([[FR-023-areas-and-sections-follow-the-tailoring]], [[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]]).
 - The view lasts until the dashboard stops. After a restart the dashboard shows everything the project uses. It writes no file for the view ([[CON-002-dashboard-never-writes-to-the-wiki]]).
-- **End.** Only the Keyholder sees "Disconnect all", which ends the session for everyone. The dashboard stops itself a few seconds after the last tab closes.
+- **End.** Only the Keyholder sees "Disconnect all", which ends the session for everyone. The dashboard stops itself a few seconds after the last tab closes ([[FR-050-stop-the-dashboard-when-nobody-is-watching]]).
 - **Reload.** Anyone can make the dashboard read the wiki from disk again.
 
 **Success metric(s).** Three devices join by the QR code. After the Keyholder hides a section and the others reload, the section is gone from the home page on all three. The wiki's repository holds no changed file.
@@ -41,7 +41,7 @@ As a [[STK-007-workshop-facilitators|workshop facilitator]] I want **the group t
 ## Hierarchy
 
 - **Parent:** [[FR-010-show-the-method]]
-- **Children:** none.
+- **Children:** [[FR-050-stop-the-dashboard-when-nobody-is-watching]]
 
 > [!note] Open points
 > - Not built yet: the dialog is still called Configure and saves the view in `_system/dashboard.yaml`. All other points are built.

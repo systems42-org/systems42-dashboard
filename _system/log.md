@@ -288,3 +288,19 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Created: [[FR-046-shared-session-in-a-workshop]], SRC-032, SRC-033.
 - Updated: ISS-001 (resolved), STK-023, CON-002 (one impact line), FR-010 (child list), FR-015 and FR-023 (links), `_system/index.md`.
 - Parked: Q5 and Q6 are not built. Configure still saves to `_system/dashboard.yaml`, noted in FR-046. DR-002 is accepted and was not edited, so it does not link FR-046. The success metric of FR-046 is a proposal by Claude.
+
+## [2026-11-19] capture | Dashboard requirements that still lived in meta
+- Source: `raw/dashboard-requirements-moved-from-meta.md`, now [[SRC-034-dashboard-requirements-moved-from-meta]] in `raw/ingested/`. The answers are [[SRC-035-grilling-session-on-the-requirements-moved-from-meta]]. Origin: meta issue #49, sub-issue of meta #38.
+- Grill gate: compared twelve meta pages with this wiki after pulling it (FR-046 had just been captured and covers the QR join, the connected tabs, the Keyholder, the View and Disconnect all). Peter Gerstbach answered eight questions.
+- Decisions:
+  - Q1: new pages use the DR-038 form (`notation: agile`, `level:`), so #33 has less to migrate.
+  - Q2: meta FR-013 is a Should story under FR-034, only the text of a page; an explicit wish of Peter Hruschka (minutes of 2026-10-12, "Hoch").
+  - Q3: meta FR-012 is a feature under FR-017 with the detail diagram and building blocks; the wikis the dashboard shows have them.
+  - Q4: meta FR-034 is a Could story, not built, depends on meta's Implement loop.
+  - Q5: meta QR-004 is one quality requirement, QR-003.
+  - Q6: meta DR-022 (self-shutdown) is a requirement, not a decision record: FR-050 under FR-046, can be switched off when the dashboard starts.
+  - Q7: meta DR-023 (term network): the requirements go to FR-040, FR-051 and FR-052; only the pattern becomes a small decision record, DR-006.
+  - Q8: the key ⌘K goes into FR-001; the menu is FR-053 (Could); no help page; the five nav entries of meta DR-032 are not taken, FR-014 stands.
+- Created: [[FR-047-see-the-requirements-as-a-story-map]], [[FR-048-show-the-delivery-status-of-a-requirement]], [[FR-049-read-the-page-text-without-links-and-metadata]], [[FR-050-stop-the-dashboard-when-nobody-is-watching]], [[FR-051-reveal-related-page-types-layer-by-layer]], [[FR-052-see-a-terms-neighbourhood-on-its-page]], [[FR-053-reach-the-session-controls-and-the-theme-from-one-menu]], [[QR-003-works-in-every-current-browser]], [[DR-006-interactive-diagrams-are-projected-on-the-server-and-laid-out-in-the-browser]], SRC-034, SRC-035.
+- Updated: FR-001 (⌘K), FR-013, FR-017, FR-034, FR-040 (edge rule), FR-046 (child lists and a link to FR-050), `_system/index.md`.
+- Checked against the code of release 0.11.4: the context diagram, the data model, the goals diagram and the requirement breakdown are Mermaid, the term network and the metamodel page are cytoscape (DR-006); the menu of FR-053 exists with all its entries. Closing round: goals of the new pages confirmed by Peter Gerstbach; FR-040 and FR-046 are Gernot Starke's pages and were changed only in their child lists, a link and one edge rule. meta removes its copies in a pull request after this lands.

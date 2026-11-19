@@ -4,8 +4,8 @@ type: functional-requirement
 title: Search the wiki
 status: draft
 created: 2026-11-11
-updated: 2026-11-11
-sources: ["[[SRC-005-search-the-wiki]]", "[[SRC-006-grilling-session-on-search]]"]
+updated: 2026-11-19
+sources: ["[[SRC-005-search-the-wiki]]", "[[SRC-006-grilling-session-on-search]]", "[[SRC-035-grilling-session-on-the-requirements-moved-from-meta]]"]
 related: ["[[STK-004-development-teams]]", "[[STK-015-newcomers]]", "[[STK-008-workshop-participants]]", "[[STK-014-domain-experts]]", "[[CON-001-proof-of-concept-not-production-ready]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]"]
 tags: ["functional-requirement", "search"]
 stereotype: epic
@@ -27,6 +27,8 @@ As a **reader** ([[STK-004-development-teams|development team]], [[STK-015-newco
 
 A reader searches from every page of the dashboard, by ID, title or any word, in a popup while typing and on a full results page. Readers misspell terms, use other word forms and use words the wiki doesn't use. [[GOAL-003-answers-without-asking-a-colleague]] promises an answer "whether they know the right word or not". The features below meet that need with what the wiki itself knows: its aliases, its glossary and its links.
 
+A reader reaches the search box from every page with the key ⌘K (Ctrl K on other systems). The box names the key.
+
 **Success metric(s).**
 
 - The example queries of every child feature pass an automated test on a fixed test wiki.
@@ -45,3 +47,5 @@ A reader searches from every page of the dashboard, by ID, title or any word, in
 ## History
 
 > Extracted from the dashboard code on 2026-11-10 ([[SRC-005-search-the-wiki]]). Sharpened with Gernot Starke on 2026-11-11 in questions Q1 to Q10 ([[SRC-006-grilling-session-on-search]]).
+>
+> The key ⌘K was added on 2026-11-19 from meta DR-032, where it was built before it was required ([[SRC-035-grilling-session-on-the-requirements-moved-from-meta]]). Peter Gerstbach decided to put it in this epic, not in a story of its own.

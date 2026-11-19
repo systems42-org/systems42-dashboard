@@ -4,7 +4,7 @@ type: functional-requirement
 title: Read a page with its links
 status: draft
 created: 2026-11-13
-updated: 2026-11-13
+updated: 2026-11-19
 sources: ["[[SRC-021-read-a-page-with-its-links]]", "[[SRC-022-grilling-session-on-reading-a-page]]"]
 related: ["[[FR-027-issues-on-the-page-they-affect]]", "[[FR-035-method-terms-lead-to-their-definition]]", "[[FR-020-know-where-you-are]]"]
 tags: ["functional-requirement", "navigation"]
@@ -38,7 +38,7 @@ As a reader I want **one wiki page with its text, what it links to and what link
 ## Hierarchy
 
 - **Parent:** [[FR-017-browse-by-area-and-section]]
-- **Children:** none.
+- **Children:** [[FR-049-read-the-page-text-without-links-and-metadata]]
 
 ## History
 
