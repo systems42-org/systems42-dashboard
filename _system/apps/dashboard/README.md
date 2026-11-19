@@ -377,8 +377,8 @@ Docker image:
 .venv/bin/python -m playwright install chromium
 ```
 
-Without them it prints `SKIP` and exits 0, so `run-all.sh` and `make test`
-still pass; a SKIP is not a pass.
+Without them it prints `SKIP` and exits 77. `run-all.sh` counts a script that
+exits 77 as skipped, not passed, and names it in the summary.
 
 pytest can run one script (`pytest tests/test_reload.py`), but not the whole
 folder: each script points the app at its own throwaway vault before

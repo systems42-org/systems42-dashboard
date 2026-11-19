@@ -387,7 +387,7 @@ TESTS = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
 if __name__ == "__main__":
     if not shutil.which("node"):
         print("skip: node not installed")
-        sys.exit(0)
+        sys.exit(77)
     failed = 0
     for t in TESTS:
         try:

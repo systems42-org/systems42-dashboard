@@ -16,6 +16,10 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - Dashboard: on a functional requirement page the sources row no longer overlaps the row of pills above it.
 
 ### Added
+- Dashboard repository: GitHub Actions runs `./dashboard.sh test` on every pull
+  request and push to `main` (`.github/workflows/ci.yml`). The test summary
+  counts and names skipped scripts (exit code 77) instead of counting them as
+  passed.
 - Dashboard repository: a release takes `make version V=1.2.3`, a merge and
   `make publish`. `version` raises `VERSION` and opens the pull request.
   `publish` sets and pushes the tag only when the release does not exist yet
