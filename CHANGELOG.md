@@ -21,6 +21,11 @@ Unreleased changes sit at the top until the next Starter Kit release.
   next.
 
 ### Changed
+- Dashboard: the shipped brand shows the Peaks intro again (FR-032). Release
+  0.11.3 had replaced it with the systems42 logo and a fly-in wordmark, which
+  changed every wiki without a brand of its own. That intro now lives in the
+  Systems42 meta repository's own brand folder. A wiki that wants another look
+  names its own folder in `brand:` (FR-031).
 - Dashboard release 0.11.3 (`_system/apps/dashboard/VERSION`).
 - Dashboard: the systems42 brand has a new intro. The systems42 logo builds
   itself (the arches swing in, the ribbon twists into place), then the letters

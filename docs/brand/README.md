@@ -20,15 +20,10 @@ status and open issues sit.
 **Rules:** smallest size 16 px; keep about 5 units of clear space; no text,
 outlines, gradients or shadows; do not recolour, reorder, stretch or rotate.
 
-**Intro:** the systems42 logo (`../../_system/apps/dashboard/static/systems42-logo.svg`):
-its two arches swing in from the sides and its ribbon twists into place, then
-the letters of the wordmark "systems42" fly in, spinning, and land; then a
-fade. About 2 s, once per tab, skipped under reduced motion, any click or key
-ends it. The earlier intro, in which the Peaks mark builds itself, is kept as
-`intro-peaks.html`.
+**Intro:** the ground grows, then the two peaks rise, then a fade; about 2 s,
+once per tab, skipped under reduced motion, any click or key ends it.
 
 **Files:** the dashboard's example brand `systems42`,
 `_system/apps/dashboard/brands/systems42/`, holds `mark-dark.svg`,
-`mark-light.svg`, `favicon.svg`, the intro, `intro.html`, and the earlier
-intro as a backup, `intro-peaks.html`. This folder holds
+`mark-light.svg`, `favicon.svg` and the intro, `intro.html`. This folder holds
 the PNGs (`mark-dark.png`, `mark-light.png`, `favicon.png`).
