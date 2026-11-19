@@ -1,0 +1,11 @@
+{# Every page a diagram draws, as a text link (QR-001): on a phone a node is
+   hard to hit, and a screen reader cannot open it at all. `links` comes from
+   the builder that draws the diagram, so the list cannot drift from it. #}
+{% macro node_links(links, summary="Pages in this diagram") %}
+{% if links %}
+<details class="diagram-links">
+  <summary>{{ summary }} ({{ links|length }})</summary>
+  <ul>{% for l in links %}<li><a class="wl" href="{{ l.url }}">{% if l.id %}<code>{{ l.id }}</code> {% endif %}{{ l.title }}</a></li>{% endfor %}</ul>
+</details>
+{% endif %}
+{% endmacro %}

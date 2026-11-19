@@ -71,6 +71,17 @@ def test_headerless_gfm_table_survives():
     assert "<table>" in html, html
 
 
+def test_tables_scroll_in_their_own_box():
+    """QR-001: a wide table scrolls inside its wrapper, not the page. The
+    wrapper survives the sanitizer, also when the content is cleaned twice."""
+    html = app.render_markdown("| a | b |\n|---|---|\n| 1 | 2 |\n\nText.\n\n| c |\n|---|\n| 3 |", {})
+    assert html.count('<div class="table-scroll"><table>') == 2, html
+    assert html.count("</table></div>") == 2, html
+    assert app.sanitize_html(html) == html, "a second sanitizer pass changed the wrapper"
+    raw = app.render_markdown('<table class="fbtn"><tr><td>x</td></tr></table>', {})
+    assert '<div class="table-scroll"><table><tbody><tr><td>x</td></tr></tbody></table></div>' in raw, raw
+
+
 def test_prose_starting_with_a_wikilink_is_joined():
     html = app.render_markdown("[[STK-001]] wants faster\nonboarding.", {})
     assert "wants faster onboarding." in html, html
@@ -197,6 +208,7 @@ if __name__ == "__main__":
     test_explicit_two_space_break_is_kept()
     test_wrapped_list_stays_tight()
     test_headerless_gfm_table_survives()
+    test_tables_scroll_in_their_own_box()
     test_prose_starting_with_a_wikilink_is_joined()
     test_spaced_pipe_in_prose_is_still_joined()
     test_leading_pipe_table_survives()
@@ -213,4 +225,4 @@ if __name__ == "__main__":
     test_images_of_the_dashboard_keep_their_source()
     test_links_to_outside_are_kept()
     test_about_styles_cannot_fetch()
-    print("OK: markdown unwrap contract, wikilinks in code, sanitizer rules")
+    print("OK: markdown unwrap contract, wikilinks in code, sanitizer rules, table wrapper")

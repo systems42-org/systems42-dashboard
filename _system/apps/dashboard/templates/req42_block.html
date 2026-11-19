@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_context_flows.html" import context_flow_table %}
+{% from "_diagram_links.html" import node_links %}
 {% block title %}{{ block.title }} · req42{% endblock %}
 {% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}{{ block.title }}</nav>{% endblock %}
 {% from "_maturity.html" import maturity_bar %}
@@ -27,6 +28,7 @@
   <pre class="mermaid">{{ context_diagram }}</pre>
   <figcaption class="ctx-legend">One line per neighbour; both directions are listed below.</figcaption>
 </figure>
+{{ node_links(diagram_links) }}
 {{ context_flow_table(context_flows) }}
 {% endif %}
 

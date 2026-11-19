@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_context_flows.html" import context_flow_table %}
+{% from "_diagram_links.html" import node_links %}
 {% from "_provenance.html" import provenance_chips %}
 {% from "_macros.html" import format_labels %}
 {% from "_trace.html" import trace_panel %}
@@ -37,6 +38,7 @@
   <pre class="mermaid">{{ context_diagram }}</pre>
   <figcaption class="ctx-legend">One line per neighbour; both directions are listed below.</figcaption>
 </figure>
+{{ node_links(diagram_links) }}
 {{ context_flow_table(context_flows) }}
 {% endif %}
 
@@ -84,6 +86,7 @@
   <pre class="mermaid">{{ deployment }}</pre>
   {% include "_lifecycle_legend.html" %}
 </figure>
+{{ node_links(diagram_links) }}
 {% endif %}
 
 {% if page_issues is defined and page_issues is not none %}{{ page_issues_panel(page_issues) }}{% endif %}
