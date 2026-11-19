@@ -121,17 +121,17 @@ Ask for what you need, e.g.:
 ├── _templates/         ← page structures the AI follows when filing
 ├── _system/            ← workflows, anchors, index.md & log.md (bookkeeping)
 │   ├── wiki.yaml       ← project identity (system name, tagline) read by the dashboard
-│   ├── scripts/        ← new-project.sh (spawn / refresh another wiki) and friends
+│   ├── scripts/        ← metamodel lint and other maintenance scripts
 │   └── apps/dashboard/ ← the live dashboard (Flask)
 ├── docs/               ← this guide and other human documentation
 ├── .agents/skills/     ← canonical AI skills: capture, grill-requirements,
-│                         requirements-wiki, new-project (hidden in Obsidian)
+│                         requirements-wiki, grilling (hidden in Obsidian)
 ├── .claude/skills/     ← Claude Code compatibility symlinks to .agents/skills/
 ├── AGENTS.md           ← the shared schema and project rules
 ├── CLAUDE.md           ← Claude Code import of AGENTS.md
 ├── README.md           ← repo overview
 ├── CHANGELOG.md        ← what changed in the method, templates, skills and dashboard
-├── Makefile            ← make dev / down / local (dashboard), make new / sync (projects)
+├── Makefile            ← make dev / down / test (dashboard)
 └── dashboard.sh        ← starts the live, browsable dashboard (Docker)
 ```
 
@@ -157,53 +157,9 @@ To adjust what's excluded: Settings → Files and links → Excluded files.
 
 ## Starting another project (or starting over)
 
-Don't wipe a vault to reuse it — spawn a fresh one next to it:
-
-```
-make new TARGET=../foo-shop NAME="Foo Shop" TAGLINE="Buy foo, fast."
-```
-
-(or tell the agent: *"start a new project"*). The new folder gets every method
-file — `AGENTS.md`, templates, anchors, workflows, skills, dashboard, this guide
-— and an empty `wiki/` and `raw/`, with its own name in `wiki.yaml` and an
-initial git commit. It inherits no decision records: decisions are content, so
-`wiki/decisions/` starts empty and the project's own decisions start at
-`DR-001`. The method files state their rules themselves; the reasons behind
-them stay with the vault you spawned from. Open it in Obsidian and Claude
-Code and run the bootstrap workflow there. The vault you spawned it from is
-untouched.
-
-When you later fix a template or workflow in the original, push the fix into
-the spawned project with `make sync TARGET=../foo-shop`. Sync refreshes method
-files only; it never touches the project's pages (decision records
-included), sources, or identity. Treat method files in a spawned project as read-only: fix at the
-source, then sync.
-
-A project spawned before decisions became wiki pages still keeps them in
-`_system/adr/`, which the current dashboard no longer reads, so sync refuses
-it. Run `make migrate-decisions TARGET=../foo-shop` once: the project's own
-ADRs become `wiki/decisions/DR-NNN` with the same number (the inherited
-ADR-0001 to 0003 are dropped, links and the index follow). Set each record's
-`kind`, review and commit in the project, then sync.
-
-**Bringing method changes back.** Sometimes the method has to grow inside a
-project, because only real content shows what a new type or template should
-look like. Do that work in the project in its own commits, message prefixed
-`method:`, and bring it back with
-
-```
-make harvest TARGET=../foo-shop
-```
-
-run in the original. It writes `harvest-foo-shop-<date>.patch` there with
-every difference on the method paths, lists the project's new `wiki/` folders
-(a new content type needs its folder here, or the next `make new` lacks it)
-and the project's decision records with the next free `DR-` number here.
-Review the patch, `git apply --3way` it, add the folders, re-record any method
-decision as a decision record here with its project origin, open a PR, and after the merge
-`make sync` the project so both sides match again. Project pages never travel
-this way; lessons that are not files go into the original's `raw/` inbox as a
-source.
+A new project wiki is created from the Systems42 meta repository
+(`systems42-org/meta`), with `make new` there. This repository holds the
+dashboard and its requirements and creates no projects.
 
 For a *partial* undo — one bad page rather than the whole vault — use
 `git checkout -- <path>`.

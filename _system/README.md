@@ -16,10 +16,9 @@ Internal machinery for the wiki. Not requirements content — this is *about* th
   `AGENTS.md` points to it and `CLAUDE.md` imports it.
 - `wiki.yaml` — project identity (system name, tagline). Filled in during
   bootstrap; the dashboard reads it live.
-- `scripts/` — standalone maintenance scripts: `new-project.sh` (create a fresh
-  wiki from this one, refresh its method files, or harvest method changes made
-  there back here as a patch; `make new` / `make sync` / `make harvest`
-  wrap it, `test-new-project.sh` tests it) and `concept-cluster-audit.py`
-  (deterministic support for `workflows/relations.md`).
+- `scripts/` — standalone maintenance scripts: `metamodel-lint.py` and
+  `concept-cluster-audit.py` (deterministic support for
+  `workflows/relations.md`). New project wikis are created from the Systems42
+  meta repository, not from this one.
 - `apps/` — auxiliary applications shipped with the wiki, e.g. `dashboard/`, the
   the Flask app started by `dashboard.sh` (read-only over the wiki; writes only its own settings file).
