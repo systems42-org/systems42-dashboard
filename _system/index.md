@@ -162,3 +162,5 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-027-dashboard-distribution-and-metamodel-contract]] Dashboard distribution and its contract with the metamodel (document)
 - [[SRC-028-grilling-session-on-dashboard-distribution]] Grilling session on dashboard distribution (interview)
 - [[SRC-029-grilling-session-on-the-published-image]] Grilling session on the published image (interview)
+- [[SRC-030-default-brand-and-instance-brands]] Default brand and instance brands (document)
+- [[SRC-031-grilling-session-on-the-default-brand]] Grilling session on the default brand (interview)

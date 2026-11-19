@@ -263,3 +263,14 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Human decisions (2026-11-18): extend FR-030 instead of a new page. Priority Must. The image is pulled without a login. It runs on amd64 and arm64.
 - Created: SRC-029. Updated: FR-030 (three lines, success metric, scope, priority Should to Must), `_system/index.md`.
 - Checked against today's state: release 0.11.2 holds an amd64 and an arm64 image and is pulled without a login. Older releases were not checked again.
+
+## [2026-11-19] capture | Default brand and instance brands
+- Source: `raw/default-brand-and-instance-brands.md`, a note drafted by Claude at Gernot Starke's request, now [[SRC-030-default-brand-and-instance-brands]] in `raw/ingested/`. The answers are [[SRC-031-grilling-session-on-the-default-brand]].
+- Grill gate: FR-031 and FR-032 already hold the rule (a wiki names its own brand folder or gets the default). Three points were missing and one question was open. Gernot Starke answered questions 1 to 4 in one round. No Issues.
+- Decisions:
+  - Q1: a project created from meta shows the default brand.
+  - Q2: the look of one wiki never goes into the shipped brand. The maintainers may still change the default for all wikis.
+  - Q3: the line on brand files as trusted content is replaced by the isolated intro.
+  - Q4: FR-032 names the meta brand.
+- Created: SRC-030, SRC-031. Updated: FR-031, FR-032, `_system/index.md`.
+- Background: release 0.11.3 shipped meta's intro as the default (pull request #43). Pull request #46 restored the Peaks intro, meta pull request #46 gave meta its own brand folder.
