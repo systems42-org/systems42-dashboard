@@ -14,6 +14,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
 
 ### Fixed
 - Dashboard: a wikilink inside inline code or a fenced code block shows as written, on wiki pages and on /metamodel, instead of as an escaped link tag. A `~~~` fence renders as code instead of being joined into the paragraph around it.
+- Dashboard: Reload now also clears the cached metamodel and anchor pages, and a wiki page rewritten with the same mtime but a different size is read again without a reload (#58).
 - Dashboard: on a functional requirement page the sources row no longer overlaps the row of pills above it.
 
 ### Added

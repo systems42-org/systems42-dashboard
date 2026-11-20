@@ -1,16 +1,16 @@
 """The footer's "Reload" control — dropping every server-side cache on demand.
 
 Wiki edits normally appear on a plain browser refresh: `_parse` is keyed by
-(path, mtime), and the folder listings are re-globbed per request, so a new,
+(path, mtime_ns, size), and the folder listings are re-globbed per request, so a new,
 edited or deleted page shows up by itself. Two things do not follow, and they
 are what the button is for:
 
-  * a rewrite that lands on the same mtime — an ingest restoring a file, a
-    checkout, a copy that preserves timestamps — is a cache hit forever;
+  * a rewrite that lands on the same mtime and size — an ingest restoring a
+    file, a checkout, a copy that preserves timestamps — is a cache hit forever;
   * Jinja compiles each template once per worker, so an edited template
     otherwise needs the process restarted.
 
-Both are cleared by POST /reload. Static assets are handled differently, by
+Both are cleared by POST /reload, together with the metamodel's own caches. Static assets are handled differently, by
 `static_url` stamping the file's own mtime into the query string, so an
 edited stylesheet arrives without anyone pressing anything.
 
@@ -42,6 +42,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import metamodel  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 BASE = (ROOT / "templates" / "base.html").read_text(encoding="utf-8")
@@ -106,19 +107,41 @@ def test_reload_empties_the_jinja_template_cache():
         assert not app.app.jinja_env.cache, app.app.jinja_env.cache
 
 
-def test_a_rewrite_that_keeps_its_mtime_is_only_seen_after_reload():
-    """The gap the button exists to close."""
+def test_reload_empties_the_metamodel_caches():
+    with app.app.test_client() as client:
+        client.get("/metamodel")
+        assert metamodel._CACHE, "expected /metamodel to populate the cache"
+        assert metamodel._ANCHOR_CACHE, "expected /metamodel to read the anchors"
+        client.post("/reload")
+        assert metamodel._CACHE == {}, metamodel._CACHE
+        assert metamodel._ANCHOR_CACHE == {}, metamodel._ANCHOR_CACHE
+
+
+def test_a_rewrite_that_keeps_its_mtime_and_size_is_only_seen_after_reload():
+    """The gap the button exists to close. "Alpha" and "Gamma" have the same
+    length, so the file keeps its size as well as its mtime."""
+    _write_term("Alpha")
+    with app.app.test_client() as client:
+        client.post("/reload")
+        assert b"Alpha" in client.get("/domain-terms").data
+
+        _write_term("Gamma", keep_mtime=True)
+        assert b"Gamma" not in client.get("/domain-terms").data, \
+            "same mtime and size should still be served from the parse cache"
+
+        client.post("/reload")
+        assert b"Gamma" in client.get("/domain-terms").data
+
+
+def test_a_rewrite_that_keeps_its_mtime_but_not_its_size_is_parsed_again():
     _write_term("Alpha")
     with app.app.test_client() as client:
         client.post("/reload")
         assert b"Alpha" in client.get("/domain-terms").data
 
         _write_term("Betamax", keep_mtime=True)
-        assert b"Betamax" not in client.get("/domain-terms").data, \
-            "same mtime should still be served from the parse cache"
-
-        client.post("/reload")
-        assert b"Betamax" in client.get("/domain-terms").data
+        assert b"Betamax" in client.get("/domain-terms").data, \
+            "a changed size must miss the parse cache without a reload"
 
 
 def test_static_url_stamps_the_files_mtime():
@@ -161,7 +184,9 @@ if __name__ == "__main__":
     test_reload_is_post_only()
     test_reload_empties_the_parse_cache()
     test_reload_empties_the_jinja_template_cache()
-    test_a_rewrite_that_keeps_its_mtime_is_only_seen_after_reload()
+    test_reload_empties_the_metamodel_caches()
+    test_a_rewrite_that_keeps_its_mtime_and_size_is_only_seen_after_reload()
+    test_a_rewrite_that_keeps_its_mtime_but_not_its_size_is_parsed_again()
     test_static_url_stamps_the_files_mtime()
     test_static_url_leaves_a_missing_file_unversioned()
     test_the_stylesheet_link_is_versioned()

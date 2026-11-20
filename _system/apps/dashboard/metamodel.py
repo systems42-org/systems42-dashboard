@@ -308,6 +308,13 @@ def method_anchors() -> list[dict]:
     return sorted(out, key=lambda a: a["name"].lower())
 
 
+def clear_caches() -> None:
+    """Forget every parsed metamodel and anchor page, so the next call reads
+    them from disk again. The dashboard's POST /reload calls this."""
+    _CACHE.clear()
+    _ANCHOR_CACHE.clear()
+
+
 def anchor_index(found: list[dict]) -> dict[str, dict]:
     """Lower-cased title, aliases and file name → the anchor, so `[[madr]]`
     and `[[MADR]]` find the same entry."""

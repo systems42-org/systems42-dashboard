@@ -609,8 +609,8 @@ class Page:
 # link index from disk). Two complementary layers fix that without ever serving
 # stale content:
 #
-#   Tier 1  _parse() is memoized by (path, mtime). A file is re-read only when it
-#           changes on disk, so editing a page and refreshing the browser still
+#   Tier 1  _parse() is memoized by (path, mtime_ns, size). A file is re-read only
+#           when it changes on disk, so editing a page and refreshing the browser still
 #           shows the new text — but repeated reads (within a request and across
 #           requests) collapse to a dict lookup. The cache lives for the worker's
 #           lifetime; each gunicorn worker warms its own.
@@ -621,9 +621,11 @@ class Page:
 #           per markdown block rendered. Outside a request context they run
 #           uncached (keeps build_* helpers usable standalone, e.g. for ISS-010).
 
-# (path -> (mtime, parsed Page or None)); folder is deterministic from the path
-# (always path.parent.name at every call site), so the path alone is the key.
-_PARSE_CACHE: dict[Path, tuple[float, "Page | None"]] = {}
+# (path -> ((mtime_ns, size), parsed Page or None)), like metamodel._CACHE. The
+# size catches a same-mtime rewrite whose length changed. Folder is
+# deterministic from the path (always path.parent.name at every call site), so
+# the path alone is the key.
+_PARSE_CACHE: dict[Path, tuple[tuple[int, int], "Page | None"]] = {}
 
 
 def _resolves_inside(root: Path, path: Path) -> bool:
@@ -649,11 +651,12 @@ def _parse(path: Path, folder: str) -> Page | None:
     if not _resolves_inside(_page_root(path), path):
         return None
     try:
-        mtime = path.stat().st_mtime
+        st = path.stat()
     except OSError:
         return None
+    stamp = (st.st_mtime_ns, st.st_size)
     cached = _PARSE_CACHE.get(path)
-    if cached is not None and cached[0] == mtime:
+    if cached is not None and cached[0] == stamp:
         return cached[1]
     # One broken file must never take the whole dashboard down: every page
     # render walks the full vault (title/link indexes), so an exception here
@@ -674,8 +677,8 @@ def _parse(path: Path, folder: str) -> Page | None:
         if not isinstance(meta, dict):
             meta = {}                         # `--- just a string ---` or a list: no fields
         page = Page(stem=path.stem, meta=meta, body=m.group(2), folder=folder,
-                    mtime=mtime)
-    _PARSE_CACHE[path] = (mtime, page)
+                    mtime=st.st_mtime)
+    _PARSE_CACHE[path] = (stamp, page)
     return page
 
 
@@ -4810,11 +4813,11 @@ def reload_caches():
     posts here and then reloads the page.
 
     Most of the time nothing here is needed: `_parse` is keyed by (path,
-    mtime) and the folder listings are re-globbed per request, so a fresh
-    ingest's new, edited and deleted pages already show up on an ordinary
-    browser refresh. Two things do not, and they are why the button exists —
-    a rewrite that lands on the same mtime (a restored file, a checkout, a
-    timestamp-preserving copy) stays a cache hit forever, and Jinja compiles
+    mtime_ns, size) and the folder listings are re-globbed per request, so a
+    fresh ingest's new, edited and deleted pages already show up on an
+    ordinary browser refresh. Two things do not, and they are why the button
+    exists — a rewrite that lands on the same mtime and size (a restored file,
+    a checkout, a timestamp-preserving copy) stays a cache hit forever, and Jinja compiles
     each template once per worker, so an edited template otherwise needs the
     process restarted. Clearing both costs one re-parse of the vault, which
     is milliseconds at workshop scale.
@@ -4825,10 +4828,17 @@ def reload_caches():
 
     POST-only on purpose. A GET would let a prefetch or a crawler flush the
     cache on someone else's behalf."""
+    _clear_caches()
+    return {"ok": True}
+
+
+def _clear_caches() -> None:
+    """Drop the parsed wiki pages, the parsed metamodel and anchor pages, and
+    Jinja's compiled templates. Used by /reload and by saving the view."""
     _PARSE_CACHE.clear()
+    metamodel.clear_caches()
     if app.jinja_env.cache is not None:
         app.jinja_env.cache.clear()
-    return {"ok": True}
 
 
 @app.route("/settings", methods=["GET"])
@@ -4866,9 +4876,7 @@ def settings_post():
     if unknown or not isinstance(data.get("hidden"), list):
         return {"error": "unknown", "unknown": unknown}, 400
     set_view(valid)
-    _PARSE_CACHE.clear()
-    if app.jinja_env.cache is not None:
-        app.jinja_env.cache.clear()
+    _clear_caches()
     return {"ok": True, "hidden": valid}
 
 
