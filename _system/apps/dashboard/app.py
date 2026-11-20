@@ -4861,7 +4861,8 @@ def reload_caches():
 def _clear_caches() -> None:
     """Drop the parsed wiki pages, the parsed metamodel and anchor pages, and
     Jinja's compiled templates. Used by /reload and by saving the view."""
-    _PARSE_CACHE.clear()
+    with _PARSE_LOCK:
+        _PARSE_CACHE.clear()
     metamodel.clear_caches()
     if app.jinja_env.cache is not None:
         app.jinja_env.cache.clear()

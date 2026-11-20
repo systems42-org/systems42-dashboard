@@ -331,8 +331,9 @@ def method_anchors() -> list[dict]:
 def clear_caches() -> None:
     """Forget every parsed metamodel and anchor page, so the next call reads
     them from disk again. The dashboard's POST /reload calls this."""
-    _CACHE.clear()
-    _ANCHOR_CACHE.clear()
+    with _LOCK:
+        _CACHE.clear()
+        _ANCHOR_CACHE.clear()
 
 
 def anchor_index(found: list[dict]) -> dict[str, dict]:
