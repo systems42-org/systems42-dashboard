@@ -160,7 +160,8 @@ body {
   color: var(--ink);
   line-height: 1.55;
 }
-code { font-family: var(--font-mono); font-size: .85em; }
+/* a long path in running text breaks rather than widen the page (QR-001) */
+code { font-family: var(--font-mono); font-size: max(.85em, .75rem); overflow-wrap: break-word; }
 h2 { letter-spacing: -.01em; }
 
 /* ---- scrollbars: visible channel + contrasting thumb ---- */
@@ -210,6 +211,16 @@ h2 { letter-spacing: -.01em; }
 .menu-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .menu-item:disabled { color: var(--ink-dim); cursor: not-allowed; opacity: .7; }
 .menu-item[hidden] { display: none; }
+/* The nav entries in the menu show only below 640 px, where the nav itself
+   goes (QR-001: a nav that scrolls sideways hides entries off-screen). */
+.menu-nav { display: none; }
+.menu-sep { height: 1px; margin: var(--space-1) 0; background: var(--line); }
+.menu-item[aria-current="page"] { font-weight: 600; background: var(--chip-bg); }
+@media (max-width: 640px) {
+  .mainnav { display: none; }
+  .menu-nav { display: list-item; }
+  .menu { margin-left: auto; }   /* at the right edge, so the open list fits the screen */
+}
 
 /* View dialog */
 .settings-dialog { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius);
@@ -237,7 +248,7 @@ h2 { letter-spacing: -.01em; }
 .settings-area-commons strong { color: var(--ink); }
 .settings-area-commons input { accent-color: var(--accent); }
 .settings-section { display: flex; align-items: center; gap: var(--space-2); padding: 2px 0 2px var(--space-4); }
-.settings-id { font: 600 .72rem/1.5 var(--font-mono); letter-spacing: .04em; padding: 0 .4em; border-radius: 4px;
+.settings-id { font: 600 .75rem/1.5 var(--font-mono); letter-spacing: .04em; padding: 0 .4em; border-radius: 4px;
   color: var(--on-area); background: var(--ink-soft); }
 .settings-id-req { background: var(--area-req); }
 .settings-id-arc { background: var(--area-arc); }
@@ -281,7 +292,7 @@ h2 { letter-spacing: -.01em; }
 /* Breadcrumbs sit at the top of <main> now that the topbar carries the nav. */
 .crumbs-row { margin: 0 0 var(--space-3); }
 .crumbs { color: var(--ink-soft); font-size: .92rem; }
-.crumbs a { color: var(--accent); text-decoration: none; }
+.crumbs a { display: inline-block; padding: .15rem 0; color: var(--accent); text-decoration: none; }
 .crumbs span { color: var(--ink-dim); margin: 0 var(--space-1); }
 
 /* Area colour bar (DR-033): a 3px line under the topbar on area and section
@@ -330,9 +341,9 @@ h2 { letter-spacing: -.01em; }
   text-decoration: none; color: var(--ink); position: relative; transition: border-color .15s ease; }
 .tile-link:hover, .tile:focus-within { border-color: var(--accent); }
 .tile-head { display: flex; flex-direction: column; gap: var(--space-1); margin-bottom: var(--space-2); }
-.tile-eyebrow { font: 600 .7rem/1.4 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-dim); }
+.tile-eyebrow { font: 600 .75rem/1.4 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-dim); }
 .tile-title { font-size: var(--step-1); font-weight: 650; margin: 0; letter-spacing: -.01em; }
-.tile-flag { display: inline-flex; align-self: flex-start; margin-top: var(--space-1); font: 600 .72rem/1.6 var(--font-mono);
+.tile-flag { display: inline-flex; align-self: flex-start; margin-top: var(--space-1); font: 600 .75rem/1.6 var(--font-mono);
   color: var(--warn); border: 1px solid rgba(255,180,84,.4); background: rgba(255,180,84,.1); border-radius: 999px;
   padding: 0 var(--space-2); white-space: nowrap; }
 .tile-count { display: flex; align-items: baseline; gap: var(--space-2); margin: 0 0 var(--space-1); }
@@ -359,7 +370,7 @@ h2 { letter-spacing: -.01em; }
 .tile-ctas .tile-cta { margin-top: 0; position: relative; z-index: 1; }
 /* a tile with several CTAs: the title link covers the tile (.tile is the
    positioned ancestor), the CTAs stay clickable above it */
-.tile-stretch { color: inherit; text-decoration: none; }
+.tile-stretch { display: inline-block; color: inherit; text-decoration: none; }
 .tile-stretch::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
 .tile-ctas .tile-cta:hover { text-decoration: underline; }
 
@@ -371,12 +382,12 @@ h2 { letter-spacing: -.01em; }
 .ml-title { color: var(--ink); }
 .ml-count { color: var(--ink-soft); font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: var(--space-1); }
 /* a whole mini-list row as one link (latest changes) */
-.ml-hit { display: flex; align-items: baseline; gap: var(--space-2); width: 100%;
+.ml-hit { display: flex; align-items: baseline; gap: var(--space-2); width: 100%; min-height: 24px;
   text-decoration: none; color: var(--ink); }
 .ml-hit:hover .ml-title { color: var(--accent); }
 .ml-hit .ml-id { flex: none; }   /* the id never wraps mid-token */
 .ml-when { color: var(--ink-dim); font-size: .78rem; white-space: nowrap; margin-left: auto; }
-.ml-id { color: var(--violet); font-size: .8em; margin-right: var(--space-1); }
+.ml-id { color: var(--violet); font-size: max(.8em, .75rem); margin-right: var(--space-1); }
 .ml-out { color: var(--ink-dim); }
 
 /* ---- area pages (/req42, /arc42, /commons) ---- */
@@ -420,18 +431,18 @@ h2 { letter-spacing: -.01em; }
 .sresult-score[data-band="low"]  .score-fill { background: var(--ink-dim); }
 
 /* ---- badges & status ---- */
-.badge { font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; padding: .15rem .5rem;
+.badge { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; padding: .15rem .5rem;
   border-radius: 999px; border: 1px solid var(--line); color: var(--ink-soft); background: var(--card-2); white-space: nowrap; }
 .badge-demo { color: var(--ink-dim); }
 .badge-assume { color: var(--warn); border-color: rgba(255,180,84,.4); background: rgba(255,180,84,.1); }
 .sev-badge { color: var(--warn); border-color: rgba(255,180,84,.4); background: rgba(255,180,84,.1); }
 .kind-badge { color: var(--accent); border-color: rgba(62,166,255,.35); background: rgba(62,166,255,.1); }
-.status { font-size: .72rem; padding: .12rem .5rem; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-soft); }
+.status { font-size: .75rem; padding: .12rem .5rem; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-soft); }
 .status-draft { color: var(--ink-soft); }
 .status-open { color: var(--danger); border-color: rgba(255,107,129,.4); background: rgba(255,107,129,.1); }
 .status-accepted { color: var(--accent-2); }
 /* arc42 `state` (DR-010), same marks as the diagrams */
-.state-badge { font-size: .72rem; padding: .12rem .5rem; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-soft); }
+.state-badge { font-size: .75rem; padding: .12rem .5rem; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-soft); }
 .state-current { color: var(--ink); border-color: var(--ink-soft); }
 .state-planned, .state-target { border-style: dashed; color: var(--accent); border-color: var(--accent); }
 .state-outdated { color: var(--ink-soft); background: var(--bg-soft); text-decoration: line-through; }
@@ -449,7 +460,7 @@ h2 { letter-spacing: -.01em; }
    button. ↕ on idle, ▲ ascending, ▼ descending; the state lives in aria-sort.
    The arrow sits in the th's right padding, so a sortable column is no wider
    than a plain one and cannot push a tight table past its card. */
-.th-sort { display: inline-block; position: relative; padding: 0; border: 0; background: none;
+.th-sort { display: inline-block; position: relative; min-width: 24px; min-height: 24px; padding: 0; border: 0; background: none;
   color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: inherit; cursor: pointer; }
 .th-sort::after { content: "↕"; position: absolute; left: 100%; margin-left: .3em; color: var(--ink-dim);
   font-weight: 400; letter-spacing: 0; }
@@ -494,7 +505,7 @@ a.wl:hover { border-bottom-style: solid; border-bottom-color: var(--accent); }
 .qr-meta { display: flex; flex-wrap: wrap; gap: .35rem; margin: .35rem 0 0; }
 .qr-scenario { display: grid; grid-template-columns: max-content 1fr; gap: .2rem .75rem;
   margin: .55rem 0 0; font-size: .85rem; color: var(--ink-soft); }
-.qr-scenario dt { color: var(--ink-dim); font-size: .72rem; text-transform: uppercase;
+.qr-scenario dt { color: var(--ink-dim); font-size: .75rem; text-transform: uppercase;
   letter-spacing: .05em; padding-top: .15rem; }
 .qr-scenario dd { margin: 0; }
 .qr-scenario .qr-measure { color: var(--ink); font-weight: 600; }
@@ -508,7 +519,7 @@ a.wl:hover { border-bottom-style: solid; border-bottom-color: var(--accent); }
 }
 .stk-links { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .5rem; }
 .bz {
-  font-size: .72rem; line-height: 1.5; padding: .04rem .45rem; border-radius: 999px;
+  font-size: .75rem; line-height: 1.5; padding: .04rem .45rem; border-radius: 999px;
   border: 1px solid var(--line); color: var(--ink-soft); text-decoration: none;
   white-space: nowrap; max-width: 18ch; overflow: hidden; text-overflow: ellipsis;
 }
@@ -624,14 +635,14 @@ a.format-label:hover { color: var(--accent); border-bottom-color: var(--accent);
 .provenance { display:flex; flex-wrap:wrap; align-items:center; gap:.4rem; margin: -.6rem 0 var(--space-4); }
 /* Right under the head row there is no meta line to pull up to. */
 .detail-head + .provenance { margin-top: .6rem; }
-.provenance-label { font: 600 .7rem/1.4 var(--font-mono); letter-spacing:.08em; text-transform:uppercase; color: var(--ink-dim); margin-right:.2rem; }
+.provenance-label { font: 600 .75rem/1.4 var(--font-mono); letter-spacing:.08em; text-transform:uppercase; color: var(--ink-dim); margin-right:.2rem; }
 .chip { display:inline-flex; align-items:center; gap:.35rem; font-size:.78rem; padding:.1rem .6rem; border-radius:999px; border:1px solid var(--line); color: var(--ink-soft); text-decoration:none; }
-.chip code { font-size:.9em; }
+.chip code { font-size: max(.9em, .75rem); }
 .chip-src:hover { border-color: var(--accent); color: var(--ink); }
 .chip-unresolved { border-style: dashed; }
 .chip-unsourced { color: var(--warn); border-color: rgba(255,180,84,.4); background: rgba(255,180,84,.1); }
 .source-facts { display:grid; grid-template-columns: max-content 1fr; gap:.3rem 1rem; margin: 1rem 0; }
-.source-facts dt { color: var(--ink-dim); font: 600 .7rem/1.8 var(--font-mono); letter-spacing:.08em; text-transform:uppercase; }
+.source-facts dt { color: var(--ink-dim); font: 600 .75rem/1.8 var(--font-mono); letter-spacing:.08em; text-transform:uppercase; }
 .source-facts dd { margin:0; }
 
 .detail-pane { margin-top: 1.5rem; background: var(--card); border: 1px solid var(--line);
@@ -664,7 +675,7 @@ a.format-label:hover { color: var(--accent); border-bottom-color: var(--accent);
   font-weight: 600; border-right: 1px solid var(--line); }
 .ctx-flows th.ctx-neighbour a { text-decoration: none; }
 .ctx-flows .ctx-eid { display: block; font-family: var(--mono, ui-monospace, monospace);
-  font-size: .72rem; color: var(--ink-soft); font-weight: 400; margin-top: .15rem; }
+  font-size: .75rem; color: var(--ink-soft); font-weight: 400; margin-top: .15rem; }
 .ctx-flows .ctx-tier { vertical-align: top; color: var(--ink-soft); white-space: nowrap; }
 .ctx-flows .ctx-dim { color: var(--ink-soft); }
 .ctx-flows .c-dir { width: 6.5rem; }
@@ -674,6 +685,15 @@ a.format-label:hover { color: var(--accent); border-bottom-color: var(--accent);
 .ctx-flows .dir-in { color: var(--accent, #2f6fb3); }
 .ctx-flows .dir-out { color: var(--ink-soft); }
 .ctx-flows tbody tr + tr th.ctx-neighbour { border-top: 1px solid var(--line); }
+/* A wide table or diagram scrolls inside its own box, never the page
+   (QR-001). render_markdown wraps tables, _mermaid.html wraps diagrams. */
+.table-scroll { max-width: 100%; overflow-x: auto; }
+.diagram-scroll { max-width: 100%; overflow: auto; touch-action: pan-x pan-y pinch-zoom; }
+/* the text links under a diagram (_diagram_links.html) */
+.diagram-links { margin: 0 0 1.6rem; }
+.diagram-links > summary { padding: .2rem 0; color: var(--accent); cursor: pointer; }
+.diagram-links ul { margin: var(--space-2) 0 0; padding-left: 1.2rem; }
+.diagram-links li a { display: inline-block; padding: .15rem 0; }
 /* hide the raw mermaid source until mermaid has rendered it (no FOUC) */
 pre.mermaid:not([data-processed]) { color: transparent; min-height: 2rem; }
 
@@ -710,7 +730,7 @@ pre.mermaid:not([data-processed]) { color: transparent; min-height: 2rem; }
 .goal-card-head h2 a { color: inherit; text-decoration: none; }
 .goal-card-head h2 a:hover { color: var(--accent); text-decoration: underline; }
 .goal-card-head .ml-id { font-size: .9rem; font-weight: 700; color: var(--accent); }
-.goal-card-head .stereo { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em;
+.goal-card-head .stereo { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em;
   padding: .15rem .55rem; border-radius: 999px; border: 1px solid var(--line);
   background: var(--card-2); color: var(--ink-soft); }
 .goal-card-head .stereo-vision { color: var(--tint-ink); border-color: rgba(62,166,255,.45);
@@ -771,7 +791,7 @@ pre.mermaid:not([data-processed]) { color: transparent; min-height: 2rem; }
 .goal-matrix-card .gm-th a:hover, .goal-matrix-card .gm-row-head a:hover { color: var(--accent); text-decoration: underline; }
 /* an epic that breaks rule-fr-traces-to-goal: in the main group, marked */
 .goal-matrix-card thead th.gm-nogoal { box-shadow: inset 0 2px 0 var(--warn); }
-.gm-flag { color: var(--warn); font-size: .7rem; font-weight: 600; text-transform: none;
+.gm-flag { color: var(--warn); font-size: .75rem; font-weight: 600; text-transform: none;
   letter-spacing: 0; white-space: nowrap; }
 .goal-matrix-card .gm-flag { display: block; margin-top: .15rem; }
 /* a goal nothing serves: a quiet row with a note in its head */
@@ -815,6 +835,7 @@ pre.mermaid:not([data-processed]) { color: transparent; min-height: 2rem; }
   gap: .85rem; flex-wrap: wrap; }
 .foot-title { color: var(--ink-soft); font-weight: 600; letter-spacing: .02em; }
 .foot-sub { margin-top: .25rem; }
+.foot a { display: inline-block; padding: .2rem 0; }
 /* shown only when wiki.yaml names a dashboard_version other than this one */
 .version-mismatch, .metamodel-mismatch { margin-top: .25rem; color: var(--warn); }
 
@@ -871,7 +892,7 @@ html.etsu-disconnected .presence-dot { animation: none; background: var(--ink-di
 }
 .who-name { font-weight: 700; font-size: 1.05rem; margin-bottom: .3rem; }
 .who-card-facilitator { border-color: var(--accent); }
-.who-role { font: 600 .7rem/1 var(--font-mono); letter-spacing: .06em; text-transform: uppercase;
+.who-role { font: 600 .75rem/1 var(--font-mono); letter-spacing: .06em; text-transform: uppercase;
   color: var(--accent); vertical-align: middle; margin-left: .3rem; }
 .who-meta { color: var(--ink-soft); font-size: .85rem; }
 .who-duration { color: var(--ink-dim); font-size: .8rem; margin-top: .5rem; }
@@ -938,7 +959,7 @@ html.etsu-disconnected {
 .dm-summary-table td, .dm-summary-table th { vertical-align: top; }
 .dm-summary-table .dm-col-name { white-space: nowrap; }
 .dm-summary-table .dm-col-name .term { font-weight: 600; }
-.dm-summary-table .dm-stereo-inline { font-size: .7rem; color: var(--ink-soft);
+.dm-summary-table .dm-stereo-inline { font-size: .75rem; color: var(--ink-soft);
   text-transform: uppercase; letter-spacing: .04em; margin-left: .3rem; }
 .dm-summary-table .dm-col-attrs { color: var(--ink); line-height: 1.55; }
 .dm-summary-table .dm-col-attrs code { background: var(--card-2);
@@ -971,10 +992,10 @@ html.etsu-disconnected {
 .dm-entity-head { display: flex; align-items: baseline; gap: .7rem; flex-wrap: wrap;
   border-bottom: 1px solid var(--line); padding-bottom: .55rem; margin-bottom: .7rem; }
 .dm-entity-head h3 { margin: 0; font-size: 1.15rem; }
-.dm-entity-head .stereo { font-size: .72rem; text-transform: uppercase;
+.dm-entity-head .stereo { font-size: .75rem; text-transform: uppercase;
   letter-spacing: .04em; color: var(--ink-soft); padding: .1rem .4rem;
   border: 1px solid var(--line); border-radius: 4px; }
-.dm-sot { font-size: .72rem; color: var(--ink-soft); font-style: italic; }
+.dm-sot { font-size: .75rem; color: var(--ink-soft); font-style: italic; }
 
 .dm-section { margin: .65rem 0; }
 .dm-section-label { margin: 0 0 .25rem; font-size: .82rem;
@@ -1017,7 +1038,7 @@ html.etsu-disconnected {
 .fr-card-head h2 a { color: var(--ink); text-decoration: none; }
 .fr-card-head h2 a:hover { color: var(--accent); }
 .fr-card-head .ml-id { font-size: .9rem; font-weight: 700; color: var(--accent); }
-.fr-card-head .stereo { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em;
+.fr-card-head .stereo { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em;
   padding: .12rem .45rem; border: 1px solid var(--line); border-radius: 999px; color: var(--ink-soft); }
 .fr-counter { margin-left: auto; font-variant-numeric: tabular-nums;
   color: var(--ink-soft); font-size: .9rem; }
@@ -1027,12 +1048,12 @@ html.etsu-disconnected {
 .fr-feature-head { display: flex; align-items: center; flex-wrap: wrap; gap: .45rem; }
 .fr-feature-head a { color: var(--ink); text-decoration: none; font-weight: 600; }
 .fr-feature-head a:hover { color: var(--accent); }
-.fr-feature-head .stereo-feature { font-size: .66rem; text-transform: uppercase;
+.fr-feature-head .stereo-feature { font-size: .75rem; text-transform: uppercase;
   letter-spacing: .05em; padding: .1rem .4rem; border: 1px solid var(--line);
   border-radius: 999px; color: var(--ink-dim); }
 
 .fr-stories { list-style: none; margin: .45rem 0 0; padding: 0; }
-.fr-stories li { display: flex; align-items: center; gap: .45rem;
+.fr-stories li { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem;
   padding: .25rem 0; border-bottom: 1px solid var(--line); }
 .fr-stories li:last-child { border-bottom: 0; }
 .fr-other-notations { margin-top: 1.4rem; }
@@ -1063,7 +1084,7 @@ html.etsu-disconnected {
 
 /* Stereotype pill on the FR detail head + shared accent colours so epic/feature/
    story read the same everywhere they appear. */
-.detail-head .stereo { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em;
+.detail-head .stereo { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em;
   padding: .12rem .5rem; border: 1px solid var(--line); border-radius: 999px; color: var(--ink-soft); }
 .stereo-epic { color: var(--tint-ink); border-color: rgba(62,166,255,.45); }
 .stereo-feature { color: var(--accent-2); border-color: rgba(70,211,176,.4); }
@@ -1085,7 +1106,7 @@ html.etsu-disconnected {
 }
 .layer-btn:hover { color: var(--ink); }
 .layer-btn .layer-n {
-  font-size: .72rem; background: var(--chip-bg); color: var(--ink-soft);
+  font-size: .75rem; background: var(--chip-bg); color: var(--ink-soft);
   border-radius: 999px; padding: 0 .4rem;
 }
 /* each layer button carries its type colour (button = legend, DR-023) */
@@ -1151,13 +1172,13 @@ html.etsu-disconnected {
   border-bottom: 1px solid var(--line); padding-bottom: .5rem; }
 .rel-group { margin: 0 0 .7rem; }
 .rel-group:last-child { margin-bottom: 0; }
-.rel-type { display: block; font-size: .72rem; text-transform: uppercase; letter-spacing: .05em;
+.rel-type { display: block; font-size: .75rem; text-transform: uppercase; letter-spacing: .05em;
   color: var(--ink-dim); margin-bottom: .25rem; }
 .rel-group ul { list-style: none; margin: 0; padding: 0; }
 .rel-group li { margin: .15rem 0; }
 .rel-group li a { font-size: .9rem; }
 .rel-group li code { color: var(--ink-dim); font-size: .78rem; margin-right: .25rem; }
-.rel-group li .status { font-size: .72rem; margin-left: .25rem; }
+.rel-group li .status { font-size: .75rem; margin-left: .25rem; }
 /* a closed issue, as in the issues panel (.page-issue-closed) */
 .rel-closed { opacity: .7; }
 
@@ -1226,8 +1247,8 @@ html.etsu-disconnected {
 .join { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-6); align-items: center; padding: var(--space-5) 0; }
 .join-qr { padding: var(--space-3); background: var(--plate); color: var(--on-plate); border-radius: var(--radius); }
 .join-qr svg { width: 100%; height: auto; display: block; }
-.join-url code { font-size: var(--step-2); }
-@media (max-width: 780px) { .join { grid-template-columns: 1fr; } .hero-join { margin-left: 0; } }
+.join-url code { font-size: var(--step-2); overflow-wrap: anywhere; }
+@media (max-width: 780px) { .join { grid-template-columns: minmax(0, 1fr); } .hero-join { margin-left: 0; } }
 
 @media (max-width: 640px) { .hero-mark { height: 3.8rem; } }
 
@@ -1256,7 +1277,7 @@ html.etsu-disconnected {
    own page, or to its tile on the area page when it has none */
 .area-tile-top { display: block; color: inherit; text-decoration: none; border-radius: 6px; }
 .area-tile-top:hover .tile-title, .area-tile-top:focus-visible .tile-title { text-decoration: underline; text-decoration-color: var(--accent); }
-.area-section-link { color: inherit; text-decoration: none; }
+.area-section-link { display: inline-block; padding: .2rem 0; color: inherit; text-decoration: none; }
 .area-section-link:hover, .area-section-link:focus-visible { color: var(--accent); text-decoration: underline; }
 .area-section-link:hover .ml-id { color: var(--accent); }
 .area-tile .tile-cta:hover { text-decoration: underline; }
@@ -1304,7 +1325,7 @@ html.etsu-disconnected {
    to the anchor's entry further down (FR-035) */
 a.mm-anchor { text-decoration: none; }
 a.mm-anchor:hover { color: var(--accent); border-color: var(--accent); }
-.mm-anchor { display: inline-block; font-size: .72rem; line-height: 1.5; padding: .02rem .45rem; margin: 0 .1rem;
+.mm-anchor { display: inline-block; font-size: .75rem; line-height: 1.5; padding: .02rem .45rem; margin: 0 .1rem;
   border-radius: 999px; border: 1px solid var(--line); color: var(--ink-soft); background: var(--card-2); white-space: nowrap; }
 /* graph */
 .mm-canvas { height: 64vh; min-height: 440px; }
@@ -1317,7 +1338,6 @@ a.mm-anchor:hover { color: var(--accent); border-color: var(--accent); }
 .mm-edge-hierarchy { border-top-style: dashed; }
 .mm-edge-block { height: 12px; border: 1px dashed var(--ink-dim); border-radius: 3px; background: var(--bg-soft); }
 .mm-universal { color: var(--ink-soft); font-size: var(--step--1); margin: var(--space-3) 0 0; }
-.mm-universal-item { white-space: nowrap; }
 .mm-universal-item code { color: var(--ink); }
 /* tables: these carry prose and lists, so no sticky header, a looser row and
    fixed column shares — the definition column must stay a readable width */
@@ -1350,7 +1370,7 @@ a.mm-anchor:hover { color: var(--accent); border-color: var(--accent); }
 .mm-type .term { display: inline; }
 .mm-c-block { overflow-wrap: break-word; }
 .mm-block-chip { white-space: nowrap; }
-.mm-block-chip { display: inline-block; font: 600 .72rem/1.6 var(--font-mono); padding: 0 .4rem; border-radius: 4px;
+.mm-block-chip { display: inline-block; font: 600 .75rem/1.6 var(--font-mono); padding: 0 .4rem; border-radius: 4px;
   background: var(--chip-bg); color: var(--ink); }
 .mm-block-title { color: var(--ink-soft); font-size: var(--step--1); }
 .mm-naming { display: block; margin-top: .4rem; font-size: .8rem; color: var(--ink-dim); font-style: italic; }
@@ -1417,6 +1437,6 @@ a.mm-anchor:hover { color: var(--accent); border-color: var(--accent); }
 
 /* FR-019: the open-issue count on a section tile links to those issues; it
    sits above the tile's stretched title link, like the tile CTAs. */
-.tile-flag-link { position: relative; z-index: 1; text-decoration: none; }
+.tile-flag-link { position: relative; z-index: 1; align-items: center; min-height: 24px; text-decoration: none; }
 .tile-flag-link:hover { text-decoration: underline; }
 .filter-note { margin: var(--space-2) 0 var(--space-3); }

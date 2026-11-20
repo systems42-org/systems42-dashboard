@@ -77,7 +77,13 @@ def _crumbs(body):
 
 
 def _current(body):
-    return re.findall(r'<a[^>]*aria-current="page"[^>]*>([^<]+)</a>', body)
+    """The marked entries of the main nav. The menu repeats the nav for
+    phones (QR-001) and must mark the same entry."""
+    nav = re.search(r'<nav class="mainnav".*?</nav>', body, re.S).group(0)
+    menu = re.findall(r'<li class="menu-nav"><a[^>]*aria-current="page"[^>]*>([^<]+)</a>', body)
+    marked = re.findall(r'<a[^>]*aria-current="page"[^>]*>([^<]+)</a>', nav)
+    assert menu == marked, (marked, menu)
+    return marked
 
 
 def test_page_path_follows_where_the_page_belongs():

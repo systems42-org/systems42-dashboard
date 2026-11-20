@@ -48,6 +48,12 @@
     <details class="menu" id="menu">
       <summary class="menu-btn" aria-label="Menu" title="Menu"><span class="menu-bars" aria-hidden="true"></span></summary>
       <ul class="menu-list" role="menu">
+        {# Below 640 px the nav moves in here (style.css, .menu-nav), so the
+           header holds one menu button and nothing scrolls sideways. #}
+        {% for href, label, current in nav_items %}
+        <li class="menu-nav"><a class="menu-item" href="{{ href }}" role="menuitem"{% if current %} aria-current="page"{% endif %}>{{ label }}</a></li>
+        {% endfor %}
+        {% if nav_items %}<li class="menu-nav menu-sep" role="separator"></li>{% endif %}
         <li><button type="button" class="menu-item" id="open-settings" role="menuitem">View…</button></li>
         <li><button type="button" class="menu-item" id="theme-toggle" role="menuitem"><span class="theme-toggle-label">Light theme</span></button></li>
         <li><a class="menu-item" href="/who" role="menuitem">Who's here</a></li>

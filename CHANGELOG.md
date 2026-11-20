@@ -27,6 +27,10 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - Dashboard: the metamodel page links a projection's route only when it is a path on this site.
 - Dashboard: the View dialog puts section ids and titles in as text, so
   markup in a framework file cannot reach the page.
+- Dashboard: no page scrolls sideways on a 320 px phone screen (QR-001,
+  issue #64). Below 640 px the nav entries move into the menu. Tables in page
+  text and diagrams scroll inside their own box. `/metamodel`, `/join` and the
+  About page fit the screen.
 - Dashboard: on a functional requirement page the sources row no longer overlaps the row of pills above it.
 
 ### Added
@@ -81,6 +85,12 @@ Unreleased changes sit at the top until the next Starter Kit release.
   pages. C6 counts all issues and shows the open ones as its flag. The R1
   claim line, the R3 breakdown by epic, feature, story and use case and the
   C3 note on the context page are gone from the tiles.
+- Dashboard: breadcrumbs, footer links, sort headers and tile links are at
+  least 24 x 24 px, and no text outside a diagram is smaller than 12 px
+  (QR-001). A diagram first shows whole, and the reader zooms and pans it by touch.
+  The term network, the deployment view and node pages, the functional
+  requirements and the scope page list every page their diagram draws as a
+  text link under it.
 - Dashboard release 0.12.0 (`_system/apps/dashboard/VERSION`).
 - Dashboard: the Configure dialog is now called View, and the view lives in
   the running dashboard only (FR-046, DR-002). The dashboard writes no file

@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "_maturity.html" import maturity_bar %}
 {% from "_list.html" import arch_table %}
+{% from "_diagram_links.html" import node_links %}
 {% block title %}{{ block.title }} · arc42{% endblock %}
 {% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}{{ block.title }}</nav>{% endblock %}
 {% macro row_head(r) %}<a class="wl" href="{{ r.url }}"><code>{{ r.id }}</code> {{ r.title }}</a>{% if r.status %} <span class="status status-{{ r.status }}">{{ r.status }}</span>{% endif %} <span class="state-badge state-{{ r.state }}">{{ r.state }}</span>{% endmacro %}
@@ -16,6 +17,8 @@
   <pre class="mermaid">{{ diagram }}</pre>
   {% include "_lifecycle_legend.html" %}
 </figure>
+{# the deployment nodes are listed below, the blocks and interfaces only here #}
+{{ node_links(diagram_links, "Blocks and interfaces in this diagram") }}
 {% endif %}
 {% if hints %}
 <aside class="arc-hints" aria-label="Consistency hints">

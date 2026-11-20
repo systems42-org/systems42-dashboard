@@ -909,8 +909,9 @@ _SANITIZE_TAGS = set(nh3.ALLOWED_TAGS) | {"tfoot"}
 # footnotes: fn:1, fnref:1, fnref2:1 (a second reference to the same note)
 _CONTENT_ID_RE = re.compile(r"fn(?:ref\d*)?:[\w.-]+")
 # wikilinks and anchor links (render_wikilinks, /metamodel), fenced code incl.
-# mermaid, footnotes
-_CONTENT_CLASS_RE = re.compile(r"wl|wl-anchor|mm-anchor|language-[\w+-]+|footnote(?:-ref|-backref)?")
+# mermaid, footnotes, the scroll box around tables (wrap_tables)
+_CONTENT_CLASS_RE = re.compile(r"wl|wl-anchor|mm-anchor|language-[\w+-]+|footnote(?:-ref|-backref)?"
+                               r"|table-scroll")
 
 
 # Wiki content must not make a viewer's browser fetch from outside: a remote
@@ -964,6 +965,17 @@ def sanitize_html(html: str, about: bool = False) -> str:
                      attribute_filter=_content_attribute,
                      filter_style_properties=_ABOUT_STYLES if about else {"text-align"},
                      link_rel=None)
+
+
+_TABLE_OPEN_RE = re.compile(r"<table\b", re.I)
+_TABLE_CLOSE_RE = re.compile(r"</table\s*>", re.I)
+
+
+def wrap_tables(html: str) -> str:
+    """Put every table of rendered markdown in a box that scrolls sideways on
+    its own, so a wide table never makes the page scroll at 320 px (QR-001)."""
+    html = _TABLE_OPEN_RE.sub('<div class="table-scroll"><table', html)
+    return _TABLE_CLOSE_RE.sub("</table></div>", html)
 
 
 def render_wikilinks(text: str, titles: dict[str, str],
@@ -1254,7 +1266,7 @@ def render_markdown(body: str, titles: dict[str, str]) -> str:
     body = outside_code(body, lambda t: render_wikilinks(t, titles, links))
     # turn Obsidian callouts `> [!type] title` into a bold label line
     body = CALLOUT_RE.sub(lambda m: f"> **{m.group(2) or m.group(1).title()}**", body)
-    return sanitize_html(md.markdown(body, extensions=["extra", "sane_lists"]))
+    return sanitize_html(wrap_tables(md.markdown(body, extensions=["extra", "sane_lists"])))
 
 
 def extract_labeled(page: Page, label: str, titles: dict[str, str],
@@ -1490,15 +1502,23 @@ def _eif_flows(p) -> tuple[list[dict], list[dict], list[dict]]:
             flows)
 
 
-def build_context_diagram(center: str | None = None) -> str | None:
+def _node_link(p: Page) -> dict:
+    """A page drawn as a diagram node, as the text link beside the diagram."""
+    return {"id": p.id, "title": p.title, "url": _page_url(p.folder, p.stem)}
+
+
+def build_context_diagram(center: str | None = None,
+                          links: list[dict] | None = None) -> str | None:
     """Project a mermaid context diagram from EIF.flows + STK.provides/receives.
 
     One line per neighbour, not one per direction: an interface with both an
     inbound and an outbound flow draws a single `<-->` edge carrying a single
     label, and the two directions are spelled out in the flow table beneath
     (build_context_flows). Returns None when no edges exist yet. Pure and
-    string-only, so it can be reused outside the request cycle."""
+    string-only, so it can be reused outside the request cycle. `links`, when
+    given, receives every page drawn as a node (QR-001)."""
     center = center or _clean_label(wiki_config()["system_name"], drop_parenthetical=False)
+    drawn: list[dict] = []
     core = "CORE"
     bands: dict[str, list[tuple[str, str, str]]] = {}   # tier -> [(nid, label, cls)]
     loose: list[tuple[str, str, str]] = []
@@ -1533,6 +1553,7 @@ def build_context_diagram(center: str | None = None) -> str | None:
         (bands.setdefault(tier, []) if tier in _TIER_LABEL else loose).append(
             (nid, _eif_node_label(p), "system"))
         add_edge(nid, ins, outs, side, ordered)
+        drawn.append(_node_link(p))
 
     # user roles — flows live on the stakeholder, not as EIF nodes. DR-014:
     # several stakeholders sharing a `context_role` merge into ONE node (union of
@@ -1560,6 +1581,7 @@ def build_context_diagram(center: str | None = None) -> str | None:
             g["cls"] = "system"          # organizations/systems share the box style
         _union(g["prov"], prov)
         _union(g["recv"], recv)
+        drawn.append(_node_link(p))   # a merged role node links each of its stakeholders
 
     for label, g in sorted(groups.items(), key=lambda kv: kv[1]["order"]):
         nid = _diagram_node_id(label)
@@ -1570,6 +1592,8 @@ def build_context_diagram(center: str | None = None) -> str | None:
 
     if not edges:
         return None
+    if links is not None:
+        links.extend(drawn)
 
     def node_line(nid: str, label: str, cls: str) -> str:
         # persons get the actor symbol (stadium + "Person"); systems/orgs are boxes
@@ -2206,7 +2230,8 @@ def build_fr_hierarchy() -> dict:
     }
 
 
-def _mermaid_goal_epic_tree(goals: dict, hierarchy: dict) -> str | None:
+def _mermaid_goal_epic_tree(goals: dict, hierarchy: dict,
+                            links: list[dict] | None = None) -> str | None:
     """Compact top-of-hierarchy map: each Objective links down to the Epics that
     contribute to it (FR `goal:` coverage, DR-018). Enabler epics (lane
     platform or display) hang under a shared `Platform / Enabler` node, epics
@@ -2215,7 +2240,8 @@ def _mermaid_goal_epic_tree(goals: dict, hierarchy: dict) -> str | None:
     why the old full Epic→Feature→Story tree was split out to the epic pages.
     Goal nodes jump to their card on /goals; epic nodes open their epic page.
     Use cases with a `goal:` (DR-038) hang under their goals beside the epics.
-    Returns None when there are neither epics nor goal-linked use cases."""
+    Returns None when there are neither epics nor goal-linked use cases.
+    `links`, when given, receives every node that opens a page (QR-001)."""
     epics = hierarchy.get("epics") or []
     coverage = goals.get("coverage") or {}
     has_uc = any(_fr_notation(p) == "use-case" for ps in coverage.values() for p in ps)
@@ -2227,6 +2253,7 @@ def _mermaid_goal_epic_tree(goals: dict, hierarchy: dict) -> str | None:
 
     lines = ["graph TD"]
     seen: set[str] = set()
+    drawn: list[dict] = []
 
     def epic_edge(parent_nid: str, e: dict) -> None:
         # An epic may contribute to several goals (a DAG): declare its node with
@@ -2238,6 +2265,7 @@ def _mermaid_goal_epic_tree(goals: dict, hierarchy: dict) -> str | None:
         label = _clean_label(e["title"])
         lines.append(f'  {parent_nid} --> {nid}["{e["id"]}<br/>{label}"]:::epic')
         lines.append(f'  click {nid} "/functional-requirements/{e["stem"]}"')
+        drawn.append({"id": e["id"], "title": e["title"], "url": f'/functional-requirements/{e["stem"]}'})
         seen.add(e["id"])
 
     def uc_edge(parent_nid: str, uc: Page) -> None:
@@ -2248,6 +2276,7 @@ def _mermaid_goal_epic_tree(goals: dict, hierarchy: dict) -> str | None:
         label = _clean_label(uc.title)
         lines.append(f'  {parent_nid} --> {nid}["{uc.id}<br/>{label}"]:::usecase')
         lines.append(f'  click {nid} "{_page_url(uc.folder, uc.stem)}"')
+        drawn.append(_node_link(uc))
         seen.add(uc.id)
 
     for o in objectives:
@@ -2255,6 +2284,7 @@ def _mermaid_goal_epic_tree(goals: dict, hierarchy: dict) -> str | None:
         glabel = _clean_label(_short_title(o))
         lines.append(f'  {gid}["{o.id}<br/>{glabel}"]:::goal')
         lines.append(f'  click {gid} "/goals#{o.id}"')
+        drawn.append({"id": o.id, "title": o.title, "url": f"/goals#{o.id}"})
         for fr in coverage.get(o.id, []):
             if _fr_notation(fr) == "use-case":
                 uc_edge(gid, fr)
@@ -2285,6 +2315,8 @@ def _mermaid_goal_epic_tree(goals: dict, hierarchy: dict) -> str | None:
         # the warning colour of the matrix's "no goal" flag (--warn)
         "  classDef nogoal fill:#5a3d0c,stroke:#ffb454,color:#ffffff,stroke-width:2px,font-weight:bold;",
     ]
+    if links is not None:
+        links.extend(drawn)
     return "\n".join(lines)
 
 
@@ -2814,14 +2846,16 @@ def _edge_text(s: object) -> str:
     return _mm_escape(str(s or "")).replace('"', "'")
 
 
-def build_deployment_diagram(root: str | None = None) -> str | None:
+def build_deployment_diagram(root: str | None = None,
+                             links: list[dict] | None = None) -> str | None:
     """Mermaid flowchart of every deployment node — existing, planned and
     replaced in one picture, marked per _lifecycle_lines — or of the subtree
     under `root`. A node with children or hosted blocks is a subgraph; hosted
     blocks are boxes inside it; `connects:` edges carry their protocol;
     external interfaces are neighbour boxes. None when no node matches. Edges
     to nodes outside a subtree are left out; deployment_hints names the
-    entries that cannot be drawn."""
+    entries that cannot be drawn. `links`, when given, receives every page
+    drawn as a node: deployment nodes, then blocks, then interfaces (QR-001)."""
     tree = build_node_tree()
     if root is not None:
         me = _bb_find(tree, root)
@@ -2892,6 +2926,11 @@ def build_deployment_diagram(root: str | None = None) -> str | None:
     for t in neighbours:
         lines.append(f'  {_diagram_node_id(eifs[t].id)}["{_clean_label(eifs[t].title)}"]:::system')
     lines += edges
+    if links is not None:
+        hosted = {b for s in shown for b in links_of(nodes[s], "hosts") if b in blocks}
+        links.extend(_node_link(nodes[s]) for s in sorted(shown, key=lambda k: nodes[k].id))
+        links.extend(_node_link(blocks[b]) for b in sorted(hosted, key=lambda k: blocks[k].id))
+        links.extend(_node_link(eifs[t]) for t in neighbours)
     lines += _lifecycle_lines(dict(sorted(marked.items(), key=lambda kv: kv[1][0])))
     lines += [
         "  classDef infra fill:#e3ecf7,stroke:#2f6fb3,color:#15202e;",
@@ -3014,7 +3053,11 @@ def deployment_view():
         row = _arch_row(p, "deployment-nodes")
         row["stereotype"] = str(p.meta.get("stereotype") or "").strip()
         rows.append(row)
-    return render_template("deployment.html", block=block, diagram=build_deployment_diagram(),
+    diagram_links: list[dict] = []
+    diagram = build_deployment_diagram(links=diagram_links)
+    return render_template("deployment.html", block=block, diagram=diagram,
+                           diagram_links=[l for l in diagram_links
+                                          if not l["url"].startswith("/page/deployment-nodes/")],
                            hints=deployment_hints(), rows=rows,
                            tree=build_node_tree(), total=len(pages),
                            maturity=maturity(p.status for p in pages))
@@ -3333,7 +3376,14 @@ def glossary_graph_view():
     rest_keys = [k for k in counts if k not in named_keys]
     rest = {"types": rest_keys, "count": sum(counts[k] for k in rest_keys)}
     n_glo = sum(1 for n in graph["nodes"] if n["data"].get("type") == "GLO")
+    # every node as a text link under the canvas (QR-001): terms, then the
+    # pages the layer buttons add
+    def node_links(core: bool) -> list[dict]:
+        found = [n["data"] for n in graph["nodes"] if bool(n["data"].get("core")) == core]
+        return [{"id": (_SOURCE_ID_RE.match(d["id"]) or [""])[0], "title": d["label"], "url": d["url"]}
+                for d in sorted(found, key=lambda d: d["label"].lower())]
     return render_template("graph.html", graph=graph, n_glo=n_glo,
+                           term_links=node_links(True), nearby_links=node_links(False),
                            named_layers=named_layers, rest=rest, edge_filter=edge_filter)
 
 
@@ -3585,7 +3635,8 @@ def page_detail(folder, stem):
     body = re.sub(r"^\s*#\s+.*(?:\n|$)", "", page.body, count=1)
     body_html = render_markdown(body, titles)
     # context pages carry the system-context diagram, projected live (DR-013)
-    context_diagram = build_context_diagram() if folder == "context" else None
+    diagram_links: list[dict] = []
+    context_diagram = build_context_diagram(links=diagram_links) if folder == "context" else None
     context_flows = build_context_flows() if folder == "context" else None
     # glossary pages carry a focused ego-graph snippet above the definition (DR-023)
     ego_graph = build_glossary_ego_graph(stem) if folder in {"domain-terms", "glossary"} else None
@@ -3594,7 +3645,7 @@ def page_detail(folder, stem):
     sequence = build_sequence_diagram(stem) if folder == "runtime-scenarios" else None
     hints = (runtime_hints(stem) if folder == "runtime-scenarios"
              else deployment_hints(stem) if folder == "deployment-nodes" else [])
-    deployment = build_deployment_diagram(stem) if folder == "deployment-nodes" else None
+    deployment = build_deployment_diagram(stem, diagram_links) if folder == "deployment-nodes" else None
     ego_layers = None
     if ego_graph:
         c = ego_graph["layer_counts"]
@@ -3613,7 +3664,7 @@ def page_detail(folder, stem):
         relations=build_relations_panel(stem, exclude=trace_stems(trace)),
         trace=trace, whitebox=whitebox,
         state=page_state(page) if folder in ARCH_FOLDERS else None,
-        sequence=sequence, hints=hints, deployment=deployment,
+        sequence=sequence, hints=hints, deployment=deployment, diagram_links=diagram_links,
         ego_graph=ego_graph, ego_layers=ego_layers,
         needs_mermaid=bool(context_diagram or whitebox or sequence or deployment) or "language-mermaid" in body_html,
         sources=provenance(page),
@@ -4306,7 +4357,8 @@ def functional_requirements_view():
     /req42/<slug>. Doubles as the home `functional-requirements` tile's click-target."""
     hierarchy = build_fr_hierarchy()
     goals = load_goals()
-    diagram = _mermaid_goal_epic_tree(goals, hierarchy)
+    diagram_links: list[dict] = []
+    diagram = _mermaid_goal_epic_tree(goals, hierarchy, diagram_links)
     block = catalog.SECTION_BY_SLUG.get("functional-requirements") or abort(404)
     # the flat list under the hierarchy (FR-021): every requirement of every
     # notation once, sortable by priority, release and order
@@ -4323,7 +4375,7 @@ def functional_requirements_view():
                      "order": str(p.meta.get("order") if p.meta.get("order") is not None else "").strip(),
                      "status": p.status})
     return render_template(
-        "functional-requirements.html", hierarchy=hierarchy, diagram=diagram,
+        "functional-requirements.html", hierarchy=hierarchy, diagram=diagram, diagram_links=diagram_links,
         block=block, needs_mermaid=bool(diagram), rows=rows,
     )
 
@@ -4443,13 +4495,14 @@ def _block_list(block: dict, slug: str | None):
         for p in _block_pages(block)
     ]
     # the Scope block (03) shows the same live-projected system-context diagram
-    context_diagram = build_context_diagram() if slug == "scope" else None
+    diagram_links: list[dict] = []
+    context_diagram = build_context_diagram(links=diagram_links) if slug == "scope" else None
     context_flows = build_context_flows() if slug == "scope" else None
     entity_diagram = build_data_model_full_diagram() if slug == "models" else None
     return render_template(
         "req42_block.html", block=block, rows=rows, total=len(rows),
         list_type=metamodel.type_for_folder(block["folders"][0]) if block["folders"] else "page",
-        context_diagram=context_diagram, context_flows=context_flows,
+        context_diagram=context_diagram, context_flows=context_flows, diagram_links=diagram_links,
         entity_diagram=entity_diagram, needs_mermaid=bool(context_diagram or entity_diagram),
         maturity=maturity(r["status"] for r in rows),
     )
@@ -4980,7 +5033,7 @@ def help_view():
         text = "# Help\n\nhelp.md is missing from the image."
     img = (f'<figure class="help-diagram"><img src="{static_url("systems42-sections.svg")}" '
            f'alt="Systems42 sections: req42, arc42 and Common" width="660" height="608"></figure>')
-    html = md.markdown(text.replace("{{DIAGRAM}}", img), extensions=["extra", "sane_lists"])
+    html = wrap_tables(md.markdown(text.replace("{{DIAGRAM}}", img), extensions=["extra", "sane_lists"]))
     return render_template("help.html", html=html)
 
 
@@ -5036,8 +5089,8 @@ def _mm_wikilinks(text: str, anchors: dict[str, str]) -> str:
 
 def _mm_html(text: str, anchors: dict[str, str]) -> str:
     """A metamodel page body (or a summary line) as HTML."""
-    return sanitize_html(md.markdown(_mm_wikilinks(_unwrap_prose(text or ""), anchors),
-                                     extensions=["extra", "sane_lists"]))
+    return sanitize_html(wrap_tables(md.markdown(_mm_wikilinks(_unwrap_prose(text or ""), anchors),
+                                                 extensions=["extra", "sane_lists"])))
 
 
 def _mm_inline(text: str, anchors: dict[str, str]) -> str:
@@ -5323,8 +5376,8 @@ def about_view():
     path = _about_path()
     if path is None:
         abort(404)
-    html = sanitize_html(md.markdown(path.read_text(encoding="utf-8", errors="replace"),
-                                     extensions=["extra", "sane_lists"]), about=True)
+    html = sanitize_html(wrap_tables(md.markdown(path.read_text(encoding="utf-8", errors="replace"),
+                                                 extensions=["extra", "sane_lists"])), about=True)
     html = _REL_URL.sub(lambda m: f'{m.group(1)}{_about_url(path, m.group(2))}"', html)
     title = wiki_config()["about_label"]
     return render_template("about.html", html=html, title=title)
