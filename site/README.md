@@ -10,11 +10,13 @@ make site
 
 This runs `site/build.py` inside Docker (using the dashboard's `base` image stage) and writes the finished site to `site/_site/` (gitignored). Nothing in `wiki/`, `raw/`, `_system/`, `_templates/` or `docs/` is modified.
 
-Preview locally:
+Preview locally in Docker (no local Python required; builds first if needed, opens your browser, `Ctrl+C` stops):
 
 ```sh
-python3 -m http.server 8090 --directory site/_site
+make site-show
 ```
+
+Set `SITE_PORT=8091` if port `8090` is already in use.
 
 ## Switching the demo wiki (for example to `isaqb-atrium`)
 
