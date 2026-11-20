@@ -86,6 +86,49 @@ def test_leading_pipe_table_survives():
     assert "<table>" in html, html
 
 
+def test_tilde_fence_lines_are_not_joined():
+    html = app.render_markdown("Before.\n\n~~~\nline one\nline two\n~~~\nAfter the fence.", {})
+    assert "<pre><code>line one\nline two\n</code></pre>" in html, html
+    assert "~~~" not in html, html
+    assert "<p>After the fence.</p>" in html, html
+
+
+# --- wikilinks inside code stay literal ------------------------------------
+
+def test_wikilink_in_inline_code_stays_literal():
+    html = app.render_markdown("Quote `[[FR-001]]` as written.", {})
+    assert "<code>[[FR-001]]</code>" in html, html
+    assert 'class="wl"' not in html, html
+
+
+def test_wikilink_in_backtick_fence_stays_literal():
+    html = app.render_markdown('```yaml\nrelated: ["[[FR-001]]"]\n```', {})
+    assert 'related: ["[[FR-001]]"]' in html, html
+    assert 'class="wl"' not in html, html
+
+
+def test_wikilink_in_tilde_fence_stays_literal():
+    html = app.render_markdown('~~~\nrelated: ["[[FR-001]]"]\n~~~', {})
+    assert '<pre><code>related: ["[[FR-001]]"]' in html, html
+    assert 'class="wl"' not in html, html
+
+
+def test_wikilink_next_to_code_is_still_a_link():
+    html = app.render_markdown("See [[FR-002|the export]] and `[[FR-001]]`.", {})
+    assert '<span class="wl">the export</span>' in html, html
+    assert "<code>[[FR-001]]</code>" in html, html
+    html = app.render_markdown('```\n[[FR-001]]\n```\n\nSee [[FR-002|the export]].', {})
+    assert '<span class="wl">the export</span>' in html, html
+    assert "<code>[[FR-001]]\n</code>" in html, html
+
+
+def test_metamodel_wikilink_in_code_stays_literal():
+    html = app._mm_html("Cite `[[MADR]]` like [[FR-002|this]].\n\n~~~\n[[FR-001]]\n~~~", {})
+    assert "<code>[[MADR]]</code>" in html, html
+    assert "<code>[[FR-001]]\n</code>" in html, html
+    assert '<span class="mm-anchor">this</span>' in html, html
+
+
 # --- sanitize_html ---------------------------------------------------------
 # tests/test_hostile_vault.py checks whole pages. These name each rule on its
 # own, so a rule that is switched off fails here by name.
@@ -157,6 +200,12 @@ if __name__ == "__main__":
     test_prose_starting_with_a_wikilink_is_joined()
     test_spaced_pipe_in_prose_is_still_joined()
     test_leading_pipe_table_survives()
+    test_tilde_fence_lines_are_not_joined()
+    test_wikilink_in_inline_code_stays_literal()
+    test_wikilink_in_backtick_fence_stays_literal()
+    test_wikilink_in_tilde_fence_stays_literal()
+    test_wikilink_next_to_code_is_still_a_link()
+    test_metamodel_wikilink_in_code_stays_literal()
     test_ids_of_the_pages_own_controls_are_dropped()
     test_footnote_ids_are_kept()
     test_classes_of_the_pages_own_controls_are_dropped()
@@ -164,4 +213,4 @@ if __name__ == "__main__":
     test_images_of_the_dashboard_keep_their_source()
     test_links_to_outside_are_kept()
     test_about_styles_cannot_fetch()
-    print("OK: markdown unwrap contract, sanitizer rules")
+    print("OK: markdown unwrap contract, wikilinks in code, sanitizer rules")
