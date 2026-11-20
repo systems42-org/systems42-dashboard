@@ -320,3 +320,13 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 ## [2026-11-19] inspect | STK-001 and STK-023 promoted
 - Gernot Starke promoted [[STK-001-readers]] and [[STK-023-keyholder]] to `accepted`.
 - STK-023 gets the alias "Yoda". Its naming paragraph now says both aliases name the role.
+
+## [2026-11-20] inspect | Boundary alignment with systems42-org/meta
+- Gernot Starke reviewed the boundary drift between this wiki and `systems42-org/meta` (`CON-004`, `CON-006`) and settled four items:
+  1. Q42 `dimensions:` (`DR-003`): `meta` leads on QR classification. Commented on `meta#35`, deprecated local [[DR-003-quality-requirements-are-classified-by-q42-dimensions]] and raised [[ISS-008-q42-dimensions-belong-in-meta]].
+  2. Issue `category:` and `owner:` (`FR-026`, `FR-028`): proposed upstream in `meta#53`, raised [[ISS-007-issue-category-and-owner-belong-in-meta]], narrowed [[FR-025-issue-list-with-filters]], [[FR-026-issues-carry-a-category]] and [[FR-028-who-answers-an-issue]] to dashboard display and filtering with graceful fallback when absent.
+  3. `sort_orders:` (`FR-021`): moved to dashboard presentation (`CON-006`), removing the metamodel schema requirement from [[FR-021-sort-lists]].
+  4. External scope: trimmed [[FR-032-example-brands-to-try]] to the shipped `systems42` default brand, deprecated [[FR-033-runnable-dashboard-in-the-starter-kit]] (moved starter-kit assembly to `meta#54`, kept zero-config start in [[FR-042-start-a-pinned-release-with-one-command]] and [[FR-029-the-dashboard-as-a-product]]), and reframed [[GOAL-006-source-and-status-on-every-statement]] to the dashboard's display and agreed-only filtering role.
+- Warned on `systems42-dashboard#33` about the three local metamodel divergences before syncing `_system/metamodel/` from `meta`.
+- Created: [[ISS-007-issue-category-and-owner-belong-in-meta]], [[ISS-008-q42-dimensions-belong-in-meta]].
+- Updated: DR-003, FR-021, FR-025, FR-026, FR-028, FR-029, FR-032, FR-033, FR-042, GOAL-006, `_system/index.md`.

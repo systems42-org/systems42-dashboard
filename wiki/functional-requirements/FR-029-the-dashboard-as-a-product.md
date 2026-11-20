@@ -4,7 +4,7 @@ type: functional-requirement
 title: The dashboard as a product
 status: draft
 created: 2026-11-13
-updated: 2026-11-17
+updated: 2026-11-20
 sources: ["[[SRC-019-the-dashboard-as-a-product]]", "[[SRC-020-grilling-session-on-the-dashboard-as-a-product]]", "[[SRC-027-dashboard-distribution-and-metamodel-contract]]", "[[SRC-028-grilling-session-on-dashboard-distribution]]"]
 related: ["[[CON-003-docker-is-the-supported-way-to-run-it]]", "[[QR-002-runs-alike-on-linux-and-macos]]", "[[DR-004-releases-are-container-images-pinned-per-wiki]]", "[[CON-001-proof-of-concept-not-production-ready]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[STK-012-maintainers]]", "[[DR-005-the-dashboard-lives-in-its-own-repository]]", "[[CON-005-the-dashboard-works-on-systems42-derivatives-only]]"]
 tags: ["functional-requirement", "product"]
@@ -37,7 +37,7 @@ These rules hold for every feature below:
 
 **Success metric(s).** A fresh starter kit on a clean Linux or macOS machine with Docker shows its dashboard after `make dev`, with no other step.
 
-**Scope.** in: releases, the launcher, the metamodel version check, branding by configuration, a runnable dashboard in the starter kit · out: Windows (for now), running without Docker as a supported way, hosting for many users ([[CON-001-proof-of-concept-not-production-ready]]).
+**Scope.** in: releases, the launcher, the metamodel version check, branding by configuration · out: Windows (for now), running without Docker as a supported way, hosting for many users ([[CON-001-proof-of-concept-not-production-ready]]), assembling the Systems42 starter kit (moved to `meta#54`, [[FR-033-runnable-dashboard-in-the-starter-kit]] deprecated).
 
 ## Hierarchy
 

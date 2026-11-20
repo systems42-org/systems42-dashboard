@@ -70,7 +70,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-030-numbered-releases]] Numbered releases (feature, Must, draft)
 - [[FR-031-branding-is-configuration]] Branding is configuration (feature, Must, draft)
 - [[FR-032-example-brands-to-try]] Example brands to try (feature, Should, draft)
-- [[FR-033-runnable-dashboard-in-the-starter-kit]] Runnable dashboard in the starter kit (feature, Should, draft)
+- [[FR-033-runnable-dashboard-in-the-starter-kit]] Runnable dashboard in the starter kit (feature, Should, deprecated)
 - [[FR-034-read-a-page-with-its-links]] Read a page with its links (feature, Must, draft)
 - [[FR-035-method-terms-lead-to-their-definition]] Method terms lead to their definition (feature, Should, draft)
 - [[FR-036-goal-coverage-matrix]] Goal coverage matrix (feature, Should, draft)
@@ -111,7 +111,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 
 - [[DR-001-english-brief-plain-writing]] Write all documentation in brief, plain English (accepted)
 - [[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]] Tailoring belongs to Systems42, the view belongs to the dashboard (accepted)
-- [[DR-003-quality-requirements-are-classified-by-q42-dimensions]] Quality requirements are classified by Q42 dimensions (accepted)
+- [[DR-003-quality-requirements-are-classified-by-q42-dimensions]] Quality requirements are classified by Q42 dimensions (deprecated)
 - [[DR-004-releases-are-container-images-pinned-per-wiki]] Releases are container images, pinned per wiki (accepted)
 - [[DR-005-the-dashboard-lives-in-its-own-repository]] The dashboard lives in its own repository, with its requirements and its code (review)
 - [[DR-006-interactive-diagrams-are-projected-on-the-server-and-laid-out-in-the-browser]] Interactive diagrams are projected on the server and laid out in the browser (draft)
@@ -124,6 +124,8 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[ISS-004-where-the-metamodel-declares-its-version]] Where the metamodel declares its version (open, systems42, meta #39)
 - [[ISS-005-the-method-lint-imports-dashboard-code]] The method's lint imports dashboard code (open, systems42, meta #40)
 - [[ISS-006-other-container-engines-than-docker]] Should the dashboard run with other container engines than Docker (open, requirements, #24)
+- [[ISS-007-issue-category-and-owner-belong-in-meta]] Issue category and owner fields belong in meta (open, systems42, meta #53)
+- [[ISS-008-q42-dimensions-belong-in-meta]] Q42 dimensions for quality requirements belong in meta (open, systems42, meta #35)
 
 ## Sources
 

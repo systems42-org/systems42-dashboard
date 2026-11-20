@@ -2,11 +2,11 @@
 id: DR-003
 type: decision-record
 title: Quality requirements are classified by Q42 dimensions
-status: accepted
+status: deprecated
 created: 2026-11-12
-updated: 2026-11-12
+updated: 2026-11-20
 sources: ["[[SRC-018-grilling-session-on-phone-and-tablet]]"]
-related: ["[[QR-001-usable-on-phone-and-tablet]]", "[[STK-001-readers]]"]
+related: ["[[QR-001-usable-on-phone-and-tablet]]", "[[STK-001-readers]]", "[[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]]", "[[ISS-008-q42-dimensions-belong-in-meta]]"]
 tags: [decision-record]
 aliases: []
 kind: architecture
@@ -22,6 +22,9 @@ superseded-by: []
 # Quality requirements are classified by Q42 dimensions
 
 > follows [[MADR]]
+
+> [!note] Deprecated (2026-11-20)
+> Quality requirement classification is a Systems42 metamodel decision, not a dashboard decision ([[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]]). `systems42-org/meta` leads on this change ([meta issue #35](https://github.com/systems42-org/meta/issues/35), [[ISS-008-q42-dimensions-belong-in-meta]]). The text below stays on record until `meta` settles it.
 
 ## Context and Problem Statement
 
