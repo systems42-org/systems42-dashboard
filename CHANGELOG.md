@@ -17,6 +17,14 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - Dashboard: Reload now also clears the cached metamodel and anchor pages, and a wiki page rewritten with the same mtime but a different size is read again without a reload (#58).
 - Dashboard: a functional requirement page renders in 12 ms instead of 35 ms, because each page's links are worked out once. Deleted pages and anchors leave the parse caches, the caches take a lock under gunicorn's four threads, and link titles come from the same pages the lists show (#68).
 - Dashboard: the Keyholder keeps the rights while their tab is in the background. Only a tab that closes or stops pinging for 90 s hands them on.
+- Launcher: `dashboard.sh` names the container after the wiki's folder plus a checksum of its path, so two wikis in folders of the same name no longer stop each other. `down`, `logs`, `clean` and a new start also handle this wiki's container under the old name.
+- Dashboard: `/goals` shows the objective cards and the goal coverage matrix when no vision page exists yet.
+- Dashboard: `*emphasis*` in a quality scenario no longer breaks a link that contains a `*`.
+- Dashboard: the view dialog can save when the browser blocks session storage.
+- Dashboard: the "Disconnect all" question counts the other clients, without the facilitator's own tab.
+- Dashboard: `/req42/<slug>` answers 404 for the arc42 sections, which live under `/arc42/`.
+- Dashboard: `/issues?section=` ignores case, so `c2` filters like `C2`.
+- Dashboard: the metamodel page links a projection's route only when it is a path on this site.
 - Dashboard: on a functional requirement page the sources row no longer overlaps the row of pills above it.
 
 ### Added

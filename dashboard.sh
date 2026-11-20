@@ -27,11 +27,29 @@ IMAGE_REPO="ghcr.io/systems42-org/dashboard"
 LATEST_RELEASE="https://api.github.com/repos/systems42-org/systems42-dashboard/releases/latest"
 LOCAL_IMAGE="systems42-dashboard:local"
 # One container per wiki, so two wikis on one machine do not replace each other.
-NAME="systems42-dashboard-$(basename "$ROOT" | tr -c 'A-Za-z0-9_.\n-' '-')"
+# The folder name alone is not enough: ~/a/wiki and ~/b/wiki would share it.
+# So the name ends in a checksum of the wiki's path (cksum is POSIX).
+LEGACY_NAME="systems42-dashboard-$(basename "$ROOT" | tr -c 'A-Za-z0-9_.\n-' '-')"
+NAME="$LEGACY_NAME-$(printf '%08x' "$(printf '%s' "$ROOT" | cksum | cut -d ' ' -f 1)")"
 PORT="${DASH_PORT:-8080}"
 URL="http://localhost:$PORT"
 
 die() { echo "✗ $*" >&2; exit 1; }
+
+# Launchers before the checksum named the container after the folder only.
+# A container under that name is this wiki's only if it mounts this wiki:
+# another wiki in a folder of the same name may own it.
+legacy_is_ours() {
+  local src
+  src="$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/repo"}}{{.Source}}{{end}}{{end}}' "$LEGACY_NAME" 2>/dev/null)" || return 1
+  [ -n "$src" ] && { [ "$src" = "$ROOT" ] || [ "$src" = "$(cd "$ROOT" && pwd -P)" ]; }
+}
+
+# Remove this wiki's container, and its container under the old name.
+remove_container() {
+  if legacy_is_ours; then docker rm -f "$LEGACY_NAME" >/dev/null 2>&1 || true; fi
+  docker rm -f "$NAME" >/dev/null 2>&1
+}
 
 need_docker() {
   command -v docker >/dev/null 2>&1 || die "Docker is not installed or not on PATH."
@@ -86,7 +104,7 @@ case "$cmd" in
     fi
     ip="$(lan_ip 2>/dev/null || true)"
     public="${DASH_PUBLIC_URL:-http://${ip:-localhost}:$PORT}"
-    docker rm -f "$NAME" >/dev/null 2>&1 || true
+    remove_container || true
     # One mount: the repository, read-only. The dashboard writes nothing there
     # (FR-046). Releases up to 0.11.4 saved the view in the settings file, so a
     # wiki that still has one gets it mounted writable for them.
@@ -114,12 +132,16 @@ case "$cmd" in
     ;;
   down)
     need_docker
-    docker rm -f "$NAME" >/dev/null 2>&1 || true
+    remove_container || true
     echo "✓ Dashboard stopped."
     ;;
   logs)
     need_docker
-    docker logs -f "$NAME"
+    if ! docker inspect "$NAME" >/dev/null 2>&1 && legacy_is_ours; then
+      docker logs -f "$LEGACY_NAME"
+    else
+      docker logs -f "$NAME"
+    fi
     ;;
   update)
     command -v curl >/dev/null 2>&1 || die "update needs curl."
@@ -145,7 +167,7 @@ case "$cmd" in
   clean)
     # Only what a start rebuilds. A pulled release image stays: other wikis
     # on this machine may use it. No volumes: the mounts are the content.
-    if command -v docker >/dev/null 2>&1 && docker rm -f "$NAME" >/dev/null 2>&1; then
+    if command -v docker >/dev/null 2>&1 && remove_container; then
       docker rmi "$LOCAL_IMAGE" >/dev/null 2>&1 || true
       echo "✓ Container removed."
     else

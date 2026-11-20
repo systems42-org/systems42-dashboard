@@ -12,7 +12,10 @@
   var note = document.getElementById("settings-note");
   var cancel = document.getElementById("settings-cancel");
 
+  // the id base.html's heartbeat uses, which is in memory only when storage
+  // is blocked
   function clientId() {
+    if (window.etsuClientId) { return window.etsuClientId; }
     try { return sessionStorage.getItem("etsu-client-id") || ""; } catch (e) { return ""; }
   }
   function facilitator() { return document.documentElement.dataset.facilitator === "1"; }

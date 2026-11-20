@@ -131,6 +131,9 @@
         return Date.now().toString(36) + Math.random().toString(36).slice(2);
       }
     })();
+    // settings.js posts the same id, also when storage is blocked and the id
+    // above lives in memory only
+    window.etsuClientId = CLIENT_ID;
     // Failure detection is shared between the 20s /ping and the 5s
     // /presence/count poll below — the faster one dominates once the server
     // is actually down, so a client sees the "session ended" state
@@ -243,9 +246,12 @@
     // currently Yoda, and re-hides it if that ever stops being true.
     if (disconnectBtn) {
       disconnectBtn.addEventListener("click", function () {
-        var n = parseInt(presenceCountEl.textContent, 10) || 0;
-        var who = n === 1 ? "1 other client" : n + " other clients";
-        if (!window.confirm("Disconnect " + who + " and stop the dashboard?")) {
+        // the count includes this tab, the facilitator's own
+        var others = Math.max((parseInt(presenceCountEl.textContent, 10) || 0) - 1, 0);
+        var ask = others === 0 ? "Nobody else is connected. Stop the dashboard?"
+            : "Disconnect " + (others === 1 ? "1 other client" : others + " other clients")
+              + " and stop the dashboard?";
+        if (!window.confirm(ask)) {
           return;
         }
         // Disabled the instant it's actioned: prevents a second click while
