@@ -4578,17 +4578,21 @@ def _facilitator_client_id():
     name "Yoda") flip back and forth between two tabs whenever the first
     one hovered around the presence window (reported 2026-10-28).
 
-    "Currently connected" means within `_PRESENCE_WINDOW`, same bar as the
-    footer counter and /who — not merely "not yet evicted by the 90s
-    heartbeat grace" (`_clients`/`_first_seen` only drop an entry that late).
-    Without this, a tab gone 40s ago could still hold the role for another
-    50s, and everyone actually present would show as a plain client
-    (nobody would pass the `cid == _facilitator_client_id()` check at all).
+    "Currently connected" means the watchdog has not dropped the client:
+    it is still in `_clients` and pinged within `_HEARTBEAT_GRACE`, the same
+    bar the watchdog evicts on. A tab in the background pings only about
+    once a minute, so the tighter `_PRESENCE_WINDOW` of the footer counter
+    and /who would take the role from a holder who merely switched tabs
+    (issue #56). The heir is picked by the same bar, so a background tab is
+    not skipped either. The price: a crashed tab holds the role for up to
+    `_HEARTBEAT_GRACE`. A closed tab sends /leaving and drops out after
+    `_LEAVE_GRACE`. The grace check here, not only the eviction, keeps the
+    answer independent of when the watchdog last ran.
     Call under `_lifecycle_lock`."""
     global _facilitator
     now = time.monotonic()
     active = {cid: fs for cid, fs in _first_seen.items()
-              if now - _clients.get(cid, 0) <= _PRESENCE_WINDOW}
+              if cid in _clients and now - _clients[cid] <= _HEARTBEAT_GRACE}
     if _facilitator in active:
         return _facilitator
     _facilitator = min(active, key=active.get) if active else None

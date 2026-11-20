@@ -16,6 +16,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - Dashboard: a wikilink inside inline code or a fenced code block shows as written, on wiki pages and on /metamodel, instead of as an escaped link tag. A `~~~` fence renders as code instead of being joined into the paragraph around it.
 - Dashboard: Reload now also clears the cached metamodel and anchor pages, and a wiki page rewritten with the same mtime but a different size is read again without a reload (#58).
 - Dashboard: a functional requirement page renders in 12 ms instead of 35 ms, because each page's links are worked out once. Deleted pages and anchors leave the parse caches, the caches take a lock under gunicorn's four threads, and link titles come from the same pages the lists show (#68).
+- Dashboard: the Keyholder keeps the rights while their tab is in the background. Only a tab that closes or stops pinging for 90 s hands them on.
 - Dashboard: on a functional requirement page the sources row no longer overlaps the row of pills above it.
 
 ### Added

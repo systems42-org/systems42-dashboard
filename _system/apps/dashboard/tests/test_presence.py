@@ -119,16 +119,14 @@ def test_the_facilitator_is_literally_named_yoda_not_a_random_nickname():
 
 
 def test_a_stale_earliest_client_does_not_block_the_facilitator_role():
-    # Regression: _facilitator_client_id() used to consider every id still in
-    # _first_seen, evicted only after the 90s heartbeat grace — so a tab gone
-    # for, say, 40s (past the 30s presence window, but not yet evicted) kept
-    # "holding" the role, and the genuinely-active first client never passed
-    # `cid == _facilitator_client_id()` at all: nobody got the button.
+    # Regression: a tab past the heartbeat grace that the watchdog has not
+    # evicted yet must not hold the role, or the genuinely active client
+    # never passes `cid == _facilitator_client_id()` and nobody gets the
+    # button.
     _reset_presence()
     client = app.app.test_client()
     _ping(client, "long-gone")  # first ever, but about to go stale
-    with app._lifecycle_lock:
-        app._clients["long-gone"] = app.time.monotonic() - (app._PRESENCE_WINDOW + 5)
+    _go_stale("long-gone")
     resp = _ping(client, "yoda").get_json()  # the only *currently* connected client
     assert resp["is_facilitator"] is True
 
@@ -145,10 +143,77 @@ def test_facilitator_role_transfers_when_yoda_disconnects():
 
 
 def _go_stale(client_id):
-    """Push a client's last ping just past the presence window, as when its
-    browser quits or a background tab is throttled."""
+    """Push a client's last ping just past the heartbeat grace, as when its
+    browser quits without a goodbye. The watchdog evicts it on its next
+    tick, but the role must not wait for that."""
+    with app._lifecycle_lock:
+        app._clients[client_id] = app.time.monotonic() - (app._HEARTBEAT_GRACE + 5)
+
+
+def _go_background(client_id):
+    """Push a client's last ping just past the presence window, as when a
+    background tab is throttled to about one ping a minute (issue #56)."""
     with app._lifecycle_lock:
         app._clients[client_id] = app.time.monotonic() - (app._PRESENCE_WINDOW + 5)
+
+
+def _post(client, path, client_id, **body):
+    return client.post(path, data=json.dumps({"client_id": client_id, **body}),
+                       content_type="application/json")
+
+
+def test_a_holder_in_a_background_tab_keeps_the_role():
+    # Issue #56: the holder's tab is throttled and its last ping is 35 s
+    # old. The second tab's ping must not take the role, and the holder's
+    # own rights stay intact. The footer counter still uses the 30 s window.
+    _reset_presence()
+    client = app.app.test_client()
+    _ping(client, "yoda")
+    _ping(client, "luke")
+    _go_background("yoda")
+    assert _ping(client, "luke").get_json()["is_facilitator"] is False
+    assert _post(client, "/settings", "luke", hidden=[]).status_code == 403
+    assert _post(client, "/disconnect-all", "luke").status_code == 403
+    assert client.get("/presence/count").get_json()["count"] == 1
+    assert _post(client, "/settings", "yoda", hidden=[]).status_code == 200
+    assert _ping(client, "yoda").get_json()["is_facilitator"] is True
+
+
+def test_the_role_passes_to_the_next_earliest_tab_once_the_holder_is_evicted():
+    # The holder stays silent past the heartbeat grace and the watchdog
+    # evicts it. The next-earliest tab inherits the role, even while that
+    # tab is itself only in the background.
+    _reset_presence()
+    client = app.app.test_client()
+    _ping(client, "yoda")
+    _ping(client, "luke")
+    _ping(client, "leia")
+    _go_stale("yoda")
+    with app._lifecycle_lock:
+        app._forget_client("yoda")  # what the watchdog does on its next tick
+    _go_background("luke")
+    assert _ping(client, "leia").get_json()["is_facilitator"] is False
+    assert _ping(client, "luke").get_json()["is_facilitator"] is True
+
+
+def test_the_heir_keeps_the_role_when_the_old_holder_returns():
+    # After the role passed on, the old holder's tab connects again with the
+    # same client_id. The heir keeps the role while it is present, even in
+    # the background, and the old holder keeps its name.
+    _reset_presence()
+    client = app.app.test_client()
+    _ping(client, "yoda")
+    _ping(client, "luke")
+    _go_stale("yoda")
+    with app._lifecycle_lock:
+        app._forget_client("yoda")
+    assert _ping(client, "luke").get_json()["is_facilitator"] is True
+    back = _ping(client, "yoda").get_json()
+    assert back["is_facilitator"] is False and back["nickname"] == "Yoda"
+    _go_background("luke")
+    assert _ping(client, "yoda").get_json()["is_facilitator"] is False
+    assert _post(client, "/disconnect-all", "yoda").status_code == 403
+    assert _ping(client, "luke").get_json()["is_facilitator"] is True
 
 
 def test_the_role_does_not_flip_back_when_the_old_yoda_reappears():
@@ -299,6 +364,9 @@ if __name__ == "__main__":
     test_the_facilitator_is_literally_named_yoda_not_a_random_nickname()
     test_a_stale_earliest_client_does_not_block_the_facilitator_role()
     test_facilitator_role_transfers_when_yoda_disconnects()
+    test_a_holder_in_a_background_tab_keeps_the_role()
+    test_the_role_passes_to_the_next_earliest_tab_once_the_holder_is_evicted()
+    test_the_heir_keeps_the_role_when_the_old_holder_returns()
     test_the_role_does_not_flip_back_when_the_old_yoda_reappears()
     test_names_are_sticky_across_a_role_transfer()
     test_a_name_survives_eviction_and_return()
