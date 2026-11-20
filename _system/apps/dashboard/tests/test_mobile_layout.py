@@ -95,6 +95,8 @@ _SERVER = """
 import json, sys
 sys.path.insert(0, sys.argv[1])
 import app
+# a shutdown (FR-050) must end this server only, never signal the test that started it
+app.app.config["DEV_SERVER"] = True
 from werkzeug.serving import WSGIRequestHandler, make_server
 
 class Quiet(WSGIRequestHandler):
@@ -117,8 +119,10 @@ srv.serve_forever()
 
 
 def _serve(wiki: Path, config: Path | None):
+    # closing a page sends /leaving: without a long leave grace the dashboard
+    # stops itself between two pages on a slow machine (FR-050)
     env = dict(os.environ, WIKI_DIR=str(wiki), DASH_STARTUP_GRACE="3600",
-               DASH_HEARTBEAT_GRACE="3600")
+               DASH_HEARTBEAT_GRACE="3600", DASH_LEAVE_GRACE="3600")
     if config:
         env["WIKI_CONFIG"] = str(config)
     proc = subprocess.Popen([sys.executable, "-c", _SERVER, str(HERE)], env=env,
