@@ -91,6 +91,8 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-051-reveal-related-page-types-layer-by-layer]] Reveal related page types layer by layer (story, Should, draft)
 - [[FR-052-see-a-terms-neighbourhood-on-its-page]] See a term's neighbourhood on its page (story, Should, draft)
 - [[FR-053-reach-the-session-controls-and-the-theme-from-one-menu]] Reach the session controls and the theme from one menu (story, Could, draft)
+- [[FR-054-a-start-without-a-container-engine]] A start without a container engine (feature, Should, draft)
+- [[FR-055-an-installable-dashboard-app]] An installable dashboard app (feature, Should, draft)
 
 ## Quality requirements
 
@@ -102,7 +104,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 
 - [[CON-001-proof-of-concept-not-production-ready]] The dashboard is a proof of concept, not production-ready for every environment (draft)
 - [[CON-002-dashboard-never-writes-to-the-wiki]] The dashboard never writes to the wiki (draft)
-- [[CON-003-docker-is-the-supported-way-to-run-it]] Docker is the supported way to run the dashboard (draft)
+- [[CON-003-docker-is-the-supported-way-to-run-it]] Docker and uv are the supported ways to run the dashboard (draft)
 - [[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]] The dashboard shows the metamodel, it does not define it (draft)
 - [[CON-005-the-dashboard-works-on-systems42-derivatives-only]] The dashboard works on Systems42 derivatives only (draft)
 - [[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]] The dashboard depends on the metamodel, never the reverse (draft)
@@ -115,6 +117,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[DR-004-releases-are-container-images-pinned-per-wiki]] Releases are container images, pinned per wiki (accepted)
 - [[DR-005-the-dashboard-lives-in-its-own-repository]] The dashboard lives in its own repository, with its requirements and its code (review)
 - [[DR-006-interactive-diagrams-are-projected-on-the-server-and-laid-out-in-the-browser]] Interactive diagrams are projected on the server and laid out in the browser (draft)
+- [[DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go]] The dashboard gets a uv start and a second implementation in Go (draft)
 
 ## Issues
 
@@ -164,3 +167,4 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-033-grilling-session-on-the-shared-session]] Grilling session on the shared session (interview)
 - [[SRC-034-dashboard-requirements-moved-from-meta]] Dashboard requirements that still lived in meta (document)
 - [[SRC-035-grilling-session-on-the-requirements-moved-from-meta]] Grilling session on the requirements moved from meta (interview)
+- [[SRC-036-grilling-session-on-running-without-a-container-engine]] Grilling session on running without a container engine (interview)

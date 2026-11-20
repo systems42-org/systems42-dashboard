@@ -330,3 +330,16 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Warned on `systems42-dashboard#33` about the three local metamodel divergences before syncing `_system/metamodel/` from `meta`.
 - Created: [[ISS-007-issue-category-and-owner-belong-in-meta]], [[ISS-008-q42-dimensions-belong-in-meta]].
 - Updated: DR-003, FR-021, FR-025, FR-026, FR-028, FR-029, FR-032, FR-033, FR-042, GOAL-006, `_system/index.md`.
+
+## [2026-11-20] capture | Running without a container engine: uv and a Go app
+- Origin: Gernot Starke, chat of 2026-11-20 ([[SRC-036-grilling-session-on-running-without-a-container-engine]]). Some people run their wiki inside a virtual machine, where no container engine starts.
+- Decisions:
+  - uv is a second supported way to start the Python dashboard, next to `make dev`.
+  - uv gets the release as a wheel from the GitHub release, not from a git tag and not from PyPI.
+  - A second implementation in Go becomes an installable app, macOS first. Claude recommended packaging the Python dashboard instead. Gernot Starke chose Go and accepts the extra work.
+  - One installed app shows every wiki and tells a differing release. It does not fetch the release a wiki names.
+  - Recorded as [[DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go]], which amends DR-004.
+- Created: [[FR-054-a-start-without-a-container-engine]], [[FR-055-an-installable-dashboard-app]], [[DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go]], SRC-036.
+- Updated: CON-003 (title and text: Docker and uv), QR-002 (scenario and measure), FR-029 (rule, scope, children), FR-042 (scope), STK-010 (concern), `_system/index.md`.
+- Open: whether the Go app shows the pages in the browser or in its own window. Asked, not yet answered, noted on FR-055. The priorities of FR-054 and FR-055 (Should) are Claude's proposal.
+- Code: `./dashboard.sh uv` and the wheel are in the same pull request. The plan for the Go app is issue #80.

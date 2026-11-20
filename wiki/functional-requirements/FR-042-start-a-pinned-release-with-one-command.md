@@ -5,8 +5,8 @@ title: Start a pinned release with one command
 status: draft
 created: 2026-11-17
 updated: 2026-11-20
-sources: ["[[SRC-027-dashboard-distribution-and-metamodel-contract]]", "[[SRC-028-grilling-session-on-dashboard-distribution]]"]
-related: ["[[DR-004-releases-are-container-images-pinned-per-wiki]]", "[[FR-030-numbered-releases]]", "[[CON-005-the-dashboard-works-on-systems42-derivatives-only]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[CON-003-docker-is-the-supported-way-to-run-it]]"]
+sources: ["[[SRC-027-dashboard-distribution-and-metamodel-contract]]", "[[SRC-028-grilling-session-on-dashboard-distribution]]", "[[SRC-036-grilling-session-on-running-without-a-container-engine]]"]
+related: ["[[DR-004-releases-are-container-images-pinned-per-wiki]]", "[[FR-030-numbered-releases]]", "[[CON-005-the-dashboard-works-on-systems42-derivatives-only]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[CON-003-docker-is-the-supported-way-to-run-it]]", "[[FR-054-a-start-without-a-container-engine]]"]
 tags: ["functional-requirement", "product"]
 stereotype: feature
 parent: ["[[FR-029-the-dashboard-as-a-product]]"]
@@ -33,7 +33,7 @@ As a [[STK-010-operators|person who runs the dashboard]] I want **one small laun
 
 **Success metric(s).** In a Systems42 derivative that holds no dashboard code except the launcher, `./dashboard.sh` shows the dashboard in the release the wiki names. After `./dashboard.sh update` and a restart, the footer shows the newest release.
 
-**Scope.** in: the launcher, the mount, the update command · out: updates without being asked ([[FR-030-numbered-releases]]), running without Docker.
+**Scope.** in: the launcher, the mount, the update command · out: updates without being asked ([[FR-030-numbered-releases]]), running without Docker ([[FR-054-a-start-without-a-container-engine]]).
 
 ## Hierarchy
 
