@@ -349,8 +349,8 @@ make test
 
 It runs every script in Docker and lists the ones that failed, with their
 output. It exits 1 if any failed. The scripts run in the `test` stage of the
-`Dockerfile`: the Python and the libraries of the shipped image, plus `make`
-and `node`, which some scripts call. The repository is mounted read-only and
+`Dockerfile`: the Python and the libraries of the shipped image, plus `make`,
+`node` and Playwright with Chromium, which some scripts call. The repository is mounted read-only and
 copied inside the container, so a test cannot change a file on the host. The
 first run needs network to build the stage.
 
@@ -369,16 +369,16 @@ on a throwaway vault and checks in headless Chromium that the vendored mermaid
 actually draws the context diagram, the entity diagram and fenced
 ```` ```mermaid ```` blocks, survives the theme re-render, logs no JavaScript
 errors, and is the version `static/vendor/README.md` names. Run it after every
-mermaid update. Its dependencies are development-only and stay out of the
-Docker image:
+mermaid update. `make test` runs it. Its dependencies stay out of the shipped
+image. To run it in the venv, install them there:
 
 ```sh
 .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/python -m playwright install chromium
 ```
 
-Without them it prints `SKIP` and exits 0, so `run-all.sh` and `make test`
-still pass; a SKIP is not a pass.
+Without them it prints `SKIP` and exits 77. `run-all.sh` counts a script that
+exits 77 as skipped, not passed, and names it in the summary.
 
 pytest can run one script (`pytest tests/test_reload.py`), but not the whole
 folder: each script points the app at its own throwaway vault before

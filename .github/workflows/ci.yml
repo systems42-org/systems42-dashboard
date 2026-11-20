@@ -1,0 +1,21 @@
+# Runs the dashboard's test scripts on every pull request and on every push
+# to main, the same way `make test` runs them locally (in the Dockerfile's
+# test stage). release.yml runs them again before a release.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Tests
+        run: ./dashboard.sh test

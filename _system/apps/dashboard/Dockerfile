@@ -1,6 +1,7 @@
 # Three stages: `base` holds Python and the requirements, `test` adds what the
-# test scripts call (make, node), and the last, unnamed stage is the image
-# that ships. `docker build .` and compose build the last stage.
+# test scripts call (make, node, Playwright with Chromium), and the last,
+# unnamed stage is the image that ships. `docker build .` and compose build
+# the last stage.
 #
 # The base image is named by digest, so every build starts from the same
 # files. To move to a newer python:3.12-slim, take the digest from
@@ -24,6 +25,15 @@ FROM base AS test
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends make nodejs git \
+    && rm -rf /var/lib/apt/lists/*
+
+# The browser test (tests/test_mermaid_browser.py) needs Playwright and its
+# Chromium. requirements-dev.txt pins Playwright, and each Playwright release
+# pins its own Chromium build. --with-deps adds the system libraries Chromium
+# needs, --only-shell takes the headless shell only, which is all the test uses.
+COPY requirements-dev.txt .
+RUN pip install --no-cache-dir -r requirements-dev.txt \
+    && python -m playwright install --with-deps --only-shell chromium \
     && rm -rf /var/lib/apt/lists/*
 
 FROM base

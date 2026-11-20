@@ -22,8 +22,8 @@ itself does not: they live in requirements-dev.txt, not requirements.txt.
     .venv/bin/pip install -r requirements-dev.txt
     .venv/bin/python -m playwright install chromium
 
-Without them the test prints SKIP and exits 0, so the plain test loop in the
-README keeps working; read its output, a SKIP is not a pass.
+Without them the test prints SKIP and exits 77, which tests/run-all.sh counts
+and names as skipped, not passed.
 
 Run from the dashboard dir:
     .venv/bin/python tests/test_mermaid_browser.py
@@ -41,7 +41,7 @@ try:
 except ImportError:
     print("SKIP test_mermaid_browser: playwright not installed "
           "(pip install -r requirements-dev.txt)")
-    sys.exit(0)
+    sys.exit(77)
 
 HERE = Path(__file__).resolve().parent.parent
 WIKI_FOLDERS = [
@@ -113,7 +113,7 @@ except Exception as exc:  # playwright present, but its Chromium was never insta
     _pw.stop()
     print(f"SKIP test_mermaid_browser: no Chromium for Playwright "
           f"(python -m playwright install chromium): {str(exc).splitlines()[0]}")
-    sys.exit(0)
+    sys.exit(77)
 
 
 def _open(path):
