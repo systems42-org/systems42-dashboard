@@ -689,11 +689,6 @@ a.format-label:hover { color: var(--accent); border-bottom-color: var(--accent);
    (QR-001). render_markdown wraps tables, _mermaid.html wraps diagrams. */
 .table-scroll { max-width: 100%; overflow-x: auto; }
 .diagram-scroll { max-width: 100%; overflow: auto; touch-action: pan-x pan-y pinch-zoom; }
-/* below 781 px mermaid draws at natural size (useMaxWidth: false), and the
-   reader pans it instead of reading a shrunken picture */
-@media (max-width: 780px) {
-  .diagram-scroll pre.mermaid[data-processed] svg { max-width: none; }
-}
 /* the text links under a diagram (_diagram_links.html) */
 .diagram-links { margin: 0 0 1.6rem; }
 .diagram-links > summary { padding: .2rem 0; color: var(--accent); cursor: pointer; }

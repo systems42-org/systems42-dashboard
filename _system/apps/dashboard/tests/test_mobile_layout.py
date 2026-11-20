@@ -6,7 +6,7 @@ touch. This test starts the dashboard on two fixture vaults, opens every page
 in headless Chromium emulating a 320 x 640 phone, and asserts that
 
   * the page is no wider than the screen (`scrollWidth <= 320`). A wide table
-    or diagram scrolls inside its own box instead.
+    scrolls inside its own box, a diagram first shows whole.
   * the main nav does not scroll sideways, and after one tap on the menu
     button every nav entry is visible.
   * breadcrumbs, footer links, sort headers, tile links, nav and menu entries
@@ -45,7 +45,7 @@ try:
 except ImportError:
     print("SKIP test_mobile_layout: playwright not installed "
           "(pip install -r requirements-dev.txt)")
-    sys.exit(0)
+    sys.exit(77)
 
 HERE = Path(__file__).resolve().parent.parent
 FIXTURES = HERE / "tests" / "fixtures"
@@ -105,7 +105,8 @@ class Quiet(WSGIRequestHandler):
 paths = sorted(r.rule for r in app.app.url_map.iter_rules()
                if not r.arguments and "GET" in r.methods and not r.rule.startswith("/static")
                and r.rule != "/brand/intro.html")
-paths += ["/req42/" + slug for slug in sorted(app.REQ42_BY_SLUG)]
+paths += sorted(s["href"] for s in app.catalog.SECTION_BY_SLUG.values()
+               if s["href"] and s["href"].startswith("/req42/"))
 for d in sorted(app.WIKI_DIR.iterdir()):
     pages = sorted(app.load_folder(d.name), key=lambda p: p.stem) if d.is_dir() else []
     paths += [app._page_url(d.name, p.stem) for p in pages[:2]]
@@ -147,7 +148,7 @@ except Exception as exc:  # playwright present, but its Chromium was never insta
         _p.kill()
     print(f"SKIP test_mobile_layout: no Chromium for Playwright "
           f"(python -m playwright install chromium): {str(exc).splitlines()[0]}")
-    sys.exit(0)
+    sys.exit(77)
 _phone = _browser.new_context(viewport={"width": WIDTH, "height": HEIGHT},
                               device_scale_factor=2, is_mobile=True, has_touch=True)
 
@@ -236,7 +237,7 @@ def test_nav_entries_are_one_tap_away():
     page.close()
 
 
-def test_wide_table_and_diagram_scroll_in_their_own_box():
+def test_wide_table_scrolls_and_diagram_shows_whole():
     _, base, _ = VAULTS[0]
     page = _open(base + "/page/decisions/DR-002-wide-table")
     box = page.evaluate("""() => { const t = document.querySelector('.table-scroll');
@@ -250,7 +251,7 @@ def test_wide_table_and_diagram_scroll_in_their_own_box():
     # Chromium reports `pan-x pan-y pinch-zoom` by its short name
     assert diagram["touch"] in ("pan-x pan-y pinch-zoom", "manipulation") \
         and diagram["overflow"] == "auto", diagram
-    assert diagram["scroll"] > diagram["client"], f"the diagram shrank to the screen instead of panning: {diagram}"
+    assert diagram["scroll"] <= diagram["client"] + 1, f"the diagram does not show whole: {diagram}"
     page.close()
 
 

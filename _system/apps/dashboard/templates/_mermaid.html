@@ -19,9 +19,8 @@
     var nodes = Array.prototype.slice.call(document.querySelectorAll("pre.mermaid"));
     nodes.forEach(function (n) { n.dataset.mermaidSrc = n.textContent; });
 
-    // Each diagram scrolls and zooms by touch inside its own box (QR-001).
-    // Below 781 px it keeps its natural size there instead of shrinking to
-    // an unreadable picture.
+    // Each diagram first shows whole, fitted to its box, and the reader
+    // zooms and pans it by touch there (QR-001).
     nodes.forEach(function (n) {
       if (n.parentElement.classList.contains("diagram-scroll")) { return; }
       var box = document.createElement("div");
@@ -29,7 +28,6 @@
       n.replaceWith(box);
       box.appendChild(n);
     });
-    var narrow = window.matchMedia("(max-width: 780px)").matches;
 
     // Tier subgraphs in the context diagram (DR-026) default to mermaid's
     // yellow cluster fill, which belongs to no palette on this dashboard.
@@ -45,10 +43,10 @@
         startOnLoad: false,
         theme: light ? "default" : "dark",
         themeVariables: light ? CLUSTER.light : CLUSTER.dark,
-        flowchart: { useMaxWidth: !narrow, curve: "basis" },
-        sequence: { useMaxWidth: !narrow },
-        er: { useMaxWidth: !narrow },
-        class: { useMaxWidth: !narrow }
+        flowchart: { useMaxWidth: true, curve: "basis" },
+        sequence: { useMaxWidth: true },
+        er: { useMaxWidth: true },
+        class: { useMaxWidth: true }
       });
       nodes.forEach(function (n) {
         n.textContent = n.dataset.mermaidSrc;

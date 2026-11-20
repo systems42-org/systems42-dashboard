@@ -87,7 +87,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
   C3 note on the context page are gone from the tiles.
 - Dashboard: breadcrumbs, footer links, sort headers and tile links are at
   least 24 x 24 px, and no text outside a diagram is smaller than 12 px
-  (QR-001). Below 781 px a diagram keeps its natural size and pans by touch.
+  (QR-001). A diagram first shows whole, and the reader zooms and pans it by touch.
   The term network, the deployment view and node pages, the functional
   requirements and the scope page list every page their diagram draws as a
   text link under it.
