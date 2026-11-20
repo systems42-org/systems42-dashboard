@@ -8,10 +8,11 @@
 
 .DEFAULT_GOAL := help
 
-.PHONY: help dev down clean test version publish
+.PHONY: help dev uv down clean test version publish
 
 help::
 	@echo "make dev      start the dashboard release this wiki names (Docker), opens your browser"
+	@echo "make uv       start the same release with uv instead of Docker; Ctrl+C stops it"
 	@echo "make down     stop the dashboard"
 	@echo "make clean    remove what can be rebuilt (container, caches); never content"
 	@echo "make test     run the dashboard's test scripts (Docker; dashboard repository only)"
@@ -20,6 +21,9 @@ help::
 
 dev:
 	./dashboard.sh up
+
+uv:
+	./dashboard.sh uv
 
 down:
 	./dashboard.sh down

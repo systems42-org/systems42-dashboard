@@ -205,7 +205,7 @@ case "${1:-}" in
     ;;
   *)
     echo "Unknown command: ${1:-}" >&2
-    echo "Usage: ./dashboard.sh [up|down|logs|update|clean|rebuild|local|test|version X.Y.Z|publish]" >&2
+    echo "Usage: ./dashboard.sh [up|down|logs|update|clean|uv|rebuild|local|test|version X.Y.Z|publish]" >&2
     exit 2
     ;;
 esac

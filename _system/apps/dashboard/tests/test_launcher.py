@@ -116,6 +116,65 @@ def test_local_needs_the_dashboard_code():
         assert "ghcr.io" not in called, called
 
 
+def _uv_run(yaml, uv_script='#!/bin/sh\necho "$@" >> "$UV_LOG"\nexit 0\n', **extra_env):
+    """`./dashboard.sh uv` with a stub `uv` that logs its arguments, and a
+    `curl` that finds nothing on the port. Returns the run, the uv log and
+    the docker log."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _wiki(tmp, yaml)
+        bin_dir, docker_log = _stubs(tmp)
+        (bin_dir / "curl").write_text("#!/bin/sh\nexit 7\n", encoding="utf-8")
+        if uv_script:
+            f = bin_dir / "uv"
+            f.write_text(uv_script, encoding="utf-8")
+            f.chmod(f.stat().st_mode | stat.S_IXUSR)
+        uv_log = Path(tmp) / "uv.log"
+        env = {**os.environ, "PATH": f"{bin_dir}{os.pathsep}/usr/bin:/bin", "DASH_NO_BROWSER": "1",
+               "UV_LOG": str(uv_log), **extra_env}
+        for key in ("DASH_PORT", "DASH_PUBLIC_URL"):
+            env.pop(key, None)
+        if "DASH_WHEEL" not in extra_env:
+            env.pop("DASH_WHEEL", None)
+        run = subprocess.run(["bash", str(root / "dashboard.sh"), "uv"], env=env, capture_output=True, text=True)
+        called = uv_log.read_text(encoding="utf-8") if uv_log.exists() else ""
+        return run, called, docker_log.exists()
+
+
+def test_uv_starts_the_wheel_of_the_release_the_wiki_names():
+    """FR-054: the same pin as the container start, and no Docker."""
+    run, called, docker_used = _uv_run('dashboard_version: "0.13.0"\n')
+    assert run.returncode == 0, run.stderr
+    wheel = ("https://github.com/systems42-org/systems42-dashboard/releases/download/"
+             "v0.13.0/systems42_dashboard-0.13.0-py3-none-any.whl")
+    start = called.splitlines()[-1]
+    assert start.startswith("tool run ") and start.endswith(f"--from {wheel} systems42-dashboard"), called
+    assert "--offline" in start, "a release fetched before must start without network"
+    assert not docker_used, "the uv start must not call docker"
+
+
+def test_uv_takes_a_wheel_from_a_file():
+    run, called, _ = _uv_run('dashboard_version: "0.13.0"\n', DASH_WHEEL="/tmp/some.whl")
+    assert run.returncode == 0, run.stderr
+    assert "--from /tmp/some.whl systems42-dashboard" in called and "github.com" not in called, called
+
+
+def test_uv_missing_is_said():
+    run, called, _ = _uv_run('dashboard_version: "0.13.0"\n', uv_script=None)
+    assert run.returncode == 1 and "uv is not installed" in run.stderr, run.stderr
+
+
+def test_uv_says_what_to_do_when_the_release_has_no_wheel():
+    run, _, _ = _uv_run('dashboard_version: "0.9.0"\n', uv_script="#!/bin/sh\nexit 1\n")
+    assert run.returncode == 1, run.returncode
+    assert "could not fetch dashboard 0.9.0" in run.stderr and "update" in run.stderr, run.stderr
+
+
+def test_uv_with_local_needs_the_dashboard_code():
+    run, called, _ = _uv_run("dashboard_version: local\n")
+    assert run.returncode == 1 and "_system/apps/dashboard" in run.stderr, run.stderr
+    assert called == "", called
+
+
 def test_a_folder_that_is_no_wiki_is_refused():
     with tempfile.TemporaryDirectory() as tmp:
         root = _wiki(tmp, "")

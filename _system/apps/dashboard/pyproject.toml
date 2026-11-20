@@ -1,0 +1,40 @@
+# The dashboard as a Python package, for the start with uv (FR-054, DR-007).
+# release.yml builds one wheel per release and attaches it to the GitHub
+# release. `./dashboard.sh uv` runs that wheel.
+#
+# The version comes from VERSION and the libraries from requirements.txt, so
+# the wheel and the container image install the same code.
+[build-system]
+requires = ["hatchling==1.27.0", "hatch-requirements-txt==0.4.1"]
+build-backend = "hatchling.build"
+
+[project]
+name = "systems42-dashboard"
+description = "Dashboard over a Systems42 requirements wiki"
+requires-python = ">=3.12"
+dynamic = ["version", "dependencies"]
+
+[project.scripts]
+systems42-dashboard = "systems42_dashboard:main"
+
+[tool.hatch.version]
+path = "VERSION"
+pattern = "(?P<version>\\S+)"
+
+[tool.hatch.metadata.hooks.requirements_txt]
+files = ["requirements.txt"]
+
+# The wheel holds one package, systems42_dashboard, with the same files the
+# Dockerfile copies into the image. tests/test_uv_start.py compares the two.
+[tool.hatch.build.targets.wheel.force-include]
+"cli.py" = "systems42_dashboard/__init__.py"
+"app.py" = "systems42_dashboard/app.py"
+"catalog.py" = "systems42_dashboard/catalog.py"
+"metamodel.py" = "systems42_dashboard/metamodel.py"
+"preflight.py" = "systems42_dashboard/preflight.py"
+"gunicorn.conf.py" = "systems42_dashboard/gunicorn.conf.py"
+"help.md" = "systems42_dashboard/help.md"
+"VERSION" = "systems42_dashboard/VERSION"
+"templates" = "systems42_dashboard/templates"
+"static" = "systems42_dashboard/static"
+"brands" = "systems42_dashboard/brands"
