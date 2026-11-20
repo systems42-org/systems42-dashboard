@@ -35,6 +35,11 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - Dashboard repository: `make test` runs the browser test
   (`test_mermaid_browser.py`). The Docker test stage installs Playwright 1.63.0
   from `requirements-dev.txt` and its headless Chromium.
+- Dashboard: this release supports metamodel version 0.1 (FR-043). When the
+  repository's metamodel declares another version or none, the footer says so
+  and links to `/metamodel#version`, which names both versions and what to do.
+  The dashboard reads `version:` from `_system/metamodel/metamodel-version.md`,
+  else from `meta-metamodel.md`.
 - Dashboard repository: a release takes `make version V=1.2.3`, a merge and
   `make publish`. `version` raises `VERSION` and opens the pull request.
   `publish` sets and pushes the tag only when the release does not exist yet

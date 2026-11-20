@@ -103,6 +103,8 @@
       </span>
     </div>
     {% if dashboard_version_differs %}<div class="version-mismatch">This wiki asks for dashboard {{ dashboard_version }}. This is {{ dashboard_version_own or "an unnumbered build" }}.</div>{% endif %}
+    {# FR-043: a notice, never a refusal. The explanation is on /metamodel#version. #}
+    {% if metamodel_check and metamodel_check.state != "supported" %}<div class="metamodel-mismatch">{% if metamodel_check.state == "missing" %}This wiki's metamodel declares no version.{% else %}This wiki's metamodel is version {{ metamodel_check.version }}.{% endif %} {{ ("Dashboard " ~ dashboard_version_own) if dashboard_version_own else "This dashboard" }} supports {{ metamodel_check.supported|join(", ") }}. <a href="/metamodel#version">What to do</a></div>{% endif %}
   </footer>
   {% block scripts %}{% endblock %}
   <script nonce="{{ csp_nonce() }}">

@@ -389,6 +389,13 @@ def inject_identity():
     return cfg
 
 
+@app.context_processor
+def inject_metamodel_version():
+    """The repository's metamodel version against this release (FR-043), for
+    the footer notice and the version section of /metamodel."""
+    return {"metamodel_check": metamodel.version_check()}
+
+
 # A brand's intro.html comes from a folder of the wiki repository and holds
 # script. It never becomes part of a dashboard page. The home page shows it in
 # a frame (templates/index.html), and this response is sandboxed without
@@ -5260,7 +5267,7 @@ def metamodel_view():
         method_anchors=build_mm_anchors(mm, anchors),
         universal=graph["universal"], universal_fields=universal_fields,
         lifecycles=meta.get("lifecycles") or {}, constructs=meta.get("constructs") or [],
-        field_kinds=meta.get("field_kinds") or [], version=meta.get("version") or "",
+        field_kinds=meta.get("field_kinds") or [],
         frameworks=mm["frameworks"], n_blocks_in=n_in, n_blocks=len(mm["blocks"]),
         n_examples=sum(1 for t in types if t["example"]["count"]),
         decision_html=_mm_dr_link("DR-035-explicit-metamodel", "DR-035"),

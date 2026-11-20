@@ -44,39 +44,48 @@ _BLOCK_NAME = re.compile(r"^(?:##\s+(.+?)|\*\*(.+?)\*\*.*)$", re.MULTILINE)
 _FRAMEWORK_ORDER = ["req42", "commons", "arc42"]
 
 
-# path -> ((mtime_ns, size), parsed page or None). The dashboard asks the
-# metamodel per issue on every page view (FR-027), so a parse is kept until
-# its file changes, like the wiki pages in app.py's _PARSE_CACHE.
-_CACHE: dict[Path, tuple[tuple[int, int], dict | None]] = {}
+# (path, parser) -> ((mtime_ns, size), parsed page or None). The dashboard
+# asks the metamodel per issue on every page view (FR-027), so a parse is kept
+# until its file changes, like the wiki pages in app.py's _PARSE_CACHE.
+_CACHE: dict[tuple[Path, object], tuple[tuple[int, int], dict | None]] = {}
 # Guards _CACHE and _ANCHOR_CACHE against gunicorn's request threads. Parsing
 # runs outside it: a duplicate parse is harmless, a torn update is not.
 _LOCK = threading.Lock()
+
+
+def _key_path(key) -> Path:
+    """The file of a cache key: _CACHE keys are (path, parser), others a path."""
+    return key[0] if isinstance(key, tuple) else key
 
 
 def _forget_missing(cache: dict, folder: Path, present: list[Path]) -> None:
     """Drop the entries of files in `folder` that are no longer listed there."""
     keep = set(present)
     with _LOCK:
-        for path in [p for p in cache if p.parent == folder and p not in keep]:
-            del cache[path]
+        for key in [k for k in cache
+                    if _key_path(k).parent == folder and _key_path(k) not in keep]:
+            del cache[key]
 
 
-def _read(path: Path) -> dict | None:
+def _read(path: Path, parse=None) -> dict | None:
     """One metamodel page as a dict (a fresh shallow copy, callers may add
-    keys), or None. Parsed again only when the file's mtime or size changes."""
+    keys), or None. Parsed again only when the file's mtime or size changes.
+    `parse` defaults to `_parse`, the reader for metamodel pages."""
+    parse = parse or _parse
+    key = (path, parse)
     try:
         st = path.stat()
     except OSError:
         with _LOCK:
-            _CACHE.pop(path, None)
+            _CACHE.pop(key, None)
         return None
     stamp = (st.st_mtime_ns, st.st_size)
     with _LOCK:
-        hit = _CACHE.get(path)
+        hit = _CACHE.get(key)
     if hit is None or hit[0] != stamp:
-        hit = (stamp, _parse(path))
+        hit = (stamp, parse(path))
         with _LOCK:
-            _CACHE[path] = hit
+            _CACHE[key] = hit
     return dict(hit[1]) if hit[1] is not None else None
 
 
@@ -99,6 +108,58 @@ def _parse(path: Path) -> dict | None:
     meta["_summary"] = summary_of(body)
     meta["_file"] = path.name
     return meta
+
+
+# --- metamodel version (FR-043) -----------------------------------------------
+
+# The metamodel versions this dashboard release supports, compared as text.
+# A list of exact versions, because the rule for when the version changes is
+# still open (ISS-004, meta issue #39). Once it is settled, a range can sit
+# next to the list, and `version_check` is the only place that reads it.
+SUPPORTED_VERSIONS: tuple[str, ...] = ("0.1",)
+
+# Where the repository declares its metamodel version: the file ISS-004
+# proposes, else the meta-metamodel page. The first file that exists decides.
+VERSION_FILES = ("metamodel-version.md", "meta-metamodel.md")
+
+
+def _parse_version(path: Path) -> dict | None:
+    """`version:` from a file's frontmatter, as written: every value is read
+    as text, so `0.10` stays `0.10`. The file needs no `type: metamodel`."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    m = _FM.match(text)
+    if not m:
+        return {"version": ""}
+    try:
+        meta = yaml.load(m.group(1), Loader=yaml.BaseLoader) or {}
+    except yaml.YAMLError:
+        return {"version": ""}
+    v = meta.get("version") if isinstance(meta, dict) else None
+    return {"version": v.strip() if isinstance(v, str) else ""}
+
+
+def version_check() -> dict:
+    """The repository's metamodel version against this release:
+
+      version     the declared version as text, "" when none is declared
+      file        the file it was read from, "" when neither file exists
+      supported   the versions this release supports
+      state       "supported", "unsupported" or "missing"
+    """
+    version, file = "", ""
+    for name in VERSION_FILES:
+        path = METAMODEL_DIR / name
+        if path.is_file():
+            file = name
+            version = (_read(path, _parse_version) or {}).get("version", "")
+            break
+    state = ("missing" if not version
+             else "supported" if version in SUPPORTED_VERSIONS else "unsupported")
+    return {"version": version, "file": file,
+            "supported": list(SUPPORTED_VERSIONS), "state": state}
 
 
 def summary_of(body: str) -> str:
