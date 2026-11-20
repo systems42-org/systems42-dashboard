@@ -329,8 +329,6 @@ h2 { letter-spacing: -.01em; }
   border-radius: var(--radius); padding: var(--space-3) var(--space-4) var(--space-3);
   text-decoration: none; color: var(--ink); position: relative; transition: border-color .15s ease; }
 .tile-link:hover, .tile:focus-within { border-color: var(--accent); }
-.tile-span-2 { grid-column: span 2; }
-@media (max-width: 640px) { .tile-span-2 { grid-column: span 1; } }
 .tile-head { display: flex; flex-direction: column; gap: var(--space-1); margin-bottom: var(--space-2); }
 .tile-eyebrow { font: 600 .7rem/1.4 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-dim); }
 .tile-title { font-size: var(--step-1); font-weight: 650; margin: 0; letter-spacing: -.01em; }
@@ -678,17 +676,6 @@ a.format-label:hover { color: var(--accent); border-bottom-color: var(--accent);
 .ctx-flows tbody tr + tr th.ctx-neighbour { border-top: 1px solid var(--line); }
 /* hide the raw mermaid source until mermaid has rendered it (no FOUC) */
 pre.mermaid:not([data-processed]) { color: transparent; min-height: 2rem; }
-
-/* ---- vision tile: the claim line, then the objectives with their epic
-        counts. Spans two grid columns — it is the page's opening statement. */
-.tile-vision-claim { margin: var(--space-1) 0 var(--space-3); color: var(--ink);
-  font-style: italic; font-weight: 500; line-height: 1.45;
-  padding-bottom: var(--space-3); border-bottom: 1px dashed var(--line); }
-/* goal list: allow titles to wrap (some are long), keep the epic counter pinned */
-.mini-list-vision { max-height: 9.5rem; }
-.mini-list-vision li { align-items: flex-start; line-height: 1.35; }
-.mini-list-vision .ml-title { flex: 1 1 auto; min-width: 0; }
-.mini-list-vision .ml-count { flex: 0 0 auto; }
 
 /* ---- /goals: vision-goals diagram + full-text cards + coverage matrix ---- */
 .goals-diagram { margin: 0 0 1.4rem; padding: 1rem 1.1rem 1.2rem; background: var(--card);
@@ -1208,6 +1195,8 @@ html.etsu-disconnected {
 .hero-text { min-width: 0; }
 .hero-title { font-size: var(--step-3); line-height: 1.15; margin: 0; letter-spacing: -0.01em; }
 .hero-text .lead { margin: var(--space-1) 0 0; }
+/* the vision's first sentence (FR-018) runs longer than a tagline */
+.hero-vision { max-width: 62ch; }
 /* The mark (the active brand's mark-{dark,light}.svg, contract in brands/README.md).
    Transparent artwork in two colourings, so the theme picks the variant.
    Mark only, no wordmark: the system name stands next to it.
@@ -1283,6 +1272,7 @@ html.etsu-disconnected {
 .area-subtitle { margin: 0; color: var(--ink-soft); font-size: var(--step--1); }
 .area-sections { list-style: none; margin: var(--space-2) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); font-size: var(--step--1); }
 .area-section.is-out { color: var(--ink-dim); }
+.area-section-count { margin-left: var(--space-1); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .valley { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); background: var(--bg-soft); border: 1px solid var(--line); border-radius: var(--radius); }
 .valley .vault-status { margin: 0; }
 .valley-block { margin: 0; }

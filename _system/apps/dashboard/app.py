@@ -1854,8 +1854,8 @@ def build_relations_panel(stem: str, exclude: set[str] | None = None) -> dict:
 # keyed off an ID list — a vault may hold any number of objectives at any IDs,
 # and all of them must reach the screen.
 # The Goal↔Epic edge is pinned at the Epic (`goal:` field on each FR, DR-018),
-# and a use case carries the same field (DR-038); coverage and tile counters are
-# pure projections from those edges.
+# and a use case carries the same field (DR-038); coverage is a pure projection
+# from those edges.
 
 
 def _goal_id_from_ref(ref: object) -> str:
@@ -1875,6 +1875,11 @@ def _goal_maturity(p: Page) -> str:
 
 
 _VISION_SECTION_RE = re.compile(r"##\s+Vision\b[^\n]*\n+(.+?)(?=\n##\s|\Z)", re.DOTALL)
+# notes, comments and the template's hints under `## Vision` are not prose
+_VISION_SKIP = (">", "<!--", "**Objectives.**", "*Optional:*")
+# a sentence ends at . ! or ? followed by the end or by a word that does not
+# start in lower case, so "e.g. the" does not end it
+_SENTENCE_RE = re.compile(r"^(.+?[.!?])(?=\s+[^a-z\s]|\s*$)", re.DOTALL)
 
 
 def _vision_paragraphs(page: Page, titles: dict[str, str],
@@ -1895,12 +1900,32 @@ def _vision_paragraphs(page: Page, titles: dict[str, str],
     out = []
     for para in m.group(1).split("\n\n"):
         para = para.strip()
-        if not para or para.startswith((">", "<!--", "**Objectives.**", "*Optional:*")):
+        if not para or para.startswith(_VISION_SKIP):
             continue
         para = re.sub(r"\s+", " ", para)
         para = render_wikilinks(para, titles, links)
         out.append(sanitize_html(re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", para)))
     return out
+
+
+def vision_sentence(page: Page | None, titles: dict[str, str]) -> str:
+    """The first sentence of the vision as plain text, for the home hero
+    (FR-018). A wikilink reads as its alias or its target's title. Empty when
+    there is no vision or no prose under `## Vision`."""
+    m = _VISION_SECTION_RE.search(page.body) if page else None
+    if not m:
+        return ""
+    for para in m.group(1).split("\n\n"):
+        para = para.strip()
+        if not para or para.startswith(_VISION_SKIP):
+            continue
+        text = WIKILINK_RE.sub(
+            lambda w: (w.group(2) or titles.get(w.group(1).strip().split("/")[-1], w.group(1))).strip(),
+            re.sub(r"\s+", " ", para))
+        text = _strip_inline_markdown(text)
+        first = _SENTENCE_RE.match(text)
+        return (first.group(1) if first else text).strip()
+    return ""
 
 
 ENABLER_LANES = ("platform", "display")
@@ -1924,8 +1949,16 @@ def breaks_fr_traces_to_goal(fr: Page, goals: list) -> bool:
     return not goals and not _in_enabler_lane(fr)
 
 
+def vision_page() -> Page | None:
+    """The goal page with `stereotype: vision`, picked by stereotype and never
+    by ID. If two pages claim it, the lowest ID wins."""
+    goals = sorted(load_folder("goals"), key=lambda p: p.id)
+    return next((p for p in goals
+                 if str(p.meta.get("stereotype") or "").strip().lower() == "vision"), None)
+
+
 def load_goals() -> dict:
-    """Return everything the tile and /goals page need.
+    """Return everything /goals and the functional-requirements goal map need.
 
     Shape:
       vision     — the goal Page with `stereotype: vision`, or None
@@ -1946,12 +1979,7 @@ def load_goals() -> dict:
     lowest-id one is the vision and the rest fall through to objectives.
     """
     goals = sorted(load_folder("goals"), key=lambda p: p.id)
-
-    def _stereotype(p: Page) -> str:
-        return str(p.meta.get("stereotype") or "").strip().lower()
-
-    visions = [p for p in goals if _stereotype(p) == "vision"]
-    vision = visions[0] if visions else None
+    vision = vision_page()
     objectives = [p for p in goals if p is not vision]
 
     all_frs = sorted(load_folder("functional-requirements"), key=lambda p: p.id)
@@ -1992,36 +2020,6 @@ def load_goals() -> dict:
             "frs": frs, "ucs": ucs}
 
 
-def build_vision_tile(data: dict, titles: dict[str, str]) -> dict:
-    """The home-tile payload for the Vision card (key='vision')."""
-    vision = data["vision"]
-    objectives = data["objectives"]
-    coverage = data["coverage"]
-    if not vision:
-        # Day-one state, and the first tile on the projector: no counter, no
-        # "Demo" chip — a heading, a next step, and a link to /goals, like
-        # every other empty tile. Deliberately carries no `count`/`unit` so
-        # index.html renders the empty state rather than a placeholder dash.
-        return {
-            "key": "vision", "label": "Vision", "eyebrow": "01 · Business Goals",
-            "href": "/goals", "folders": ["goals"], "span": 2,
-            "rows": [], "active": False,
-        }
-    claim = str(vision.meta.get("tile_claim") or "").strip()
-    rows = [{
-        "id": o.id,
-        "title": o.title,
-        "epics": len(coverage.get(o.id, [])),
-    } for o in objectives]
-    return {
-        "key": "vision", "label": "Vision", "eyebrow": "01 · Business Goals",
-        "href": "/goals", "folders": ["goals"], "span": 2,
-        "active": True,
-        "claim": claim,
-        "objective_rows": rows,
-    }
-
-
 # --- functional requirements (req42 block 04) ----------------------------
 #
 # One content type `functional-requirement`; every page stores its `notation:`
@@ -2029,8 +2027,8 @@ def build_vision_tile(data: dict, titles: dict[str, str]) -> dict:
 # `level:` values (DR-038). The hierarchy edge is the `parent:` wikilink field,
 # a graph independent of notation and level. build_fr_hierarchy is the story
 # map: a pure projection over the Agile epic/feature/story pages (plus the use
-# cases Agile features and stories refine) — the single source for both the
-# home tile and the /req42/functional-requirements page. Everything it cannot
+# cases Agile features and stories refine) — the single source for the
+# /req42/functional-requirements page. Everything it cannot
 # place is listed under the other notations.
 
 def _fr_stem_from_ref(ref: object) -> str:
@@ -2078,7 +2076,7 @@ def _fr_sort_key(p: "Page"):
 
 
 def _fr_node(p: "Page") -> dict:
-    """Slim per-page record shared by tile rows, cards, and the diagram."""
+    """Slim per-page record shared by cards and the diagram."""
     return {
         "id": p.id, "title": p.title, "stem": p.stem,
         "priority": str(p.meta.get("priority") or "").strip(),
@@ -3136,61 +3134,39 @@ def build_search_index() -> dict:
 
 # --- views -----------------------------------------------------------------
 
-def _tile_rows_by_relations(pages):
-    return sorted(
-        ({"title": p.title, "id": p.id, "relations": len(p.link_targets())} for p in pages),
-        key=lambda r: (-r["relations"], r["id"]),
-    )
-
-
 def build_section_tile(section: dict) -> dict:
-    """The tile payload for one catalog section, keyed by section ID. Vision
-    (R1), Functional Requirements (R3), Supporting Models (R4), Scope (C3), Domain Terms (C5)
-    and Issues (C6) keep their special bodies; everything else is a count plus
-    a relation-ranked preview."""
+    """The tile payload for one catalog section, keyed by section ID: a count,
+    the maturity bar and the open-issue flag, nothing more (FR-019). The
+    count is what the unit says: R4 counts model pages, C3 external
+    interfaces, C6 all issues with the open ones as its flag."""
     sid = section["id"]
     folders = catalog.section_folders(section)
     base = {"key": sid.lower(), "id": sid, "label": section["title"],
             "eyebrow": f"{sid} · {section['title']}", "href": section["href"],
             "folders": folders, "scope": section["scope"],
             "colors": section["colors"], "note": section["note"],
-            "links": [], "rows": [], "active": section["scope"] == "in",
-            "sub": "", "sub_units": [], "unit": "page", "unit_many": None, "count": 0}
+            "links": [], "active": section["scope"] == "in",
+            "unit": "page", "unit_many": None, "count": 0}
     if section["scope"] != "in":
         base["maturity"] = maturity([])
         base["open_issues"] = 0
         return base
     pages = [p for f in folders for p in load_folder(f)]
-    t = {**base, "count": len(pages), "rows": _tile_rows_by_relations(pages)}
+    flags = open_issue_counts()
+    # union, not sum: an issue linking pages in two of this section's folders
+    # must count once, not twice.
+    t = {**base, "count": len(pages), "maturity": maturity(p.status for p in pages),
+         "open_issues": len(set().union(*(flags.get(f, set()) for f in folders))),
+         "open_issues_href": f"/issues?section={sid}",
+         "open_issues_title": "Show the open issues that point at pages of this section"}
     if sid == "R1":
-        t.update(build_vision_tile(load_goals(), title_index()))
-        t.update({"key": "r1", "id": "R1", "eyebrow": "R1 · Vision & Goals",
-                  "label": "Vision & Goals", "scope": "in", "colors": section["colors"]})
+        t["unit"] = "goal"
     elif sid == "R3":
-        hierarchy = build_fr_hierarchy()
-        frs = load_folder("functional-requirements")
-        ucs = sorted((p for p in frs if _fr_notation(p) == "use-case"), key=lambda p: p.id)
-        # the headline counts every functional requirement of every notation
-        # (orphans included, DR-038); the breakdown names only the kinds that
-        # exist, so an empty kind never reads "0 epics".
-        breakdown = [{"n": hierarchy["total_epics"], "one": "epic", "many": None},
-                     {"n": hierarchy["total_features"], "one": "feature", "many": None},
-                     {"n": hierarchy["total_stories"], "one": "story", "many": "stories"},
-                     {"n": len(ucs), "one": "use case", "many": None}]
-        t.update({"count": len(frs),
-                  "unit": "requirement",
-                  # counted nouns, not a pre-built string: the template runs
-                  # each through `plural`, so one feature reads "1 feature".
-                  "sub_units": [u for u in breakdown if u["n"]],
-                  "epic_rows": [{"id": e["id"], "title": e["title"], "n_features": e["n_features"],
-                                 "n_stories": e["n_stories"]} for e in hierarchy["epics"]],
-                  # use cases are functional requirements too (DR-038)
-                  "uc_rows": [{"id": p.id, "title": p.title, "level": _fr_level(p)} for p in ucs]})
+        # every functional requirement of every notation (DR-038)
+        t["unit"] = "requirement"
     elif sid == "R4":
-        # `relations` there is a page count per model type, not a link count
-        models = _supporting_model_entries()
-        t.update({"unit": "model page", "count": sum(m["relations"] for m in models),
-                  "rows": [{"title": m["title"], "pages": m["relations"]} for m in models]})
+        t.update({"unit": "model page",
+                  "count": sum(m["relations"] for m in _supporting_model_entries())})
     elif sid == "C1":
         t["unit"] = "scenario"
     elif sid == "C2":
@@ -3198,10 +3174,7 @@ def build_section_tile(section: dict) -> dict:
     elif sid == "C3":
         # folders carries both (maturity and issue flags span the context page
         # too), but the headline number is what the unit says: interfaces.
-        eifs = load_folder("external-interfaces")
-        t.update({"unit": "external interface", "count": len(eifs),
-                  "rows": _tile_rows_by_relations(eifs),
-                  "sub": "context described" if load_folder("context") else "no context page yet"})
+        t.update({"unit": "external interface", "count": len(load_folder("external-interfaces"))})
     elif sid == "C4":
         t["unit"] = "persona"
     elif sid == "C5":
@@ -3209,39 +3182,30 @@ def build_section_tile(section: dict) -> dict:
                   "links": [{"label": "Table", "href": "/domain-terms"},
                             {"label": "Term network", "href": "/graph/domain-terms"}]})
     elif sid == "C6":
-        issues = pages
-        open_issues = [i for i in issues if is_open_issue(i.status)]
-        t.update({"count": len(open_issues), "total": len(issues),
-                  # "open" is the adjective, not a noun: it never takes an -s
-                  "unit": "open", "unit_many": "open",
-                  "href": "/issues?status=open" if open_issues else "/issues",
-                  "sub": f"{len(issues)} in total",
-                  "rows": [{"id": i.id, "title": i.title, "severity": str(i.meta.get("severity") or "")}
-                           for i in sorted(open_issues,
-                                           key=lambda i: ({"blocker": 0, "major": 1, "minor": 2}
-                                                          .get(str(i.meta.get("severity") or ""), 3), i.id))][:5]})
-    t["maturity"] = maturity(p.status for p in pages)
-    flags = open_issue_counts()
-    # union, not sum: an issue linking pages in two of this section's folders
-    # must count once, not twice.
-    t["open_issues"] = 0 if sid == "C6" else len(set().union(*(flags.get(f, set()) for f in folders)))
-    t["open_issues_href"] = f"/issues?section={sid}"
+        t.update({"unit": "issue",
+                  "open_issues": sum(1 for i in pages if is_open_issue(i.status)),
+                  "open_issues_href": "/issues?status=open",
+                  "open_issues_title": "Show the open issues"})
     return t
 
 
 def build_area_tile(area: dict) -> dict:
     """Home-page tile for one cabinet: count, maturity and open-issue flag
-    over its visible, captured sections, plus the section list as links."""
+    over its visible, captured sections, plus the section list as links, each
+    with its section tile's count (FR-018)."""
     sections = visible_sections(area["key"])
     folders = [f for s in sections for f in catalog.section_folders(s)]
     pages = [p for f in folders for p in load_folder(f)]
     flags = open_issue_counts()
+    tiles = {s["id"]: build_section_tile(s) for s in sections if s["scope"] == "in"}
     return {
         "key": area["key"], "label": area["label"], "subtitle": area["subtitle"],
         "href": area["href"], "colors": area["colors"],
         "count": len(pages), "maturity": maturity(p.status for p in pages),
         "open_issues": len(set().union(*(flags.get(f, set()) for f in folders if f != "issues"))),
-        "sections": [{"id": s["id"], "title": s["title"], "href": s["href"], "scope": s["scope"]}
+        "sections": [{"id": s["id"], "title": s["title"], "href": s["href"], "scope": s["scope"],
+                      **({"count": tiles[s["id"]]["count"], "unit": tiles[s["id"]]["unit"],
+                          "unit_many": tiles[s["id"]]["unit_many"]} if s["id"] in tiles else {})}
                      for s in sections],
         "planned": not sections or all(s["scope"] == "planned" for s in sections),
     }
@@ -3272,7 +3236,25 @@ def index():
     areas = {a["key"]: build_area_tile(a) for a in visible_areas()}
     join_url = public_url()
     return render_template("index.html", areas=areas, valley=build_valley(),
+                           vision_sentence=vision_sentence(vision_page(), title_index()),
                            join_url=join_url, join_qr=qr_svg(join_url))
+
+
+# The issue that holds the open definition of the clarify loop. Matched by
+# its full stem: a project numbers its own issues, so a bare ISS-002 there is
+# a different question.
+CLARIFY_ISSUE = "ISS-002-define-the-clarify-loop"
+
+
+@app.route("/method")
+def method_view():
+    """The three loops, capture, inspect and clarify, by their principles
+    (FR-011). Clarify links its issue while that issue is open."""
+    issue = next((p for p in load_folder("issues")
+                  if p.stem == CLARIFY_ISSUE and is_open_issue(p.status)), None)
+    clarify = ({"id": issue.id, "title": issue.title, "url": _page_url("issues", issue.stem)}
+               if issue else None)
+    return render_template("method.html", clarify_issue=clarify)
 
 
 @app.errorhandler(404)

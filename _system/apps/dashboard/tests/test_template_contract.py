@@ -156,7 +156,7 @@ def test_data_model_attribute_bullets_are_extractable():
 def test_goal_template_body_markers_are_extractable():
     """`## Vision` (vision) and the `- **Purpose.**` / `- **Advantage.**`
     bullets (objective) are parsed out of the goal body for /goals and the
-    home tile."""
+    home hero."""
     tpl = (TEMPLATES / "goal.md").read_text(encoding="utf-8")
     base = (tpl.replace("{{date}}", "2026-09-06")
                .replace("{{title}}", "System X Runs Itself")
@@ -172,8 +172,7 @@ def test_goal_template_body_markers_are_extractable():
                .replace("<the one indicator (see `metric:` / `baseline:` / `target:`)>",
                         "Indicator A."))
     vision = (base.replace("id: GOAL-NNN", "id: GOAL-001")
-                  .replace("stereotype: objective", "stereotype: vision")
-                  .replace("tile_claim:", "tile_claim: System X, without the paperwork."))
+                  .replace("stereotype: objective", "stereotype: vision"))
     objective = (base.replace("id: GOAL-NNN", "id: GOAL-002")
                      .replace("title: System X Runs Itself", "title: Objective A"))
     vp = _wiki / "goals" / "GOAL-001-system-x.md"
@@ -187,8 +186,9 @@ def test_goal_template_body_markers_are_extractable():
             assert data["vision"] is not None, "the template's vision is not recognised"
             para = " ".join(app._vision_paragraphs(data["vision"], titles))
             assert "System X" in para, f"`## Vision` did not parse: {para!r}"
-            tile = app.build_vision_tile(data, titles)
-            assert tile["claim"].startswith("System X, without"), tile["claim"]
+            sentence = app.vision_sentence(data["vision"], titles)
+            assert sentence == ("For Role B who need Entity A handled, System X is a "
+                                "platform that does the bookkeeping."), sentence
             obj = data["objectives"][0]
             for label in ("Purpose", "Advantage", "Metric"):
                 got = app.extract_pam_bullet(obj, label, titles)

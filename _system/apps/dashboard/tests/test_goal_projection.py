@@ -165,9 +165,11 @@ def test_goals_page_renders_all_objectives_and_the_late_epic():
 
 def test_home_and_fr_page_agree_with_the_vault():
     client = app.app.test_client()
-    home = client.get("/req42").get_data(as_text=True)
-    for gid in ALL_OBJECTIVES:
-        assert gid in home, f"{gid} missing from the home Vision tile"
+    # the R1 tile counts every goal page, the vision and all objectives (FR-019)
+    area = client.get("/req42").get_data(as_text=True)
+    r1 = area[area.index('id="tile-r1"'):area.index('id="tile-r2"')]
+    n = 1 + len(ALL_OBJECTIVES)
+    assert f'<span class="num">{n}</span><span class="unit">goals</span>' in r1, r1
     fr_page = client.get("/req42/functional-requirements").get_data(as_text=True)
     assert "GOAL-006" in fr_page, "GOAL-006 missing from the functional-requirements goal map"
 

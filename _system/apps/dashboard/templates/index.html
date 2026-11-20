@@ -53,7 +53,9 @@
     {% if about_href %}</a>{% endif %}
     <div class="hero-text">
       <h1 class="hero-title">{{ system_name }}</h1>
-      {% if tagline %}<p class="lead">{{ tagline }}</p>{% endif %}
+      {# the vision in one sentence, the tagline only without one (FR-018) #}
+      {% if vision_sentence %}<p class="lead hero-vision">{{ vision_sentence }}</p>
+      {% elif tagline %}<p class="lead">{{ tagline }}</p>{% endif %}
       {% if about_href %}<p class="hero-about"><a href="{{ about_href }}">{{ about_label }} →</a></p>{% endif %}
     </div>
     <a class="hero-join" href="/join" title="Show a big code to project">
@@ -87,8 +89,9 @@
   {% endif %}
   </a>
   <ul class="area-sections">
-    {# a section with a page of its own links there; one without (R2, A1-A5) links to its tile on the area page #}
-    {% for s in a.sections %}<li class="area-section{% if s.scope != 'in' %} is-out{% endif %}"><a class="area-section-link" href="{{ s.href or (a.href ~ '#tile-' ~ s.id|lower) }}"><code class="ml-id">{{ s.id }}</code> {{ s.title }}</a></li>{% endfor %}
+    {# a section with a page of its own links there; one without (R2, A1-A5) links to its tile on the area page.
+       A captured section shows its section tile's count (FR-018). #}
+    {% for s in a.sections %}<li class="area-section{% if s.scope != 'in' %} is-out{% endif %}"><a class="area-section-link" href="{{ s.href or (a.href ~ '#tile-' ~ s.id|lower) }}"><code class="ml-id">{{ s.id }}</code> {{ s.title }}{% if s.count is defined %}<span class="area-section-count" title="{{ plural(s.count, s.unit, s.unit_many) }}">{{ s.count }}</span>{% endif %}</a></li>{% endfor %}
   </ul>
   <a class="tile-cta" href="{{ a.href }}">Open {{ a.label }} →</a>
 </section>

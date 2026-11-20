@@ -75,11 +75,15 @@ def test_decision_empty_state_does_not_suggest_ingest():
 
 
 def test_vision_without_objectives_has_a_hint():
+    """The hint lives on /goals. The R1 tile shows a count only (FR-019)."""
     (_wiki / "goals" / "GOAL-001-vision.md").write_text(VISION, encoding="utf-8")
     try:
-        body = _client().get("/req42").get_data(as_text=True)
-        assert "Every piece accounted for." in body
-        assert "No objectives yet" in body
+        c = _client()
+        assert "No objectives yet" in c.get("/goals").get_data(as_text=True)
+        area = c.get("/req42").get_data(as_text=True)
+        r1 = area[area.index('id="tile-r1"'):area.index('id="tile-r2"')]
+        assert '<span class="num">1</span><span class="unit">goal</span>' in r1, r1
+        assert "No objectives yet" not in r1 and "Every piece accounted for." not in r1, r1
     finally:
         (_wiki / "goals" / "GOAL-001-vision.md").unlink()
 

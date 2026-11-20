@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Method{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> Method</nav>{% endblock %}
+{% block content %}
+{# FR-011: the three loops by their principles, not their steps, on one
+   screen. Capture and inspect follow _system/workflows/capture.md and
+   inspect.md. Clarify has no workflow yet: its issue is linked while open. #}
+<article class="help-prose">
+<h1>Three loops</h1>
+<p>Three loops write and maintain the pages of this wiki: capture, inspect and
+clarify. The AI does the bookkeeping. Humans supply the sources and decide.</p>
+
+<h2>Capture</h2>
+<p>A human drops a raw source into the inbox, such as interview notes, a
+transcript or a ticket. The AI grills it against the wiki, turns it into typed,
+linked pages and records where each page came from.</p>
+<p><strong>In:</strong> a raw source. <strong>Out:</strong> new or updated
+pages, and the questions the source leaves open.</p>
+
+<h2>Inspect</h2>
+<p>The wiki is checked against fixed rules, after each capture, at intervals or
+on request. Findings such as contradictions, broken links or untestable
+requirements become questions.</p>
+<p><strong>In:</strong> the pages as they stand. <strong>Out:</strong>
+findings, as questions.</p>
+
+<h2>Clarify</h2>
+<p>Being defined by the Systems42 team.{% if clarify_issue %}
+The open question is <a href="{{ clarify_issue.url }}">{{ clarify_issue.id }} {{ clarify_issue.title }}</a>.{% endif %}</p>
+
+<h2>How they feed each other</h2>
+<p>Capture and inspect feed clarify with the questions they raise. Clarify
+feeds the pages, and the next capture and inspection start from those
+pages.</p>
+</article>
+{% endblock %}

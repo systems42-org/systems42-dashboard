@@ -39,7 +39,7 @@ GET_ROUTES = [
     "/search", "/goals", "/entity-diagram", "/req42", "/req42/functional-requirements", "/arc42/building-blocks",
     "/arc42/deployment", "/arc42/runtime", "/arc42/concepts",
     "/req42/scope", "/req42/models", "/req42/quality", "/req42/constraints",
-    "/arc42", "/commons", "/help", "/metamodel",
+    "/arc42", "/commons", "/help", "/metamodel", "/method",
     "/join",
     "/issues?status=open&category=systems42&severity=minor&section=C1&owner=none&sort=status:asc",
 ]
