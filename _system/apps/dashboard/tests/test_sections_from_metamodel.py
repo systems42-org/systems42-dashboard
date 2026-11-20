@@ -91,8 +91,8 @@ def test_the_catalog_reads_both():
 
 def test_home_page_lists_both():
     body = _get("/")
-    assert f'href="/section/A6"><code class="ml-id">A6</code> {ADDED}</a>' in body, body
-    assert f'<code class="ml-id">C6</code> {RENAMED}</a>' in body, body
+    assert f'href="/section/A6"><code class="ml-id">A6</code> {ADDED}<' in body, body
+    assert f'<code class="ml-id">C6</code> {RENAMED}<' in body, body
     # the architecture peak counts the added section's pages and its open issue
     with app.app.test_request_context("/"):
         arch = app.build_area_tile(app.catalog.AREA_BY_KEY["architecture"])
@@ -115,7 +115,7 @@ def test_area_page_has_a_generic_tile_for_the_added_section():
     tile = m.group(0)
     assert f"A6 · {ADDED}" in tile, tile
     assert '<span class="num">2</span>' in tile, tile
-    assert "Vendor lock-in" in tile and "No load tests" in tile, tile
+    assert "Vendor lock-in" not in tile, tile   # count only, no page names (FR-019)
     assert "maturity" in tile, tile
     assert 'href="/issues?section=A6"' in tile and "1 open issue" in tile, tile
     assert 'href="/section/A6"' in tile, tile
