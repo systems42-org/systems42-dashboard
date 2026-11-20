@@ -1,0 +1,78 @@
+# Builds dashboard.systems42.org and publishes it to the gh-pages branch.
+#
+# One-time setup in GitHub repository settings:
+#   Settings -> Pages -> Source: Deploy from a branch -> gh-pages / (root)
+#   DNS CNAME: dashboard.systems42.org -> systems42-org.github.io
+#
+# To switch the /demo/ showcase to another public Systems42 wiki (such as
+# systems42-org/isaqb-atrium), set repository variable SITE_DEMO_WIKI_REPO or
+# pass `demo_wiki_repo` when triggering this workflow manually.
+name: site
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths:
+      - "site/**"
+      - "wiki/**"
+      - "docs/**"
+      - "dashboard.sh"
+      - "CHANGELOG.md"
+      - "Makefile"
+      - "_system/wiki.yaml"
+      - "_system/apps/dashboard/**"
+      - ".github/workflows/site.yml"
+  workflow_dispatch:
+    inputs:
+      demo_wiki_repo:
+        description: "Optional owner/repo to export as /demo/ (empty = this repository)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gh-pages
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout dashboard repository
+        uses: actions/checkout@v4
+
+      - name: Optional checkout of external demo wiki
+        id: demo
+        env:
+          INPUT_REPO: ${{ github.event.inputs.demo_wiki_repo }}
+          VAR_REPO: ${{ vars.SITE_DEMO_WIKI_REPO }}
+        run: |
+          repo="${INPUT_REPO:-$VAR_REPO}"
+          if [ -n "$repo" ]; then
+            git clone --depth 1 "https://github.com/${repo}.git" /tmp/demo-wiki
+            echo "path=/tmp/demo-wiki" >> "$GITHUB_OUTPUT"
+          else
+            echo "path=$GITHUB_WORKSPACE" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build static site
+        run: make site DEMO_WIKI="${{ steps.demo.outputs.path }}"
+
+      - name: Publish site/_site to gh-pages branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          work="$(mktemp -d)"
+          cp -R site/_site/. "$work/"
+          cd "$work"
+          git init -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Deploy dashboard.systems42.org from ${GITHUB_SHA::7}"
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push --force origin gh-pages
