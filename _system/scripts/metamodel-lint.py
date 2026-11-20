@@ -2,7 +2,7 @@
 """Lint `_system/metamodel/` against the files that must agree with it.
 
 The metamodel is the single statement of the schema (DR-035); templates,
-wiki folders, anchors and the dashboard catalog are its consumers. Nothing
+wiki folders and anchors are its consumers. Nothing
 raises when they drift, so this script diffs them:
 
   * every template has a type page; every `type` page: template exists, its `id:` prefix and `type:` value
@@ -14,7 +14,7 @@ raises when they drift, so this script diffs them:
   * every `relation`: `from` / `to` types exist (or `any`), and every `from`
     type declares a field for it;
   * every `framework`: block types exist, every wiki folder sits in exactly
-    one block, and the dashboard catalog agrees on id, title and folders;
+    one block;
   * every `projection`: the types and fields it reads exist;
   * the altitude scale: assigned types / stereotypes exist.
 
@@ -186,7 +186,7 @@ def main() -> int:
                 if r["field"] not in fields and r["field"] not in universal:
                     fail(f"{where}: type {src} declares no field {r['field']}")
 
-    # --- frameworks vs wiki folders vs dashboard catalog -------------------
+    # --- frameworks vs wiki folders ---------------------------------------
     folder_owner: dict[str, str] = {}
     for fw_name, fw in frameworks.items():
         where = fw["_path"].relative_to(ROOT)
@@ -203,33 +203,6 @@ def main() -> int:
     for d in sorted(wiki.iterdir()) if wiki.is_dir() else []:
         if d.is_dir() and d.name not in folder_owner:
             fail(f"wiki/{d.name}/ belongs to no framework block")
-    try:
-        sys.path.insert(0, str(ROOT / "_system" / "apps" / "dashboard"))
-        import catalog  # type: ignore
-        cat = {s["id"]: s for s in catalog.SECTIONS}
-        for bid, (fw_name, b) in blocks.items():
-            s = cat.get(bid)
-            if not s:
-                fail(f"dashboard catalog has no section {bid}")
-                continue
-            if s["title"] != b["title"]:
-                fail(f"{bid}: title '{b['title']}' (metamodel) vs '{s['title']}' (catalog)")
-            want = sorted(Path(types[tn]["folder"]).name for tn in b.get("types", []) if tn in types)
-            catalog_folders = s["folders"]
-            # This repository's wiki still uses the pre-DR-039 schema.
-            if "glossary-term" in types and bid == "C5":
-                catalog_folders = [f for f in catalog.section_folders(s) if f != "domain-terms"]
-            if "data-model" in types and bid == "R4":
-                catalog_folders = catalog.section_folders(s)
-            if sorted(catalog_folders) != want:
-                fail(f"{bid}: folders {want} (metamodel) vs {sorted(catalog_folders)} (catalog)")
-            if s["scope"] != b.get("scope"):
-                fail(f"{bid}: scope {b.get('scope')} (metamodel) vs {s['scope']} (catalog)")
-        for sid in cat:
-            if sid not in blocks:
-                fail(f"catalog section {sid} is declared by no framework")
-    except ImportError:
-        fail("could not import the dashboard catalog (_system/apps/dashboard/catalog.py)")
 
     # --- projections -------------------------------------------------------
     for name, pr in projections.items():

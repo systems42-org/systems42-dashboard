@@ -147,7 +147,7 @@ os.environ["WIKI_DIR"] = str(_wiki)
 os.environ["WIKI_CONFIG"] = str(_tmp / "wiki.yaml")
 os.environ["RAW_SOURCES_DIR"] = str(_sources)
 os.environ["DOCS_DIR"] = str(_docs)
-os.environ["METAMODEL_DIR"] = str(Path(__file__).resolve().parents[2] / "metamodel")
+os.environ["METAMODEL_DIR"] = str(Path(__file__).resolve().parents[3] / "metamodel")
 # without a browser heartbeat the watchdog SIGTERMs this process (DR-022)
 os.environ["DASH_STARTUP_GRACE"] = "3600"
 os.environ["DASH_HEARTBEAT_GRACE"] = "3600"

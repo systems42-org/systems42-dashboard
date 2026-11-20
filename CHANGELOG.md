@@ -25,6 +25,8 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - Dashboard: `/req42/<slug>` answers 404 for the arc42 sections, which live under `/arc42/`.
 - Dashboard: `/issues?section=` ignores case, so `c2` filters like `C2`.
 - Dashboard: the metamodel page links a projection's route only when it is a path on this site.
+- Dashboard: the View dialog puts section ids and titles in as text, so
+  markup in a framework file cannot reach the page.
 - Dashboard: on a functional requirement page the sources row no longer overlaps the row of pills above it.
 
 ### Added
@@ -49,6 +51,17 @@ Unreleased changes sit at the top until the next Starter Kit release.
   and is not lower than the newest one, `CHANGELOG.md` names it and the tests
   pass. Both bring `main` up to date first, and every refusal says what to do
   next.
+
+### Changed
+- Dashboard: the sections come from the repository's metamodel
+  (`_system/metamodel/frameworks/`, FR-044), not from a list in `catalog.py`.
+  A renamed or added section shows on the home page, the area pages and in
+  the lists without a code change, and the header takes the new titles of C5,
+  C6 and C7. A section the dashboard has no
+  view for gets a generic tile and list at `/section/<id>`, in the area of its
+  framework file. Pages in `wiki/use-cases/` now count in R3.
+- Metamodel lint: it no longer imports the dashboard's `catalog.py` and runs
+  without dashboard code (ISS-005).
 
 ### Removed
 - Wiki: 23 stakeholders merged into 7 (meta issue #38). Retired IDs, never

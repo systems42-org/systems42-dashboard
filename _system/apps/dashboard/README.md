@@ -107,7 +107,8 @@ current entry marked, a search box and the ≡ menu. Pressing <kbd>⌘K</kbd>
 (<kbd>Ctrl K</kbd> elsewhere) anywhere focuses the search box; submitting it
 lands on `/search`, the full-text view. The nav carries content only: the
 two peaks, then Domain Terms, Decisions and Issues from Commons. Every label
-comes from `catalog.py`, so a section has one name everywhere (FR-017).
+comes from `catalog.py`, which reads the section titles from the metamodel,
+so a section has one name everywhere (FR-017, FR-044).
 Breadcrumbs under the bar read `Home › Area › Section › Page`, following
 where a page belongs (FR-020). Pages outside the sections read `Home › Page`.
 
@@ -162,8 +163,13 @@ a path of the dashboard, and no style that loads something (`url()`).
 
 ## Home, areas and tiles
 
-The section structure follows the Systems42 sections diagram and lives in one
-place, `catalog.py`: three areas, eighteen sections (DR-033).
+The section structure follows the Systems42 sections diagram (DR-033).
+`catalog.py` holds the three areas and reads the sections from the framework
+blocks in `_system/metamodel/frameworks/` of the repository (FR-044): id,
+title, folders (from each listed type's `folder:`), scope and note. A
+section's area is the `area:` of its framework file. The dashboard adds the
+routes and colours of the sections it knows. A section it does not know gets
+the generic list at `/section/<id>`, a generic tile and its area's colours.
 
 The home page (`/`) opens with the vault name and the first sentence of the
 vision, the goal page with `stereotype: vision`. Without a vision it shows the
@@ -319,7 +325,7 @@ status-strip source count already reads.
 ```
 _system/apps/dashboard/
   app.py             Flask app + wiki parser + all diagram projections
-  catalog.py         the three areas and eighteen sections (labels, folders, routes, colours)
+  catalog.py         the three areas, and the sections from the metamodel with routes and colours
   metamodel.py       reader for _system/metamodel/ (the /metamodel page, ADR-0008)
   help.md            source of the /help page
   templates/         base, index, _empty (shared empty state), _macros (plural()),
@@ -411,12 +417,13 @@ abbreviations, DR-025 is indexed), and two contracts that would otherwise
 drift in silence — `_templates/` against `app.py`'s parser, and the skills the
 workflows name against the ones vendored under `.agents/skills/`. The
 three-area restructure is pinned by `test_catalog.py` (every wiki folder
-belongs to exactly one section), `test_view.py` (the view, its lifetime
+belongs to exactly one section), `test_sections_from_metamodel.py` (a renamed
+and an added section show without a code change, FR-044), `test_view.py` (the view, its lifetime
 and the success metric of FR-046), `test_areas.py`, `test_area_chrome.py` (breadcrumbs,
 colour bar), `test_menu.py`, `test_help.py` and `test_home_layout.py`.
 The metamodel is pinned twice: `test_metamodel_lint.py` runs
-`_system/scripts/metamodel-lint.py` (templates, folders, anchors and the
-catalog must agree with `_system/metamodel/`), and `test_metamodel_page.py`
+`_system/scripts/metamodel-lint.py` (templates, folders and anchors must
+agree with `_system/metamodel/`, with no dashboard code present), and `test_metamodel_page.py`
 checks the `/metamodel` page (loader, graph as a pure projection, every type a
 row with an anchor and a colour token, wikilink resolution, live examples).
 

@@ -192,6 +192,15 @@ for _p in _mm.rglob("*.md"):
     _p.write_text("---\n" + yaml.safe_dump(_poison(_front), allow_unicode=True, sort_keys=False)
                   + "---\n" + _body, encoding="utf-8")
 
+# a section the dashboard does not know, named by the payload (FR-044): it
+# gets the generic route and tile, and its title lands in every section list
+_fw = _mm / "frameworks" / "fw-commons.md"
+_m = re.match(r"^---\s*\n(.*?)\n---\s*\n?(.*)$", _fw.read_text(encoding="utf-8"), re.DOTALL)
+_front = yaml.safe_load(_m.group(1))
+_front["blocks"].append({"id": "X9", "title": PAYLOAD, "types": [], "scope": "in", "note": PAYLOAD})
+_fw.write_text("---\n" + yaml.safe_dump(_front, allow_unicode=True, sort_keys=False)
+               + "---\n" + _m.group(2), encoding="utf-8")
+
 (_docs / "about.md").write_text(f"# {PAYLOAD}\n\n{PAYLOAD}\n\n![m](m.svg)\n", encoding="utf-8")
 (_docs / "m.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg"/>', encoding="utf-8")
 (_tmp / "wiki.yaml").write_text(yaml.safe_dump({"system_name": PAYLOAD, "tagline": PAYLOAD,
@@ -259,7 +268,8 @@ def _routes() -> list[str]:
             and str(r) not in ("/presence/count", "/presence/list")]
     urls += [app._page_url(p.parent.name, p.stem) for p in _wiki.rglob("*.md")]
     urls += [f"/source/{p.stem}" for p in _sources.glob("*.md")]
-    urls += [f"/req42/{slug}" for slug in app.REQ42_BY_SLUG]
+    urls += [f"/req42/{slug}" for slug in app.catalog.SECTION_BY_SLUG]
+    urls += [f"/section/{sid}" for sid in app.catalog.SECTION_BY_ID]
     urls += [f"/brand/{name}" for name in app.BRAND_MARKS] + ["/about/files/m.svg"]
     urls += ["/entity-diagram?focus=DT-001-hostile", "/entity-diagram?focus=DM-001-hostile",
              "/entity-diagram?context=" + PAYLOAD, "/graph/domain-terms?edges=structured",

@@ -19,6 +19,8 @@ with tempfile.TemporaryDirectory() as temp:
         REPO_DIR=str(example),
         RAW_SOURCES_DIR=str(example / "raw/sources"),
         DOCS_DIR=str(example / "docs"),
+        # the fixture holds no metamodel; the sections come from this repository's
+        METAMODEL_DIR=str(HERE.parents[2] / "metamodel"),
         DASH_STARTUP_GRACE="3600",
         DASH_HEARTBEAT_GRACE="3600",
     )

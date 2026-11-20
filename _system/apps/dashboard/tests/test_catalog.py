@@ -1,5 +1,6 @@
-"""Catalog contract: three areas, eighteen sections from the Systems42
-sections diagram, every wiki folder owned by exactly one section. No pytest.
+"""Catalog contract: three areas, the eighteen sections this repository's
+metamodel declares (FR-044), every wiki folder owned by exactly one section.
+No pytest.
 
 Run from the dashboard dir:
     .venv/bin/python tests/test_catalog.py
@@ -10,13 +11,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import catalog  # noqa: E402
+import metamodel  # noqa: E402
 
-WIKI_FOLDERS = [
-    "domain-terms", "goals", "stakeholders", "context", "external-interfaces",
-    "activity-models", "functional-requirements",
-    "quality-requirements", "constraints", "issues", "decisions", "building-blocks",
-    "deployment-nodes", "runtime-scenarios", "concepts",
-]
+REPO = Path(__file__).resolve().parents[4]
+WIKI_FOLDERS = sorted(d.name for d in (REPO / "wiki").iterdir() if d.is_dir())
 
 
 def test_three_areas_in_diagram_order():
@@ -46,6 +44,18 @@ def test_every_wiki_folder_belongs_to_exactly_one_section():
     for f in WIKI_FOLDERS:
         assert owners.get(f) and len(owners[f]) == 1, (f, owners.get(f))
     assert set(owners) == set(WIKI_FOLDERS), set(owners) ^ set(WIKI_FOLDERS)
+
+
+def test_sections_are_the_metamodel_blocks():
+    # id, title, folders and scope as the framework files declare them
+    want = {b["id"]: b for b in metamodel.blocks()}
+    assert set(catalog.SECTION_BY_ID) == set(want)
+    for sid, s in catalog.SECTION_BY_ID.items():
+        b = want[sid]
+        assert (s["title"], s["folders"], s["scope"], s["area"]) == \
+            (b["title"], b["folders"], b["scope"], b["area"]), sid
+    # use cases live in R3 (DR-011) and come with it
+    assert catalog.SECTION_BY_ID["R3"]["folders"] == ["functional-requirements", "use-cases"]
 
 
 def test_architecture_a2_to_a5_live_and_a1_planned():
@@ -87,6 +97,9 @@ def test_lookups():
     assert catalog.section_for_folder("stakeholders")["id"] == "C4"
     assert catalog.section_for_folder("glossary")["id"] == "C5"
     assert catalog.section_for_folder("data-models")["id"] == "R4"
+    assert catalog.section_for_folder("use-cases")["id"] == "R3"
+    # DR-039 renamed the folder; both names find the section
+    assert catalog.section_for_folder("domain-terms")["id"] == "C5"
     assert catalog.area_for_folder("external-interfaces")["key"] == "commons"
     assert catalog.area_for_folder("nope") is None
     assert catalog.area_for_path("/req42/functional-requirements")["key"] == "requirements"
@@ -107,6 +120,7 @@ if __name__ == "__main__":
     test_three_areas_in_diagram_order()
     test_eighteen_sections_with_diagram_ids()
     test_every_wiki_folder_belongs_to_exactly_one_section()
+    test_sections_are_the_metamodel_blocks()
     test_architecture_a2_to_a5_live_and_a1_planned()
     test_out_of_scope_sections_have_no_folders_or_route()
     test_routes_are_unchanged()
