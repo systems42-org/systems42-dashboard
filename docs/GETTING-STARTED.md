@@ -51,8 +51,9 @@ Open `_system/index.md` for the catalog, or use the **graph view** to see how ev
 connects. Follow the links. If something's off, just tell the agent. Prefer a browser
 to Obsidian? Run `./dashboard.sh` for a live, read-only view of the wiki —
 handy for a quick check or for showing someone else without installing anything.
-(That path needs Docker; `./dashboard.sh local` runs the same dashboard directly
-with Python on `http://localhost:8000` instead.) In the dashboard, <kbd>⌘K</kbd>
+(That path needs Docker. Where Docker cannot run, for example inside a virtual
+machine, `./dashboard.sh uv` starts the same dashboard with
+[uv](https://docs.astral.sh/uv/) instead.) In the dashboard, <kbd>⌘K</kbd>
 (<kbd>Ctrl K</kbd> on Windows/Linux) jumps to search from any page. The dashboard follows the Systems42 sections
 model: Requirements and Architecture as two areas, plus the Commons they share.
 The ≡ menu holds View, Theme, Who's here, Help, Reload and Disconnect all;
@@ -131,7 +132,7 @@ Ask for what you need, e.g.:
 ├── CLAUDE.md           ← Claude Code import of AGENTS.md
 ├── README.md           ← repo overview
 ├── CHANGELOG.md        ← what changed in the method, templates, skills and dashboard
-├── Makefile            ← make dev / down / test (dashboard)
+├── Makefile            ← make dev / uv / down / test (dashboard)
 └── dashboard.sh        ← starts the live, browsable dashboard (Docker)
 ```
 

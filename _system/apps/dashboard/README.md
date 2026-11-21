@@ -22,6 +22,16 @@ It reads `dashboard_version:` from `_system/wiki.yaml` and starts the image
 `update` asks GitHub for the newest release and writes that one line. A wiki
 that names no release is told to run `update`.
 
+**Without Docker.** `./dashboard.sh uv` (also `make uv`) starts the same
+release with [uv](https://docs.astral.sh/uv/), for machines where Docker
+cannot run, such as a virtual machine (FR-054). uv is then the one thing to
+install. It fetches Python 3.12 and the release's wheel from the GitHub
+release, and a release fetched once starts without network. The dashboard
+runs in the foreground at the same address: Ctrl+C stops it, and so does
+closing the last browser tab. `DASH_WHEEL` names a wheel file or address to
+run instead, for a machine without network. Releases up to 0.12.0 have no
+wheel. With `dashboard_version: local` it runs the code in this repository.
+
 **One mount.** The launcher mounts the repository read-only at `/repo`. The
 dashboard writes nothing there (see View). The image sets `REPO_DIR=/repo`, and the dashboard finds
 `wiki/`, `raw/sources/`, `docs/`, `_system/metamodel/`, `_system/anchors/` and
@@ -50,7 +60,8 @@ start. The launcher hands every command it does not know to `dev.sh` here:
 ./dashboard.sh test     # run the test scripts in Docker (also `make test`)
 ```
 
-`local` is the escape hatch for machines where Docker will not start: it
+`local` is the older way to run without Docker and promises nothing. Use
+`./dashboard.sh uv` instead, which runs the server of the image. `local`
 builds a `.venv/` here on first run (~20 s), installs the requirements again
 whenever `requirements.txt` has changed, and serves the same app until you
 press Ctrl+C. It refuses to start while something already answers on port 8000.
@@ -71,7 +82,11 @@ A release takes three steps, all from `main`:
 A git tag `vX.Y.Z` that matches `VERSION` runs `.github/workflows/release.yml`:
 the tests, then an image for amd64 and arm64 under
 `ghcr.io/systems42-org/dashboard:X.Y.Z` and `:latest`, then a GitHub release,
-which is what `update` asks for (DR-004, FR-030).
+which is what `update` asks for (DR-004, FR-030). The release carries the
+wheel `systems42_dashboard-X.Y.Z-py3-none-any.whl`, built from
+`pyproject.toml` (DR-007). The wheel holds the files the `Dockerfile` copies:
+a file added to one must be added to the other, and `tests/test_uv_start.py`
+fails when they differ.
 
 Every page footer shows the data-refresh timestamp (page load time, `%Y-%m-%d`,
 in `TZ` if set, else the host's local zone).

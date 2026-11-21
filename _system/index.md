@@ -70,7 +70,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-030-numbered-releases]] Numbered releases (feature, Must, draft)
 - [[FR-031-branding-is-configuration]] Branding is configuration (feature, Must, draft)
 - [[FR-032-example-brands-to-try]] Example brands to try (feature, Should, draft)
-- [[FR-033-runnable-dashboard-in-the-starter-kit]] Runnable dashboard in the starter kit (feature, Should, draft)
+- [[FR-033-runnable-dashboard-in-the-starter-kit]] Runnable dashboard in the starter kit (feature, Should, deprecated)
 - [[FR-034-read-a-page-with-its-links]] Read a page with its links (feature, Must, draft)
 - [[FR-035-method-terms-lead-to-their-definition]] Method terms lead to their definition (feature, Should, draft)
 - [[FR-036-goal-coverage-matrix]] Goal coverage matrix (feature, Should, draft)
@@ -91,6 +91,8 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-051-reveal-related-page-types-layer-by-layer]] Reveal related page types layer by layer (story, Should, draft)
 - [[FR-052-see-a-terms-neighbourhood-on-its-page]] See a term's neighbourhood on its page (story, Should, draft)
 - [[FR-053-reach-the-session-controls-and-the-theme-from-one-menu]] Reach the session controls and the theme from one menu (story, Could, draft)
+- [[FR-054-a-start-without-a-container-engine]] A start without a container engine (feature, Should, draft)
+- [[FR-055-an-installable-dashboard-app]] An installable dashboard app (feature, Should, draft)
 - [[FR-056-a-public-website-for-the-dashboard]] A public website for the dashboard (epic, Should, draft)
 - [[FR-057-overview-of-the-dashboard-on-the-website]] Overview of the dashboard on the website (feature, Should, draft)
 - [[FR-058-a-demo-to-try-without-installing]] A demo to try without installing (feature, Must, draft)
@@ -109,7 +111,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 
 - [[CON-001-proof-of-concept-not-production-ready]] The dashboard is a proof of concept, not production-ready for every environment (draft)
 - [[CON-002-dashboard-never-writes-to-the-wiki]] The dashboard never writes to the wiki (draft)
-- [[CON-003-docker-is-the-supported-way-to-run-it]] Docker is the supported way to run the dashboard (draft)
+- [[CON-003-docker-is-the-supported-way-to-run-it]] Docker and uv are the supported ways to run the dashboard (draft)
 - [[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]] The dashboard shows the metamodel, it does not define it (draft)
 - [[CON-005-the-dashboard-works-on-systems42-derivatives-only]] The dashboard works on Systems42 derivatives only (draft)
 - [[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]] The dashboard depends on the metamodel, never the reverse (draft)
@@ -118,10 +120,11 @@ every capture (`_system/workflows/capture.md`, step 7).
 
 - [[DR-001-english-brief-plain-writing]] Write all documentation in brief, plain English (accepted)
 - [[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]] Tailoring belongs to Systems42, the view belongs to the dashboard (accepted)
-- [[DR-003-quality-requirements-are-classified-by-q42-dimensions]] Quality requirements are classified by Q42 dimensions (accepted)
+- [[DR-003-quality-requirements-are-classified-by-q42-dimensions]] Quality requirements are classified by Q42 dimensions (deprecated)
 - [[DR-004-releases-are-container-images-pinned-per-wiki]] Releases are container images, pinned per wiki (accepted)
 - [[DR-005-the-dashboard-lives-in-its-own-repository]] The dashboard lives in its own repository, with its requirements and its code (review)
 - [[DR-006-interactive-diagrams-are-projected-on-the-server-and-laid-out-in-the-browser]] Interactive diagrams are projected on the server and laid out in the browser (draft)
+- [[DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go]] The dashboard gets a uv start and a second implementation in Go (draft)
 
 ## Issues
 
@@ -131,6 +134,8 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[ISS-004-where-the-metamodel-declares-its-version]] Where the metamodel declares its version (open, systems42, meta #39)
 - [[ISS-005-the-method-lint-imports-dashboard-code]] The method's lint imports dashboard code (open, systems42, meta #40)
 - [[ISS-006-other-container-engines-than-docker]] Should the dashboard run with other container engines than Docker (open, requirements, #24)
+- [[ISS-007-issue-category-and-owner-belong-in-meta]] Issue category and owner fields belong in meta (open, systems42, meta #53)
+- [[ISS-008-q42-dimensions-belong-in-meta]] Q42 dimensions for quality requirements belong in meta (open, systems42, meta #35)
 
 ## Sources
 
@@ -169,5 +174,6 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-033-grilling-session-on-the-shared-session]] Grilling session on the shared session (interview)
 - [[SRC-034-dashboard-requirements-moved-from-meta]] Dashboard requirements that still lived in meta (document)
 - [[SRC-035-grilling-session-on-the-requirements-moved-from-meta]] Grilling session on the requirements moved from meta (interview)
+- [[SRC-036-grilling-session-on-running-without-a-container-engine]] Grilling session on running without a container engine (interview)
 - [[SRC-037-a-public-website-for-the-dashboard]] A public website for the dashboard (document)
 - [[SRC-038-grilling-session-on-the-public-website]] Grilling session on the public website (interview)
