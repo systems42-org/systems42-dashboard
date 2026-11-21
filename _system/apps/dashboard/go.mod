@@ -1,10 +1,12 @@
 module github.com/systems42-org/systems42-dashboard/_system/apps/dashboard
 
-go 1.24.4
+go 1.26.0
 
 require (
 	github.com/nikolalohinski/gonja/v2 v2.9.1
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
+	github.com/yuin/goldmark v1.8.7
+	golang.org/x/net v0.63.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -17,6 +19,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
-	golang.org/x/sys v0.32.0 // indirect
-	golang.org/x/text v0.23.0 // indirect
+	golang.org/x/sys v0.50.0 // indirect
+	golang.org/x/text v0.44.0 // indirect
 )

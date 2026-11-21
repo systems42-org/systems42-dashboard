@@ -44,24 +44,9 @@ NON_WIKI_FIXTURES = {"notations"}
 # them. Exact paths live in UNPORTED_EXACT; prefixes in UNPORTED_PREFIXES.
 # When a phase lands, remove its entries here so CI enforces parity on them.
 UNPORTED_EXACT: dict[str, str] = {
-    # Phase 2: metamodel, areas and lists
-    "/req42": "Phase 2",
-    "/arc42": "Phase 2",
-    "/commons": "Phase 2",
-    "/req42/scope": "Phase 2",
-    "/req42/models": "Phase 2",
-    "/req42/quality": "Phase 2",
-    "/req42/constraints": "Phase 2",
-    "/metamodel": "Phase 2",
-    "/method": "Phase 2",
-    "/issues": "Phase 2",
-    "/stakeholders": "Phase 2",
-    "/decisions": "Phase 2",
-    "/adrs": "Phase 2",
-    "/domain-terms": "Phase 2",
-    "/glossary": "Phase 2",
-    "/changes": "Phase 2",
     # Phase 3: projections
+    "/req42/scope": "Phase 3 (page projection)",
+    "/req42/models": "Phase 3 (page projection)",
     "/goals": "Phase 3",
     "/entity-diagram": "Phase 3",
     "/data-model": "Phase 3",
@@ -85,13 +70,14 @@ UNPORTED_EXACT: dict[str, str] = {
 }
 
 UNPORTED_PREFIXES: tuple[tuple[str, str], ...] = (
-    # Phase 1: reading the wiki (detail & source pages)
-    ("/page/", "Phase 1"),
-    ("/source/", "Phase 1"),
-    # Phase 2: generic section views
-    ("/section/", "Phase 2"),
-    # Phase 3: functional requirement detail views
+    # Phase 3: functional requirement detail views and page-embedded projections
     ("/functional-requirements/", "Phase 3"),
+    ("/page/context/", "Phase 3 (page projection)"),
+    ("/page/glossary/", "Phase 3 (page projection)"),
+    ("/page/domain-terms/", "Phase 3 (page projection)"),
+    ("/page/building-blocks/", "Phase 3 (page projection)"),
+    ("/page/runtime-scenarios/", "Phase 3 (page projection)"),
+    ("/page/deployment-nodes/", "Phase 3 (page projection)"),
     # Phase 5: docs files under /about
     ("/about/files/", "Phase 5"),
 )
@@ -110,6 +96,27 @@ STATIC_SAMPLE_ROUTES = (
 # Fixed routes exercised on every wiki.
 FIXED_ROUTES = (
     "/",
+    "/req42",
+    "/arc42",
+    "/commons",
+    "/req42/quality",
+    "/req42/constraints",
+    "/req42/building-blocks",
+    "/section/C6",
+    "/metamodel",
+    "/method",
+    "/changes",
+    "/issues",
+    "/issues?status=open",
+    "/issues?status=closed",
+    "/issues?section=c1",
+    "/issues?owner=none",
+    "/stakeholders",
+    "/decisions",
+    "/adrs",
+    "/domain-terms",
+    "/glossary",
+    "/glossary?sort=title",
     "/presence/count",
     "/presence/list",
     "/brand/mark-dark.svg",
@@ -164,11 +171,16 @@ class _Normalizer(HTMLParser):
             return (name, "<NONCE>")
         if name in ("href", "src"):
             val = _STATIC_VER_RE.sub(r"\1?v=<V>", val)
+        if name == "data-sort-orders" and val:
+            try:
+                val = json.dumps(json.loads(val), sort_keys=True, separators=(",", ":"))
+            except ValueError:
+                pass
         if self._in_stack_badge:
             if name == "title":
                 return (name, "<STACK_TITLE>")
-            if tag == "img" and name == "src":
-                return (name, "<STACK_ICON>")
+            if tag == "img" and name in ("src", "class", "width", "height"):
+                return (name, f"<STACK_{name.upper()}>")
         if self._in_qr_svg:
             if tag == "svg" and name == "viewbox":
                 return (name, "<QR_VIEWBOX>")
@@ -263,6 +275,11 @@ class _Normalizer(HTMLParser):
                 if raw_depth > 0:
                     body = body.strip()
                     if body:
+                        if out and out[-1].startswith("<script ") and 'type="application/json"' in out[-1]:
+                            try:
+                                body = json.dumps(json.loads(body), sort_keys=True, separators=(",", ":"))
+                            except ValueError:
+                                pass
                         out.append("RAW:" + body)
                 else:
                     body = _REFRESHED_RE.sub("Data last refreshed: <REFRESHED_AT>", body)
@@ -524,6 +541,12 @@ def _compare_route(label: str, route: str, py_port: int, go_port: int) -> str | 
         go_xfo = go_hdrs.get("x-frame-options", "")
         if py_xfo != go_xfo:
             return f"[{label}] {route}: X-Frame-Options mismatch python={py_xfo!r}, go={go_xfo!r}"
+        if 300 <= py_status < 400:
+            py_loc = py_hdrs.get("location", "")
+            go_loc = go_hdrs.get("location", "")
+            if py_loc != go_loc:
+                return f"[{label}] {route}: Location mismatch python={py_loc!r}, go={go_loc!r}"
+            return None
         py_text = py_body.decode("utf-8", errors="replace")
         go_text = go_body.decode("utf-8", errors="replace")
         if 'class="stack-badge"' in py_text:

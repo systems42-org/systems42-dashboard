@@ -20,11 +20,56 @@ import (
 var (
 	frontmatterRE   = regexp.MustCompile(`(?s)^---\s*\r?\n(.*?)\r?\n---\s*(?:\r?\n(.*))?$`)
 	wikilinkRE      = regexp.MustCompile(`\[\[([^\]\|#]+)(?:#[^\]\|]+)?(?:\|([^\]]+))?\]\]`)
+	refStartRE      = regexp.MustCompile(`^\[\[([^\]\|#]+)`)
+	anyWikilinkRE   = regexp.MustCompile(`\[\[([^\]]+)\]\]`)
 	inlineMDRE      = regexp.MustCompile(`\*\*([^*]+)\*\*|` + "`([^`]+)`" + `|\*([^*]+)\*`)
 	visionHeadingRE = regexp.MustCompile(`##\s+Vision\b[^\n]*\n+`)
 	nextH2RE        = regexp.MustCompile(`\n##\s`)
 	whitespaceRE    = regexp.MustCompile(`\s+`)
 )
+
+// ArchFolders lists the four arc42 architecture content folders (A2-A5).
+var ArchFolders = []string{"building-blocks", "concepts", "runtime-scenarios", "deployment-nodes"}
+
+var archFolderSet = map[string]bool{
+	"building-blocks":   true,
+	"concepts":          true,
+	"runtime-scenarios": true,
+	"deployment-nodes":  true,
+}
+
+var validArchStates = map[string]bool{
+	"outdated": true,
+	"current":  true,
+	"planned":  true,
+	"target":   true,
+}
+
+// TypeFolder maps stem ID prefixes to their canonical wiki subfolder.
+var TypeFolder = map[string]string{
+	"DT": "domain-terms", "GLO": "glossary", "DM": "data-models", "STK": "stakeholders",
+	"EIF": "external-interfaces", "GOAL": "goals", "CTX": "context",
+	"FR": "functional-requirements", "CON": "constraints", "ISS": "issues",
+	"UC": "functional-requirements", "ACT": "activity-models", "QR": "quality-requirements",
+	"DR": "decisions", "BB": "building-blocks", "CC": "concepts",
+	"RS": "runtime-scenarios", "DN": "deployment-nodes",
+}
+
+// TypeLabel maps stem ID prefixes to group labels for the relations and trace panels.
+var TypeLabel = map[string]string{
+	"DT": "Domain terms", "GLO": "Glossary", "STK": "Stakeholders", "DM": "Data models",
+	"CTX": "Context", "EIF": "External interfaces", "GOAL": "Goals",
+	"FR": "Functional requirements", "UC": "Use cases", "ACT": "Activity models",
+	"QR": "Quality requirements", "CON": "Constraints", "DR": "Decisions",
+	"BB": "Building blocks", "CC": "Concepts", "RS": "Runtime scenarios",
+	"DN": "Deployment nodes", "ISS": "Issues",
+}
+
+// RelTypeOrder defines the group display order in relations and trace panels.
+var RelTypeOrder = []string{
+	"DT", "GLO", "STK", "DM", "CTX", "EIF", "GOAL", "FR", "UC", "ACT",
+	"QR", "CON", "DR", "BB", "CC", "RS", "DN", "ISS",
+}
 
 // FolderLabels maps wiki subfolder names to display names, matching app.py.
 var FolderLabels = map[string]string{
@@ -115,6 +160,210 @@ func (p *Page) Status() string {
 // MetaString returns a frontmatter field as text, or "" when unset.
 func (p *Page) MetaString(key string) string {
 	return scalarString(p.Meta[key])
+}
+
+// AsList returns a list-valued frontmatter field as a slice, wrapping a single
+// scalar value in a 1-element slice and treating nil or "" as empty.
+func (p *Page) AsList(field string) []any {
+	v, ok := p.Meta[field]
+	if !ok || v == nil {
+		return []any{}
+	}
+	if s, isStr := v.(string); isStr && s == "" {
+		return []any{}
+	}
+	if list, isList := v.([]any); isList {
+		return list
+	}
+	return []any{v}
+}
+
+// AsStringList returns AsList(field) with each item converted to text.
+func (p *Page) AsStringList(field string) []string {
+	raw := p.AsList(field)
+	out := make([]string, 0, len(raw))
+	for _, item := range raw {
+		out = append(out, scalarString(item))
+	}
+	return out
+}
+
+// Aliases returns non-empty alias strings from frontmatter.
+func (p *Page) Aliases() []string {
+	raw := p.AsList("aliases")
+	out := make([]string, 0, len(raw))
+	for _, item := range raw {
+		if s := scalarString(item); s != "" {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// IsArchFolder reports whether folder is one of the four arc42 folders.
+func IsArchFolder(folder string) bool {
+	return archFolderSet[folder]
+}
+
+// PageState returns an architecture page's lifecycle state, defaulting to "target".
+func PageState(p *Page) string {
+	v := strings.ToLower(strings.TrimSpace(p.MetaString("state")))
+	if validArchStates[v] {
+		return v
+	}
+	return "target"
+}
+
+// TypeOf returns the ID prefix before the first '-', or stem itself.
+func TypeOf(stem string) string {
+	if i := strings.IndexByte(stem, '-'); i >= 0 {
+		return stem[:i]
+	}
+	return stem
+}
+
+// Scalar unwraps nested lists produced by unquoted YAML `[[stem]]` links.
+func Scalar(v any) any {
+	for {
+		list, ok := v.([]any)
+		if !ok {
+			return v
+		}
+		if len(list) == 0 {
+			return ""
+		}
+		v = list[0]
+	}
+}
+
+// ScalarString converts any YAML scalar to its display string (matching PyYAML).
+func ScalarString(v any) string {
+	return scalarString(v)
+}
+
+// StemFromRef extracts the page stem from '[[FR-009-foo]]' or a bare stem.
+func StemFromRef(ref any) string {
+	s := strings.TrimSpace(scalarString(ref))
+	if m := refStartRE.FindStringSubmatch(s); m != nil {
+		s = m[1]
+	}
+	parts := strings.Split(s, "/")
+	return strings.TrimSpace(parts[len(parts)-1])
+}
+
+// StemOfLink extracts the target stem from a frontmatter link entry.
+func StemOfLink(raw any) string {
+	t := strings.TrimSpace(scalarString(raw))
+	if m := anyWikilinkRE.FindStringSubmatch(t); m != nil {
+		t = m[1]
+	}
+	if i := strings.IndexByte(t, '|'); i >= 0 {
+		t = t[:i]
+	}
+	if i := strings.IndexByte(t, '#'); i >= 0 {
+		t = t[:i]
+	}
+	t = strings.TrimSpace(t)
+	parts := strings.Split(t, "/")
+	return strings.TrimSpace(parts[len(parts)-1])
+}
+
+// LinksOf returns existing target stems referenced by page.Meta[field], in
+// order without duplicates, handling unquoted YAML `[[stem]]` nested lists.
+func LinksOf(page *Page, field string, byStem map[string]*Page) []string {
+	var out []string
+	seen := map[string]bool{}
+	var walk func(v any)
+	walk = func(v any) {
+		if list, ok := v.([]any); ok {
+			for _, x := range list {
+				walk(x)
+			}
+			return
+		}
+		if v == nil {
+			return
+		}
+		s := StemOfLink(v)
+		if s != "" && byStem[s] != nil && !seen[s] {
+			seen[s] = true
+			out = append(out, s)
+		}
+	}
+	walk(page.Meta[field])
+	return out
+}
+
+// StructTargets returns existing target stems named under keys in a
+// structured-list field (such as steps: from/to), in order without duplicates.
+func StructTargets(page *Page, field string, keys []string, byStem map[string]*Page) []string {
+	entries, ok := page.Meta[field].([]any)
+	if !ok {
+		return nil
+	}
+	var out []string
+	seen := map[string]bool{}
+	for _, item := range entries {
+		m, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		for _, k := range keys {
+			v := Scalar(m[k])
+			if v == nil {
+				continue
+			}
+			s := StemOfLink(v)
+			if s != "" && byStem[s] != nil && !seen[s] {
+				seen[s] = true
+				out = append(out, s)
+			}
+		}
+	}
+	return out
+}
+
+// IsWikiFolder reports whether folder is a direct, non-hidden subfolder of
+// wikiDir whose resolved path stays inside wikiDir.
+func IsWikiFolder(wikiDir, folder string) bool {
+	if folder == "" || strings.HasPrefix(folder, ".") || strings.ContainsAny(folder, `/\`) {
+		return false
+	}
+	d := filepath.Join(wikiDir, folder)
+	st, err := os.Stat(d)
+	if err != nil || !st.IsDir() {
+		return false
+	}
+	return ResolvesInside(wikiDir, d)
+}
+
+// LoadPage reads and parses a single page wiki/<folder>/<stem>.md if it exists
+// as a regular file and resolves inside WikiDir.
+func (s *Store) LoadPage(folder, stem string) *Page {
+	if stem == "" || stem == "." || stem == ".." || strings.ContainsAny(stem, `/\`) {
+		return nil
+	}
+	p := filepath.Join(s.Paths.WikiDir, folder, stem+".md")
+	st, err := os.Stat(p)
+	if err != nil || !st.Mode().IsRegular() {
+		return nil
+	}
+	return s.parse(p, folder)
+}
+
+// SourceIndex maps each source record's stem and ID to its Page (first wins).
+func SourceIndex(sources []*Page) map[string]*Page {
+	idx := make(map[string]*Page, len(sources)*2)
+	for _, p := range sources {
+		if _, exists := idx[p.Stem]; !exists {
+			idx[p.Stem] = p
+		}
+		id := p.ID()
+		if _, exists := idx[id]; !exists {
+			idx[id] = p
+		}
+	}
+	return idx
 }
 
 // LinkTargets returns distinct wiki page targets referenced in frontmatter or
@@ -309,7 +558,14 @@ func sanitizeUTF8(b []byte) string {
 	if utf8.Valid(b) {
 		return string(b)
 	}
-	return strings.ToValidUTF8(string(b), "\uFFFD")
+	var out strings.Builder
+	out.Grow(len(b))
+	for len(b) > 0 {
+		r, size := utf8.DecodeRune(b)
+		out.WriteRune(r)
+		b = b[size:]
+	}
+	return out.String()
 }
 
 func listMarkdownFiles(dir string) []string {

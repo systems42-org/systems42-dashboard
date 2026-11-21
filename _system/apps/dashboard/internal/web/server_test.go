@@ -62,8 +62,8 @@ func TestHomeHeadersAndNonces(t *testing.T) {
 		t.Fatalf("CSP nonce mismatch: csp=%q", csp1)
 	}
 	body1 := rec1.Body.String()
-	if !strings.Contains(body1, `title="Built with Go"`) || !strings.Contains(body1, `/static/go-logo.svg?v=`) {
-		t.Fatalf("expected Go stack badge in footer")
+	if !strings.Contains(body1, `title="Built with Go"`) || !strings.Contains(body1, `/static/go-logo.svg?v=`) || !strings.Contains(body1, `class="stack-icon stack-icon-go"`) || !strings.Contains(body1, `width="45" height="18"`) {
+		t.Fatalf("expected sized Go stack badge in footer")
 	}
 	if strings.Contains(body1, `Built with Python + Flask`) {
 		t.Fatalf("Go dashboard footer should not claim Python + Flask")
@@ -238,5 +238,200 @@ func TestHeartbeatPresenceReloadAndDisconnect(t *testing.T) {
 	srv.ServeHTTP(rec, req)
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("POST /leaving = %d, want 204", rec.Code)
+	}
+}
+
+func TestPageAndSourceDetailRoutes(t *testing.T) {
+	srv := newRepoServer(t)
+
+	// Decision detail with drivers trace, provenance chip, relations, breadcrumb
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/page/decisions/DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET DR-007 = %d", rec.Code)
+	}
+	body := rec.Body.String()
+	for _, want := range []string{
+		"DR-007",
+		`href="/decisions"`,
+		`href="/source/SRC-036-grilling-session-on-running-without-a-container-engine"`,
+		`href="/functional-requirements/FR-055-`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("DR-007 missing %q", want)
+		}
+	}
+
+	// Issue detail page with issue fields
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/page/issues/ISS-001-who-holds-the-keys-in-parallel-work", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "ISS-001") {
+		t.Fatalf("GET ISS-001 = %d", rec.Code)
+	}
+
+	// Quality requirement detail with Q42 anchor format label
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/page/quality-requirements/QR-003-works-in-every-current-browser", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "QR-003") {
+		t.Fatalf("GET QR-003 = %d", rec.Code)
+	}
+
+	// Source detail page with source-facts and resolved ingested-pages wikilinks
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/source/SRC-036-grilling-session-on-running-without-a-container-engine", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET SRC-036 = %d", rec.Code)
+	}
+	srcBody := rec.Body.String()
+	if !strings.Contains(srcBody, `<dl class="source-facts">`) || !strings.Contains(srcBody, `/page/decisions/DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go`) {
+		t.Errorf("SRC-036 missing source-facts or ingested-pages link")
+	}
+
+	// Legacy redirects
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/page/adr/0007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go", nil))
+	if rec.Code != http.StatusMovedPermanently || rec.Header().Get("Location") != "/page/decisions/DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go" {
+		t.Fatalf("ADR redirect = %d -> %q", rec.Code, rec.Header().Get("Location"))
+	}
+
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/page/functional-requirements/FR-055-second-implementation-in-go", nil))
+	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/functional-requirements/FR-055-second-implementation-in-go" {
+		t.Fatalf("FR redirect = %d -> %q", rec.Code, rec.Header().Get("Location"))
+	}
+}
+
+func TestPhase2AreasListsMetamodelAndCustomSection(t *testing.T) {
+	srv := newRepoServer(t)
+
+	// Areas and req42 blocks
+	for _, u := range []string{"/req42", "/arc42", "/commons", "/req42/quality", "/req42/constraints", "/method", "/changes", "/domain-terms", "/stakeholders", "/decisions", "/issues", "/metamodel"} {
+		rec := httptest.NewRecorder()
+		srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, u, nil))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET %s = %d, want 200", u, rec.Code)
+		}
+	}
+	// arc42 slug under /req42/ returns 404
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/req42/building-blocks", nil))
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("GET /req42/building-blocks = %d, want 404", rec.Code)
+	}
+
+	// Redirects preserve CSP + XFO + query
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/glossary?sort=title", nil))
+	if rec.Code != http.StatusMovedPermanently || rec.Header().Get("Location") != "/domain-terms?sort=title" || rec.Header().Get("X-Frame-Options") != "DENY" {
+		t.Fatalf("GET /glossary?sort=title = %d loc=%q xfo=%q", rec.Code, rec.Header().Get("Location"), rec.Header().Get("X-Frame-Options"))
+	}
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/adrs", nil))
+	if rec.Code != http.StatusMovedPermanently || rec.Header().Get("Location") != "/decisions" {
+		t.Fatalf("GET /adrs = %d loc=%q", rec.Code, rec.Header().Get("Location"))
+	}
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/section/C6", nil))
+	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/issues" {
+		t.Fatalf("GET /section/C6 = %d loc=%q", rec.Code, rec.Header().Get("Location"))
+	}
+
+	// /method links ISS-002 while open
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/method", nil))
+	if !strings.Contains(rec.Body.String(), "ISS-002") {
+		t.Error("expected ISS-002 link on /method")
+	}
+
+	// /issues legacy ?filter=open and case-insensitive ?section=c2
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/issues?filter=open&section=c2&severity=bogus", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `value="open" selected`) || !strings.Contains(rec.Body.String(), `value="C2" selected`) {
+		t.Fatalf("GET /issues filtered unexpected: status=%d", rec.Code)
+	}
+
+	// Custom metamodel section A6 and renamed C6 (FR-044) plus unsafe projection route check
+	tmp := t.TempDir()
+	for _, f := range []string{"issues", "risks", "decisions"} {
+		_ = os.MkdirAll(filepath.Join(tmp, "wiki", f), 0o755)
+	}
+	_ = os.MkdirAll(filepath.Join(tmp, "raw", "sources"), 0o755)
+	_ = os.MkdirAll(filepath.Join(tmp, "_system", "anchors"), 0o755)
+	_ = os.WriteFile(filepath.Join(tmp, "_system", "wiki.yaml"), []byte("system_name: Demo\nintro: off\n"), 0o644)
+
+	srcMM := filepath.Join(repoRoot(t), "_system", "metamodel")
+	dstMM := filepath.Join(tmp, "_system", "metamodel")
+	_ = filepath.WalkDir(srcMM, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel(srcMM, p)
+		dst := filepath.Join(dstMM, rel)
+		if d.IsDir() {
+			return os.MkdirAll(dst, 0o755)
+		}
+		b, err := os.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(dst, b, 0o644)
+	})
+	// Rename C6 and add A6 + risk type + unsafe projection route
+	fwCommons := filepath.Join(dstMM, "frameworks", "fw-commons.md")
+	cb, _ := os.ReadFile(fwCommons)
+	_ = os.WriteFile(fwCommons, []byte(strings.Replace(string(cb), `title: "Issues"`, `title: "Open Points"`, 1)), 0o644)
+
+	fwArc := filepath.Join(dstMM, "frameworks", "fw-arc42.md")
+	ab, _ := os.ReadFile(fwArc)
+	_ = os.WriteFile(fwArc, []byte(strings.Replace(string(ab),
+		"scope: in}\n",
+		"scope: in}\n  - {id: A6, title: \"Risks\", types: [risk], scope: in}\n", 1)), 0o644)
+	_ = os.WriteFile(filepath.Join(dstMM, "types", "type-risk.md"), []byte(
+		"---\ntype: metamodel\nconstruct: type\nname: risk\nprefix: RSK\nfolder: wiki/risks\nlabel: Risk\nblock: A6\nlifecycle: content\nfields: []\n---\n\n# Type: risk\n\nA technical risk.\n"), 0o644)
+	_ = os.WriteFile(filepath.Join(dstMM, "projections", "proj-evil.md"), []byte(
+		"---\ntype: metamodel\nconstruct: projection\nname: evil-proj\noutput: table\nimplemented: //evil.example/x\nreads: []\n---\n\n# Evil\n\nTest unsafe route.\n"), 0o644)
+	_ = os.WriteFile(filepath.Join(tmp, "wiki", "risks", "RSK-001-lockin.md"), []byte(
+		"---\nid: RSK-001\ntype: risk\ntitle: Vendor lock-in\nstatus: draft\n---\n\n# Vendor lock-in\n"), 0o644)
+	_ = os.WriteFile(filepath.Join(tmp, "wiki", "issues", "ISS-001-risk.md"), []byte(
+		"---\nid: ISS-001\ntype: issue\ntitle: Mitigate lock-in\nstatus: open\nseverity: major\nrelated: [\"[[RSK-001-lockin]]\"]\n---\n\n# Mitigate\n"), 0o644)
+
+	paths, _ := wiki.ResolvePaths(tmp, func(string) string { return "" })
+	customSrv := web.NewServer(web.Options{
+		Paths:       paths,
+		StaticFS:    dashboard.StaticFS(),
+		TemplatesFS: dashboard.TemplatesFS(),
+		BrandsFS:    dashboard.BrandsFS(),
+		Version:     dashboard.Version(),
+		DisplayTZ:   "UTC",
+		PublicURL:   "http://127.0.0.1:8080",
+	})
+
+	// /section/A6 and lowercase /section/a6 both render RSK-001; /section/R2 is 404 (out of scope)
+	for _, u := range []string{"/section/A6", "/section/a6"} {
+		r2 := httptest.NewRecorder()
+		customSrv.ServeHTTP(r2, httptest.NewRequest(http.MethodGet, u, nil))
+		if r2.Code != http.StatusOK || !strings.Contains(r2.Body.String(), "RSK-001") {
+			t.Fatalf("GET %s = %d (missing RSK-001)", u, r2.Code)
+		}
+	}
+	rOut := httptest.NewRecorder()
+	customSrv.ServeHTTP(rOut, httptest.NewRequest(http.MethodGet, "/section/R2", nil))
+	if rOut.Code != http.StatusNotFound {
+		t.Fatalf("GET /section/R2 = %d, want 404", rOut.Code)
+	}
+	rArc := httptest.NewRecorder()
+	customSrv.ServeHTTP(rArc, httptest.NewRequest(http.MethodGet, "/arc42", nil))
+	if !strings.Contains(rArc.Body.String(), "A6 · Risks") || !strings.Contains(rArc.Body.String(), `href="/issues?section=A6"`) {
+		t.Error("/arc42 missing custom A6 tile")
+	}
+	rIss := httptest.NewRecorder()
+	customSrv.ServeHTTP(rIss, httptest.NewRequest(http.MethodGet, "/issues?section=A6", nil))
+	if !strings.Contains(rIss.Body.String(), "ISS-001") || !strings.Contains(rIss.Body.String(), ">Open Points<") {
+		t.Error("/issues missing A6 filter hit or renamed C6 nav label")
+	}
+	rMM := httptest.NewRecorder()
+	customSrv.ServeHTTP(rMM, httptest.NewRequest(http.MethodGet, "/metamodel", nil))
+	if strings.Contains(rMM.Body.String(), `href="//evil.example/x"`) {
+		t.Error("/metamodel linked protocol-relative projection route //evil.example/x")
 	}
 }

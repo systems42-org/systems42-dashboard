@@ -247,6 +247,38 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case p == "/":
 		s.handleIndex(w, r)
+	case p == "/req42":
+		s.handleArea(w, r, "requirements")
+	case p == "/arc42":
+		s.handleArea(w, r, "architecture")
+	case p == "/commons":
+		s.handleArea(w, r, "commons")
+	case strings.HasPrefix(p, "/req42/"):
+		s.handleReq42Block(w, r)
+	case strings.HasPrefix(p, "/section/"):
+		s.handleSection(w, r)
+	case p == "/metamodel":
+		s.handleMetamodel(w, r)
+	case p == "/method":
+		s.handleMethod(w, r)
+	case p == "/changes":
+		s.handleChanges(w, r)
+	case p == "/domain-terms":
+		s.handleDomainTerms(w, r)
+	case p == "/glossary":
+		s.handleLegacyRedirect(w, r, "/domain-terms")
+	case p == "/stakeholders":
+		s.handleStakeholders(w, r)
+	case p == "/decisions":
+		s.handleDecisions(w, r)
+	case p == "/adrs":
+		s.redirect(w, r, "/decisions", http.StatusMovedPermanently)
+	case p == "/issues":
+		s.handleIssues(w, r)
+	case strings.HasPrefix(p, "/page/"):
+		s.handlePageDetail(w, r)
+	case strings.HasPrefix(p, "/source/"):
+		s.handleSourceDetail(w, r)
 	case p == "/presence/count":
 		s.handlePresenceCount(w, r)
 	case p == "/presence/list":
@@ -391,9 +423,12 @@ func (s *Server) baseContext(r *http.Request, cat *metamodel.Catalog, nonce stri
 		"current_area":    currentArea,
 		"nav_items":       navItems,
 		"stack_badge": map[string]any{
-			"label": "Go",
-			"title": "Built with Go",
-			"icon":  "go-logo.svg",
+			"label":      "Go",
+			"title":      "Built with Go",
+			"icon":       "go-logo.svg",
+			"icon_class": "stack-icon-go",
+			"width":      45,
+			"height":     18,
 		},
 	}
 }
@@ -417,6 +452,12 @@ func (s *Server) renderHTML(w http.ResponseWriter, r *http.Request, status int, 
 	if r.Method != http.MethodHead {
 		_, _ = w.Write(buf.Bytes())
 	}
+}
+
+func (s *Server) redirect(w http.ResponseWriter, r *http.Request, target string, code int) {
+	w.Header().Set("Content-Security-Policy", fmt.Sprintf(pageCSPTemplate, generateNonce()))
+	w.Header().Set("X-Frame-Options", "DENY")
+	http.Redirect(w, r, target, code)
 }
 
 func (s *Server) publicURL(r *http.Request) string {
@@ -452,15 +493,18 @@ func lanIP() string {
 // --- Request snapshot (Tier 2 per-request cache, matching _request_cached) --
 
 type requestSnapshot struct {
-	store     *wiki.Store
-	folders   map[string][]*wiki.Page
-	allPages  []*wiki.Page
-	allLoaded bool
-	sources   []*wiki.Page
-	srcLoaded bool
-	links     map[string]wiki.PageRef
-	titles    map[string]string
-	flags     map[string]map[string]struct{}
+	store       *wiki.Store
+	folders     map[string][]*wiki.Page
+	allPages    []*wiki.Page
+	allLoaded   bool
+	sources     []*wiki.Page
+	srcLoaded   bool
+	pagesByStem map[string]*wiki.Page
+	srcIndex    map[string]*wiki.Page
+	anchors     map[string]metamodel.Anchor
+	links       map[string]wiki.PageRef
+	titles      map[string]string
+	flags       map[string]map[string]struct{}
 }
 
 func newSnapshot(store *wiki.Store) *requestSnapshot {

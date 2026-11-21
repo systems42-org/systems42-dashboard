@@ -443,13 +443,21 @@ agree with `_system/metamodel/`, with no dashboard code present), and `test_meta
 checks the `/metamodel` page (loader, graph as a pure projection, every type a
 row with an anchor and a colour token, wikilink resolution, live examples).
 
-## Go implementation (Phase 0)
+## Go implementation
 
 A second implementation of the dashboard in Go lives in this folder next to the
 Python reference (FR-055, DR-007, issue #80). Both share `static/`,
 `templates/`, `brands/`, `help.md` and `VERSION` without copies (`assets.go`
 embeds them with `go:embed`). `Dockerfile` and `pyproject.toml` name their
 files one by one, so Go files stay out of the container image and the wheel.
+
+Phases 0 to 2 are in place: the home page, static and brand endpoints,
+heartbeat/presence API, Markdown and wikilink renderer with HTML sanitiser
+(`internal/render`), `/page/<folder>/<stem>` and `/source/<stem>` detail views,
+areas (`/req42`, `/arc42`, `/commons`), generic block and section routes
+(`/req42/<slug>`, `/section/<id>`), `/metamodel`, `/method`, `/changes`,
+`/issues`, `/stakeholders`, `/decisions`, `/domain-terms`, and the hostile-vault
+security suite (`internal/web/hostile_vault_test.go`).
 
 From the repository root, `make app-start` (or `./dashboard.sh app-start`)
 builds the pure-Go binary into a temporary file, starts it on
