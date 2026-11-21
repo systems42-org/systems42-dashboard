@@ -2,18 +2,19 @@
 # `./dashboard.sh up`. `./dashboard.sh logs|update` have no target here; call
 # the script directly.
 #
-# `make app-start`, `make test`, `make version` and `make publish` work only in the dashboard's own repository,
-# which holds the dashboard code (`./dashboard.sh rebuild|local|app-start|test|version|publish`,
+# `make app-start`, `make app-bundle`, `make test`, `make version` and `make publish` work only in the dashboard's own repository,
+# which holds the dashboard code (`./dashboard.sh rebuild|local|app-start|app-bundle|test|version|publish`,
 # see _system/apps/dashboard/dev.sh).
 
 .DEFAULT_GOAL := help
 
-.PHONY: help dev uv app-start down clean test site site-show site-down version publish
+.PHONY: help dev uv app-start app-bundle down clean test site site-show site-down version publish
 
 help::
 	@echo "make dev        start the dashboard release this wiki names (Docker), opens your browser"
 	@echo "make uv         start the same release with uv instead of Docker; Ctrl+C stops it"
 	@echo "make app-start  build and start the Go dashboard without Docker; Ctrl+C stops it"
+	@echo "make app-bundle build the macOS Systems42 Dashboard.app and DMG into dist/ (macOS only)"
 	@echo "make down       stop the dashboard"
 	@echo "make clean      remove what can be rebuilt (container, caches); never content"
 	@echo "make test       run the dashboard's test scripts (Docker; dashboard repository only)"
@@ -31,6 +32,9 @@ uv:
 
 app-start:
 	./dashboard.sh app-start
+
+app-bundle:
+	./dashboard.sh app-bundle
 
 down:
 	./dashboard.sh down

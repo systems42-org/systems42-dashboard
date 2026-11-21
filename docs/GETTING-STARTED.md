@@ -48,12 +48,11 @@ anything unclear. Watch it happen live in Obsidian's file list and graph view.
 
 ### 3. Review what it built
 Open `_system/index.md` for the catalog, or use the **graph view** to see how everything
-connects. Follow the links. If something's off, just tell the agent. Prefer a browser
-to Obsidian? Run `./dashboard.sh` for a live, read-only view of the wiki —
-handy for a quick check or for showing someone else without installing anything.
-(That path needs Docker. Where Docker cannot run, for example inside a virtual
-machine, `./dashboard.sh uv` starts the same dashboard with
-[uv](https://docs.astral.sh/uv/) instead.) In the dashboard, <kbd>⌘K</kbd>
+connects. Follow the links. If something's off, just tell the agent. Prefer a browser to Obsidian? Start the read-only dashboard in one of three ways:
+- **Docker:** `./dashboard.sh` (or `make dev`) runs the release named in `_system/wiki.yaml`.
+- **uv:** `./dashboard.sh uv` (or `make uv`) runs the same release without Docker, for example inside a virtual machine, using [uv](https://docs.astral.sh/uv/).
+- **macOS app:** install **Systems42 Dashboard** from the release `.dmg` (needs no Docker, uv, Python or terminal) and pick your wiki folder from the menu bar.
+In the dashboard, <kbd>⌘K</kbd>
 (<kbd>Ctrl K</kbd> on Windows/Linux) jumps to search from any page. The dashboard follows the Systems42 sections
 model: Requirements and Architecture as two areas, plus the Commons they share.
 The ≡ menu holds View, Theme, Who's here, Help, Reload and Disconnect all;

@@ -1,8 +1,8 @@
-# Publishes a dashboard release (DR-004, FR-030): a git tag vX.Y.Z builds the
-# image ghcr.io/systems42-org/dashboard:X.Y.Z for amd64 and arm64, after the
-# tests have passed, and creates the GitHub release that
-# `./dashboard.sh update` asks for. The release carries the wheel that
-# `./dashboard.sh uv` runs (DR-007, FR-054).
+# Publishes a dashboard release (DR-004, FR-030, FR-054, FR-055, DR-007):
+# a git tag vX.Y.Z runs Python tests, Go tests and route parity checks, builds
+# the multi-arch container image (ghcr.io/systems42-org/dashboard:X.Y.Z), the
+# Python wheel for `./dashboard.sh uv`, and the universal macOS `.app`/`.dmg`,
+# then publishes all release assets on one GitHub release.
 name: release
 
 on:
@@ -14,23 +14,59 @@ permissions:
   packages: write
 
 jobs:
-  release:
+  check-and-test:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
     steps:
       - uses: actions/checkout@v7
 
       - name: The tag matches VERSION
+        id: ver
         run: |
           version="${GITHUB_REF_NAME#v}"
-          own="$(cat _system/apps/dashboard/VERSION)"
+          own="$(tr -d '[:space:]' < _system/apps/dashboard/VERSION)"
           if [ "$version" != "$own" ]; then
             echo "Tag $GITHUB_REF_NAME does not match VERSION ($own)." >&2
             exit 1
           fi
-          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      - name: Tests
+      - name: Python tests (Docker)
         run: ./dashboard.sh test
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: _system/apps/dashboard/go.mod
+          cache-dependency-path: _system/apps/dashboard/go.sum
+
+      - name: Go tests
+        working-directory: _system/apps/dashboard
+        run: go test -race ./...
+
+      - name: Go build (no cgo)
+        working-directory: _system/apps/dashboard
+        env:
+          CGO_ENABLED: "0"
+        run: go build -o "$RUNNER_TEMP/systems42-dashboard" ./cmd/systems42-dashboard
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Parity tests
+        working-directory: _system/apps/dashboard
+        env:
+          GO_DASHBOARD_BIN: ${{ runner.temp }}/systems42-dashboard
+        run: |
+          python -m pip install --quiet --disable-pip-version-check -r requirements.txt
+          python tests/test_parity.py
+
+  image-and-wheel:
+    needs: check-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
 
       - uses: docker/setup-qemu-action@v4
       - uses: docker/setup-buildx-action@v4
@@ -47,16 +83,83 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/systems42-org/dashboard:${{ env.VERSION }}
+            ghcr.io/systems42-org/dashboard:${{ needs.check-and-test.outputs.version }}
             ghcr.io/systems42-org/dashboard:latest
 
       # The launcher asks for exactly this file name.
       - name: Wheel
+        env:
+          VERSION: ${{ needs.check-and-test.outputs.version }}
         run: |
           pipx run build --wheel --outdir dist _system/apps/dashboard
           test -f "dist/systems42_dashboard-$VERSION-py3-none-any.whl"
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel
+          path: dist/*.whl
+
+  macos-app:
+    needs: check-and-test
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: _system/apps/dashboard/go.mod
+          cache-dependency-path: _system/apps/dashboard/go.sum
+
+      - name: Import Apple signing certificate (when configured)
+        if: ${{ secrets.APPLE_SIGN_P12 != '' && secrets.APPLE_SIGN_PASSWORD != '' }}
+        env:
+          APPLE_SIGN_P12: ${{ secrets.APPLE_SIGN_P12 }}
+          APPLE_SIGN_PASSWORD: ${{ secrets.APPLE_SIGN_PASSWORD }}
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/build.keychain-db"
+          KEYCHAIN_PASS="$(uuidgen)"
+          security create-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN"
+          echo "$APPLE_SIGN_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -P "$APPLE_SIGN_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security list-keychain -d user -s "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASS" "$KEYCHAIN"
+
+      - name: Prepare Apple notarisation key (when configured)
+        if: ${{ secrets.APPLE_NOTARY_KEY != '' }}
+        env:
+          APPLE_NOTARY_KEY: ${{ secrets.APPLE_NOTARY_KEY }}
+        run: |
+          echo "$APPLE_NOTARY_KEY" | base64 --decode > "$RUNNER_TEMP/notary.p8"
+          chmod 600 "$RUNNER_TEMP/notary.p8"
+          echo "APPLE_NOTARY_KEY_PATH=$RUNNER_TEMP/notary.p8" >> "$GITHUB_ENV"
+
+      - name: Build universal macOS app and DMG
+        env:
+          APPLE_SIGN_IDENTITY: ${{ secrets.APPLE_SIGN_IDENTITY }}
+          APPLE_NOTARY_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
+          APPLE_NOTARY_ISSUER_ID: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
+        run: ./_system/apps/dashboard/macos/build-app.sh --outdir dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: |
+            dist/*.dmg
+            dist/*.dmg.sha256
+
+  publish:
+    needs: [check-and-test, image-and-wheel, macos-app]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
       - name: GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "$GITHUB_REF_NAME" --title "$VERSION" --generate-notes dist/*.whl
+          VERSION: ${{ needs.check-and-test.outputs.version }}
+        run: gh release create "$GITHUB_REF_NAME" --title "$VERSION" --generate-notes dist/*

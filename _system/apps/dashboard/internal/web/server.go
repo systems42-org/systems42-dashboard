@@ -494,7 +494,9 @@ func (s *Server) baseContext(r *http.Request, cat *metamodel.Catalog, nonce stri
 		"current_area":    currentArea,
 		"nav_items":       navItems,
 		"stack_badge": map[string]any{
-			"label":      "Go",
+			"prefix":     "Built with",
+			"label":      "",
+			"alt":        "Go",
 			"title":      "Built with Go",
 			"icon":       "go-logo.svg",
 			"icon_class": "stack-icon-go",
@@ -547,6 +549,12 @@ func (s *Server) publicURL(r *http.Request) string {
 		scheme = "https"
 	}
 	return strings.TrimRight(fmt.Sprintf("%s://%s", scheme, r.Host), "/")
+}
+
+// LANIP returns the host's primary local IPv4 address for workshop QR join links,
+// or an empty string when offline.
+func LANIP() string {
+	return lanIP()
 }
 
 func lanIP() string {

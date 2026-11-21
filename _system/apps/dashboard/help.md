@@ -51,7 +51,10 @@ humans. It has three layers:
   agent which kinds of pages exist and how they link.
 
 The dashboard only reads `wiki/`. To change a page, change the source or ask
-the agent, then reload.
+the agent, then reload. You can start the dashboard in three ways: with Docker
+(`./dashboard.sh`), with uv (`./dashboard.sh uv`) where Docker cannot run, or
+with the installable macOS app (**Systems42 Dashboard**, which needs no Docker,
+uv, Python or terminal).
 
 ## The Systems42 model in brief
 
