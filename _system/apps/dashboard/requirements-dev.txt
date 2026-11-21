@@ -4,3 +4,5 @@
 #   .venv/bin/python -m playwright install chromium
 -r requirements.txt
 playwright==1.63.0
+# The start with uv (tests/test_uv_start.py) builds the wheel and runs it.
+uv==0.9.28

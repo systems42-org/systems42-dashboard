@@ -4,9 +4,9 @@ type: functional-requirement
 title: Issue list with filters
 status: draft
 created: 2026-11-12
-updated: 2026-11-12
+updated: 2026-11-20
 sources: ["[[SRC-015-see-what-is-still-open]]", "[[SRC-016-grilling-session-on-open-issues]]"]
-related: ["[[FR-019-section-at-a-glance]]", "[[FR-021-sort-lists]]", "[[FR-022-lists-keep-sort-and-filter-in-their-address]]", "[[FR-026-issues-carry-a-category]]", "[[FR-028-who-answers-an-issue]]", "[[STK-001-readers]]"]
+related: ["[[FR-019-section-at-a-glance]]", "[[FR-021-sort-lists]]", "[[FR-022-lists-keep-sort-and-filter-in-their-address]]", "[[FR-026-issues-carry-a-category]]", "[[FR-028-who-answers-an-issue]]", "[[STK-001-readers]]", "[[ISS-007-issue-category-and-owner-belong-in-meta]]"]
 tags: ["functional-requirement", "issues"]
 stereotype: feature
 parent: ["[[FR-024-see-what-is-still-open]]"]
@@ -25,9 +25,10 @@ As a [[STK-001-readers|requirements engineer]] I want **one list of all issues t
 
 **PROBLEM / GOAL**
 
-- One list holds every issue, with its status, severity, kind, category and owner. Each row opens its issue.
+- One list holds every issue, with its status, severity, kind, and (when present in the wiki's issues) category and owner. Each row opens its issue.
 - The list shows how many issues are open, and how many in total.
-- A reader filters it by status, category, severity, section and owner. Filters combine.
+- A reader filters it by status, severity, section and (when present) category and owner. Filters combine.
+- On a wiki whose issues do not carry `category:` or `owner:`, the list stays usable without errors ([[ISS-007-issue-category-and-owner-belong-in-meta]]).
 - The section filter keeps the issues that point at pages of that section. A section's open issue count opens the list with this filter ([[FR-019-section-at-a-glance]]).
 - The address carries every filter, as with sort and status filter on every list ([[FR-022-lists-keep-sort-and-filter-in-their-address]]).
 

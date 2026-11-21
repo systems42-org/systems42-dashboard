@@ -321,6 +321,29 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Gernot Starke promoted [[STK-001-readers]] and [[STK-023-keyholder]] to `accepted`.
 - STK-023 gets the alias "Yoda". Its naming paragraph now says both aliases name the role.
 
+## [2026-11-20] inspect | Boundary alignment with systems42-org/meta
+- Gernot Starke reviewed the boundary drift between this wiki and `systems42-org/meta` (`CON-004`, `CON-006`) and settled four items:
+  1. Q42 `dimensions:` (`DR-003`): `meta` leads on QR classification. Commented on `meta#35`, deprecated local [[DR-003-quality-requirements-are-classified-by-q42-dimensions]] and raised [[ISS-008-q42-dimensions-belong-in-meta]].
+  2. Issue `category:` and `owner:` (`FR-026`, `FR-028`): proposed upstream in `meta#53`, raised [[ISS-007-issue-category-and-owner-belong-in-meta]], narrowed [[FR-025-issue-list-with-filters]], [[FR-026-issues-carry-a-category]] and [[FR-028-who-answers-an-issue]] to dashboard display and filtering with graceful fallback when absent.
+  3. `sort_orders:` (`FR-021`): moved to dashboard presentation (`CON-006`), removing the metamodel schema requirement from [[FR-021-sort-lists]].
+  4. External scope: trimmed [[FR-032-example-brands-to-try]] to the shipped `systems42` default brand, deprecated [[FR-033-runnable-dashboard-in-the-starter-kit]] (moved starter-kit assembly to `meta#54`, kept zero-config start in [[FR-042-start-a-pinned-release-with-one-command]] and [[FR-029-the-dashboard-as-a-product]]), and reframed [[GOAL-006-source-and-status-on-every-statement]] to the dashboard's display and agreed-only filtering role.
+- Warned on `systems42-dashboard#33` about the three local metamodel divergences before syncing `_system/metamodel/` from `meta`.
+- Created: [[ISS-007-issue-category-and-owner-belong-in-meta]], [[ISS-008-q42-dimensions-belong-in-meta]].
+- Updated: DR-003, FR-021, FR-025, FR-026, FR-028, FR-029, FR-032, FR-033, FR-042, GOAL-006, `_system/index.md`.
+
+## [2026-11-20] capture | Running without a container engine: uv and a Go app
+- Origin: Gernot Starke, chat of 2026-11-20 ([[SRC-036-grilling-session-on-running-without-a-container-engine]]). Some people run their wiki inside a virtual machine, where no container engine starts.
+- Decisions:
+  - uv is a second supported way to start the Python dashboard, next to `make dev`.
+  - uv gets the release as a wheel from the GitHub release, not from a git tag and not from PyPI.
+  - A second implementation in Go becomes an installable app, macOS first. Claude recommended packaging the Python dashboard instead. Gernot Starke chose Go and accepts the extra work.
+  - One installed app shows every wiki and tells a differing release. It does not fetch the release a wiki names.
+  - Recorded as [[DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go]], which amends DR-004.
+- Created: [[FR-054-a-start-without-a-container-engine]], [[FR-055-an-installable-dashboard-app]], [[DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go]], SRC-036.
+- Updated: CON-003 (title and text: Docker and uv), QR-002 (scenario and measure), FR-029 (rule, scope, children), FR-042 (scope), STK-010 (concern), `_system/index.md`.
+- Open: whether the Go app shows the pages in the browser or in its own window. Asked, not yet answered, noted on FR-055. The priorities of FR-054 and FR-055 (Should) are Claude's proposal.
+- Code: `./dashboard.sh uv` and the wheel are in the same pull request. The plan for the Go app is issue #80.
+
 ## [2026-11-21] inspect | FR-046: who gets the keys when the holder leaves
 - Origin: issue #56, the rule question left open by pull request #72.
 - Decision (Gernot Starke, 2026-11-21): the earliest tab still connected gets the rights, also when it held them before. A returning holder counts as newly connected. A session always has a Keyholder.

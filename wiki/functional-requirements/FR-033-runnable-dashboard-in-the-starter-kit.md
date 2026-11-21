@@ -2,11 +2,11 @@
 id: FR-033
 type: functional-requirement
 title: Runnable dashboard in the starter kit
-status: draft
+status: deprecated
 created: 2026-11-13
-updated: 2026-11-13
+updated: 2026-11-20
 sources: ["[[SRC-019-the-dashboard-as-a-product]]"]
-related: ["[[CON-003-docker-is-the-supported-way-to-run-it]]", "[[STK-008-workshop-participants-and-facilitators]]"]
+related: ["[[CON-003-docker-is-the-supported-way-to-run-it]]", "[[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]]", "[[FR-042-start-a-pinned-release-with-one-command]]", "[[STK-008-workshop-participants-and-facilitators]]"]
 tags: ["functional-requirement", "product"]
 stereotype: feature
 parent: ["[[FR-029-the-dashboard-as-a-product]]"]
@@ -18,6 +18,9 @@ goal: ["[[GOAL-002-show-what-systems42-can-do]]", "[[GOAL-008-one-way-into-every
 ---
 
 # Runnable dashboard in the starter kit
+
+> [!note] Deprecated (2026-11-20)
+> Assembling the Systems42 starter kit belongs to `systems42-org/meta` ([meta issue #54](https://github.com/systems42-org/meta/issues/54)), not to the dashboard repository. The dashboard's own side (starting with one command and default settings without editing any file) is covered by [[FR-042-start-a-pinned-release-with-one-command]], [[FR-031-branding-is-configuration]] and [[QR-002-runs-alike-on-linux-and-macos]].
 
 ## Story
 

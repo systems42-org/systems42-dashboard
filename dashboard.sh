@@ -8,6 +8,8 @@
 #   ./dashboard.sh logs     follow the container's log
 #   ./dashboard.sh update   name the newest release in _system/wiki.yaml
 #   ./dashboard.sh clean    remove what can be rebuilt: container, caches
+#   ./dashboard.sh uv       start the same release with uv instead of Docker,
+#                           in the foreground. Ctrl+C stops it.
 #
 # The release is `dashboard_version:` in _system/wiki.yaml, e.g. "0.9.0".
 # `local` builds the image from _system/apps/dashboard/, which only the
@@ -15,7 +17,8 @@
 # (rebuild, local, test), see _system/apps/dashboard/dev.sh.
 #
 # DASH_PORT sets the port (8080). DASH_PUBLIC_URL sets the address of the QR
-# code. DASH_NO_BROWSER=1 starts without opening a browser.
+# code. DASH_NO_BROWSER=1 starts without opening a browser. DASH_WHEEL names
+# the wheel `uv` runs, as a file or an address, for a machine without network.
 #
 set -euo pipefail
 
@@ -24,6 +27,7 @@ CONFIG="$ROOT/_system/wiki.yaml"
 SETTINGS="$ROOT/_system/dashboard.yaml"
 DEV_DIR="$ROOT/_system/apps/dashboard"
 IMAGE_REPO="ghcr.io/systems42-org/dashboard"
+RELEASE_FILES="https://github.com/systems42-org/systems42-dashboard/releases/download"
 LATEST_RELEASE="https://api.github.com/repos/systems42-org/systems42-dashboard/releases/latest"
 LOCAL_IMAGE="systems42-dashboard:local"
 # One container per wiki, so two wikis on one machine do not replace each other.
@@ -180,13 +184,66 @@ case "$cmd" in
         -o \( -type d -name __pycache__ -o -type f -name .DS_Store \) -exec rm -rf {} +)
     echo "✓ Removed caches and .DS_Store. wiki/, raw/ and settings untouched."
     ;;
+  uv)
+    # The same dashboard without a container (FR-054). uv fetches Python and
+    # the wheel of the release this wiki names. It runs in the foreground:
+    # Ctrl+C stops it, and so does closing the last browser tab (FR-050).
+    command -v uv >/dev/null 2>&1 || die "uv is not installed or not on PATH. Install it: https://docs.astral.sh/uv/getting-started/installation/"
+    version="$(wiki_version)"
+    [ -n "$version" ] || die "_system/wiki.yaml names no dashboard release. Run ./dashboard.sh update, or set dashboard_version: yourself."
+    if [ "$version" = "local" ]; then
+      [ -f "$DEV_DIR/cli.py" ] || die "dashboard_version: local needs the dashboard code in _system/apps/dashboard/."
+      run=(uv run --quiet --no-project --python 3.12 --with-requirements "$DEV_DIR/requirements.txt" python "$DEV_DIR/cli.py")
+    else
+      wheel="${DASH_WHEEL:-$RELEASE_FILES/v$version/systems42_dashboard-$version-py3-none-any.whl}"
+      # A release that uv has fetched before starts without network.
+      if ! uv tool run --quiet --offline --python 3.12 --from "$wheel" systems42-dashboard --version >/dev/null 2>&1; then
+        echo "→ First start of dashboard $version with uv: fetching it…"
+        uv tool run --python 3.12 --from "$wheel" systems42-dashboard --version >/dev/null \
+          || die "uv could not fetch dashboard $version from $wheel.
+  The first start needs network. Releases up to 0.12.0 have no package for uv: ./dashboard.sh update names the newest release."
+      fi
+      run=(uv tool run --quiet --offline --python 3.12 --from "$wheel" systems42-dashboard)
+    fi
+    # Without this check the wait below would get its answer from a dashboard
+    # that runs already, and report a start that failed.
+    if command -v curl >/dev/null 2>&1 && curl -s --max-time 1 -o /dev/null "$URL/"; then
+      die "Port $PORT is already in use. Is a dashboard still running? Stop it (./dashboard.sh down, or close its browser tabs), or set DASH_PORT."
+    fi
+    ip="$(lan_ip 2>/dev/null || true)"
+    public="${DASH_PUBLIC_URL:-http://${ip:-localhost}:$PORT}"
+    # `exec` below turns this shell into the server, under the same process
+    # number. This helper waits up to 30 s for the answer, as long as that
+    # process lives, then opens the browser.
+    server=$$
+    (
+      command -v curl >/dev/null 2>&1 || exit 0
+      tries=60
+      while [ "$tries" -gt 0 ]; do
+        kill -0 "$server" 2>/dev/null || exit 0
+        if curl -sf --max-time 1 -o /dev/null "$URL/"; then
+          echo "✓ Dashboard $version running at $URL (uv, no Docker). Ctrl+C stops it."
+          echo "✓ Others in the room: $public (QR on the home page, /join to project it)"
+          if [ -z "${DASH_NO_BROWSER:-}" ]; then
+            if command -v open >/dev/null 2>&1; then open "$URL"
+            elif command -v xdg-open >/dev/null 2>&1; then xdg-open "$URL"
+            fi
+          fi
+          exit 0
+        fi
+        tries=$((tries - 1))
+        sleep 0.5
+      done
+    ) &
+    REPO_DIR="$ROOT" DASH_PORT="$PORT" DASH_PUBLIC_URL="$public" exec "${run[@]}"
+    ;;
   *)
     # The dashboard's own repository has more commands.
     if [ -x "$DEV_DIR/dev.sh" ]; then
       exec "$DEV_DIR/dev.sh" "$@"
     fi
     echo "Unknown command: $cmd" >&2
-    echo "Usage: ./dashboard.sh [up|down|logs|update|clean]" >&2
+    echo "Usage: ./dashboard.sh [up|down|logs|update|clean|uv]" >&2
     exit 2
     ;;
 esac

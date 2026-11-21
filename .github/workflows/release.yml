@@ -1,7 +1,8 @@
 # Publishes a dashboard release (DR-004, FR-030): a git tag vX.Y.Z builds the
 # image ghcr.io/systems42-org/dashboard:X.Y.Z for amd64 and arm64, after the
 # tests have passed, and creates the GitHub release that
-# `./dashboard.sh update` asks for.
+# `./dashboard.sh update` asks for. The release carries the wheel that
+# `./dashboard.sh uv` runs (DR-007, FR-054).
 name: release
 
 on:
@@ -49,7 +50,13 @@ jobs:
             ghcr.io/systems42-org/dashboard:${{ env.VERSION }}
             ghcr.io/systems42-org/dashboard:latest
 
+      # The launcher asks for exactly this file name.
+      - name: Wheel
+        run: |
+          pipx run build --wheel --outdir dist _system/apps/dashboard
+          test -f "dist/systems42_dashboard-$VERSION-py3-none-any.whl"
+
       - name: GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "$GITHUB_REF_NAME" --title "$VERSION" --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" --title "$VERSION" --generate-notes dist/*.whl
