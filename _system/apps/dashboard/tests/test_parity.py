@@ -85,13 +85,16 @@ UNPORTED_EXACT: dict[str, str] = {
 }
 
 UNPORTED_PREFIXES: tuple[tuple[str, str], ...] = (
-    # Phase 1: reading the wiki (detail & source pages)
-    ("/page/", "Phase 1"),
-    ("/source/", "Phase 1"),
     # Phase 2: generic section views
     ("/section/", "Phase 2"),
-    # Phase 3: functional requirement detail views
+    # Phase 3: functional requirement detail views and page-embedded projections
     ("/functional-requirements/", "Phase 3"),
+    ("/page/context/", "Phase 3 (page projection)"),
+    ("/page/glossary/", "Phase 3 (page projection)"),
+    ("/page/domain-terms/", "Phase 3 (page projection)"),
+    ("/page/building-blocks/", "Phase 3 (page projection)"),
+    ("/page/runtime-scenarios/", "Phase 3 (page projection)"),
+    ("/page/deployment-nodes/", "Phase 3 (page projection)"),
     # Phase 5: docs files under /about
     ("/about/files/", "Phase 5"),
 )
@@ -167,8 +170,8 @@ class _Normalizer(HTMLParser):
         if self._in_stack_badge:
             if name == "title":
                 return (name, "<STACK_TITLE>")
-            if tag == "img" and name == "src":
-                return (name, "<STACK_ICON>")
+            if tag == "img" and name in ("src", "class", "width", "height"):
+                return (name, f"<STACK_{name.upper()}>")
         if self._in_qr_svg:
             if tag == "svg" and name == "viewbox":
                 return (name, "<QR_VIEWBOX>")

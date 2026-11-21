@@ -224,6 +224,17 @@ func BuildCatalog(blocks []Block) *Catalog {
 	return cat
 }
 
+// SectionHref returns the section's own URL, or its anchor on the area page.
+func SectionHref(s Section) string {
+	if s.Href != "" {
+		return s.Href
+	}
+	if a, ok := AreaByKey[s.Area]; ok {
+		return a.Href + "#tile-" + strings.ToLower(s.ID)
+	}
+	return ""
+}
+
 // SectionsOf returns the area's sections in diagram order.
 func (c *Catalog) SectionsOf(areaKey string) []Section {
 	var out []Section

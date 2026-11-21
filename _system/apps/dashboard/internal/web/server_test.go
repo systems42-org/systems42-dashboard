@@ -62,8 +62,8 @@ func TestHomeHeadersAndNonces(t *testing.T) {
 		t.Fatalf("CSP nonce mismatch: csp=%q", csp1)
 	}
 	body1 := rec1.Body.String()
-	if !strings.Contains(body1, `title="Built with Go"`) || !strings.Contains(body1, `/static/go-logo.svg?v=`) {
-		t.Fatalf("expected Go stack badge in footer")
+	if !strings.Contains(body1, `title="Built with Go"`) || !strings.Contains(body1, `/static/go-logo.svg?v=`) || !strings.Contains(body1, `class="stack-icon stack-icon-go"`) || !strings.Contains(body1, `width="45" height="18"`) {
+		t.Fatalf("expected sized Go stack badge in footer")
 	}
 	if strings.Contains(body1, `Built with Python + Flask`) {
 		t.Fatalf("Go dashboard footer should not claim Python + Flask")
@@ -238,5 +238,65 @@ func TestHeartbeatPresenceReloadAndDisconnect(t *testing.T) {
 	srv.ServeHTTP(rec, req)
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("POST /leaving = %d, want 204", rec.Code)
+	}
+}
+
+func TestPageAndSourceDetailRoutes(t *testing.T) {
+	srv := newRepoServer(t)
+
+	// Decision detail with drivers trace, provenance chip, relations, breadcrumb
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/page/decisions/DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET DR-007 = %d", rec.Code)
+	}
+	body := rec.Body.String()
+	for _, want := range []string{
+		"DR-007",
+		`href="/decisions"`,
+		`href="/source/SRC-036-grilling-session-on-running-without-a-container-engine"`,
+		`href="/functional-requirements/FR-055-`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("DR-007 missing %q", want)
+		}
+	}
+
+	// Issue detail page with issue fields
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/page/issues/ISS-001-who-holds-the-keys-in-parallel-work", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "ISS-001") {
+		t.Fatalf("GET ISS-001 = %d", rec.Code)
+	}
+
+	// Quality requirement detail with Q42 anchor format label
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/page/quality-requirements/QR-003-works-in-every-current-browser", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "QR-003") {
+		t.Fatalf("GET QR-003 = %d", rec.Code)
+	}
+
+	// Source detail page with source-facts and resolved ingested-pages wikilinks
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/source/SRC-036-grilling-session-on-running-without-a-container-engine", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET SRC-036 = %d", rec.Code)
+	}
+	srcBody := rec.Body.String()
+	if !strings.Contains(srcBody, `<dl class="source-facts">`) || !strings.Contains(srcBody, `/page/decisions/DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go`) {
+		t.Errorf("SRC-036 missing source-facts or ingested-pages link")
+	}
+
+	// Legacy redirects
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/page/adr/0007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go", nil))
+	if rec.Code != http.StatusMovedPermanently || rec.Header().Get("Location") != "/page/decisions/DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go" {
+		t.Fatalf("ADR redirect = %d -> %q", rec.Code, rec.Header().Get("Location"))
+	}
+
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/page/functional-requirements/FR-055-second-implementation-in-go", nil))
+	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/functional-requirements/FR-055-second-implementation-in-go" {
+		t.Fatalf("FR redirect = %d -> %q", rec.Code, rec.Header().Get("Location"))
 	}
 }

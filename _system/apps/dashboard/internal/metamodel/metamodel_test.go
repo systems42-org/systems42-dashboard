@@ -79,3 +79,35 @@ func TestCatalogFromRepoMetamodel(t *testing.T) {
 		t.Fatal("expected no area for /")
 	}
 }
+
+func TestAnchorsVocabAndSectionHref(t *testing.T) {
+	mmDir := repoMetamodelDir(t)
+	anchorsDir := filepath.Clean(filepath.Join(mmDir, "..", "anchors"))
+	r := NewReader(mmDir, "", anchorsDir)
+
+	anchors := r.MethodAnchors()
+	if len(anchors) == 0 {
+		t.Fatal("expected method anchors from repo _system/anchors")
+	}
+	idx := AnchorIndex(anchors)
+	if a, ok := idx["q42"]; !ok || a.Slug == "" {
+		t.Fatalf("expected q42 alias in AnchorIndex, got %+v (%v)", a, ok)
+	}
+
+	lc := r.Lifecycle("issue")
+	if len(lc) == 0 {
+		t.Fatal("expected non-empty issue lifecycle from metamodel")
+	}
+	sev := r.FieldValues("issue", "severity")
+	if len(sev) == 0 {
+		t.Fatal("expected non-empty issue severity values from metamodel")
+	}
+
+	cat := BuildCatalog(r.Blocks())
+	if href := SectionHref(cat.ByID["C6"]); href != "/issues" {
+		t.Fatalf("SectionHref(C6) = %q, want /issues", href)
+	}
+	if href := SectionHref(Section{ID: "X9", Area: "requirements"}); href != "/req42#tile-x9" {
+		t.Fatalf("SectionHref(X9) = %q, want /req42#tile-x9", href)
+	}
+}

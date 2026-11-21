@@ -21,7 +21,25 @@ var SupportedVersions = []string{"0.1"}
 // file that exists supplies the declared version.
 var VersionFiles = []string{"metamodel-version.md", "meta-metamodel.md"}
 
-var fmRE = regexp.MustCompile(`(?s)^---\s*\n(.*?)\n---\s*\n?(.*)$`)
+var (
+	fmRE        = regexp.MustCompile(`(?s)^---\s*\n(.*?)\n---\s*\n?(.*)$`)
+	h1RE        = regexp.MustCompile(`(?m)^#\s+.*$`)
+	urlRE       = regexp.MustCompile(`https?://[^\s<>()\]]+`)
+	slugRE      = regexp.MustCompile(`[^a-z0-9]+`)
+	blankLineRE = regexp.MustCompile(`\n\s*\n`)
+)
+
+// Anchor is a methodological standard in _system/anchors/ (FR-035).
+type Anchor struct {
+	Name       string
+	Slug       string
+	ID         string
+	Aliases    []string
+	AppliesTo  []string
+	Definition string
+	Reference  string
+	File       string
+}
 
 // VersionStatus describes how the wiki's metamodel version matches this release.
 type VersionStatus struct {
@@ -75,14 +93,21 @@ type entry struct {
 	data  map[string]any
 }
 
-// Reader parses _system/metamodel/ pages and caches them by (mtime_ns, size).
+type anchorEntry struct {
+	stamp  stamp
+	anchor *Anchor
+}
+
+// Reader parses _system/metamodel/ and _system/anchors/ pages and caches them
+// by (mtime_ns, size).
 type Reader struct {
 	Dir          string
 	NotationsDir string
 	AnchorsDir   string
 
-	mu    sync.RWMutex
-	cache map[cacheKey]entry
+	mu          sync.RWMutex
+	cache       map[cacheKey]entry
+	anchorCache map[string]anchorEntry
 }
 
 // NewReader creates a metamodel Reader for the given directories.
@@ -92,13 +117,15 @@ func NewReader(dir, notationsDir, anchorsDir string) *Reader {
 		NotationsDir: notationsDir,
 		AnchorsDir:   anchorsDir,
 		cache:        map[cacheKey]entry{},
+		anchorCache:  map[string]anchorEntry{},
 	}
 }
 
-// ClearCaches drops every cached metamodel parse.
+// ClearCaches drops every cached metamodel and anchor parse.
 func (r *Reader) ClearCaches() {
 	r.mu.Lock()
 	r.cache = map[cacheKey]entry{}
+	r.anchorCache = map[string]anchorEntry{}
 	r.mu.Unlock()
 }
 
@@ -356,6 +383,218 @@ func (r *Reader) SortOrders(typeName string) []SortOrder {
 		return out
 	}
 	return nil
+}
+
+func (r *Reader) typePage(typeName string) map[string]any {
+	for _, t := range r.load("types", "type") {
+		if strVal(t["name"]) == typeName {
+			return t
+		}
+	}
+	return nil
+}
+
+// FieldValues returns the closed enum list a type's field allows, or nil.
+func (r *Reader) FieldValues(typeName, field string) []string {
+	tp := r.typePage(typeName)
+	if tp == nil {
+		return nil
+	}
+	fields, _ := tp["fields"].([]any)
+	for _, item := range fields {
+		fm, ok := item.(map[string]any)
+		if !ok || strVal(fm["name"]) != field {
+			continue
+		}
+		rawVals, _ := fm["values"].([]any)
+		out := make([]string, 0, len(rawVals))
+		for _, v := range rawVals {
+			out = append(out, strVal(v))
+		}
+		return out
+	}
+	return nil
+}
+
+// Lifecycle returns the status values a type's lifecycle allows, or nil.
+func (r *Reader) Lifecycle(typeName string) []string {
+	meta := r.readCached(filepath.Join(r.Dir, "meta-metamodel.md"), "page", parseMetamodelPage)
+	tp := r.typePage(typeName)
+	if meta == nil || tp == nil {
+		return nil
+	}
+	lcName := strVal(tp["lifecycle"])
+	lifecycles, _ := meta["lifecycles"].(map[string]any)
+	rawVals, _ := lifecycles[lcName].([]any)
+	out := make([]string, 0, len(rawVals))
+	for _, v := range rawVals {
+		out = append(out, strVal(v))
+	}
+	return out
+}
+
+func anchorDefinition(body string) string {
+	for _, para := range blankLineRE.Split(body, -1) {
+		head := strings.TrimLeft(para, " \t\r\n")
+		if head == "" {
+			continue
+		}
+		if strings.HasPrefix(head, ">") || strings.HasPrefix(head, "-") ||
+			strings.HasPrefix(head, "*") || strings.HasPrefix(head, "|") ||
+			strings.HasPrefix(head, "#") || strings.HasPrefix(head, "<!--") {
+			continue
+		}
+		var lines []string
+		for _, l := range strings.Split(strings.TrimSpace(para), "\n") {
+			lines = append(lines, strings.TrimSpace(l))
+		}
+		return strings.Join(lines, " ")
+	}
+	return ""
+}
+
+func parseAnchor(path string) *Anchor {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	text := strings.ReplaceAll(string(raw), "\r\n", "\n")
+	m := fmRE.FindStringSubmatch(text)
+	if m == nil {
+		return nil
+	}
+	var parsed any
+	if err := yaml.Unmarshal([]byte(m[1]), &parsed); err != nil {
+		return nil
+	}
+	meta, ok := parsed.(map[string]any)
+	if !ok || strVal(meta["type"]) != "anchor" {
+		return nil
+	}
+	body := strings.TrimSpace(m[2])
+	if loc := h1RE.FindStringIndex(body); loc != nil {
+		body = strings.TrimSpace(body[:loc[0]] + body[loc[1]:])
+	}
+	stem := strings.TrimSuffix(filepath.Base(path), ".md")
+	slug := strings.Trim(slugRE.ReplaceAllString(strings.ToLower(stem), "-"), "-")
+	ref := ""
+	if u := urlRE.FindString(body); u != "" {
+		ref = strings.TrimRight(u, ".,;:")
+	}
+	name := strVal(meta["title"])
+	if name == "" {
+		name = stem
+	}
+	var aliases []string
+	if rawA, ok := meta["aliases"].([]any); ok {
+		for _, a := range rawA {
+			if s := strVal(a); s != "" {
+				aliases = append(aliases, s)
+			}
+		}
+	}
+	var applies []string
+	switch rawAp := meta["applies-to"].(type) {
+	case []any:
+		for _, a := range rawAp {
+			if s := strVal(a); s != "" {
+				applies = append(applies, s)
+			}
+		}
+	case string:
+		if rawAp != "" {
+			applies = []string{rawAp}
+		}
+	}
+	return &Anchor{
+		Name:       name,
+		Slug:       slug,
+		ID:         "anchor-" + slug,
+		Aliases:    aliases,
+		AppliesTo:  applies,
+		Definition: anchorDefinition(body),
+		Reference:  ref,
+		File:       filepath.Base(path),
+	}
+}
+
+func (r *Reader) forgetMissingAnchors(folder string, present []string) {
+	keep := make(map[string]struct{}, len(present))
+	for _, p := range present {
+		keep[p] = struct{}{}
+	}
+	r.mu.Lock()
+	for p := range r.anchorCache {
+		if filepath.Dir(p) == folder {
+			if _, ok := keep[p]; !ok {
+				delete(r.anchorCache, p)
+			}
+		}
+	}
+	r.mu.Unlock()
+}
+
+// MethodAnchors loads every method anchor from AnchorsDir sorted by name,
+// cached by (mtime_ns, size).
+func (r *Reader) MethodAnchors() []Anchor {
+	entries, err := os.ReadDir(r.AnchorsDir)
+	var paths []string
+	if err == nil {
+		for _, e := range entries {
+			if strings.HasSuffix(e.Name(), ".md") {
+				paths = append(paths, filepath.Join(r.AnchorsDir, e.Name()))
+			}
+		}
+		sort.Strings(paths)
+	}
+	r.forgetMissingAnchors(r.AnchorsDir, paths)
+	var out []Anchor
+	for _, p := range paths {
+		st, err := os.Stat(p)
+		if err != nil {
+			r.mu.Lock()
+			delete(r.anchorCache, p)
+			r.mu.Unlock()
+			continue
+		}
+		cur := stamp{mtimeNs: st.ModTime().UnixNano(), size: st.Size()}
+		r.mu.RLock()
+		hit, ok := r.anchorCache[p]
+		r.mu.RUnlock()
+		if !ok || hit.stamp != cur {
+			hit = anchorEntry{stamp: cur, anchor: parseAnchor(p)}
+			r.mu.Lock()
+			r.anchorCache[p] = hit
+			r.mu.Unlock()
+		}
+		if hit.anchor != nil {
+			out = append(out, *hit.anchor)
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		return strings.ToLower(out[i].Name) < strings.ToLower(out[j].Name)
+	})
+	return out
+}
+
+// AnchorIndex maps lower-cased anchor name, slug and aliases to the Anchor.
+func AnchorIndex(found []Anchor) map[string]Anchor {
+	idx := map[string]Anchor{}
+	for _, a := range found {
+		keys := make([]string, 0, 2+len(a.Aliases))
+		keys = append(keys, a.Name, a.Slug)
+		keys = append(keys, a.Aliases...)
+		for _, k := range keys {
+			norm := strings.ToLower(strings.TrimSpace(k))
+			if norm == "" {
+				continue
+			}
+			if _, exists := idx[norm]; !exists {
+				idx[norm] = a
+			}
+		}
+	}
+	return idx
 }
 
 func strVal(v any) string {

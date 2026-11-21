@@ -247,6 +247,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case p == "/":
 		s.handleIndex(w, r)
+	case strings.HasPrefix(p, "/page/"):
+		s.handlePageDetail(w, r)
+	case strings.HasPrefix(p, "/source/"):
+		s.handleSourceDetail(w, r)
 	case p == "/presence/count":
 		s.handlePresenceCount(w, r)
 	case p == "/presence/list":
@@ -391,9 +395,12 @@ func (s *Server) baseContext(r *http.Request, cat *metamodel.Catalog, nonce stri
 		"current_area":    currentArea,
 		"nav_items":       navItems,
 		"stack_badge": map[string]any{
-			"label": "Go",
-			"title": "Built with Go",
-			"icon":  "go-logo.svg",
+			"label":      "Go",
+			"title":      "Built with Go",
+			"icon":       "go-logo.svg",
+			"icon_class": "stack-icon-go",
+			"width":      45,
+			"height":     18,
 		},
 	}
 }
@@ -452,15 +459,18 @@ func lanIP() string {
 // --- Request snapshot (Tier 2 per-request cache, matching _request_cached) --
 
 type requestSnapshot struct {
-	store     *wiki.Store
-	folders   map[string][]*wiki.Page
-	allPages  []*wiki.Page
-	allLoaded bool
-	sources   []*wiki.Page
-	srcLoaded bool
-	links     map[string]wiki.PageRef
-	titles    map[string]string
-	flags     map[string]map[string]struct{}
+	store       *wiki.Store
+	folders     map[string][]*wiki.Page
+	allPages    []*wiki.Page
+	allLoaded   bool
+	sources     []*wiki.Page
+	srcLoaded   bool
+	pagesByStem map[string]*wiki.Page
+	srcIndex    map[string]*wiki.Page
+	anchors     map[string]metamodel.Anchor
+	links       map[string]wiki.PageRef
+	titles      map[string]string
+	flags       map[string]map[string]struct{}
 }
 
 func newSnapshot(store *wiki.Store) *requestSnapshot {
