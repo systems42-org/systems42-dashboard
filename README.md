@@ -33,3 +33,11 @@ define the content types and conventions.
 
 For the full walkthrough, see [`docs/GETTING-STARTED.md`](docs/GETTING-STARTED.md).
 What changed in the method: [`CHANGELOG.md`](CHANGELOG.md).
+
+## Public website (`dashboard.systems42.org`)
+
+`site/` holds the public showcase, docs, downloads and static `/demo/` export, deployed from `site/_site/` by [`.github/workflows/site.yml`](.github/workflows/site.yml) using GitHub Actions Pages.
+
+- `make site` builds the static site into `site/_site/` in Docker.
+- `make site-show` / `make site-down` start and stop a local Docker preview server at `http://localhost:8090`.
+- See [`site/README.md`](site/README.md) for switching the demo wiki (for example to `isaqb-atrium`).

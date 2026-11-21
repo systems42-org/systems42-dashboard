@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Systems42 Dashboard{% endblock %} · dashboard.systems42.org</title>
+  <meta name="description" content="{% block description %}Read-only interactive dashboard for Systems42 requirements and architecture wikis. Try the live demo, read the docs, or download the launcher.{% endblock %}">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="site-brand" href="/">
+        <img src="/assets/mark-light.svg" alt="Systems42 mark" width="30" height="30">
+        <span>Systems42 Dashboard</span>
+        <span class="brand-badge">v{{ version }}</span>
+      </a>
+      <nav class="site-nav" aria-label="Main navigation">
+        <a href="/"{% if active_nav == 'home' %} aria-current="page"{% endif %}>Overview</a>
+        <a href="/docs/"{% if active_nav == 'docs' %} aria-current="page"{% endif %}>Docs</a>
+        <a href="/downloads/"{% if active_nav == 'downloads' %} aria-current="page"{% endif %}>Downloads</a>
+        <a href="https://github.com/systems42-org/systems42-dashboard" rel="noopener">GitHub</a>
+        <a class="nav-demo" href="/demo/">Live Demo</a>
+      </nav>
+      <details class="mobile-nav">
+        <summary aria-label="Open menu">Menu</summary>
+        <div class="mobile-nav-panel">
+          <a href="/"{% if active_nav == 'home' %} aria-current="page"{% endif %}>Overview</a>
+          <a href="/demo/">Live Demo</a>
+          <a href="/docs/"{% if active_nav == 'docs' %} aria-current="page"{% endif %}>Docs</a>
+          <a href="/downloads/"{% if active_nav == 'downloads' %} aria-current="page"{% endif %}>Downloads</a>
+          <a href="https://github.com/systems42-org/systems42-dashboard" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </header>
+
+  <main class="site-main">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <h4>Systems42 Dashboard</h4>
+          <p>Read-only browser view for Systems42 requirements and architecture wikis. Built for workshops, reviews and everyday project reading.</p>
+          <p>Release <strong>{{ version }}</strong> · Built {{ built_date }}</p>
+        </div>
+        <div>
+          <h4>This Site</h4>
+          <ul>
+            <li><a href="/">Overview</a></li>
+            <li><a href="/demo/">Live Demo ({{ demo_name }})</a></li>
+            <li><a href="/docs/">Documentation</a></li>
+            <li><a href="/downloads/">Downloads</a></li>
+            <li><a href="/docs/getting-started/">Getting Started</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Method Family</h4>
+          <ul>
+            <li><a href="https://systems42.org" rel="noopener">systems42.org</a></li>
+            <li><a href="https://arc42.org" rel="noopener">arc42.org</a></li>
+            <li><a href="https://docs.arc42.org" rel="noopener">docs.arc42.org</a></li>
+            <li><a href="https://req42.de" rel="noopener">req42.de</a></li>
+            <li><a href="https://quality.arc42.org" rel="noopener">quality.arc42.org</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Project &amp; Legal</h4>
+          <ul>
+            <li><a href="https://github.com/systems42-org/systems42-dashboard" rel="noopener">GitHub Repository</a></li>
+            <li><a href="https://github.com/systems42-org/systems42-dashboard/releases" rel="noopener">Releases</a></li>
+            <li><a href="https://github.com/systems42-org/systems42-dashboard/issues" rel="noopener">Issue Tracker</a></li>
+            <li><a href="/imprint/">Imprint &amp; Privacy</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>Systems42 · Dr. Gernot Starke &amp; contributors</span>
+        <span>Static site on GitHub Pages · No cookies · No tracking</span>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

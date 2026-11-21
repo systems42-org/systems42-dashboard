@@ -4,3 +4,4 @@ _system/apps/dashboard/.venv
 .obsidian/workspace.json
 .superpowers/
 harvest-*.patch
+site/_site/

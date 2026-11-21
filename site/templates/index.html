@@ -1,0 +1,113 @@
+{% extends "layout.html" %}
+{% block title %}Systems42 Dashboard{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="container hero-grid">
+    <div>
+      <span class="eyebrow">Systems42 · req42 + arc42</span>
+      <h1>Trusted answers about requirements and architecture, right in your browser</h1>
+      <p class="hero-lead">
+        Systems42 Dashboard turns a Markdown requirements and architecture wiki into a fast, read-only web view. Search with typo tolerance, trace goals to requirements and building blocks, and share one live view in workshops.
+      </p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="/demo/">Try the Live Demo</a>
+        <a class="btn" href="/downloads/">Downloads &amp; Quickstart</a>
+        <a class="btn" href="/docs/">Read the Docs</a>
+      </div>
+    </div>
+    <aside class="hero-card" aria-label="Live showcase summary">
+      <h2>Interactive Demo: {{ demo_name }}</h2>
+      <p>{{ demo_tagline }}</p>
+      <ul class="stat-list">
+        <li>
+          <span class="stat-num">{{ demo_stats.pages }}</span>
+          <span class="stat-label">Wiki pages exported</span>
+        </li>
+        <li>
+          <span class="stat-num">{{ demo_stats.routes }}</span>
+          <span class="stat-label">Browsable views</span>
+        </li>
+        <li>
+          <span class="stat-num">v{{ version }}</span>
+          <span class="stat-label">Current release</span>
+        </li>
+        <li>
+          <span class="stat-num">0</span>
+          <span class="stat-label">Install steps to try</span>
+        </li>
+      </ul>
+      <a class="btn btn-primary" href="/demo/" style="width: 100%;">Open {{ demo_name }} Demo →</a>
+    </aside>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <h2>What you can try in the demo</h2>
+      <p>The public demo is a static snapshot exported directly from the real dashboard. Every reading, search, filtering and diagram view works in your browser.</p>
+    </div>
+    <div class="card-grid">
+      <article class="card">
+        <h3>Forgiving search (⌘K / Ctrl K)</h3>
+        <p>Search by ID, title, tag, alias or question-style query from any page. Non-exact hits explain why they matched.</p>
+        <a class="card-link" href="/demo/search/">Open search →</a>
+      </article>
+      <article class="card">
+        <h3>Goals &amp; coverage matrix</h3>
+        <p>Inspect vision and PAM objectives alongside the projected matrix showing which requirements serve each goal.</p>
+        <a class="card-link" href="/demo/goals/">Open Vision &amp; Goals →</a>
+      </article>
+      <article class="card">
+        <h3>Requirements &amp; open issues</h3>
+        <p>Browse areas and sections from the repository's metamodel, sort by multiple columns, and filter open issues by status, severity or category.</p>
+        <a class="card-link" href="/demo/issues/">Open Issues →</a>
+      </article>
+      <article class="card">
+        <h3>Interactive metamodel &amp; graphs</h3>
+        <p>Explore the Systems42 metamodel and domain-term networks with interactive Cytoscape layouts and Mermaid diagrams.</p>
+        <a class="card-link" href="/demo/metamodel/">Open Metamodel →</a>
+      </article>
+      <article class="card">
+        <h3>Read-only by design</h3>
+        <p>The dashboard mounts your wiki read-only and never edits repository files. Every statement keeps its status and source visible.</p>
+        <a class="card-link" href="/demo/method/">Read Method overview →</a>
+      </article>
+      <article class="card">
+        <h3>Branding by configuration</h3>
+        <p>Every Systems42 wiki uses the same released image and sets its own name, marks, favicon and intro in <code>_system/wiki.yaml</code>.</p>
+        <a class="card-link" href="/docs/#branding">See branding docs →</a>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="container">
+    <div class="section-head">
+      <h2>Start on your own Systems42 wiki in two minutes</h2>
+      <p>Pin a dashboard release in <code>_system/wiki.yaml</code>, drop the thin launcher <code>dashboard.sh</code> into your repository, and run it with Docker.</p>
+    </div>
+    <div class="card-grid-2">
+      <div class="card">
+        <h3>1. Download the launcher</h3>
+        <pre><code>curl -fsSLO https://dashboard.systems42.org/downloads/dashboard.sh
+chmod +x dashboard.sh</code></pre>
+        <p>Pin the release in <code>_system/wiki.yaml</code>:</p>
+        <pre><code>dashboard_version: "{{ version }}"
+brand: systems42</code></pre>
+      </div>
+      <div class="card">
+        <h3>2. Launch the dashboard</h3>
+        <pre><code># With Docker (Linux &amp; macOS, offline after first pull)
+./dashboard.sh up
+
+# Stop again
+./dashboard.sh down</code></pre>
+        <p>Need container image details, release notes or SHA-256 checksums?</p>
+        <a class="card-link" href="/downloads/">Go to Downloads →</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
