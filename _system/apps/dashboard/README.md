@@ -442,6 +442,47 @@ agree with `_system/metamodel/`, with no dashboard code present), and `test_meta
 checks the `/metamodel` page (loader, graph as a pure projection, every type a
 row with an anchor and a colour token, wikilink resolution, live examples).
 
+## Go implementation (Phase 0)
+
+A second implementation of the dashboard in Go lives in this folder next to the
+Python reference (FR-055, DR-007, issue #80). Both share `static/`,
+`templates/`, `brands/`, `help.md` and `VERSION` without copies (`assets.go`
+embeds them with `go:embed`). `Dockerfile` and `pyproject.toml` name their
+files one by one, so Go files stay out of the container image and the wheel.
+
+Build and run without cgo from this directory:
+
+```sh
+CGO_ENABLED=0 go build ./cmd/systems42-dashboard
+./systems42-dashboard --version
+./systems42-dashboard /path/to/systems42-wiki
+```
+
+Run the Go unit tests and the Python vs Go parity test:
+
+```sh
+go test -race ./...
+uv run --no-project --python 3.12 --with-requirements requirements.txt python tests/test_parity.py
+```
+
+`tests/test_parity.py` starts both implementations on every wiki under
+`tests/fixtures/`, a synthetic notices wiki and this repository's own wiki,
+then compares status codes, CSP and framing headers, normalised HTML, JSON and
+static bytes. Routes not ported yet sit in `UNPORTED_EXACT` and
+`UNPORTED_PREFIXES` and shrink with each phase.
+
+**Template spike (issue #80, question 2).** The Go dashboard runs the existing
+40 Jinja2 templates directly through `github.com/nikolalohinski/gonja/v2`
+instead of porting them to `html/template`. Four targeted shims in
+`internal/web/templates.go` cover what `gonja/v2` omits: N-tuple `for`
+unpacking (`base.html`, `_list.html`), top-level `from`/`import`/`set`/`macro`
+statements in child templates that extend `base.html`, module-scoped
+`from ... import ...` for sibling and chained macros (`_trace.html`,
+`_macros.html`, `_list.html`, `_tile.html`), and preserving the safe flag on
+block-`set` captures (`crumbs_html` in `base.html`). `internal/web/template_spike_test.go`
+verifies all 40 templates parse and tests `base.html`, `_macros.html` and
+`detail.html` under the race detector.
+
 ## Obsidian
 
 Hidden automatically: `_system/` is in `.obsidian/app.json` →
