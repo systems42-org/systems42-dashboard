@@ -65,8 +65,17 @@ func TestHomeHeadersAndNonces(t *testing.T) {
 		t.Fatalf("CSP nonce mismatch: csp=%q", csp1)
 	}
 	body1 := rec1.Body.String()
-	if !strings.Contains(body1, `title="Built with Go"`) || !strings.Contains(body1, `/static/go-logo.svg?v=`) || !strings.Contains(body1, `class="stack-icon stack-icon-go"`) || !strings.Contains(body1, `width="45" height="18"`) {
+	if !strings.Contains(body1, `title="Built with Go"`) || !strings.Contains(body1, `/static/go-logo.svg?v=`) || !strings.Contains(body1, `class="stack-icon stack-icon-go"`) || !strings.Contains(body1, `width="45" height="18"`) || !strings.Contains(body1, `alt="Go"`) {
 		t.Fatalf("expected sized Go stack badge in footer")
+	}
+	badgeIdx := strings.Index(body1, `class="stack-badge"`)
+	if badgeIdx < 0 {
+		t.Fatalf("missing stack-badge in home HTML")
+	}
+	badgeEnd := strings.Index(body1[badgeIdx:], "</span>")
+	badgeHTML := body1[badgeIdx : badgeIdx+badgeEnd]
+	if !strings.Contains(badgeHTML, "Built with") || strings.HasSuffix(strings.TrimSpace(badgeHTML), "Go") {
+		t.Fatalf("footer stack badge should show 'Built with' + Go logo without duplicate 'Go' text: %q", badgeHTML)
 	}
 	if strings.Contains(body1, `Built with Python + Flask`) {
 		t.Fatalf("Go dashboard footer should not claim Python + Flask")

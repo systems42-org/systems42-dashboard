@@ -196,12 +196,18 @@ class _Normalizer(HTMLParser):
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         t = tag.lower()
+        if self._in_stack_badge:
+            return
         self.tokens.append(self._format_tag(t, attrs))
+        if self._in_stack_badge:
+            self.tokens.append("TEXT:<STACK_BADGE>")
         if t in _RAW_TEXT_TAGS:
             self._raw_depth += 1
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         t = tag.lower()
+        if self._in_stack_badge:
+            return
         self.tokens.append(self._format_tag(t, attrs))
         if t not in _VOID_TAGS:
             self.tokens.append(f"</{t}>")
@@ -218,6 +224,10 @@ class _Normalizer(HTMLParser):
             self._in_qr_svg = False
         if t == "span" and self._in_stack_badge:
             self._in_stack_badge = False
+            self.tokens.append(f"</{t}>")
+            return
+        if self._in_stack_badge:
+            return
         self.tokens.append(f"</{t}>")
 
     def handle_data(self, data: str) -> None:
@@ -230,8 +240,8 @@ class _Normalizer(HTMLParser):
         self._emit_text(html.unescape(f"&#{name};"))
 
     def _emit_text(self, text: str) -> None:
-        if self._in_stack_badge and text.strip():
-            text = "<STACK_LABEL>"
+        if self._in_stack_badge:
+            return
         if self._raw_depth > 0:
             text = text.replace("\r\n", "\n")
             if self.tokens and self.tokens[-1].startswith("TEXT:"):

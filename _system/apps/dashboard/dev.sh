@@ -9,6 +9,7 @@
 #                             Ctrl+C stops it
 #   ./dashboard.sh app-start  build and run the Go dashboard without Docker;
 #                             Ctrl+C stops it
+#   ./dashboard.sh app-bundle build the macOS .app bundle and .dmg into dist/
 #   ./dashboard.sh test       run the test scripts in Docker
 #   ./dashboard.sh version X.Y.Z   raise VERSION, as a pull request
 #   ./dashboard.sh publish  publish the release that VERSION names
@@ -208,6 +209,10 @@ case "${1:-}" in
     fi
     wait "$server_pid" || true
     ;;
+  app-bundle)
+    shift
+    exec "$HERE/macos/build-app.sh" "$@"
+    ;;
   test)
     # The test stage of the Dockerfile: the shipped image's Python and
     # libraries, plus make and node, which some scripts call. The repository
@@ -255,7 +260,7 @@ case "${1:-}" in
     ;;
   *)
     echo "Unknown command: ${1:-}" >&2
-    echo "Usage: ./dashboard.sh [up|down|logs|update|clean|uv|rebuild|local|app-start|test|version X.Y.Z|publish]" >&2
+    echo "Usage: ./dashboard.sh [up|down|logs|update|clean|uv|rebuild|local|app-start|app-bundle|test|version X.Y.Z|publish]" >&2
     exit 2
     ;;
 esac

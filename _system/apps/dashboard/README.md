@@ -61,6 +61,7 @@ start. The launcher hands every command it does not know to `dev.sh` here:
 ./dashboard.sh rebuild    # build the local image from scratch, then start
 ./dashboard.sh local      # no Docker: run Flask directly on http://localhost:8000
 ./dashboard.sh app-start  # no Docker: build and start the Go dashboard (also `make app-start`)
+./dashboard.sh app-bundle # macOS: build universal Systems42 Dashboard.app and DMG into dist/ (also `make app-bundle`)
 ./dashboard.sh test       # run the test scripts in Docker (also `make test`)
 ```
 
@@ -454,18 +455,32 @@ Python reference (FR-055, DR-007, issue #80). Both share `static/`,
 embeds them with `go:embed`). `Dockerfile` and `pyproject.toml` name their
 files one by one, so Go files stay out of the container image and the wheel.
 
-Phases 0 to 5 are in place with full route parity across every dashboard
-endpoint: the home page, static and brand endpoints, heartbeat/presence API and
-FR-050 self-shutdown watchdog (`internal/session`), Markdown and wikilink
-renderer with HTML sanitiser (`internal/render`), `/page/<folder>/<stem>` and
-`/source/<stem>` detail views, areas (`/req42`, `/arc42`, `/commons`), generic
-block and section routes (`/req42/<slug>`, `/section/<id>`), `/metamodel`,
-`/method`, `/changes`, `/issues`, `/stakeholders`, `/decisions`,
-`/domain-terms`, all Mermaid and cytoscape projections (`internal/project`),
-search index and filters (`internal/search`: `/search`, `/search.json`),
-session, help and about routes (`/join`, `/who`, `/help`, `/about`,
-`/about/files/<path>`, `GET`/`POST /settings`), and the hostile-vault security
-suite (`internal/web/hostile_vault_test.go`).
+Phases 0 to 8 are in place with full route parity across every dashboard
+endpoint, a universal macOS desktop app and GitHub Actions release packaging.
+See [`docs/go-dashboard-requirements-summary.md`](../../../docs/go-dashboard-requirements-summary.md)
+for the requirements and trade-offs behind the Go implementation.
+
+- **Server (`cmd/systems42-dashboard/`, `internal/`):** home page, static and
+  brand endpoints, heartbeat/presence API and FR-050 self-shutdown watchdog
+  (`internal/session`), Markdown and wikilink renderer with HTML sanitiser
+  (`internal/render`), `/page/<folder>/<stem>` and `/source/<stem>` detail
+  views, areas (`/req42`, `/arc42`, `/commons`), generic block and section
+  routes (`/req42/<slug>`, `/section/<id>`), `/metamodel`, `/method`,
+  `/changes`, `/issues`, `/stakeholders`, `/decisions`, `/domain-terms`, all
+  Mermaid and cytoscape projections (`internal/project`), search index and
+  filters (`internal/search`: `/search`, `/search.json`), session, help and
+  about routes (`/join`, `/who`, `/help`, `/about`, `/about/files/<path>`,
+  `GET`/`POST /settings`), and the hostile-vault security suite
+  (`internal/web/hostile_vault_test.go`).
+- **macOS desktop app (`macos/`):** native AppKit menu-bar launcher
+  (`AppDelegate.swift`) bundling the universal `CGO_ENABLED=0` Go binary, with
+  folder picker, Finder drag-and-drop, CON-005 preflight alerts, one free port
+  per wiki (`--port 0 --ready-json`), recent wikis stored under
+  `~/Library/Application Support/Systems42 Dashboard/recent.json` (never in the
+  wiki), universal `.dmg` packaging (`make app-bundle`), Homebrew cask
+  (`macos/Casks/systems42-dashboard.rb`), and automated release builds in
+  `.github/workflows/release.yml` (signing and notarisation activate when
+  `APPLE_SIGN_*` and `APPLE_NOTARY_*` secrets are configured).
 
 From the repository root, `make app-start` (or `./dashboard.sh app-start`)
 builds the pure-Go binary into a temporary file, starts it on
