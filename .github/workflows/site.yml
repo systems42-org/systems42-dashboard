@@ -1,0 +1,84 @@
+# Builds dashboard.systems42.org into site/_site/ and deploys that folder
+# directly to GitHub Pages via GitHub Actions (no gh-pages branch).
+#
+# Repository setup (Settings -> Pages):
+#   Source: GitHub Actions
+#   Custom domain: dashboard.systems42.org (DNS CNAME -> systems42-org.github.io.)
+#
+# To switch the /demo/ showcase to another public Systems42 wiki (such as
+# systems42-org/isaqb-atrium), set repository variable SITE_DEMO_WIKI_REPO or
+# pass `demo_wiki_repo` when triggering this workflow manually.
+name: site
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths:
+      - "site/**"
+      - "wiki/**"
+      - "docs/**"
+      - "dashboard.sh"
+      - "CHANGELOG.md"
+      - "Makefile"
+      - "_system/wiki.yaml"
+      - "_system/apps/dashboard/**"
+      - ".github/workflows/site.yml"
+  workflow_dispatch:
+    inputs:
+      demo_wiki_repo:
+        description: "Optional owner/repo to export as /demo/ (empty = this repository)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout dashboard repository
+        uses: actions/checkout@v7
+
+      - name: Optional checkout of external demo wiki
+        id: demo
+        env:
+          INPUT_REPO: ${{ github.event.inputs.demo_wiki_repo }}
+          VAR_REPO: ${{ vars.SITE_DEMO_WIKI_REPO }}
+        run: |
+          repo="${INPUT_REPO:-$VAR_REPO}"
+          if [ -n "$repo" ]; then
+            git clone --depth 1 "https://github.com/${repo}.git" /tmp/demo-wiki
+            echo "path=/tmp/demo-wiki" >> "$GITHUB_OUTPUT"
+          else
+            echo "path=$GITHUB_WORKSPACE" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Build static site
+        run: make site DEMO_WIKI="${{ steps.demo.outputs.path }}"
+
+      - name: Upload site/_site artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/_site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

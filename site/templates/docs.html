@@ -1,0 +1,102 @@
+{% extends "layout.html" %}
+{% block title %}Documentation{% endblock %}
+{% block description %}Configuration, branding, workshop sessions and metamodel compatibility for the Systems42 Dashboard.{% endblock %}
+{% block content %}
+<section class="page-hero">
+  <div class="container">
+    <div class="crumbs"><a href="/">Home</a> › Documentation</div>
+    <h1>Documentation</h1>
+    <p>How to configure, brand and run the Systems42 Dashboard on any Systems42 requirements wiki.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="card-grid">
+      <article class="card">
+        <h3>Getting Started with Systems42</h3>
+        <p>Full walkthrough for product owners, architects and engineers: capturing sources from <code>raw/</code>, grilling requirements and inspecting the wiki.</p>
+        <a class="card-link" href="/docs/getting-started/">Read Getting Started →</a>
+      </article>
+      <article class="card">
+        <h3>Brand Prompt Template</h3>
+        <p>Ready-to-use prompt for generating dark/light SVG marks, favicon and intro animation that follow the dashboard's brand contract.</p>
+        <a class="card-link" href="/docs/brand-prompt/">Open Brand Prompt →</a>
+      </article>
+      <article class="card">
+        <h3>Try the Live Demo</h3>
+        <p>Browse the live static export of <strong>{{ demo_name }}</strong>, including its Method overview, Metamodel graph and Help page.</p>
+        <a class="card-link" href="/demo/method/">Open Method in Demo →</a>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="section section-alt" id="configuration">
+  <div class="container prose">
+    <h2>Repository configuration (<code>_system/wiki.yaml</code>)</h2>
+    <p>The dashboard expects a Systems42 derivative repository containing <code>wiki/</code>, <code>raw/</code>, <code>_system/metamodel/</code>, <code>_system/anchors/</code> and <code>_system/wiki.yaml</code>. All dashboard settings live in <code>_system/wiki.yaml</code>:</p>
+    <table class="info-table">
+      <thead>
+        <tr>
+          <th>Key</th>
+          <th>Purpose</th>
+          <th>Example</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>system_name</code></td>
+          <td>Displayed in the hero and browser title.</td>
+          <td><code>"My System"</code></td>
+        </tr>
+        <tr>
+          <td><code>tagline</code></td>
+          <td>Short fallback line when no vision sentence exists.</td>
+          <td><code>"Requirements and architecture"</code></td>
+        </tr>
+        <tr>
+          <td><code>dashboard_version</code></td>
+          <td>Pinned release tag (quoted) or <code>local</code> in the dashboard repo.</td>
+          <td><code>"{{ version }}"</code></td>
+        </tr>
+        <tr>
+          <td><code>brand</code></td>
+          <td>Shipped default (<code>systems42</code>) or a folder inside your repository.</td>
+          <td><code>brand/</code></td>
+        </tr>
+        <tr>
+          <td><code>intro</code></td>
+          <td>Switches the brand intro animation on or off.</td>
+          <td><code>on</code> or <code>off</code></td>
+        </tr>
+        <tr>
+          <td><code>about</code></td>
+          <td>Optional Markdown page under <code>docs/</code> shown at <code>/about</code>.</td>
+          <td><code>docs/brand/README.md</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="branding">Branding by configuration</h2>
+    <p>Every Systems42 wiki uses the same released dashboard image and applies its own identity through a folder in its repository (for example <code>brand/</code>):</p>
+    <ul>
+      <li><code>mark-dark.svg</code> (or <code>.png</code>) and <code>mark-light.svg</code> for dark and light themes.</li>
+      <li><code>favicon.svg</code> (or <code>.png</code>) for browser tabs.</li>
+      <li>Optional <code>intro.html</code>: runs inside a sandboxed iframe without access to wiki pages or network, finishes within two seconds, and respects reduced motion.</li>
+    </ul>
+    <p>If a brand folder is missing or incomplete, the dashboard falls back to the shipped <code>systems42</code> brand without showing an error.</p>
+
+    <h2 id="workshops">Workshops &amp; shared sessions</h2>
+    <ul>
+      <li>Start the dashboard on the facilitator's laptop with <code>./dashboard.sh up</code> (or <code>make dev</code>).</li>
+      <li>Participants scan the QR code on the home page (or project <code>/join</code>) to open the same wiki on their phones or laptops with zero installation.</li>
+      <li>The first browser tab to connect becomes the <strong>Keyholder</strong> ("Yoda") and controls the temporary <strong>View</strong> dialog and <strong>Disconnect all</strong>.</li>
+      <li>Closing the last open tab stops the container automatically.</li>
+    </ul>
+
+    <h2 id="scope">Read-only &amp; security scope</h2>
+    <p>The dashboard mounts your wiki read-only and never writes files into your repository. Because it has no login and serves the local network in workshop mode, run live sessions only on trusted networks. For public read-only publishing, use the static site export (<code>make site</code>).</p>
+  </div>
+</section>
+{% endblock %}
