@@ -527,16 +527,16 @@ func (s *Server) handlePageDetail(w http.ResponseWriter, r *http.Request) {
 			newStem := fmt.Sprintf("DR-%03d-%s", n, m[2])
 			candidate := filepath.Join(s.Paths.WikiDir, "decisions", newStem+".md")
 			if st, err := os.Stat(candidate); err == nil && st.Mode().IsRegular() && wiki.ResolvesInside(s.Paths.WikiDir, candidate) {
-				http.Redirect(w, r, wiki.PageURL("decisions", newStem), http.StatusMovedPermanently)
+				s.redirect(w, r, wiki.PageURL("decisions", newStem), http.StatusMovedPermanently)
 				return
 			}
 		}
-		http.Redirect(w, r, "/decisions", http.StatusMovedPermanently)
+		s.redirect(w, r, "/decisions", http.StatusMovedPermanently)
 		return
 	}
 
 	if folder == "functional-requirements" {
-		http.Redirect(w, r, "/functional-requirements/"+stem, http.StatusFound)
+		s.redirect(w, r, "/functional-requirements/"+stem, http.StatusFound)
 		return
 	}
 
@@ -546,7 +546,7 @@ func (s *Server) handlePageDetail(w http.ResponseWriter, r *http.Request) {
 		_, ucErr := os.Stat(ucPath)
 		if ucErr != nil {
 			if st, err := os.Stat(frPath); err == nil && st.Mode().IsRegular() && wiki.ResolvesInside(s.Paths.WikiDir, frPath) {
-				http.Redirect(w, r, "/functional-requirements/"+stem, http.StatusMovedPermanently)
+				s.redirect(w, r, "/functional-requirements/"+stem, http.StatusMovedPermanently)
 				return
 			}
 		}

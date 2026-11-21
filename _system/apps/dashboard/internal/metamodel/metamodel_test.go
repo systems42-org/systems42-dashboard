@@ -111,3 +111,51 @@ func TestAnchorsVocabAndSectionHref(t *testing.T) {
 		t.Fatalf("SectionHref(X9) = %q, want /req42#tile-x9", href)
 	}
 }
+
+func TestLoadAnchorsAndNotations(t *testing.T) {
+	mmDir := repoMetamodelDir(t)
+	notDir := t.TempDir()
+	_ = os.WriteFile(filepath.Join(notDir, "not-custom.md"), []byte(
+		"---\ntype: metamodel\nconstruct: notation\nname: custom\ntitle: Custom\nlevels: [a, b]\n---\n\n"+
+			"# Custom\n\n<!-- levels: a, b -->\n## Summary\n\n<!-- levels: b -->\n**Details.** text\n"), 0o644)
+
+	r := NewReader(mmDir, notDir, "")
+	mm := r.Load()
+	if !mm.Present || len(mm.Types) == 0 || len(mm.Relations) == 0 || len(mm.Projections) == 0 || len(mm.Rules) == 0 {
+		t.Fatalf("Load missing constructs: present=%v types=%d rel=%d proj=%d rules=%d",
+			mm.Present, len(mm.Types), len(mm.Relations), len(mm.Projections), len(mm.Rules))
+	}
+	if len(mm.Frameworks) < 3 || StrVal(mm.Frameworks[0]["name"]) != "req42" || StrVal(mm.Frameworks[1]["name"]) != "commons" || StrVal(mm.Frameworks[2]["name"]) != "arc42" {
+		t.Fatalf("unexpected framework order: %+v", mm.Frameworks)
+	}
+	if StrVal(mm.Types[0]["name"]) != "goal" || StrVal(mm.Types[len(mm.Types)-1]["name"]) != "source" {
+		t.Fatalf("unexpected type block order: first=%q last=%q", StrVal(mm.Types[0]["name"]), StrVal(mm.Types[len(mm.Types)-1]["name"]))
+	}
+	for _, tp := range mm.Types {
+		if StrVal(tp["_summary"]) == "" {
+			t.Errorf("empty _summary for type %q", StrVal(tp["name"]))
+		}
+	}
+
+	anc := Anchors(mm)
+	if anc["FR"] != "type-functional-requirement" || anc["goal"] != "type-goal" {
+		t.Fatalf("unexpected Anchors: FR=%q goal=%q", anc["FR"], anc["goal"])
+	}
+	if got := r.TypeForFolder("quality-requirements"); got != "quality-requirement" {
+		t.Fatalf("TypeForFolder(quality-requirements) = %q", got)
+	}
+
+	foundCustom := false
+	for _, n := range mm.Notations {
+		if StrVal(n["name"]) == "custom" {
+			foundCustom = true
+			secs, _ := n["_sections"].([]map[string]any)
+			if len(secs) != 2 || StrVal(secs[0]["heading"]) != "Summary" || StrVal(secs[1]["heading"]) != "Details" {
+				t.Fatalf("unexpected notation sections: %+v", secs)
+			}
+		}
+	}
+	if !foundCustom {
+		t.Fatal("expected project-specific notation from NotationsDir")
+	}
+}

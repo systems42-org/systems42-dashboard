@@ -37,6 +37,15 @@ func EscapeHTML(s string) string {
 	return html.EscapeString(s)
 }
 
+// ReplaceWikilinks replaces every Obsidian [[target]] / [[target|alias]] in s
+// by calling fn(target, alias).
+func ReplaceWikilinks(s string, fn func(target, alias string) string) string {
+	return wikilinkRE.ReplaceAllStringFunc(s, func(match string) string {
+		sub := wikilinkRE.FindStringSubmatch(match)
+		return fn(strings.TrimSpace(sub[1]), strings.TrimSpace(sub[2]))
+	})
+}
+
 // AnchorTitle formats a method anchor's definition as plain text for a title
 // attribute, matching app.py's anchor_title().
 func AnchorTitle(a metamodel.Anchor) string {
