@@ -157,6 +157,13 @@ def _go_background(client_id):
         app._clients[client_id] = app.time.monotonic() - (app._PRESENCE_WINDOW + 5)
 
 
+def _evict(client_id):
+    """What the watchdog does to a tab that stayed silent past the grace."""
+    _go_stale(client_id)
+    with app._lifecycle_lock:
+        app._forget_client(client_id)
+
+
 def _post(client, path, client_id, **body):
     return client.post(path, data=json.dumps({"client_id": client_id, **body}),
                        content_type="application/json")
@@ -214,6 +221,42 @@ def test_the_heir_keeps_the_role_when_the_old_holder_returns():
     assert _ping(client, "yoda").get_json()["is_facilitator"] is False
     assert _post(client, "/disconnect-all", "yoda").status_code == 403
     assert _ping(client, "luke").get_json()["is_facilitator"] is True
+
+
+def test_a_returning_holder_queues_behind_the_tabs_that_were_there():
+    # Issue #56, the rule Gernot Starke chose on 2026-11-21: when the holder
+    # leaves, the earliest present tab gets the role. A former holder that
+    # comes back counts as connected at its return, so it stands behind
+    # every tab that was there then.
+    _reset_presence()
+    client = app.app.test_client()
+    for cid in ("yoda", "luke", "leia"):
+        _ping(client, cid)
+    _evict("yoda")
+    assert _ping(client, "luke").get_json()["is_facilitator"] is True
+    _ping(client, "yoda")  # the first holder is back
+    _evict("luke")
+    assert _ping(client, "yoda").get_json()["is_facilitator"] is False
+    assert _ping(client, "leia").get_json()["is_facilitator"] is True
+
+
+def test_a_former_holder_can_hold_the_role_again_when_it_is_the_earliest_left():
+    # The same rule from the other side: there is always a Keyholder. A
+    # former holder gets the role again once every tab that was there at
+    # its return is gone, also ahead of a tab that joined after it.
+    _reset_presence()
+    client = app.app.test_client()
+    _ping(client, "yoda")
+    _ping(client, "luke")
+    _evict("yoda")
+    assert _ping(client, "luke").get_json()["is_facilitator"] is True
+    _ping(client, "yoda")
+    _ping(client, "leia")  # joins after yoda's return
+    _evict("luke")
+    assert _ping(client, "leia").get_json()["is_facilitator"] is False
+    assert _ping(client, "yoda").get_json()["is_facilitator"] is True
+    assert _post(client, "/settings", "yoda", hidden=[]).status_code == 200
+    assert _post(client, "/settings", "leia", hidden=[]).status_code == 403
 
 
 def test_the_role_does_not_flip_back_when_the_old_yoda_reappears():
@@ -367,6 +410,8 @@ if __name__ == "__main__":
     test_a_holder_in_a_background_tab_keeps_the_role()
     test_the_role_passes_to_the_next_earliest_tab_once_the_holder_is_evicted()
     test_the_heir_keeps_the_role_when_the_old_holder_returns()
+    test_a_returning_holder_queues_behind_the_tabs_that_were_there()
+    test_a_former_holder_can_hold_the_role_again_when_it_is_the_earliest_left()
     test_the_role_does_not_flip_back_when_the_old_yoda_reappears()
     test_names_are_sticky_across_a_role_transfer()
     test_a_name_survives_eviction_and_return()

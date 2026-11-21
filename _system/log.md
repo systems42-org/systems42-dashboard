@@ -343,3 +343,9 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Updated: CON-003 (title and text: Docker and uv), QR-002 (scenario and measure), FR-029 (rule, scope, children), FR-042 (scope), STK-010 (concern), `_system/index.md`.
 - Open: whether the Go app shows the pages in the browser or in its own window. Asked, not yet answered, noted on FR-055. The priorities of FR-054 and FR-055 (Should) are Claude's proposal.
 - Code: `./dashboard.sh uv` and the wheel are in the same pull request. The plan for the Go app is issue #80.
+
+## [2026-11-21] inspect | FR-046: who gets the keys when the holder leaves
+- Origin: issue #56, the rule question left open by pull request #72.
+- Decision (Gernot Starke, 2026-11-21): the earliest tab still connected gets the rights, also when it held them before. A returning holder counts as newly connected. A session always has a Keyholder.
+- Updated: [[FR-046-shared-session-in-a-workshop]] (Keyholder rule, history). No code change: the dashboard already works this way, and two new tests in `tests/test_presence.py` hold it.
+- Not changed: [[STK-023-keyholder]] is `accepted` and still says "the rights never go back to an earlier holder". It needs the same wording, by promotion.
