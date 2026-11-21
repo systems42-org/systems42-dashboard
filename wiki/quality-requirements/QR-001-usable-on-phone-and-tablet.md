@@ -4,9 +4,9 @@ type: quality-requirement
 title: Usable on phone and tablet
 status: draft
 created: 2026-11-12
-updated: 2026-11-12
-sources: ["[[SRC-017-usable-on-phone-and-tablet]]", "[[SRC-018-grilling-session-on-phone-and-tablet]]"]
-related: ["[[GOAL-003-answers-without-asking-a-colleague]]", "[[GOAL-007-readers-who-come-back]]", "[[STK-008-workshop-participants-and-facilitators]]", "[[STK-001-readers]]", "[[STK-013-people-learning-or-presenting-systems42]]", "[[DR-003-quality-requirements-are-classified-by-q42-dimensions]]"]
+updated: 2026-11-21
+sources: ["[[SRC-017-usable-on-phone-and-tablet]]", "[[SRC-018-grilling-session-on-phone-and-tablet]]", "[[SRC-037-a-public-website-for-the-dashboard]]", "[[SRC-038-grilling-session-on-the-public-website]]"]
+related: ["[[GOAL-003-answers-without-asking-a-colleague]]", "[[GOAL-007-readers-who-come-back]]", "[[STK-008-workshop-participants-and-facilitators]]", "[[STK-001-readers]]", "[[STK-013-people-learning-or-presenting-systems42]]", "[[DR-003-quality-requirements-are-classified-by-q42-dimensions]]", "[[FR-056-a-public-website-for-the-dashboard]]"]
 tags: [quality-requirement]
 dimensions: [usable, flexible]
 priority: should
@@ -17,7 +17,7 @@ testable: true
 
 **Q42 dimensions.** Usable, flexible.
 
-Every page of the dashboard is easy to read and use on a phone or a tablet, not only on a laptop. The layout adapts to the screen.
+Every page of the dashboard is easy to read and use on a phone or a tablet, not only on a laptop. The layout adapts to the screen. The same holds for the public website ([[FR-056-a-public-website-for-the-dashboard]]).
 
 **Scenario (Q42 quality scenario).**  <!-- follows [[Q42]], https://quality.arc42.org -->
 - **Source.** A [[STK-008-workshop-participants-and-facilitators|workshop participant]].

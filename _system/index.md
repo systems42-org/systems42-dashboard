@@ -93,6 +93,13 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-053-reach-the-session-controls-and-the-theme-from-one-menu]] Reach the session controls and the theme from one menu (story, Could, draft)
 - [[FR-054-a-start-without-a-container-engine]] A start without a container engine (feature, Should, draft)
 - [[FR-055-an-installable-dashboard-app]] An installable dashboard app (feature, Should, draft)
+- [[FR-056-a-public-website-for-the-dashboard]] A public website for the dashboard (epic, Should, draft)
+- [[FR-057-overview-of-the-dashboard-on-the-website]] Overview of the dashboard on the website (feature, Should, draft)
+- [[FR-058-a-demo-to-try-without-installing]] A demo to try without installing (feature, Must, draft)
+- [[FR-059-downloads-on-the-website]] Downloads on the website (feature, Should, draft)
+- [[FR-060-documentation-on-the-website]] Documentation on the website (feature, Should, draft)
+- [[FR-061-legal-and-project-information-on-the-website]] Legal and project information on the website (feature, Must, draft)
+- [[FR-062-the-website-is-built-and-published-from-the-repository]] The website is built and published from the repository (feature, Should, draft)
 
 ## Quality requirements
 
@@ -168,3 +175,5 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-034-dashboard-requirements-moved-from-meta]] Dashboard requirements that still lived in meta (document)
 - [[SRC-035-grilling-session-on-the-requirements-moved-from-meta]] Grilling session on the requirements moved from meta (interview)
 - [[SRC-036-grilling-session-on-running-without-a-container-engine]] Grilling session on running without a container engine (interview)
+- [[SRC-037-a-public-website-for-the-dashboard]] A public website for the dashboard (document)
+- [[SRC-038-grilling-session-on-the-public-website]] Grilling session on the public website (interview)
