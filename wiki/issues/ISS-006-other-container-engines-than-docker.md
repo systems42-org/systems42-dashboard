@@ -4,7 +4,7 @@ type: issue
 title: Should the dashboard run with other container engines than Docker
 status: open
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-21
 sources: ["[[SRC-027-dashboard-distribution-and-metamodel-contract]]", "[[SRC-028-grilling-session-on-dashboard-distribution]]"]
 related: ["[[CON-003-docker-is-the-supported-way-to-run-it]]", "[[FR-042-start-a-pinned-release-with-one-command]]"]
 tags: [issue]
@@ -12,7 +12,7 @@ severity: minor
 kind: question
 category: requirements
 raised-by: "[[STK-012-maintainers]]"
-owner: Gernot Starke
+owner: "[[STK-012-maintainers]]"
 resolved: null
 ---
 

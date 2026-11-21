@@ -366,3 +366,11 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Issues: none. Every question was answered.
 - IDs: FR-054, FR-055, SRC-036 and DR-007 are taken by pull request #81, which is not merged, so this capture starts at FR-056 and SRC-037.
 - Not changed: GOAL-002 and GOAL-008 are served through the `goal:` field of the new pages.
+
+## [2026-11-21] inspect | Issue schema taken over from systems42-org/meta
+- Origin: [meta pull request 55](https://github.com/systems42-org/meta/pull/55), which adopts `category:` and `owner:` for issues.
+- Schema: `type-issue.md`, `rel-owner.md` and `_templates/issue.md` now match meta. The category `systems42` is `method`, both fields are optional, `owner:` takes a stakeholder link only.
+- Updated: six issues from `category: systems42` to `method`. Seven issues from the owner "Gernot Starke" or "Gernot Starke and team" to [[STK-012-maintainers]] (Claude's choice of stakeholder, to be checked).
+- Resolved: [[ISS-007-issue-category-and-owner-belong-in-meta]].
+- Updated: [[FR-026-issues-carry-a-category]], [[FR-028-who-answers-an-issue]], [[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]].
+- No code change: the dashboard reads the category values from the metamodel. It still shows an owner written as a plain name.
