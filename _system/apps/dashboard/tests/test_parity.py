@@ -104,6 +104,7 @@ STATIC_SAMPLE_ROUTES = (
     "/static/search-popup.js",
     "/static/list-view.js",
     "/static/python-logo.svg",
+    "/static/go-logo.svg",
 )
 
 # Fixed routes exercised on every wiki.
@@ -152,6 +153,7 @@ class _Normalizer(HTMLParser):
         self.tokens: list[str] = []
         self._raw_depth = 0
         self._in_qr_svg = False
+        self._in_stack_badge = False
 
     def _norm_attr(self, tag: str, name: str, val: str | None) -> tuple[str, str]:
         name = name.lower()
@@ -162,6 +164,11 @@ class _Normalizer(HTMLParser):
             return (name, "<NONCE>")
         if name in ("href", "src"):
             val = _STATIC_VER_RE.sub(r"\1?v=<V>", val)
+        if self._in_stack_badge:
+            if name == "title":
+                return (name, "<STACK_TITLE>")
+            if tag == "img" and name == "src":
+                return (name, "<STACK_ICON>")
         if self._in_qr_svg:
             if tag == "svg" and name == "viewbox":
                 return (name, "<QR_VIEWBOX>")
@@ -172,10 +179,11 @@ class _Normalizer(HTMLParser):
 
     def _format_tag(self, tag: str, attrs: list[tuple[str, str | None]]) -> str:
         tag = tag.lower()
-        if tag == "svg":
-            cls = dict((k.lower(), v or "") for k, v in attrs).get("class", "")
-            if "segno" in cls.split():
-                self._in_qr_svg = True
+        attr_map = dict((k.lower(), v or "") for k, v in attrs)
+        if tag == "svg" and "segno" in attr_map.get("class", "").split():
+            self._in_qr_svg = True
+        if tag == "span" and "stack-badge" in attr_map.get("class", "").split():
+            self._in_stack_badge = True
         norm = sorted(self._norm_attr(tag, k, v) for k, v in attrs)
         parts = [tag]
         for k, v in norm:
@@ -207,6 +215,8 @@ class _Normalizer(HTMLParser):
             self._raw_depth -= 1
         if t == "svg" and self._in_qr_svg:
             self._in_qr_svg = False
+        if t == "span" and self._in_stack_badge:
+            self._in_stack_badge = False
         self.tokens.append(f"</{t}>")
 
     def handle_data(self, data: str) -> None:
@@ -219,6 +229,8 @@ class _Normalizer(HTMLParser):
         self._emit_text(html.unescape(f"&#{name};"))
 
     def _emit_text(self, text: str) -> None:
+        if self._in_stack_badge and text.strip():
+            text = "<STACK_LABEL>"
         if self._raw_depth > 0:
             text = text.replace("\r\n", "\n")
             if self.tokens and self.tokens[-1].startswith("TEXT:"):
@@ -512,9 +524,16 @@ def _compare_route(label: str, route: str, py_port: int, go_port: int) -> str | 
         go_xfo = go_hdrs.get("x-frame-options", "")
         if py_xfo != go_xfo:
             return f"[{label}] {route}: X-Frame-Options mismatch python={py_xfo!r}, go={go_xfo!r}"
+        py_text = py_body.decode("utf-8", errors="replace")
+        go_text = go_body.decode("utf-8", errors="replace")
+        if 'class="stack-badge"' in py_text:
+            if "python-logo.svg" not in py_text or "Built with Python + Flask" not in py_text:
+                return f"[{label}] {route}: python response missing Python stack badge"
+            if "go-logo.svg" not in go_text or "Built with Go" not in go_text:
+                return f"[{label}] {route}: go response missing Go stack badge"
         diff = first_token_diff(
-            normalize_html(py_body.decode("utf-8", errors="replace")),
-            normalize_html(go_body.decode("utf-8", errors="replace")),
+            normalize_html(py_text),
+            normalize_html(go_text),
         )
         if diff:
             return f"[{label}] {route}: {diff}"

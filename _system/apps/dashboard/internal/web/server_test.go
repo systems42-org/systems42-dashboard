@@ -61,6 +61,13 @@ func TestHomeHeadersAndNonces(t *testing.T) {
 	if m1 == nil || !strings.Contains(csp1, "'nonce-"+m1[1]+"'") {
 		t.Fatalf("CSP nonce mismatch: csp=%q", csp1)
 	}
+	body1 := rec1.Body.String()
+	if !strings.Contains(body1, `title="Built with Go"`) || !strings.Contains(body1, `/static/go-logo.svg?v=`) {
+		t.Fatalf("expected Go stack badge in footer")
+	}
+	if strings.Contains(body1, `Built with Python + Flask`) {
+		t.Fatalf("Go dashboard footer should not claim Python + Flask")
+	}
 
 	rec2 := httptest.NewRecorder()
 	srv.ServeHTTP(rec2, httptest.NewRequest(http.MethodGet, "/", nil))

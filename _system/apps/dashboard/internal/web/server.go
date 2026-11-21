@@ -390,6 +390,11 @@ func (s *Server) baseContext(r *http.Request, cat *metamodel.Catalog, nonce stri
 		"metamodel_check": s.Metamodel.VersionCheck().ToMap(),
 		"current_area":    currentArea,
 		"nav_items":       navItems,
+		"stack_badge": map[string]any{
+			"label": "Go",
+			"title": "Built with Go",
+			"icon":  "go-logo.svg",
+		},
 	}
 }
 
