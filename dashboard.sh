@@ -208,7 +208,7 @@ case "$cmd" in
     # Without this check the wait below would get its answer from a dashboard
     # that runs already, and report a start that failed.
     if command -v curl >/dev/null 2>&1 && curl -s --max-time 1 -o /dev/null "$URL/"; then
-      die "Port $PORT is already in use. Is a dashboard still running? Stop it (./dashboard.sh down, or close its browser tabs), or set DASH_PORT."
+      die "Port $PORT is already in use. Is a dashboard still running? Stop it: Ctrl+C in the terminal of a uv start, ./dashboard.sh down for a Docker start, or close its browser tabs. Or set DASH_PORT."
     fi
     ip="$(lan_ip 2>/dev/null || true)"
     public="${DASH_PUBLIC_URL:-http://${ip:-localhost}:$PORT}"
