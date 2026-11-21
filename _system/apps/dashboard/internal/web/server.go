@@ -253,8 +253,32 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.handleArea(w, r, "architecture")
 	case p == "/commons":
 		s.handleArea(w, r, "commons")
+	case p == "/req42/functional-requirements":
+		s.handleFunctionalRequirements(w, r)
+	case p == "/req42/backlog":
+		s.redirect(w, r, "/req42/functional-requirements", http.StatusMovedPermanently)
 	case strings.HasPrefix(p, "/req42/"):
 		s.handleReq42Block(w, r)
+	case strings.HasPrefix(p, "/functional-requirements/"):
+		s.handleFRDetail(w, r)
+	case p == "/goals":
+		s.handleGoals(w, r)
+	case p == "/entity-diagram":
+		s.handleEntityDiagram(w, r)
+	case p == "/data-model":
+		s.handleLegacyRedirect(w, r, "/entity-diagram")
+	case p == "/graph/domain-terms":
+		s.handleGlossaryGraph(w, r)
+	case p == "/graph/glossary":
+		s.handleLegacyRedirect(w, r, "/graph/domain-terms")
+	case p == "/arc42/building-blocks":
+		s.handleBuildingBlocks(w, r)
+	case p == "/arc42/concepts":
+		s.handleConcepts(w, r)
+	case p == "/arc42/runtime":
+		s.handleRuntime(w, r)
+	case p == "/arc42/deployment":
+		s.handleDeployment(w, r)
 	case strings.HasPrefix(p, "/section/"):
 		s.handleSection(w, r)
 	case p == "/metamodel":

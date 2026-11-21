@@ -20,6 +20,7 @@ var (
 	listStartRE      = regexp.MustCompile(`^\s*([-*+]|\d+[.)])\s`)
 	ulMarkerRE       = regexp.MustCompile(`^( *)([-*+])(\s.*)$`)
 	olMarkerRE       = regexp.MustCompile(`^( *)(\d+)([.)])(\s.*)$`)
+	bqLineRE         = regexp.MustCompile(`^( {0,3}>[ \t]?)(.*)$`)
 	tableSepRE       = regexp.MustCompile(`^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$`)
 	tableOpenRE      = regexp.MustCompile(`(?i)<table\b`)
 	tableCloseRE     = regexp.MustCompile(`(?i)</table\s*>`)
@@ -165,12 +166,42 @@ func normalizePythonMarkdownLists(body string) string {
 		kind   string // "ul" or "ol"
 	}
 	var stack []listFrame
+	inBQPara := false
 
 	for i, line := range lines {
 		if fenced[i] {
 			stack = nil
+			inBQPara = false
 			continue
 		}
+		if bq := bqLineRE.FindStringSubmatch(line); bq != nil {
+			prefix, rest := bq[1], bq[2]
+			trimmed := strings.TrimSpace(rest)
+			if trimmed == "" {
+				inBQPara = false
+				continue
+			}
+			expRest := strings.ReplaceAll(rest, "\t", "    ")
+			if m := ulMarkerRE.FindStringSubmatch(expRest); m != nil {
+				if inBQPara {
+					lines[i] = prefix + m[1] + `\` + m[2] + m[3]
+				}
+				continue
+			}
+			if m := olMarkerRE.FindStringSubmatch(expRest); m != nil {
+				if inBQPara {
+					lines[i] = prefix + m[1] + m[2] + `\` + m[3] + m[4]
+				}
+				continue
+			}
+			if !strings.HasPrefix(trimmed, "#") && !strings.HasPrefix(trimmed, ">") {
+				inBQPara = true
+			} else {
+				inBQPara = false
+			}
+			continue
+		}
+		inBQPara = false
 		if strings.TrimSpace(line) == "" {
 			// A blank line does not immediately pop an active list, unless a
 			// non-indented non-list block follows; keep stack for now.

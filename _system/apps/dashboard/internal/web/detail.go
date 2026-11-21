@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/metamodel"
+	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/project"
 	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/render"
 	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/wiki"
 )
@@ -587,6 +588,53 @@ func (s *Server) handlePageDetail(w http.ResponseWriter, r *http.Request) {
 		issueVal = issueFields(page, sn.titleIndex(), sn.linkIndex(), vocab)
 	}
 
+	byStem := sn.byStem()
+	diagramLinks := []map[string]any{}
+	var contextDiagram, contextFlows, whitebox, sequence, deployment, egoGraph, egoLayers any
+	hints := []string{}
+
+	switch folder {
+	case "context":
+		cfg := wiki.LoadConfig(s.Paths, s.warnOnce)
+		eifs := sn.folder("external-interfaces")
+		cd, dl := project.BuildContextDiagram(cfg.SystemName, eifs, sn.folder("stakeholders"))
+		contextDiagram = nilIfEmpty(cd)
+		if dl != nil {
+			diagramLinks = dl
+		}
+		contextFlows = project.BuildContextFlows(eifs)
+	case "domain-terms", "glossary":
+		eg := project.BuildGlossaryEgoGraph(sn.all(), sn.folder("domain-terms"), sn.folder("glossary"), sn.folder("data-models"), stem)
+		if eg != nil {
+			egoGraph = eg
+			counts := eg["layer_counts"].(map[string]int)
+			layers := []map[string]any{}
+			for _, kv := range [][2]string{{"DM", "Data model"}, {"STK", "Stakeholder"}, {"GOAL", "Goals"}, {"BB", "Building block"}} {
+				if c := counts[kv[0]]; c > 0 {
+					layers = append(layers, map[string]any{"key": kv[0], "label": kv[1], "count": c})
+				}
+			}
+			egoLayers = layers
+		}
+	case "building-blocks":
+		whitebox = nilIfEmpty(project.BuildWhitebox(stem, sn.folder("building-blocks"), sn.folder("external-interfaces"), byStem))
+	case "runtime-scenarios":
+		scenarios := sn.folder("runtime-scenarios")
+		sequence = nilIfEmpty(project.BuildSequenceDiagram(stem, scenarios, byStem))
+		hints = project.RuntimeHints(stem, scenarios, sn.folder("building-blocks"), byStem)
+	case "deployment-nodes":
+		nodes := sn.folder("deployment-nodes")
+		blocks := sn.folder("building-blocks")
+		dep, dl := project.BuildDeploymentDiagram(stem, nodes, blocks, sn.folder("external-interfaces"), byStem)
+		deployment = nilIfEmpty(dep)
+		if dl != nil {
+			diagramLinks = dl
+		}
+		hints = project.DeploymentHints(stem, nodes, blocks, byStem)
+	}
+
+	needsMermaid := contextDiagram != nil || whitebox != nil || sequence != nil || deployment != nil || strings.Contains(bodyHTML, "language-mermaid")
+
 	s.renderHTML(w, r, http.StatusOK, "detail.html", cat, map[string]any{
 		"kind":            kind,
 		"id":              page.ID(),
@@ -598,19 +646,19 @@ func (s *Server) handlePageDetail(w http.ResponseWriter, r *http.Request) {
 		"body_html":       bodyHTML,
 		"crumb":           crumb,
 		"crumb_href":      crumbHref,
-		"context_diagram": nil,
-		"context_flows":   nil,
+		"context_diagram": contextDiagram,
+		"context_flows":   contextFlows,
 		"relations":       relations,
 		"trace":           trace,
-		"whitebox":        nil,
+		"whitebox":        whitebox,
 		"state":           stateVal,
-		"sequence":        nil,
-		"hints":           []string{},
-		"deployment":      nil,
-		"diagram_links":   []any{},
-		"ego_graph":       nil,
-		"ego_layers":      nil,
-		"needs_mermaid":   strings.Contains(bodyHTML, "language-mermaid"),
+		"sequence":        sequence,
+		"hints":           hints,
+		"deployment":      deployment,
+		"diagram_links":   diagramLinks,
+		"ego_graph":       egoGraph,
+		"ego_layers":      egoLayers,
+		"needs_mermaid":   needsMermaid,
 		"sources":         provenanceChips(page, sn.sourceIndex()),
 		"issue":           issueVal,
 		"page_issues":     openIssuesFor(sn, stem, vocab),
