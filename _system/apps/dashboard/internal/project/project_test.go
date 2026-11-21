@@ -159,8 +159,11 @@ func TestGoalsFRHierarchyAndArchProjections(t *testing.T) {
 		}
 	}
 	node, lvl := FRHierarchyNode(h, "FR-001-epic")
-	if lvl != "epic" || !strings.Contains(MermaidFRSubtree(node), "FR004") {
-		t.Fatalf("FR subtree failed: lvl=%q", lvl)
+	frBB := mkPage("building-blocks", "BB-009-drv", map[string]any{"id": "BB-009", "title": "Driver Block", "drivers": []any{"[[FR-001-epic]]"}}, "")
+	byStem[frBB.Stem] = frBB
+	subDiag, subLinks := MermaidFRSubtree(node, FRBuildingBlocks("FR-001-epic", []*wiki.Page{frBB}, byStem))
+	if lvl != "epic" || !strings.Contains(subDiag, "FR004") || !strings.Contains(subDiag, `FR001 -.-> BB009[["BB-009<br/>Driver Block"]]:::block`) || len(subLinks) != 2 {
+		t.Fatalf("FR subtree failed: lvl=%q links=%d\n%s", lvl, len(subLinks), subDiag)
 	}
 
 	// Architecture projections: whitebox, sequence + hints, deployment + hints

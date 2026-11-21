@@ -719,30 +719,52 @@ func MermaidGoalEpicTree(goals *GoalsData, hierarchy map[string]any) (string, []
 	return strings.Join(lines, "\n"), drawn
 }
 
-// MermaidFRSubtree projects one FR's own Feature -> Story breakdown for
-// /functional-requirements/<stem>.
-func MermaidFRSubtree(node map[string]any) string {
+// FRBuildingBlocks returns building blocks whose `drivers:` list names stem,
+// sorted by ID (FR-047, #66).
+func FRBuildingBlocks(stem string, blocks []*wiki.Page, byStem map[string]*wiki.Page) []*wiki.Page {
+	var out []*wiki.Page
+	for _, p := range SortedByID(blocks) {
+		for _, drv := range wiki.LinksOf(p, "drivers", byStem) {
+			if drv == stem {
+				out = append(out, p)
+				break
+			}
+		}
+	}
+	return out
+}
+
+// MermaidFRSubtree projects one FR's own Feature -> Story breakdown plus its
+// linked building blocks for /functional-requirements/<stem> (FR-047, #66).
+func MermaidFRSubtree(node map[string]any, blocks []*wiki.Page) (string, []map[string]any) {
 	if node == nil {
-		return ""
+		return "", nil
 	}
 	feats, _ := node["features"].([]map[string]any)
 	ownStories, _ := node["stories"].([]map[string]any)
 	direct, _ := node["direct_stories"].([]map[string]any)
-	if len(feats) == 0 && len(ownStories) == 0 && len(direct) == 0 {
-		return ""
+	if len(feats) == 0 && len(ownStories) == 0 && len(direct) == 0 && len(blocks) == 0 {
+		return "", nil
 	}
 	rid := DiagramNodeID(node["id"].(string))
 	lines := []string{
 		"graph TD",
 		fmt.Sprintf(`  %s["%s<br/>%s"]:::root`, rid, node["id"].(string), CleanLabel(node["title"].(string), true)),
 	}
+	drawn := make([]map[string]any, 0)
 	child := func(parentNID string, rec map[string]any, css string) string {
 		nid := DiagramNodeID(rec["id"].(string))
 		label := CleanLabel(rec["title"].(string), true)
+		url := "/functional-requirements/" + rec["stem"].(string)
 		lines = append(lines,
 			fmt.Sprintf(`  %s --> %s["%s<br/>%s"]:::%s`, parentNID, nid, rec["id"].(string), label, css),
-			fmt.Sprintf(`  click %s "/functional-requirements/%s"`, nid, rec["stem"].(string)),
+			fmt.Sprintf(`  click %s "%s"`, nid, url),
 		)
+		drawn = append(drawn, map[string]any{
+			"id":    rec["id"].(string),
+			"title": rec["title"].(string),
+			"url":   url,
+		})
 		return nid
 	}
 	for _, f := range feats {
@@ -758,10 +780,19 @@ func MermaidFRSubtree(node map[string]any) string {
 	for _, s := range direct {
 		child(rid, s, "story")
 	}
+	for _, b := range blocks {
+		nid := DiagramNodeID(b.ID())
+		lines = append(lines,
+			fmt.Sprintf(`  %s -.-> %s[["%s<br/>%s"]]:::block`, rid, nid, b.ID(), CleanLabel(b.Title(), true)),
+			fmt.Sprintf(`  click %s "%s"`, nid, wiki.PageURL(b.Folder, b.Stem)),
+		)
+		drawn = append(drawn, NodeLink(b))
+	}
 	lines = append(lines,
 		"  classDef root fill:#2f6fb3,stroke:#7fc0ff,color:#ffffff,stroke-width:2px,font-weight:bold;",
 		"  classDef feature fill:#d7dbe3,stroke:#9aa3b2,color:#15202e;",
 		"  classDef story fill:#f3f6fb,stroke:#c4ccd9,color:#15202e;",
+		"  classDef block fill:#e3efe6,stroke:#6f9b7c,color:#15202e;",
 	)
-	return strings.Join(lines, "\n")
+	return strings.Join(lines, "\n"), drawn
 }

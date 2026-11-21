@@ -461,12 +461,21 @@ func (s *Server) handleFRDetail(w http.ResponseWriter, r *http.Request) {
 		"n_stories":      nStories,
 	}
 
-	diagram := project.MermaidFRSubtree(node)
+	subtreeNode := node
+	if subtreeNode == nil {
+		subtreeNode = map[string]any{"id": page.ID(), "title": page.Title()}
+	}
+	frBlocks := project.FRBuildingBlocks(stem, sn.folder("building-blocks"), sn.byStem())
+	diagram, diagramLinks := project.MermaidFRSubtree(subtreeNode, frBlocks)
+	if diagramLinks == nil {
+		diagramLinks = []map[string]any{}
+	}
 	trace := buildTrace(sn, stem, "functional-requirements")
 	s.renderHTML(w, r, http.StatusOK, "fr.html", cat, map[string]any{
 		"fr":            fr,
 		"body_html":     bodyHTML,
 		"diagram":       nilIfEmpty(diagram),
+		"diagram_links": diagramLinks,
 		"ancestors":     project.FRAncestors(frs, stem),
 		"trace":         trace,
 		"relations":     buildRelationsPanel(sn, stem, traceStems(trace), vocab),
