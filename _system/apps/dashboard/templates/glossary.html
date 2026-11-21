@@ -5,7 +5,7 @@
 {% from "_maturity.html" import maturity_bar %}
 {% from "_macros.html" import status_rank %}
 {% from "_list.html" import list_attrs, list_controls, list_empty %}
-{% set spec = list_spec("glossary-term") %}
+{% set spec = list_spec(term_type) %}
 {% block content %}
 <h1 class="page-h1">Domain Terms <span class="count-pill">{{ total }} terms</span></h1>
 {{ maturity_bar(maturity) }}

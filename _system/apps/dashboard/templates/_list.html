@@ -1,5 +1,5 @@
 {# The shared list layer's markup (static/list-view.js, FR-021, FR-022).
-   `spec` is list_spec(type): {type, orders}, the orders from the metamodel.
+   `spec` is list_spec(type): {type, orders}, the sort presets app.py offers for that type.
    The controls stay hidden until the script runs: without it they do nothing. #}
 {% from "_macros.html" import status_rank %}
 {% macro list_attrs(spec) %} data-list="{{ spec.type }}" data-sort-orders='{{ spec.orders | tojson }}'{% endmacro %}

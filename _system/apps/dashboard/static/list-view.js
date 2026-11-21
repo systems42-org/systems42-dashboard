@@ -1,5 +1,5 @@
 // The shared list layer (FR-021, FR-022): sort by one or several columns, the
-// metamodel's sort orders, an "agreed only" filter, and all of it in the address.
+// dashboard's sort presets for its type, an "agreed only" filter, and all of it in the address.
 //
 // Markup, declared in the templates:
 //

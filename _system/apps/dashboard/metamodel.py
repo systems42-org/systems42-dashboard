@@ -285,19 +285,6 @@ def blocks() -> list[dict]:
     return out
 
 
-def sort_orders(type_name: str) -> list[dict]:
-    """The useful list orders a type page declares (FR-021), as
-    `[{label, keys}]`. A type without any, or an unknown type, has none."""
-    for t in _load("types", "type"):
-        if t.get("name") == type_name:
-            out = []
-            for so in t.get("sort_orders") or []:
-                if isinstance(so, dict) and so.get("label") and so.get("keys"):
-                    out.append({"label": str(so["label"]), "keys": [str(k) for k in so["keys"]]})
-            return out
-    return []
-
-
 def _type_page(type_name: str) -> dict:
     return next((t for t in _load("types", "type") if t.get("name") == type_name), {})
 
