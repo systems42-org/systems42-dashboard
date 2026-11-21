@@ -321,6 +321,12 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Gernot Starke promoted [[STK-001-readers]] and [[STK-023-keyholder]] to `accepted`.
 - STK-023 gets the alias "Yoda". Its naming paragraph now says both aliases name the role.
 
+## [2026-11-21] inspect | FR-046: who gets the keys when the holder leaves
+- Origin: issue #56, the rule question left open by pull request #72.
+- Decision (Gernot Starke, 2026-11-21): the earliest tab still connected gets the rights, also when it held them before. A returning holder counts as newly connected. A session always has a Keyholder.
+- Updated: [[FR-046-shared-session-in-a-workshop]] (Keyholder rule, history). No code change: the dashboard already works this way, and two new tests in `tests/test_presence.py` hold it.
+- Not changed: [[STK-023-keyholder]] is `accepted` and still says "the rights never go back to an earlier holder". It needs the same wording, by promotion.
+
 ## [2026-11-21] capture | A public website for the dashboard
 - Source: `raw/ingested/public-website-for-the-dashboard.md` ([[SRC-037-a-public-website-for-the-dashboard]]), written on 2026-11-21 from Gernot Starke's requirement and the existing site in `site/`. Grilling: [[SRC-038-grilling-session-on-the-public-website]].
 - Decisions (Gernot Starke, 2026-11-21):

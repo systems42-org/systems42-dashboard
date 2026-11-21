@@ -4,7 +4,7 @@ type: functional-requirement
 title: Shared session in a workshop
 status: draft
 created: 2026-11-19
-updated: 2026-11-19
+updated: 2026-11-21
 sources: ["[[SRC-032-shared-session-in-a-workshop]]", "[[SRC-033-grilling-session-on-the-shared-session]]"]
 related: ["[[STK-023-keyholder]]", "[[STK-008-workshop-participants-and-facilitators]]", "[[STK-013-people-learning-or-presenting-systems42]]", "[[FR-015-read-the-formalities-in-the-footer]]", "[[FR-023-areas-and-sections-follow-the-tailoring]]", "[[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[CON-001-proof-of-concept-not-production-ready]]"]
 tags: ["functional-requirement", "method"]
@@ -27,7 +27,7 @@ As a [[STK-008-workshop-participants-and-facilitators|workshop facilitator]] I w
 
 - **Join.** The home page shows a QR code and its address. `/join` shows the code full size for projecting.
 - **Who is connected.** Every page shows how many browser tabs are connected ([[FR-015-read-the-formalities-in-the-footer]]). `/who` lists them under generated nicknames, never real names.
-- **Keyholder.** The first tab to connect holds the rights ([[STK-023-keyholder]]) and is called "Yoda". When that tab closes, the rights pass to the tab that connected next-earliest. That tab keeps its own nickname. The rights never go back to an earlier holder.
+- **Keyholder.** The first tab to connect holds the rights ([[STK-023-keyholder]]) and is called "Yoda". A tab in the background keeps them. When that tab closes, the rights pass to the earliest tab still connected. That tab keeps its own nickname. The rights never go back while the new holder is connected. An earlier holder that comes back counts as newly connected, and can hold the rights again only when it is the earliest tab left.
 - **View.** A dialog called View shows everyone which areas and sections are shown. Only the Keyholder changes it. A hidden section leaves the home page, the area pages and the top bar, but stays reachable by address and search.
 - The view offers only what the tailoring includes ([[FR-023-areas-and-sections-follow-the-tailoring]], [[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]]).
 - The view lasts until the dashboard stops. After a restart the dashboard shows everything the project uses. It writes no file for the view ([[CON-002-dashboard-never-writes-to-the-wiki]]).
@@ -48,4 +48,4 @@ As a [[STK-008-workshop-participants-and-facilitators|workshop facilitator]] I w
 
 ## History
 
-> Extracted from the dashboard code on 2026-11-10 ([[SRC-032-shared-session-in-a-workshop]]). Gernot Starke decided on 2026-11-19: one feature, Should, the view lasts until the dashboard stops, the dialog is called View, and the nickname "Yoda" stays with the first holder ([[SRC-033-grilling-session-on-the-shared-session]]). He agreed the success metric the same day, on condition that it is simple to test.
+> Extracted from the dashboard code on 2026-11-10 ([[SRC-032-shared-session-in-a-workshop]]). Gernot Starke decided on 2026-11-19: one feature, Should, the view lasts until the dashboard stops, the dialog is called View, and the nickname "Yoda" stays with the first holder ([[SRC-033-grilling-session-on-the-shared-session]]). He agreed the success metric the same day, on condition that it is simple to test. On 2026-11-21 he decided that the earliest tab still connected gets the rights, also when it held them before, so a session always has a Keyholder ([issue #56](https://github.com/systems42-org/systems42-dashboard/issues/56)).
