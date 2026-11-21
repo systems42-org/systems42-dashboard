@@ -55,9 +55,10 @@ local`: the launcher builds the image from `_system/apps/dashboard/` at every
 start. The launcher hands every command it does not know to `dev.sh` here:
 
 ```sh
-./dashboard.sh rebuild  # build the local image from scratch, then start
-./dashboard.sh local    # no Docker: run Flask directly on http://localhost:8000
-./dashboard.sh test     # run the test scripts in Docker (also `make test`)
+./dashboard.sh rebuild    # build the local image from scratch, then start
+./dashboard.sh local      # no Docker: run Flask directly on http://localhost:8000
+./dashboard.sh app-start  # no Docker: build and start the Go dashboard (also `make app-start`)
+./dashboard.sh test       # run the test scripts in Docker (also `make test`)
 ```
 
 `local` is the older way to run without Docker and promises nothing. Use
@@ -450,7 +451,12 @@ Python reference (FR-055, DR-007, issue #80). Both share `static/`,
 embeds them with `go:embed`). `Dockerfile` and `pyproject.toml` name their
 files one by one, so Go files stay out of the container image and the wheel.
 
-Build and run without cgo from this directory:
+From the repository root, `make app-start` (or `./dashboard.sh app-start`)
+builds the pure-Go binary into a temporary file, starts it on
+`http://localhost:8080` against this wiki and opens the browser. Ctrl+C stops
+it and removes the temporary binary.
+
+Build and run directly without cgo from this directory:
 
 ```sh
 CGO_ENABLED=0 go build ./cmd/systems42-dashboard

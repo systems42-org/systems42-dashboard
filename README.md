@@ -24,7 +24,9 @@ define the content types and conventions.
    `http://localhost:8080`. It starts the release that `dashboard_version:` in
    `_system/wiki.yaml` names. This repository names `local` and builds the
    dashboard from its own code. Without Docker, `./dashboard.sh uv` (or
-   `make uv`) starts the same release with [uv](https://docs.astral.sh/uv/).
+   `make uv`) starts the same release with [uv](https://docs.astral.sh/uv/),
+   and `make app-start` builds and starts the Go implementation (issue #80,
+   Phase 0) on `http://localhost:8080`.
 2. Open this folder in Obsidian with **Open folder as vault**.
 3. Point your agent at this folder. `AGENTS.md` holds the rules; Claude Code reads
    it through `CLAUDE.md` and finds the skills in `.claude/skills/`.

@@ -34,7 +34,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - Dashboard: on a functional requirement page the sources row no longer overlaps the row of pills above it.
 
 ### Added
-- Dashboard (Go, Phase 0): Go module under `_system/apps/dashboard/` (`cmd/systems42-dashboard/`, `internal/wiki`, `internal/metamodel`, `internal/web`), embedded static/brand/template assets via `go:embed`, CON-005 preflight, `wiki.yaml` reader, home page, shared Jinja2 templates via `gonja/v2` (answering issue #80 question 2), Python vs Go parity test (`tests/test_parity.py`), and a `go` job in `.github/workflows/ci.yml` (FR-055, DR-007, issue #80).
+- Dashboard (Go, Phase 0): Go module under `_system/apps/dashboard/` (`cmd/systems42-dashboard/`, `internal/wiki`, `internal/metamodel`, `internal/web`), embedded static/brand/template assets via `go:embed`, CON-005 preflight, `wiki.yaml` reader, home page, `make app-start` (`./dashboard.sh app-start`), shared Jinja2 templates via `gonja/v2` (answering issue #80 question 2), Python vs Go parity test (`tests/test_parity.py`), and a `go` job in `.github/workflows/ci.yml` (FR-055, DR-007, issue #80).
 - Launcher: `./dashboard.sh uv` (also `make uv`) starts the release a wiki names with [uv](https://docs.astral.sh/uv/) instead of Docker, for machines where no container engine runs, such as a virtual machine. Every release from the next one on carries a wheel for it (FR-054, DR-007).
 - Dashboard repository: GitHub Actions runs `./dashboard.sh test` on every pull
   request and push to `main` (`.github/workflows/ci.yml`). The test summary

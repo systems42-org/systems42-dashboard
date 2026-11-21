@@ -227,7 +227,7 @@ def test_the_dashboard_repository_hands_other_commands_to_dev_sh():
     dev = (_REPO / "_system" / "apps" / "dashboard" / "dev.sh")
     assert os.access(dev, os.X_OK), "dev.sh must be executable"
     text = dev.read_text(encoding="utf-8")
-    for cmd in ("rebuild)", "local)", "test)"):
+    for cmd in ("rebuild)", "local)", "app-start)", "test)"):
         assert cmd in text, cmd
 
 
