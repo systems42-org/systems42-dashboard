@@ -350,6 +350,23 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Updated: [[FR-046-shared-session-in-a-workshop]] (Keyholder rule, history). No code change: the dashboard already works this way, and two new tests in `tests/test_presence.py` hold it.
 - Not changed: [[STK-023-keyholder]] is `accepted` and still says "the rights never go back to an earlier holder". It needs the same wording, by promotion.
 
+## [2026-11-21] capture | A public website for the dashboard
+- Source: `raw/ingested/public-website-for-the-dashboard.md` ([[SRC-037-a-public-website-for-the-dashboard]]), written on 2026-11-21 from Gernot Starke's requirement and the existing site in `site/`. Grilling: [[SRC-038-grilling-session-on-the-public-website]].
+- Decisions (Gernot Starke, 2026-11-21):
+  - Goal: GOAL-002. The downloads also serve GOAL-008. No new goal.
+  - Audience: people who consider using Systems42 become an alias of STK-013. STK-022 is not brought back.
+  - The static export is, for now, only the way this site gets its demo. Publishing any wiki is out of scope.
+  - The demo shows the dashboard's own wiki. The maintainers switch it only when the other wiki's owner agrees.
+  - No measure of its own: QR-001 applies to the site.
+  - Gernot Starke keeps the imprint and the privacy notice correct.
+  - Priorities: epic Should, demo and legal information Must, the other features Should.
+  - The three gaps of the site are open points on the pages and GitHub issue #86.
+- Created: [[FR-056-a-public-website-for-the-dashboard]], [[FR-057-overview-of-the-dashboard-on-the-website]], [[FR-058-a-demo-to-try-without-installing]], [[FR-059-downloads-on-the-website]], [[FR-060-documentation-on-the-website]], [[FR-061-legal-and-project-information-on-the-website]], [[FR-062-the-website-is-built-and-published-from-the-repository]], SRC-037, SRC-038.
+- Updated: STK-013 (alias, snapshot, goal), STK-012 (goal), CON-001 (the demo), QR-001 (applies to the site), `_system/index.md`.
+- Issues: none. Every question was answered.
+- IDs: FR-054, FR-055, SRC-036 and DR-007 are taken by pull request #81, which is not merged, so this capture starts at FR-056 and SRC-037.
+- Not changed: GOAL-002 and GOAL-008 are served through the `goal:` field of the new pages.
+
 ## [2026-11-21] inspect | Issue schema taken over from systems42-org/meta
 - Origin: [meta pull request 55](https://github.com/systems42-org/meta/pull/55), which adopts `category:` and `owner:` for issues.
 - Schema: `type-issue.md`, `rel-owner.md` and `_templates/issue.md` now match meta. The category `systems42` is `method`, both fields are optional, `owner:` takes a stakeholder link only.
