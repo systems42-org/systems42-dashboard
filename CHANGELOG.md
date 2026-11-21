@@ -35,6 +35,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - Dashboard: on a functional requirement page the sources row no longer overlaps the row of pills above it.
 
 ### Added
+- Dashboard: the diagram on a functional requirement's page also shows the building blocks whose `drivers:` name the requirement, with a dashed edge (FR-047, #66). A requirement without children shows the diagram when it has building blocks. Every page in the diagram is also a text link below it.
 - Launcher: `./dashboard.sh uv` (also `make uv`) starts the release a wiki names with [uv](https://docs.astral.sh/uv/) instead of Docker, for machines where no container engine runs, such as a virtual machine. Every release from the next one on carries a wheel for it (FR-054, DR-007).
 - Dashboard repository: GitHub Actions runs `./dashboard.sh test` on every pull
   request and push to `main` (`.github/workflows/ci.yml`). The test summary

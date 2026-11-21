@@ -374,3 +374,11 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Resolved: [[ISS-007-issue-category-and-owner-belong-in-meta]].
 - Updated: [[FR-026-issues-carry-a-category]], [[FR-028-who-answers-an-issue]], [[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]].
 - No code change: the dashboard reads the category values from the metamodel. It still shows an owner written as a plain name.
+
+## [2026-11-21] inspect | FR-047: building blocks in the detail diagram
+- Origin: issue #66.
+- Code: the diagram on a requirement's page draws its children and the building blocks whose `drivers:` name it. Test: `tests/test_fr_detail_diagram.py`.
+- Updated: [[FR-047-see-the-requirements-as-a-story-map]] (open points, history).
+- Removed: the field `building-blocks: []` from FR-047 to FR-053. The template does not define it, and nothing read it.
+- Claude's choices, to be checked: a static Mermaid diagram instead of an interactive one, and the block's `drivers:` as the only source of the link.
+- Not built: [[FR-048-show-the-delivery-status-of-a-requirement]]. It waits for the delivery fields of the Systems42 metamodel.
