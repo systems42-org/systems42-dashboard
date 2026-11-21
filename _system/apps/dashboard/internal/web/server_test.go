@@ -435,3 +435,61 @@ func TestPhase2AreasListsMetamodelAndCustomSection(t *testing.T) {
 		t.Error("/metamodel linked protocol-relative projection route //evil.example/x")
 	}
 }
+
+func TestPhase3ProjectionRoutesAndFilters(t *testing.T) {
+	srv := newRepoServer(t)
+
+	for _, u := range []string{
+		"/req42/scope", "/req42/models", "/req42/functional-requirements",
+		"/goals", "/entity-diagram", "/graph/domain-terms",
+		"/arc42/building-blocks", "/arc42/deployment", "/arc42/runtime", "/arc42/concepts",
+		"/functional-requirements/FR-055-an-installable-dashboard-app",
+	} {
+		rec := httptest.NewRecorder()
+		srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, u, nil))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET %s = %d, want 200", u, rec.Code)
+		}
+	}
+
+	// Phase 3 legacy redirects
+	for _, pair := range [][2]string{
+		{"/data-model?context=Core", "/entity-diagram?context=Core"},
+		{"/graph/glossary?edges=related", "/graph/domain-terms?edges=related"},
+		{"/req42/backlog", "/req42/functional-requirements"},
+	} {
+		rec := httptest.NewRecorder()
+		srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, pair[0], nil))
+		if rec.Code != http.StatusMovedPermanently || rec.Header().Get("Location") != pair[1] {
+			t.Fatalf("GET %s = %d loc=%q, want 301 -> %q", pair[0], rec.Code, rec.Header().Get("Location"), pair[1])
+		}
+	}
+
+	// Focus filter on fixture:domain-model (exercises selectattr|map|first in data_model.html)
+	fixtureRoot := filepath.Join(repoRoot(t), "_system", "apps", "dashboard", "tests", "fixtures", "domain-model")
+	mmDir := filepath.Join(repoRoot(t), "_system", "metamodel")
+	anchorsDir := filepath.Join(repoRoot(t), "_system", "anchors")
+	dmSrv := web.NewServer(web.Options{
+		Paths: wiki.Paths{
+			RepoDir:      fixtureRoot,
+			WikiDir:      filepath.Join(fixtureRoot, "wiki"),
+			SourcesDir:   filepath.Join(fixtureRoot, "raw", "sources"),
+			ConfigPath:   filepath.Join(fixtureRoot, "wiki.yaml"),
+			DocsDir:      filepath.Join(fixtureRoot, "docs"),
+			MetamodelDir: mmDir,
+			NotationsDir: filepath.Join(repoRoot(t), "_system", "notations"),
+			AnchorsDir:   anchorsDir,
+		},
+		StaticFS:    dashboard.StaticFS(),
+		TemplatesFS: dashboard.TemplatesFS(),
+		BrandsFS:    dashboard.BrandsFS(),
+		Version:     dashboard.Version(),
+		DisplayTZ:   "UTC",
+		PublicURL:   "http://127.0.0.1:8080",
+	})
+	rec := httptest.NewRecorder()
+	dmSrv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/entity-diagram?focus=DT-002-order", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "Order") || !strings.Contains(rec.Body.String(), "and its direct neighbours") {
+		t.Fatalf("GET /entity-diagram?focus=DT-002-order failed: status=%d", rec.Code)
+	}
+}

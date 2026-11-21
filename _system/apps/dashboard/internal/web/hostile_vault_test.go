@@ -182,7 +182,10 @@ func TestHostileVault(t *testing.T) {
 		}
 	}
 	for _, u := range []string{
-		"/", "/req42", "/arc42", "/commons", "/req42/quality", "/req42/constraints",
+		"/", "/req42", "/arc42", "/commons", "/req42/scope", "/req42/models",
+		"/req42/quality", "/req42/constraints", "/req42/functional-requirements",
+		"/goals", "/entity-diagram", "/graph/domain-terms",
+		"/arc42/building-blocks", "/arc42/deployment", "/arc42/runtime", "/arc42/concepts",
 		"/metamodel", "/method", "/changes", "/issues", "/issues?status=open",
 		"/stakeholders", "/decisions", "/domain-terms", "/source/SRC-001-hostile",
 	} {
@@ -583,7 +586,10 @@ func TestHostileEveryType(t *testing.T) {
 	})
 
 	urls = append([]string{
-		"/", "/req42", "/arc42", "/commons", "/req42/quality", "/req42/constraints",
+		"/", "/req42", "/arc42", "/commons", "/req42/scope", "/req42/models",
+		"/req42/quality", "/req42/constraints", "/req42/functional-requirements",
+		"/goals", "/entity-diagram", "/graph/domain-terms",
+		"/arc42/building-blocks", "/arc42/deployment", "/arc42/runtime", "/arc42/concepts",
 		"/metamodel", "/method", "/changes", "/issues", "/issues?status=open",
 		"/stakeholders", "/decisions", "/domain-terms", "/does-not-exist",
 	}, urls...)

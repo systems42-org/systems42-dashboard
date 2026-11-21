@@ -44,20 +44,6 @@ NON_WIKI_FIXTURES = {"notations"}
 # them. Exact paths live in UNPORTED_EXACT; prefixes in UNPORTED_PREFIXES.
 # When a phase lands, remove its entries here so CI enforces parity on them.
 UNPORTED_EXACT: dict[str, str] = {
-    # Phase 3: projections
-    "/req42/scope": "Phase 3 (page projection)",
-    "/req42/models": "Phase 3 (page projection)",
-    "/goals": "Phase 3",
-    "/entity-diagram": "Phase 3",
-    "/data-model": "Phase 3",
-    "/graph/domain-terms": "Phase 3",
-    "/graph/glossary": "Phase 3",
-    "/req42/functional-requirements": "Phase 3",
-    "/req42/backlog": "Phase 3",
-    "/arc42/building-blocks": "Phase 3",
-    "/arc42/deployment": "Phase 3",
-    "/arc42/runtime": "Phase 3",
-    "/arc42/concepts": "Phase 3",
     # Phase 4: search
     "/search": "Phase 4",
     "/search.json": "Phase 4",
@@ -70,14 +56,6 @@ UNPORTED_EXACT: dict[str, str] = {
 }
 
 UNPORTED_PREFIXES: tuple[tuple[str, str], ...] = (
-    # Phase 3: functional requirement detail views and page-embedded projections
-    ("/functional-requirements/", "Phase 3"),
-    ("/page/context/", "Phase 3 (page projection)"),
-    ("/page/glossary/", "Phase 3 (page projection)"),
-    ("/page/domain-terms/", "Phase 3 (page projection)"),
-    ("/page/building-blocks/", "Phase 3 (page projection)"),
-    ("/page/runtime-scenarios/", "Phase 3 (page projection)"),
-    ("/page/deployment-nodes/", "Phase 3 (page projection)"),
     # Phase 5: docs files under /about
     ("/about/files/", "Phase 5"),
 )
@@ -99,9 +77,25 @@ FIXED_ROUTES = (
     "/req42",
     "/arc42",
     "/commons",
+    "/req42/scope",
+    "/req42/models",
     "/req42/quality",
     "/req42/constraints",
+    "/req42/functional-requirements",
+    "/req42/backlog",
     "/req42/building-blocks",
+    "/goals",
+    "/entity-diagram",
+    "/entity-diagram?focus=DT-002-order",
+    "/data-model",
+    "/graph/domain-terms",
+    "/graph/domain-terms?edges=related",
+    "/graph/domain-terms?edges=structured",
+    "/graph/glossary",
+    "/arc42/building-blocks",
+    "/arc42/deployment",
+    "/arc42/runtime",
+    "/arc42/concepts",
     "/section/C6",
     "/metamodel",
     "/method",
@@ -277,7 +271,11 @@ class _Normalizer(HTMLParser):
                     if body:
                         if out and out[-1].startswith("<script ") and 'type="application/json"' in out[-1]:
                             try:
-                                body = json.dumps(json.loads(body), sort_keys=True, separators=(",", ":"))
+                                parsed = json.loads(body)
+                                # Python's build_glossary_ego_graph iterates a set for nodes.
+                                if 'id="ego-data"' in out[-1] and isinstance(parsed, dict) and isinstance(parsed.get("nodes"), list):
+                                    parsed["nodes"] = sorted(parsed["nodes"], key=lambda n: n.get("data", {}).get("id", ""))
+                                body = json.dumps(parsed, sort_keys=True, separators=(",", ":"))
                             except ValueError:
                                 pass
                         out.append("RAW:" + body)

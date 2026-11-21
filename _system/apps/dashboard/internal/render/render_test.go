@@ -244,4 +244,10 @@ func TestExtractLabeledPAMAndEmphasis(t *testing.T) {
 	if strings.HasPrefix(inline, "<p>") || !strings.Contains(inline, "<code>[[literal]]</code>") || !strings.Contains(inline, `href="#target"`) {
 		t.Fatalf("RenderMarkdownInline unexpected: %s", inline)
 	}
+
+	// Callout line immediately followed by `> - ...` stays inside the same <p> (Python-Markdown parity).
+	bq := RenderMarkdown("> [!note] Open points\n> - Item one.\n> - Item two.", ctx)
+	if strings.Contains(bq, "<ul>") || !strings.Contains(bq, "<strong>Open points</strong>") || !strings.Contains(bq, "- Item one.") {
+		t.Fatalf("callout bullet parity failed: %s", bq)
+	}
 }

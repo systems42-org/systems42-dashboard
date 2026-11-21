@@ -454,13 +454,18 @@ Python reference (FR-055, DR-007, issue #80). Both share `static/`,
 embeds them with `go:embed`). `Dockerfile` and `pyproject.toml` name their
 files one by one, so Go files stay out of the container image and the wheel.
 
-Phases 0 to 2 are in place: the home page, static and brand endpoints,
+Phases 0 to 3 are in place: the home page, static and brand endpoints,
 heartbeat/presence API, Markdown and wikilink renderer with HTML sanitiser
 (`internal/render`), `/page/<folder>/<stem>` and `/source/<stem>` detail views,
 areas (`/req42`, `/arc42`, `/commons`), generic block and section routes
 (`/req42/<slug>`, `/section/<id>`), `/metamodel`, `/method`, `/changes`,
-`/issues`, `/stakeholders`, `/decisions`, `/domain-terms`, and the hostile-vault
-security suite (`internal/web/hostile_vault_test.go`).
+`/issues`, `/stakeholders`, `/decisions`, `/domain-terms`, all Mermaid and
+cytoscape projections (`internal/project`: `/goals`, `/entity-diagram`,
+`/graph/domain-terms`, `/req42/functional-requirements`,
+`/functional-requirements/<stem>`, `/arc42/building-blocks`,
+`/arc42/deployment`, `/arc42/runtime`, `/arc42/concepts`, and embedded page
+projections), and the hostile-vault security suite
+(`internal/web/hostile_vault_test.go`).
 
 From the repository root, `make app-start` (or `./dashboard.sh app-start`)
 builds the pure-Go binary into a temporary file, starts it on

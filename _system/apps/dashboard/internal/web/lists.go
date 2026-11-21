@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/metamodel"
+	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/project"
 	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/render"
 	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/wiki"
 )
@@ -89,7 +90,7 @@ func qrDetails(p *wiki.Page, linkCtx render.LinkContext) map[string]any {
 	}
 }
 
-func (s *Server) renderBlockList(w http.ResponseWriter, r *http.Request, cat *metamodel.Catalog, block metamodel.Section, _ string) {
+func (s *Server) renderBlockList(w http.ResponseWriter, r *http.Request, cat *metamodel.Catalog, block metamodel.Section, slug string) {
 	now := s.Now()
 	sn := newSnapshot(s.Store)
 	linkCtx := s.linkContext(sn)
@@ -129,16 +130,37 @@ func (s *Server) renderBlockList(w http.ResponseWriter, r *http.Request, cat *me
 		listType = s.Metamodel.TypeForFolder(block.Folders[0])
 	}
 
+	var contextDiagram any
+	var contextFlows any
+	diagramLinks := []map[string]any{}
+	var entityDiagram any
+	if slug == "scope" {
+		cfg := wiki.LoadConfig(s.Paths, s.warnOnce)
+		eifs := sn.folder("external-interfaces")
+		cd, dl := project.BuildContextDiagram(cfg.SystemName, eifs, sn.folder("stakeholders"))
+		contextDiagram = nilIfEmpty(cd)
+		if dl != nil {
+			diagramLinks = dl
+		}
+		contextFlows = project.BuildContextFlows(eifs)
+	}
+	if slug == "models" {
+		dm, dt, glo := sn.folder("data-models"), sn.folder("domain-terms"), sn.folder("glossary")
+		nodes := project.DataModelNodes(dm, dt, glo)
+		edges := project.DataModelEdges(dm, dt, glo)
+		entityDiagram = nilIfEmpty(project.BuildDataModelFullDiagram(nodes, edges, "", ""))
+	}
+
 	s.renderHTML(w, r, http.StatusOK, "req42_block.html", cat, map[string]any{
 		"block":           block.ToMap(),
 		"rows":            rows,
 		"total":           len(rows),
 		"list_type":       listType,
-		"context_diagram": nil,
-		"context_flows":   nil,
-		"diagram_links":   []any{},
-		"entity_diagram":  nil,
-		"needs_mermaid":   false,
+		"context_diagram": contextDiagram,
+		"context_flows":   contextFlows,
+		"diagram_links":   diagramLinks,
+		"entity_diagram":  entityDiagram,
+		"needs_mermaid":   contextDiagram != nil || entityDiagram != nil,
 		"maturity":        wiki.ComputeMaturity(statuses).ToMap(),
 	}, now)
 }
@@ -146,11 +168,6 @@ func (s *Server) renderBlockList(w http.ResponseWriter, r *http.Request, cat *me
 func (s *Server) handleReq42Block(w http.ResponseWriter, r *http.Request) {
 	slug := strings.TrimPrefix(r.URL.Path, "/req42/")
 	if slug == "" || strings.Contains(slug, "/") {
-		s.handleNotFound(w, r)
-		return
-	}
-	// Phase 3 routes under /req42/ remain unported until Phase 3.
-	if slug == "functional-requirements" || slug == "backlog" {
 		s.handleNotFound(w, r)
 		return
 	}
