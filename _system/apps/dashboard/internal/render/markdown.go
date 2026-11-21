@@ -9,6 +9,7 @@ import (
 	gast "github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	extast "github.com/yuin/goldmark/extension/ast"
+	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer"
 	goldmarkhtml "github.com/yuin/goldmark/renderer/html"
 	"github.com/yuin/goldmark/util"
@@ -30,6 +31,7 @@ var (
 	pamBulletEndRE   = regexp.MustCompile(`\n[ \t]*-\s+\*\*|\n##\s|\n\s*\n`)
 	emphasisRE       = regexp.MustCompile(`\*(\S[^*]*?)\*`)
 	htmlTagRE        = regexp.MustCompile(`<[^>]*>`)
+	headingAttrRE    = regexp.MustCompile(`(?m)^(#{1,6}\s+.*?)\s*\{:\s*([^}]*?)\s*\}\s*$`)
 )
 
 // footnoteListRenderer overrides goldmark's default <div class="footnotes">
@@ -322,6 +324,54 @@ func RenderMarkdownInline(body string, rewriteOutsideCode func(string) string) s
 		h = h[3 : len(h)-4]
 	}
 	return h
+}
+
+var helpMDConverter = goldmark.New(
+	goldmark.WithExtensions(
+		extension.NewTable(
+			extension.WithTableCellAlignMethod(extension.TableCellAlignStyle),
+		),
+		extension.NewFootnote(
+			extension.WithFootnoteLinkClass("footnote-ref"),
+			extension.WithFootnoteBacklinkClass("footnote-backref"),
+			extension.WithFootnoteBacklinkHTML("↩"),
+			extension.WithFootnoteBacklinkTitle("Jump back to footnote ^^ in the text"),
+		),
+	),
+	goldmark.WithParserOptions(
+		parser.WithAttribute(),
+	),
+	goldmark.WithRendererOptions(
+		goldmarkhtml.WithUnsafe(),
+		renderer.WithNodeRenderers(
+			util.Prioritized(&footnoteListRenderer{}, 100),
+		),
+	),
+)
+
+// RenderHelpMarkdown renders trusted dashboard help.md Markdown with table
+// wrapping and without HTML sanitisation (matching app.py's help_view()).
+func RenderHelpMarkdown(body string) string {
+	body = strings.ReplaceAll(body, "\r\n", "\n")
+	body = normalizePythonMarkdownLists(body)
+	body = headingAttrRE.ReplaceAllString(body, "$1 {$2}")
+	var buf bytes.Buffer
+	if err := helpMDConverter.Convert([]byte(body), &buf); err != nil {
+		return ""
+	}
+	return WrapTables(buf.String())
+}
+
+// RenderAboutMarkdown renders a project's About Markdown file with table
+// wrapping and about-mode HTML sanitisation (matching app.py's about_view()).
+func RenderAboutMarkdown(body string) string {
+	body = strings.ReplaceAll(body, "\r\n", "\n")
+	body = normalizePythonMarkdownLists(body)
+	var buf bytes.Buffer
+	if err := mdConverter.Convert([]byte(body), &buf); err != nil {
+		return ""
+	}
+	return SanitizeHTML(WrapTables(buf.String()), true)
 }
 
 // ExtractLabeled pulls the paragraph introduced by **<label>.**, collapses

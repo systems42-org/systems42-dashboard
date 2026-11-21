@@ -57,16 +57,18 @@ func init() {
 
 // Options configures a dashboard HTTP Server.
 type Options struct {
-	Paths       wiki.Paths
-	StaticFS    fs.FS
-	TemplatesFS fs.FS
-	BrandsFS    fs.FS
-	Version     string
-	DisplayTZ   string
-	PublicURL   string
-	Logger      *log.Logger
-	Now         func() time.Time
-	OnShutdown  func(reason string)
+	Paths          wiki.Paths
+	StaticFS       fs.FS
+	TemplatesFS    fs.FS
+	BrandsFS       fs.FS
+	HelpMD         string
+	Version        string
+	DisplayTZ      string
+	PublicURL      string
+	Logger         *log.Logger
+	Now            func() time.Time
+	SessionOptions session.Options
+	OnShutdown     func(reason string)
 }
 
 // Server serves the Systems42 dashboard over net/http.
@@ -78,6 +80,7 @@ type Server struct {
 	Templates  *Engine
 	StaticFS   fs.FS
 	BrandsFS   fs.FS
+	HelpMD     string
 	Version    string
 	DisplayTZ  string
 	PublicURL  string
@@ -105,14 +108,19 @@ func NewServer(opts Options) *Server {
 	if nowFn == nil {
 		nowFn = time.Now
 	}
+	sessOpts := opts.SessionOptions
+	if sessOpts.Now == nil {
+		sessOpts.Now = nowFn
+	}
 
 	s := &Server{
 		Paths:        opts.Paths,
 		Store:        wiki.NewStore(opts.Paths),
 		Metamodel:    metamodel.NewReader(opts.Paths.MetamodelDir, opts.Paths.NotationsDir, opts.Paths.AnchorsDir),
-		Session:      session.NewTracker(session.Options{Now: nowFn}),
+		Session:      session.NewTracker(sessOpts),
 		StaticFS:     opts.StaticFS,
 		BrandsFS:     opts.BrandsFS,
+		HelpMD:       opts.HelpMD,
 		Version:      strings.TrimSpace(opts.Version),
 		DisplayTZ:    opts.DisplayTZ,
 		PublicURL:    strings.TrimSpace(opts.PublicURL),
@@ -254,6 +262,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			s.handleLeaving(w, r)
 		case "/reload":
 			s.handleReload(w, r)
+		case "/settings":
+			s.handleSettingsPost(w, r)
 		case "/disconnect-all":
 			s.handleDisconnectAll(w, r)
 		default:
@@ -324,6 +334,22 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.handlePageDetail(w, r)
 	case strings.HasPrefix(p, "/source/"):
 		s.handleSourceDetail(w, r)
+	case p == "/search":
+		s.handleSearch(w, r)
+	case p == "/search.json":
+		s.handleSearchJSON(w, r)
+	case p == "/join":
+		s.handleJoin(w, r)
+	case p == "/who":
+		s.handleWho(w, r)
+	case p == "/help":
+		s.handleHelp(w, r)
+	case p == "/about":
+		s.handleAbout(w, r)
+	case strings.HasPrefix(p, "/about/files/"):
+		s.handleAboutFile(w, r)
+	case p == "/settings":
+		s.handleSettingsGet(w, r)
 	case p == "/presence/count":
 		s.handlePresenceCount(w, r)
 	case p == "/presence/list":
@@ -468,7 +494,9 @@ func (s *Server) baseContext(r *http.Request, cat *metamodel.Catalog, nonce stri
 		"current_area":    currentArea,
 		"nav_items":       navItems,
 		"stack_badge": map[string]any{
-			"label":      "Go",
+			"prefix":     "Built with",
+			"label":      "",
+			"alt":        "Go",
 			"title":      "Built with Go",
 			"icon":       "go-logo.svg",
 			"icon_class": "stack-icon-go",
@@ -521,6 +549,12 @@ func (s *Server) publicURL(r *http.Request) string {
 		scheme = "https"
 	}
 	return strings.TrimRight(fmt.Sprintf("%s://%s", scheme, r.Host), "/")
+}
+
+// LANIP returns the host's primary local IPv4 address for workshop QR join links,
+// or an empty string when offline.
+func LANIP() string {
+	return lanIP()
 }
 
 func lanIP() string {

@@ -554,6 +554,12 @@ func (s *Store) parse(path, folder string) *Page {
 	return page
 }
 
+// SanitizeUTF8 decodes b as UTF-8 replacing each invalid byte sequence with U+FFFD
+// (matching Python's errors="replace").
+func SanitizeUTF8(b []byte) string {
+	return sanitizeUTF8(b)
+}
+
 func sanitizeUTF8(b []byte) string {
 	if utf8.Valid(b) {
 		return string(b)

@@ -3,6 +3,7 @@
 package session
 
 import (
+	"context"
 	"hash/crc32"
 	"math"
 	"sort"
@@ -23,8 +24,9 @@ var (
 )
 
 // Options tunes the presence and grace windows. Zero values default to app.py's
-// constants (90s heartbeat, 5s leave, 30s presence window).
+// constants (90s startup, 90s heartbeat, 5s leave, 30s presence window).
 type Options struct {
+	StartupGrace   time.Duration
 	HeartbeatGrace time.Duration
 	LeaveGrace     time.Duration
 	PresenceWindow time.Duration
@@ -48,22 +50,29 @@ type ClientInfo struct {
 
 // Tracker holds in-memory presence state for one dashboard process.
 type Tracker struct {
+	startupGrace   time.Duration
 	heartbeatGrace time.Duration
 	leaveGrace     time.Duration
 	presenceWindow time.Duration
 	now            func() time.Time
+	startedAt      time.Time
 
-	mu          sync.Mutex
-	clients     map[string]time.Time
-	leaving     map[string]time.Time
-	firstSeen   map[string]time.Time
-	userAgents  map[string]string
-	names       map[string]string
-	facilitator string
+	mu            sync.Mutex
+	clients       map[string]time.Time
+	leaving       map[string]time.Time
+	firstSeen     map[string]time.Time
+	userAgents    map[string]string
+	names         map[string]string
+	facilitator   string
+	everConnected bool
 }
 
 // NewTracker initializes a presence Tracker with defaults matching app.py.
 func NewTracker(opts Options) *Tracker {
+	sg := opts.StartupGrace
+	if sg <= 0 {
+		sg = 90 * time.Second
+	}
 	hb := opts.HeartbeatGrace
 	if hb <= 0 {
 		hb = 90 * time.Second
@@ -81,10 +90,12 @@ func NewTracker(opts Options) *Tracker {
 		nowFn = time.Now
 	}
 	return &Tracker{
+		startupGrace:   sg,
 		heartbeatGrace: hb,
 		leaveGrace:     lg,
 		presenceWindow: pw,
 		now:            nowFn,
+		startedAt:      nowFn(),
 		clients:        map[string]time.Time{},
 		leaving:        map[string]time.Time{},
 		firstSeen:      map[string]time.Time{},
@@ -188,11 +199,57 @@ func (t *Tracker) Ping(rawID, userAgent string) PingReply {
 		t.firstSeen[cid] = now
 	}
 	t.clients[cid] = now
+	t.everConnected = true
 	t.userAgents[cid] = userAgent
 	delete(t.leaving, cid)
 	isFac := cid == t.facilitatorLocked(now)
 	name := t.nameForLocked(cid, now)
 	return PingReply{Nickname: name, IsFacilitator: isFac}
+}
+
+// ShouldShutdown sweeps stale/leaving tabs and reports whether the server
+// should shut down (FR-050): either no browser ever connected within
+// StartupGrace, or every previously connected browser has now disconnected.
+func (t *Tracker) ShouldShutdown() (bool, string) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	now := t.now()
+	t.sweepLocked(now)
+	if !t.everConnected {
+		if now.Sub(t.startedAt) > t.startupGrace {
+			return true, "no browser connected within startup grace"
+		}
+		return false, ""
+	}
+	if len(t.clients) == 0 {
+		return true, "all clients disconnected"
+	}
+	return false, ""
+}
+
+// StartWatchdog polls ShouldShutdown every interval until ctx is cancelled or
+// shutdown triggers, calling onShutdown once.
+func (t *Tracker) StartWatchdog(ctx context.Context, interval time.Duration, onShutdown func(reason string)) {
+	if interval <= 0 {
+		interval = time.Second
+	}
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if stop, reason := t.ShouldShutdown(); stop {
+					if onShutdown != nil {
+						onShutdown(reason)
+					}
+					return
+				}
+			}
+		}
+	}()
 }
 
 // Leaving records a pagehide beacon for rawID.
