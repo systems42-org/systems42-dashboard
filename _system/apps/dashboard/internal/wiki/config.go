@@ -31,6 +31,7 @@ type Config struct {
 	SystemName       string
 	SystemNameSet    bool
 	Tagline          string
+	AboutPath        string
 	AboutHref        string
 	AboutLabel       string
 	DefaultNotation  string
@@ -73,8 +74,9 @@ func LoadConfig(paths Paths, warn func(string)) Config {
 		effectiveName = DefaultSystemName
 	}
 
+	aboutPath := AboutDoc(paths.DocsDir, data["about"])
 	aboutHref := ""
-	if AboutDoc(paths.DocsDir, data["about"]) != "" {
+	if aboutPath != "" {
 		aboutHref = "/about"
 	}
 	aboutLabel := strings.TrimSpace(scalarString(data["about_label"]))
@@ -113,6 +115,7 @@ func LoadConfig(paths Paths, warn func(string)) Config {
 		SystemName:       effectiveName,
 		SystemNameSet:    name != "",
 		Tagline:          strings.TrimSpace(scalarString(data["tagline"])),
+		AboutPath:        aboutPath,
 		AboutHref:        aboutHref,
 		AboutLabel:       aboutLabel,
 		DefaultNotation:  defaultNotation,

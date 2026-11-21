@@ -21,6 +21,15 @@ func Version() string {
 	return strings.TrimSpace(string(b))
 }
 
+// HelpMD returns the embedded help.md text, or a fallback notice if missing.
+func HelpMD() string {
+	b, err := Assets.ReadFile("help.md")
+	if err != nil {
+		return "# Help\n\nhelp.md is missing from the image."
+	}
+	return string(b)
+}
+
 // StaticFS returns the embedded static/ directory rooted at its contents.
 func StaticFS() fs.FS {
 	sub, err := fs.Sub(Assets, "static")

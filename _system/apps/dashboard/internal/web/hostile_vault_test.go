@@ -559,10 +559,20 @@ func TestHostileEveryType(t *testing.T) {
 			[]byte("---\n"+string(b)+"---\n# "+payload+"\n\n"+payload+" [x]("+payload+") https://example.org\n"), 0o644)
 	}
 
+	// Hostile about doc + outside secret + symlink escape inside docs/
+	_ = os.MkdirAll(filepath.Join(docsDir, "brand", "svg"), 0o755)
+	_ = os.WriteFile(filepath.Join(docsDir, "brand", "about.md"),
+		[]byte("# "+payload+"\n\n"+payload+"\n\n![mark](svg/mark.svg)\n"), 0o644)
+	_ = os.WriteFile(filepath.Join(docsDir, "brand", "svg", "mark.svg"),
+		[]byte(`<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>`), 0o644)
+	_ = os.WriteFile(filepath.Join(tmp, "secret.txt"), []byte("top-secret\n"), 0o644)
+	_ = os.Symlink(filepath.Join(tmp, "secret.txt"), filepath.Join(docsDir, "brand", "leak.md"))
+
 	// Hostile wiki.yaml
 	cfgPath := filepath.Join(tmp, "wiki.yaml")
 	cfgBytes, _ := yaml.Marshal(map[string]any{
-		"system_name": payload, "tagline": payload, "about_label": payload, "intro": "off",
+		"system_name": payload, "tagline": payload,
+		"about": "docs/brand/about.md", "about_label": payload, "intro": "off",
 	})
 	_ = os.WriteFile(cfgPath, cfgBytes, 0o644)
 
@@ -580,6 +590,7 @@ func TestHostileEveryType(t *testing.T) {
 		StaticFS:    dashboard.StaticFS(),
 		TemplatesFS: dashboard.TemplatesFS(),
 		BrandsFS:    dashboard.BrandsFS(),
+		HelpMD:      dashboard.HelpMD(),
 		Version:     dashboard.Version(),
 		DisplayTZ:   "UTC",
 		PublicURL:   "http://127.0.0.1:8080",
@@ -591,7 +602,9 @@ func TestHostileEveryType(t *testing.T) {
 		"/goals", "/entity-diagram", "/graph/domain-terms",
 		"/arc42/building-blocks", "/arc42/deployment", "/arc42/runtime", "/arc42/concepts",
 		"/metamodel", "/method", "/changes", "/issues", "/issues?status=open",
-		"/stakeholders", "/decisions", "/domain-terms", "/does-not-exist",
+		"/stakeholders", "/decisions", "/domain-terms",
+		"/search", "/search.json", "/join", "/who", "/help", "/about",
+		"/about/files/brand/svg/mark.svg", "/settings", "/does-not-exist",
 	}, urls...)
 	for _, u := range urls {
 		rec := doGet(srv, u)
@@ -604,9 +617,22 @@ func TestHostileEveryType(t *testing.T) {
 		}
 	}
 
+	// Inert headers on /about/files/ and refusal of traversal / symlink escapes.
+	svgRec := doGet(srv, "/about/files/brand/svg/mark.svg")
+	if svgRec.Code != http.StatusOK || !strings.Contains(svgRec.Header().Get("Content-Security-Policy"), "sandbox") || svgRec.Header().Get("X-Content-Type-Options") != "nosniff" {
+		t.Errorf("/about/files/brand/svg/mark.svg headers unsafe: code=%d csp=%q xcto=%q",
+			svgRec.Code, svgRec.Header().Get("Content-Security-Policy"), svgRec.Header().Get("X-Content-Type-Options"))
+	}
+	for _, escapeURL := range []string{"/about/files/../../secret.txt", "/about/files/../secret.txt", "/about/files/brand/leak.md"} {
+		if rec := doGet(srv, escapeURL); rec.Code != http.StatusNotFound {
+			t.Errorf("%s: got %d, want 404", escapeURL, rec.Code)
+		}
+	}
+
 	// Non-vacuous check: escaped payload actually reached the rendered HTML
 	for _, u := range []string{
 		"/", "/req42/quality", "/metamodel", "/changes", "/issues", "/stakeholders", "/decisions", "/domain-terms",
+		"/search", "/about",
 		"/page/glossary/GLO-001-hostile", "/page/runtime-scenarios/RS-002-hostile", "/page/issues/ISS-001-hostile", "/source/SRC-001-hostile",
 	} {
 		body := doGet(srv, u).Body.String()

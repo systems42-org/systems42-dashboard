@@ -43,22 +43,9 @@ NON_WIKI_FIXTURES = {"notations"}
 # Routes not ported to Go yet, grouped by the phase in issue #80 that ports
 # them. Exact paths live in UNPORTED_EXACT; prefixes in UNPORTED_PREFIXES.
 # When a phase lands, remove its entries here so CI enforces parity on them.
-UNPORTED_EXACT: dict[str, str] = {
-    # Phase 4: search
-    "/search": "Phase 4",
-    "/search.json": "Phase 4",
-    # Phase 5: session, help, about
-    "/join": "Phase 5",
-    "/who": "Phase 5",
-    "/help": "Phase 5",
-    "/about": "Phase 5",
-    "/settings": "Phase 5",
-}
+UNPORTED_EXACT: dict[str, str] = {}
 
-UNPORTED_PREFIXES: tuple[tuple[str, str], ...] = (
-    # Phase 5: docs files under /about
-    ("/about/files/", "Phase 5"),
-)
+UNPORTED_PREFIXES: tuple[tuple[str, str], ...] = ()
 
 # Static assets verified for exact byte parity in Phase 0.
 STATIC_SAMPLE_ROUTES = (
@@ -111,6 +98,14 @@ FIXED_ROUTES = (
     "/domain-terms",
     "/glossary",
     "/glossary?sort=title",
+    "/search",
+    "/search.json",
+    "/join",
+    "/who",
+    "/help",
+    "/about",
+    "/about/files/guide/mark.svg",
+    "/settings",
     "/presence/count",
     "/presence/list",
     "/brand/mark-dark.svg",
@@ -480,8 +475,11 @@ def _discover_wikis(tmp: Path) -> list[tuple[str, dict[str, str], Path, Path]]:
     (edge / "raw" / "sources").mkdir(parents=True)
     shutil.copytree(REPO / "_system" / "metamodel", edge / "_system" / "metamodel")
     shutil.copytree(REPO / "_system" / "anchors", edge / "_system" / "anchors")
+    (edge / "docs" / "guide").mkdir(parents=True)
+    (edge / "docs" / "guide" / "mark.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"></svg>', encoding="utf-8")
+    (edge / "docs" / "guide" / "about.md").write_text('# About Edge\n\n<div style="color:red;background:url(https://evil.example/x)">Hello</div>\n\n![Mark](mark.svg)\n', encoding="utf-8")
     (edge / "_system" / "metamodel" / "metamodel-version.md").write_text("---\nversion: 0.2\n---\n", encoding="utf-8")
-    (edge / "_system" / "wiki.yaml").write_text('dashboard_version: "0.1.0"\nintro: off\n', encoding="utf-8")
+    (edge / "_system" / "wiki.yaml").write_text('dashboard_version: "0.1.0"\nintro: off\nabout: docs/guide/about.md\n', encoding="utf-8")
     wikis.append((
         "synthetic:notices",
         {"REPO_DIR": str(edge)},
@@ -606,6 +604,8 @@ def _start_go(binary: Path, port: int, env_overrides: dict[str, str]) -> subproc
     env.update({
         "TZ": "UTC",
         "DASH_PUBLIC_URL": "http://127.0.0.1:8080",
+        "DASH_STARTUP_GRACE": "3600",
+        "DASH_HEARTBEAT_GRACE": "3600",
         "DASH_HOST": "127.0.0.1",
         "DASH_PORT": str(port),
     })
@@ -650,6 +650,15 @@ def main() -> int:
                     err = _compare_route(label, route, py_port, go_port)
                     if err:
                         failures.append(err)
+                if label == "fixture:search-wiki" and shutil.which("node"):
+                    se_env = dict(os.environ)
+                    se_env["DASH_SEARCH_URL"] = f"http://127.0.0.1:{go_port}"
+                    se = subprocess.run(
+                        [sys.executable, str(HERE / "tests" / "test_search_examples.py")],
+                        cwd=str(HERE), env=se_env, capture_output=True, text=True,
+                    )
+                    if se.returncode != 0:
+                        failures.append(f"[go:{label}] test_search_examples.py failed:\n{se.stdout}{se.stderr}")
             finally:
                 _stop_proc(py_proc)
                 _stop_proc(go_proc)

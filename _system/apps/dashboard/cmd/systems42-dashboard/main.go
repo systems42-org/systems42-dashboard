@@ -13,14 +13,28 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
 	dashboard "github.com/systems42-org/systems42-dashboard/_system/apps/dashboard"
+	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/session"
 	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/web"
 	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/wiki"
 )
+
+func graceEnv(name string, def time.Duration) time.Duration {
+	raw := strings.TrimSpace(os.Getenv(name))
+	if raw == "" {
+		return def
+	}
+	sec, err := strconv.ParseFloat(raw, 64)
+	if err != nil || sec <= 0 {
+		return def
+	}
+	return time.Duration(sec * float64(time.Second))
+}
 
 func main() {
 	os.Exit(run(os.Args[1:]))
@@ -68,22 +82,34 @@ func run(args []string) int {
 
 	logger := log.New(os.Stderr, "", log.LstdFlags)
 	shutdownCh := make(chan string, 1)
+	triggerShutdown := func(reason string) {
+		select {
+		case shutdownCh <- reason:
+		default:
+		}
+	}
 	srv := web.NewServer(web.Options{
 		Paths:       paths,
 		StaticFS:    dashboard.StaticFS(),
 		TemplatesFS: dashboard.TemplatesFS(),
 		BrandsFS:    dashboard.BrandsFS(),
+		HelpMD:      dashboard.HelpMD(),
 		Version:     dashboard.Version(),
 		DisplayTZ:   os.Getenv("TZ"),
 		PublicURL:   os.Getenv("DASH_PUBLIC_URL"),
 		Logger:      logger,
-		OnShutdown: func(reason string) {
-			select {
-			case shutdownCh <- reason:
-			default:
-			}
+		SessionOptions: session.Options{
+			StartupGrace:   graceEnv("DASH_STARTUP_GRACE", 90*time.Second),
+			HeartbeatGrace: graceEnv("DASH_HEARTBEAT_GRACE", 90*time.Second),
+			LeaveGrace:     graceEnv("DASH_LEAVE_GRACE", 5*time.Second),
+			PresenceWindow: graceEnv("DASH_PRESENCE_WINDOW", 30*time.Second),
 		},
+		OnShutdown: triggerShutdown,
 	})
+
+	watchCtx, watchCancel := context.WithCancel(context.Background())
+	defer watchCancel()
+	srv.Session.StartWatchdog(watchCtx, time.Second, triggerShutdown)
 
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {

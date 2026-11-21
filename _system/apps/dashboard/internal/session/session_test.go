@@ -1,6 +1,8 @@
 package session
 
 import (
+	"context"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -64,5 +66,96 @@ func TestLeavingCancelledByNextPing(t *testing.T) {
 	now = now.Add(10 * time.Second)
 	if tr.Count() != 1 || !tr.IsFacilitator("tab-1") {
 		t.Fatalf("in-tab navigation ping should cancel /leaving: count=%d fac=%v", tr.Count(), tr.IsFacilitator("tab-1"))
+	}
+}
+
+func TestKeyholderReturnAndSelfShutdown(t *testing.T) {
+	now := time.Date(2026, 11, 21, 16, 0, 0, 0, time.UTC)
+	tr := NewTracker(Options{
+		StartupGrace:   10 * time.Second,
+		HeartbeatGrace: 30 * time.Second,
+		LeaveGrace:     5 * time.Second,
+		PresenceWindow: 15 * time.Second,
+		Now:            func() time.Time { return now },
+	})
+
+	// Before any client connects: stays alive during startup grace, shuts down after.
+	if stop, _ := tr.ShouldShutdown(); stop {
+		t.Fatalf("ShouldShutdown triggered immediately at startup")
+	}
+	now = now.Add(11 * time.Second)
+	if stop, reason := tr.ShouldShutdown(); !stop || reason == "" {
+		t.Fatalf("ShouldShutdown after startup grace = (%v, %q), want true", stop, reason)
+	}
+
+	// Reset tracker to test keyholder handover, returning Yoda (issue #56), and disconnect shutdown.
+	now = time.Date(2026, 11, 21, 16, 0, 0, 0, time.UTC)
+	tr = NewTracker(Options{
+		StartupGrace:   10 * time.Second,
+		HeartbeatGrace: 30 * time.Second,
+		LeaveGrace:     5 * time.Second,
+		PresenceWindow: 15 * time.Second,
+		Now:            func() time.Time { return now },
+	})
+	yoda := tr.Ping("tab-yoda", "")
+	if yoda.Nickname != "Yoda" || !yoda.IsFacilitator {
+		t.Fatalf("first client = %+v, want Yoda facilitator", yoda)
+	}
+	now = now.Add(2 * time.Second)
+	heir := tr.Ping("tab-heir", "")
+	if heir.IsFacilitator || heir.Nickname == "Yoda" {
+		t.Fatalf("second client = %+v, want non-facilitator", heir)
+	}
+
+	// Yoda leaves and expires; heir inherits facilitator.
+	tr.Leaving("tab-yoda")
+	now = now.Add(6 * time.Second)
+	if !tr.Ping("tab-heir", "").IsFacilitator {
+		t.Fatalf("heir did not inherit facilitator after Yoda left")
+	}
+
+	// Yoda returns while heir is still alive: keeps name "Yoda" but does NOT take the keys back.
+	now = now.Add(1 * time.Second)
+	returned := tr.Ping("tab-yoda", "")
+	if returned.Nickname != "Yoda" || returned.IsFacilitator {
+		t.Fatalf("returning Yoda = %+v, want Yoda non-facilitator while heir lives", returned)
+	}
+	if !tr.IsFacilitator("tab-heir") {
+		t.Fatalf("heir lost facilitator when Yoda returned")
+	}
+
+	// Heir leaves and expires; Yoda becomes facilitator again.
+	tr.Leaving("tab-heir")
+	now = now.Add(6 * time.Second)
+	if !tr.IsFacilitator("tab-yoda") {
+		t.Fatalf("Yoda did not inherit facilitator after heir left")
+	}
+
+	// Yoda also leaves and expires: all clients gone -> ShouldShutdown fires.
+	tr.Leaving("tab-yoda")
+	now = now.Add(6 * time.Second)
+	if stop, reason := tr.ShouldShutdown(); !stop || reason == "" {
+		t.Fatalf("ShouldShutdown after all clients left = (%v, %q), want true", stop, reason)
+	}
+
+	// Watchdog goroutine fires onShutdown promptly.
+	var fired atomic.Int32
+	done := make(chan string, 1)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	tr.StartWatchdog(ctx, 5*time.Millisecond, func(reason string) {
+		fired.Add(1)
+		done <- reason
+	})
+	select {
+	case reason := <-done:
+		if reason == "" {
+			t.Fatalf("watchdog fired with empty reason")
+		}
+	case <-time.After(time.Second):
+		t.Fatalf("watchdog did not fire within 1s")
+	}
+	if fired.Load() != 1 {
+		t.Fatalf("watchdog fired %d times, want 1", fired.Load())
 	}
 }

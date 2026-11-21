@@ -1,6 +1,7 @@
 package web_test
 
 import (
+	"encoding/json"
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	dashboard "github.com/systems42-org/systems42-dashboard/_system/apps/dashboard"
 	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/web"
@@ -37,6 +39,7 @@ func newRepoServer(t *testing.T) *web.Server {
 		StaticFS:    dashboard.StaticFS(),
 		TemplatesFS: dashboard.TemplatesFS(),
 		BrandsFS:    dashboard.BrandsFS(),
+		HelpMD:      dashboard.HelpMD(),
 		Version:     dashboard.Version(),
 		DisplayTZ:   "UTC",
 		PublicURL:   "http://127.0.0.1:8080",
@@ -491,5 +494,167 @@ func TestPhase3ProjectionRoutesAndFilters(t *testing.T) {
 	dmSrv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/entity-diagram?focus=DT-002-order", nil))
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "Order") || !strings.Contains(rec.Body.String(), "and its direct neighbours") {
 		t.Fatalf("GET /entity-diagram?focus=DT-002-order failed: status=%d", rec.Code)
+	}
+}
+
+func TestPhase4And5SearchSettingsHelpAbout(t *testing.T) {
+	srv := newRepoServer(t)
+
+	// /search, /search.json, /join, /who, /help
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/search", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "S42Search.filter(") {
+		t.Fatalf("GET /search failed: %d", rec.Code)
+	}
+
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/search.json", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET /search.json = %d, want 200", rec.Code)
+	}
+	var sidx map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &sidx); err != nil {
+		t.Fatalf("unmarshal /search.json: %v", err)
+	}
+	if _, ok := sidx["records"]; !ok {
+		t.Fatalf("/search.json missing records key")
+	}
+	if _, ok := sidx["synonyms"]; !ok {
+		t.Fatalf("/search.json missing synonyms key")
+	}
+
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/join", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "<svg") || !strings.Contains(rec.Body.String(), "http://127.0.0.1:8080") {
+		t.Fatalf("GET /join failed: %d", rec.Code)
+	}
+
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/who", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "/presence/list") {
+		t.Fatalf("GET /who failed: %d", rec.Code)
+	}
+
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/help", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `<h2 id="llm-wiki">`) || !strings.Contains(rec.Body.String(), "systems42-sections.svg") {
+		t.Fatalf("GET /help failed: status=%d", rec.Code)
+	}
+
+	// /settings GET + POST authorization, validation, and live view hiding (FR-046)
+	postJSON := func(s *web.Server, target, body string) *httptest.ResponseRecorder {
+		r := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, target, strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		s.ServeHTTP(r, req)
+		return r
+	}
+	if r := postJSON(srv, "/ping", `{"client_id":"yoda"}`); r.Code != http.StatusOK {
+		t.Fatalf("ping yoda = %d", r.Code)
+	}
+	if r := postJSON(srv, "/ping", `{"client_id":"padawan"}`); r.Code != http.StatusOK {
+		t.Fatalf("ping padawan = %d", r.Code)
+	}
+	if r := postJSON(srv, "/settings", `{"client_id":"padawan","hidden":["C4"]}`); r.Code != http.StatusForbidden {
+		t.Fatalf("non-facilitator POST /settings = %d, want 403", r.Code)
+	}
+	if r := postJSON(srv, "/settings", `{"client_id":"yoda","hidden":["C4","bogus"]}`); r.Code != http.StatusBadRequest {
+		t.Fatalf("unknown ID POST /settings = %d, want 400", r.Code)
+	}
+	rSave := postJSON(srv, "/settings", `{"client_id":"yoda","hidden":["c4","architecture"]}`)
+	if rSave.Code != http.StatusOK {
+		t.Fatalf("facilitator POST /settings = %d, want 200", rSave.Code)
+	}
+	var saved struct {
+		OK     bool     `json:"ok"`
+		Hidden []string `json:"hidden"`
+	}
+	if err := json.Unmarshal(rSave.Body.Bytes(), &saved); err != nil || !saved.OK || len(saved.Hidden) != 2 || saved.Hidden[0] != "architecture" || saved.Hidden[1] != "C4" {
+		t.Fatalf("unexpected POST /settings reply: %s", rSave.Body.String())
+	}
+
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	if strings.Contains(rec.Body.String(), `href="/stakeholders"`) {
+		t.Fatalf("hidden C4 still shown on /")
+	}
+	// Hidden section remains directly addressable by URL.
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/stakeholders", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("hidden /stakeholders returned %d, want 200", rec.Code)
+	}
+	if r := postJSON(srv, "/settings", `{"client_id":"yoda","hidden":[]}`); r.Code != http.StatusOK {
+		t.Fatalf("unhide POST /settings = %d", r.Code)
+	}
+
+	// /about and /about/files/ with relative image rewriting, symlink rejection, and disconnect-all
+	tmp := t.TempDir()
+	docs := filepath.Join(tmp, "docs")
+	_ = os.MkdirAll(filepath.Join(docs, "brand", "svg"), 0o755)
+	_ = os.WriteFile(filepath.Join(docs, "brand", "README.md"),
+		[]byte("# Brand\n\n![mark](svg/mark.svg) ![shared](../shared.svg) ![out](../../secret.md)\n"), 0o644)
+	_ = os.WriteFile(filepath.Join(docs, "brand", "svg", "mark.svg"), []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`), 0o644)
+	_ = os.WriteFile(filepath.Join(docs, "shared.svg"), []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`), 0o644)
+	_ = os.WriteFile(filepath.Join(tmp, "secret.md"), []byte("# secret\n"), 0o644)
+	_ = os.Symlink(filepath.Join(tmp, "secret.md"), filepath.Join(docs, "brand", "leak.md"))
+	cfgPath := filepath.Join(tmp, "wiki.yaml")
+	_ = os.WriteFile(cfgPath, []byte("system_name: Demo\nabout: docs/brand/README.md\n"), 0o644)
+
+	shutdownCh := make(chan string, 1)
+	aboutSrv := web.NewServer(web.Options{
+		Paths: wiki.Paths{
+			RepoDir:      tmp,
+			WikiDir:      filepath.Join(tmp, "wiki"),
+			SourcesDir:   filepath.Join(tmp, "raw", "sources"),
+			ConfigPath:   cfgPath,
+			DocsDir:      docs,
+			MetamodelDir: filepath.Join(repoRoot(t), "_system", "metamodel"),
+			NotationsDir: filepath.Join(repoRoot(t), "_system", "notations"),
+			AnchorsDir:   filepath.Join(repoRoot(t), "_system", "anchors"),
+		},
+		StaticFS:    dashboard.StaticFS(),
+		TemplatesFS: dashboard.TemplatesFS(),
+		BrandsFS:    dashboard.BrandsFS(),
+		HelpMD:      dashboard.HelpMD(),
+		Version:     dashboard.Version(),
+		DisplayTZ:   "UTC",
+		PublicURL:   "http://127.0.0.1:8080",
+		OnShutdown:  func(reason string) { shutdownCh <- reason },
+	})
+
+	rec = httptest.NewRecorder()
+	aboutSrv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/about", nil))
+	body := rec.Body.String()
+	if rec.Code != http.StatusOK || !strings.Contains(body, `src="/about/files/brand/svg/mark.svg"`) || !strings.Contains(body, `src="/about/files/shared.svg"`) || !strings.Contains(body, `src="../../secret.md"`) {
+		t.Fatalf("GET /about unexpected rewrite: status=%d body=%s", rec.Code, body)
+	}
+	rec = httptest.NewRecorder()
+	aboutSrv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/about/files/shared.svg", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Header().Get("Content-Security-Policy"), "sandbox") {
+		t.Fatalf("GET /about/files/shared.svg = %d csp=%q", rec.Code, rec.Header().Get("Content-Security-Policy"))
+	}
+	rec = httptest.NewRecorder()
+	aboutSrv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/about/files/brand/leak.md", nil))
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("symlink escape /about/files/brand/leak.md = %d, want 404", rec.Code)
+	}
+
+	// Disconnect-all requires facilitator and triggers OnShutdown asynchronously.
+	_ = postJSON(aboutSrv, "/ping", `{"client_id":"yoda"}`)
+	_ = postJSON(aboutSrv, "/ping", `{"client_id":"guest"}`)
+	if r := postJSON(aboutSrv, "/disconnect-all", `{"client_id":"guest"}`); r.Code != http.StatusForbidden {
+		t.Fatalf("non-facilitator /disconnect-all = %d, want 403", r.Code)
+	}
+	if r := postJSON(aboutSrv, "/disconnect-all", `{"client_id":"yoda"}`); r.Code != http.StatusNoContent {
+		t.Fatalf("facilitator /disconnect-all = %d, want 204", r.Code)
+	}
+	select {
+	case reason := <-shutdownCh:
+		if reason == "" {
+			t.Fatalf("disconnect-all fired empty shutdown reason")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("disconnect-all did not invoke OnShutdown within 2s")
 	}
 }

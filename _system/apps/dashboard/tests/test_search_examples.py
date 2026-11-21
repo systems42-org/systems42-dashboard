@@ -11,19 +11,23 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import urllib.request
 from pathlib import Path
 
 _DASH = Path(__file__).resolve().parent.parent
 _FIXTURE = Path(__file__).resolve().parent / "fixtures" / "search-wiki"
-_tmp = Path(tempfile.mkdtemp())
-os.environ["WIKI_DIR"] = str(_FIXTURE)
-os.environ["RAW_SOURCES_DIR"] = str(_tmp / "sources")
-os.environ["WIKI_CONFIG"] = str(_tmp / "wiki.yaml")
-os.environ["DASH_STARTUP_GRACE"] = "3600"
-os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
-sys.path.insert(0, str(_DASH))
+_REMOTE_URL = os.environ.get("DASH_SEARCH_URL", "").rstrip("/")
+app = None
+if not _REMOTE_URL:
+    _tmp = Path(tempfile.mkdtemp())
+    os.environ["WIKI_DIR"] = str(_FIXTURE)
+    os.environ["RAW_SOURCES_DIR"] = str(_tmp / "sources")
+    os.environ["WIKI_CONFIG"] = str(_tmp / "wiki.yaml")
+    os.environ["DASH_STARTUP_GRACE"] = "3600"
+    os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
+    sys.path.insert(0, str(_DASH))
 
-import app  # noqa: E402
+    import app  # noqa: E402
 
 HARNESS = Path(__file__).resolve().parent / "search_harness.js"
 _INDEX = None
@@ -32,8 +36,12 @@ _INDEX = None
 def _index_json() -> str:
     global _INDEX
     if _INDEX is None:
-        with app.app.test_request_context():
-            _INDEX = json.dumps(app.build_search_index())
+        if _REMOTE_URL:
+            with urllib.request.urlopen(f"{_REMOTE_URL}/search.json", timeout=10) as resp:
+                _INDEX = resp.read().decode("utf-8")
+        else:
+            with app.app.test_request_context():
+                _INDEX = json.dumps(app.build_search_index())
     return _INDEX
 
 
@@ -368,7 +376,11 @@ def test_fr009_priority_and_tag_filters():
 
 
 def test_fr009_filters_sit_next_to_the_type_facets():
-    page = app.app.test_client().get("/search").get_data(as_text=True)
+    if _REMOTE_URL:
+        with urllib.request.urlopen(f"{_REMOTE_URL}/search", timeout=10) as resp:
+            page = resp.read().decode("utf-8")
+    else:
+        page = app.app.test_client().get("/search").get_data(as_text=True)
     bar = page[page.index('class="toolbar"'):page.index('class="table-card"')]
     for name in ("status", "priority", "tag"):
         assert f'id="search-{name}"' in bar, name
