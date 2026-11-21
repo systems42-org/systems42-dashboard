@@ -4,7 +4,7 @@ type: functional-requirement
 title: Issues carry a category
 status: draft
 created: 2026-11-12
-updated: 2026-11-20
+updated: 2026-11-21
 sources: ["[[SRC-015-see-what-is-still-open]]", "[[SRC-016-grilling-session-on-open-issues]]"]
 related: ["[[FR-025-issue-list-with-filters]]", "[[FR-017-browse-by-area-and-section]]", "[[STK-001-readers]]", "[[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]]", "[[ISS-007-issue-category-and-owner-belong-in-meta]]"]
 tags: ["functional-requirement", "issues"]
@@ -39,9 +39,6 @@ As a [[STK-001-readers|product owner]] I want **every issue to show which part o
 - **Parent:** [[FR-024-see-what-is-still-open]]
 - **Children:** none.
 
-> [!note] Open points
-> `category:` is proposed upstream in Systems42 ([meta issue #53](https://github.com/systems42-org/meta/issues/53), [[ISS-007-issue-category-and-owner-belong-in-meta]]).
-
 ## History
 
-> Gernot Starke named the categories requirements, architecture, commons, content, orga and systems42 ([[SRC-015-see-what-is-still-open]]). One category per issue, Should, in Q2 and Q4 of [[SRC-016-grilling-session-on-open-issues]]. On 2026-11-20 the field definition moved to [[ISS-007-issue-category-and-owner-belong-in-meta]] (`meta#53`), keeping only dashboard display and filtering here.
+> Gernot Starke named the categories requirements, architecture, commons, content, orga and systems42 ([[SRC-015-see-what-is-still-open]]). One category per issue, Should, in Q2 and Q4 of [[SRC-016-grilling-session-on-open-issues]]. On 2026-11-20 the field definition moved to [[ISS-007-issue-category-and-owner-belong-in-meta]] (`meta#53`), keeping only dashboard display and filtering here. On 2026-11-21 Systems42 adopted the field ([meta pull request 55](https://github.com/systems42-org/meta/pull/55)): the category `systems42` is named `method`, and the field is optional.

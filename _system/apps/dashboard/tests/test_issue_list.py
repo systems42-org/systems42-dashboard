@@ -40,7 +40,7 @@ _page("issues", "ISS-001-tempo", "issue", "Wie schnell genau", "open",
       'severity: major\nkind: question\ncategory: requirements\nowner: "[[STK-001-produktverantwortliche]]"\n',
       '"[[QR-001-schnell]]"')
 _page("issues", "ISS-002-schleife", "issue", "Die Klärungsschleife", "in-progress",
-      "severity: minor\nkind: gap\ncategory: systems42\nowner:\n", '"[[CON-001-klein]]"')
+      "severity: minor\nkind: gap\ncategory: method\nowner:\n", '"[[CON-001-klein]]"')
 _page("issues", "ISS-003-erledigt", "issue", "Erledigte Frage", "resolved",
       "severity: minor\nkind: risk\ncategory: content\nowner: Gernot Starke\n", '"[[QR-001-schnell]]"')
 _page("issues", "ISS-004-unklar", "issue", "Unklare Kategorie", "open",
@@ -90,7 +90,7 @@ def test_category_and_owner_columns():
 
 
 def test_each_filter_alone():
-    assert _ids("?category=systems42") == ["ISS-002"]
+    assert _ids("?category=method") == ["ISS-002"]
     assert _ids("?severity=major") == ["ISS-001"]
     assert _ids("?owner=none") == ["ISS-002", "ISS-004", "ISS-005"]
     assert _ids("?owner=Gernot+Starke") == ["ISS-003"]
@@ -148,8 +148,8 @@ def test_rows_link_their_page_and_the_pane_is_gone():
 
 
 def test_filter_controls_show_the_address():
-    body = _body("?category=systems42&owner=none")
-    assert re.search(r'<option value="systems42" selected>', body)
+    body = _body("?category=method&owner=none")
+    assert re.search(r'<option value="method" selected>', body)
     assert re.search(r'<option value="none" selected>nobody yet</option>', body)
     form = re.search(r'<form class="issue-filters" method="get" action="/issues">(.*?)</form>', body, re.S)
     assert form, "no filter form"

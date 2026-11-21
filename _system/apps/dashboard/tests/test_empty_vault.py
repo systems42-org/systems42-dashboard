@@ -41,7 +41,7 @@ GET_ROUTES = [
     "/req42/scope", "/req42/models", "/req42/quality", "/req42/constraints",
     "/arc42", "/commons", "/help", "/metamodel", "/method",
     "/join",
-    "/issues?status=open&category=systems42&severity=minor&section=C1&owner=none&sort=status:asc",
+    "/issues?status=open&category=method&severity=minor&section=C1&owner=none&sort=status:asc",
 ]
 NOT_FOUND_ROUTES = [
     "/page/glossary/GLO-001-nothing",

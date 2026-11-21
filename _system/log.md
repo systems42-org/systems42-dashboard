@@ -349,3 +349,11 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Decision (Gernot Starke, 2026-11-21): the earliest tab still connected gets the rights, also when it held them before. A returning holder counts as newly connected. A session always has a Keyholder.
 - Updated: [[FR-046-shared-session-in-a-workshop]] (Keyholder rule, history). No code change: the dashboard already works this way, and two new tests in `tests/test_presence.py` hold it.
 - Not changed: [[STK-023-keyholder]] is `accepted` and still says "the rights never go back to an earlier holder". It needs the same wording, by promotion.
+
+## [2026-11-21] inspect | Issue schema taken over from systems42-org/meta
+- Origin: [meta pull request 55](https://github.com/systems42-org/meta/pull/55), which adopts `category:` and `owner:` for issues.
+- Schema: `type-issue.md`, `rel-owner.md` and `_templates/issue.md` now match meta. The category `systems42` is `method`, both fields are optional, `owner:` takes a stakeholder link only.
+- Updated: six issues from `category: systems42` to `method`. Seven issues from the owner "Gernot Starke" or "Gernot Starke and team" to [[STK-012-maintainers]] (Claude's choice of stakeholder, to be checked).
+- Resolved: [[ISS-007-issue-category-and-owner-belong-in-meta]].
+- Updated: [[FR-026-issues-carry-a-category]], [[FR-028-who-answers-an-issue]], [[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]].
+- No code change: the dashboard reads the category values from the metamodel. It still shows an owner written as a plain name.

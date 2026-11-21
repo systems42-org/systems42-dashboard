@@ -10,9 +10,9 @@ related: []           # CRITICAL: link every page this issue affects
 tags: [issue]
 severity: major       # blocker | major | minor
 kind: question        # question | contradiction | gap | ambiguity | risk
-category: requirements # requirements | architecture | commons | content | orga | systems42
+category:             # optional: requirements | architecture | commons | content | orga | method
 raised-by: <agent | [[STK-...]]>
-owner:                # who is expected to answer: a name or [[STK-...]]; empty = nobody yet
+owner:                # optional: [[STK-...]], the stakeholder the question is addressed to
 resolved: null        # date when status -> resolved/wontfix
 ---
 

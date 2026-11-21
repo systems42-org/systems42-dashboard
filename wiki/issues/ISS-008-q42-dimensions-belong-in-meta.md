@@ -4,15 +4,15 @@ type: issue
 title: Q42 dimensions for quality requirements belong in meta
 status: open
 created: 2026-11-20
-updated: 2026-11-20
+updated: 2026-11-21
 sources: []
 related: ["[[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]]", "[[DR-003-quality-requirements-are-classified-by-q42-dimensions]]", "[[QR-001-usable-on-phone-and-tablet]]", "[[QR-002-runs-alike-on-linux-and-macos]]", "[[QR-003-works-in-every-current-browser]]"]
 tags: [issue]
 severity: major
 kind: contradiction
-category: systems42
+category: method
 raised-by: Gernot Starke
-owner: Gernot Starke and team
+owner: "[[STK-012-maintainers]]"
 resolved: null
 ---
 

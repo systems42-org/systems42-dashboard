@@ -58,6 +58,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
   next.
 
 ### Changed
+- Issues: `category:` and `owner:` follow the Systems42 metamodel (meta pull request 55). The category `systems42` is now `method`, both fields are optional, and `owner:` takes a `[[STK-...]]` link only. Rename `category: systems42` to `method` in your issues. The dashboard still shows an owner written as a plain name.
 - Dashboard: the sections come from the repository's metamodel
   (`_system/metamodel/frameworks/`, FR-044), not from a list in `catalog.py`.
   A renamed or added section shows on the home page, the area pages and in

@@ -123,12 +123,12 @@ every capture (`_system/workflows/capture.md`, step 7).
 
 - [[ISS-001-who-holds-the-keys-in-parallel-work]] Who holds the keys when two people work in parallel (resolved)
 - [[ISS-002-define-the-clarify-loop]] Define the clarify loop (open)
-- [[ISS-003-goal-coverage-projection-cites-decisions-from-another-wiki]] The goal coverage projection cites decisions from another wiki (open, systems42, meta #37)
-- [[ISS-004-where-the-metamodel-declares-its-version]] Where the metamodel declares its version (open, systems42, meta #39)
-- [[ISS-005-the-method-lint-imports-dashboard-code]] The method's lint imports dashboard code (open, systems42, meta #40)
+- [[ISS-003-goal-coverage-projection-cites-decisions-from-another-wiki]] The goal coverage projection cites decisions from another wiki (open, method, meta #37)
+- [[ISS-004-where-the-metamodel-declares-its-version]] Where the metamodel declares its version (open, method, meta #39)
+- [[ISS-005-the-method-lint-imports-dashboard-code]] The method's lint imports dashboard code (open, method, meta #40)
 - [[ISS-006-other-container-engines-than-docker]] Should the dashboard run with other container engines than Docker (open, requirements, #24)
-- [[ISS-007-issue-category-and-owner-belong-in-meta]] Issue category and owner fields belong in meta (open, systems42, meta #53)
-- [[ISS-008-q42-dimensions-belong-in-meta]] Q42 dimensions for quality requirements belong in meta (open, systems42, meta #35)
+- [[ISS-007-issue-category-and-owner-belong-in-meta]] Issue category and owner fields belong in meta (resolved, method, meta #53)
+- [[ISS-008-q42-dimensions-belong-in-meta]] Q42 dimensions for quality requirements belong in meta (open, method, meta #35)
 
 ## Sources
 
