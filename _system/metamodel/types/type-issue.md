@@ -21,8 +21,6 @@ fields:
   - {name: resolved, kind: date, doc: "when status became resolved / wontfix"}
 anchors: [req42]
 projections: []
-sort_orders:
-  - {label: "Status › severity", keys: [status, severity]}
 ---
 
 # Type: issue

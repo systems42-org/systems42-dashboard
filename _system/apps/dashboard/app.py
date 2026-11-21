@@ -552,10 +552,37 @@ def static_url(filename: str) -> str:
 app.jinja_env.globals["static_url"] = static_url
 
 
+# Multi-column sort presets per type (FR-021). They are presentation, so they
+# live here and not in the metamodel (CON-006). `keys` are field names, most
+# significant first; each sorts in its column's natural direction.
+SORT_PRESETS: dict[str, list[dict]] = {
+    "functional-requirement": [{"label": "Priority › release › order", "keys": ["priority", "release", "order"]}],
+    "issue": [{"label": "Status › severity", "keys": ["status", "severity"]}],
+    "decision-record": [{"label": "Newest first", "keys": ["decided"]}],
+    "domain-term": [{"label": "A to Z", "keys": ["title"]}],
+    "glossary-term": [{"label": "A to Z", "keys": ["title"]}],  # until this wiki moves to domain terms
+    "stakeholder": [{"label": "Influence › interest", "keys": ["influence", "interest"]}],
+    "quality-requirement": [{"label": "Priority", "keys": ["priority"]}],
+}
+
+
+def sort_presets(type_name: str) -> list[dict]:
+    """The presets a type's list offers, as copies. A type without presets
+    sorts by single columns only. A preset key the pages lack is skipped by
+    static/list-view.js."""
+    return [{"label": p["label"], "keys": list(p["keys"])} for p in SORT_PRESETS.get(type_name, [])]
+
+
+def term_type() -> str:
+    """The type the Domain Terms list is declared as: the metamodel's type for
+    `wiki/domain-terms/` (`domain-term`), else the older `glossary-term`."""
+    return metamodel.type_for_folder("domain-terms") or "glossary-term"
+
+
 def list_spec(type_name: str) -> dict:
     """What a section list declares for static/list-view.js (FR-021): its type
-    and the sort orders the metamodel gives that type."""
-    return {"type": type_name, "orders": metamodel.sort_orders(type_name)}
+    and the sort presets the dashboard offers for it."""
+    return {"type": type_name, "orders": sort_presets(type_name)}
 
 
 app.jinja_env.globals["list_spec"] = list_spec
@@ -3378,7 +3405,7 @@ def glossary_view():
         })
     # Default order is alphabetical by term; other orders are applied client-side.
     rows.sort(key=lambda r: r["title"].lower())
-    return render_template("glossary.html", rows=rows, total=len(rows),
+    return render_template("glossary.html", rows=rows, total=len(rows), term_type=term_type(),
                            maturity=maturity(p.status for p in pages))
 
 
