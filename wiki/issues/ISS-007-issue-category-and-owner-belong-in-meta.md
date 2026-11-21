@@ -2,18 +2,18 @@
 id: ISS-007
 type: issue
 title: Issue category and owner fields belong in meta
-status: open
+status: resolved
 created: 2026-11-20
-updated: 2026-11-20
+updated: 2026-11-21
 sources: []
-related: ["[[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]]", "[[FR-025-issue-list-with-filters]]", "[[FR-026-issues-carry-a-category]]", "[[FR-028-who-answers-an-issue]]"]
+related: ["[[STK-012-maintainers]]", "[[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]]", "[[FR-025-issue-list-with-filters]]", "[[FR-026-issues-carry-a-category]]", "[[FR-028-who-answers-an-issue]]"]
 tags: [issue]
 severity: minor
 kind: gap
-category: systems42
+category: method
 raised-by: Gernot Starke
-owner: Gernot Starke and team
-resolved: null
+owner: "[[STK-012-maintainers]]"
+resolved: 2026-11-21
 ---
 
 # Issue category and owner fields belong in meta
@@ -32,4 +32,4 @@ resolved: null
 1. `meta` adopts `category:` and `owner:` in `type-issue.md` and `_templates/issue.md`.
 2. `meta` leaves them out, and the dashboard shows them only on wikis that carry them.
 
-**Resolution.**
+**Resolution.** Option 1, with changes. Systems42 adopted both fields in [meta pull request 55](https://github.com/systems42-org/meta/pull/55) on 2026-11-21: the category `systems42` is named `method`, both fields are optional, and `owner:` takes a stakeholder link only. This repository took over the three schema files. Its issues now use `method`, and [[STK-012-maintainers]] replaces the owner "Gernot Starke and team".

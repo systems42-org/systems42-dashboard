@@ -29,7 +29,10 @@ install. It fetches Python 3.12 and the release's wheel from the GitHub
 release, and a release fetched once starts without network. The dashboard
 runs in the foreground at the same address: Ctrl+C stops it, and so does
 closing the last browser tab. `DASH_WHEEL` names a wheel file or address to
-run instead, for a machine without network. Releases up to 0.12.0 have no
+run instead, for a machine that cannot reach GitHub. uv still needs Python
+3.12 and the libraries the wheel names: a machine that reaches a package
+index fetches them there, a machine without any network needs them in uv's
+cache already. Releases up to 0.12.0 have no
 wheel. With `dashboard_version: local` it runs the code in this repository.
 
 **One mount.** The launcher mounts the repository read-only at `/repo`. The

@@ -168,13 +168,34 @@ func (s *Server) staticURL(filename string) string {
 	return u
 }
 
+// sortPresets holds the multi-column sort presets per type (FR-021, CON-006),
+// matching app.py's SORT_PRESETS.
+var sortPresets = map[string][]metamodel.SortOrder{
+	"functional-requirement": {{Label: "Priority › release › order", Keys: []string{"priority", "release", "order"}}},
+	"issue":                  {{Label: "Status › severity", Keys: []string{"status", "severity"}}},
+	"decision-record":        {{Label: "Newest first", Keys: []string{"decided"}}},
+	"domain-term":            {{Label: "A to Z", Keys: []string{"title"}}},
+	"glossary-term":          {{Label: "A to Z", Keys: []string{"title"}}},
+	"stakeholder":            {{Label: "Influence › interest", Keys: []string{"influence", "interest"}}},
+	"quality-requirement":    {{Label: "Priority", Keys: []string{"priority"}}},
+}
+
+func (s *Server) termType() string {
+	if t := s.Metamodel.TypeForFolder("domain-terms"); t != "" {
+		return t
+	}
+	return "glossary-term"
+}
+
 func (s *Server) listSpec(typeName string) map[string]any {
-	raw := s.Metamodel.SortOrders(typeName)
+	raw := sortPresets[typeName]
 	orders := make([]map[string]any, 0, len(raw))
 	for _, o := range raw {
+		keys := make([]string, len(o.Keys))
+		copy(keys, o.Keys)
 		orders = append(orders, map[string]any{
 			"label": o.Label,
-			"keys":  o.Keys,
+			"keys":  keys,
 		})
 	}
 	return map[string]any{

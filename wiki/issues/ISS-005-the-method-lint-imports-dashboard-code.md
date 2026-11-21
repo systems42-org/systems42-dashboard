@@ -4,15 +4,15 @@ type: issue
 title: The method's lint imports dashboard code
 status: open
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-21
 sources: ["[[SRC-027-dashboard-distribution-and-metamodel-contract]]", "[[SRC-028-grilling-session-on-dashboard-distribution]]"]
 related: ["[[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]]", "[[DR-005-the-dashboard-lives-in-its-own-repository]]", "[[FR-044-sections-come-from-the-repositorys-metamodel]]"]
 tags: [issue]
 severity: major
 kind: contradiction
-category: systems42
+category: method
 raised-by: Claude
-owner: Gernot Starke and team
+owner: "[[STK-012-maintainers]]"
 resolved: null
 ---
 

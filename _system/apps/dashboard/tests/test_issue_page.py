@@ -33,7 +33,7 @@ HEAD = ("---\nid: {id}\ntype: {type}\ntitle: {title}\nstatus: {status}\ncreated:
     encoding="utf-8")
 (_wiki / "issues" / "ISS-002-schleife.md").write_text(
     HEAD.format(id="ISS-002", type="issue", title="Die Klärungsschleife", status="in-progress",
-                extra="severity: minor\nkind: gap\ncategory: systems42\nowner:\n"), encoding="utf-8")
+                extra="severity: minor\nkind: gap\ncategory: method\nowner:\n"), encoding="utf-8")
 (_wiki / "issues" / "ISS-003-kaputt.md").write_text(
     HEAD.format(id="ISS-003", type="issue", title="Kaputt", status="open",
                 extra="severity: huge\nkind: question\ncategory: bogus\n"), encoding="utf-8")
@@ -63,7 +63,7 @@ def _fields(stem):
 
 def test_issue_page_shows_its_fields():
     fields, _ = _fields("ISS-002-schleife")
-    assert fields == {"Category": "systems42", "Severity": "minor", "Kind": "gap", "Owner": "nobody yet"}, fields
+    assert fields == {"Category": "method", "Severity": "minor", "Kind": "gap", "Owner": "nobody yet"}, fields
 
 
 def test_owner_links_its_stakeholder():

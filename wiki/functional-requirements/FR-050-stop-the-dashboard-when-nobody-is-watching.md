@@ -11,7 +11,6 @@ tags: [functional-requirement, session]
 notation: agile
 level: story
 parent: ["[[FR-046-shared-session-in-a-workshop]]"]
-building-blocks: []
 priority: Should
 release: unscheduled
 lane: backbone

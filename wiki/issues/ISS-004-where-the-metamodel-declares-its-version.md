@@ -4,15 +4,15 @@ type: issue
 title: Where the metamodel declares its version
 status: open
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-21
 sources: ["[[SRC-027-dashboard-distribution-and-metamodel-contract]]", "[[SRC-028-grilling-session-on-dashboard-distribution]]"]
 related: ["[[FR-043-the-dashboard-checks-the-metamodel-version]]", "[[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]]"]
 tags: [issue]
 severity: minor
 kind: gap
-category: systems42
+category: method
 raised-by: "[[STK-012-maintainers]]"
-owner: Gernot Starke and team
+owner: "[[STK-012-maintainers]]"
 resolved: null
 ---
 

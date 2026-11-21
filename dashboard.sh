@@ -18,7 +18,8 @@
 #
 # DASH_PORT sets the port (8080). DASH_PUBLIC_URL sets the address of the QR
 # code. DASH_NO_BROWSER=1 starts without opening a browser. DASH_WHEEL names
-# the wheel `uv` runs, as a file or an address, for a machine without network.
+# the wheel `uv` runs, as a file or an address, for a machine that cannot reach
+# GitHub. uv still needs Python 3.12 and the libraries, from its cache or an index.
 #
 set -euo pipefail
 
@@ -208,7 +209,7 @@ case "$cmd" in
     # Without this check the wait below would get its answer from a dashboard
     # that runs already, and report a start that failed.
     if command -v curl >/dev/null 2>&1 && curl -s --max-time 1 -o /dev/null "$URL/"; then
-      die "Port $PORT is already in use. Is a dashboard still running? Stop it (./dashboard.sh down, or close its browser tabs), or set DASH_PORT."
+      die "Port $PORT is already in use. Is a dashboard still running? Stop it: Ctrl+C in the terminal of a uv start, ./dashboard.sh down for a Docker start, or close its browser tabs. Or set DASH_PORT."
     fi
     ip="$(lan_ip 2>/dev/null || true)"
     public="${DASH_PUBLIC_URL:-http://${ip:-localhost}:$PORT}"

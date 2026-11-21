@@ -552,10 +552,37 @@ def static_url(filename: str) -> str:
 app.jinja_env.globals["static_url"] = static_url
 
 
+# Multi-column sort presets per type (FR-021). They are presentation, so they
+# live here and not in the metamodel (CON-006). `keys` are field names, most
+# significant first; each sorts in its column's natural direction.
+SORT_PRESETS: dict[str, list[dict]] = {
+    "functional-requirement": [{"label": "Priority › release › order", "keys": ["priority", "release", "order"]}],
+    "issue": [{"label": "Status › severity", "keys": ["status", "severity"]}],
+    "decision-record": [{"label": "Newest first", "keys": ["decided"]}],
+    "domain-term": [{"label": "A to Z", "keys": ["title"]}],
+    "glossary-term": [{"label": "A to Z", "keys": ["title"]}],  # until this wiki moves to domain terms
+    "stakeholder": [{"label": "Influence › interest", "keys": ["influence", "interest"]}],
+    "quality-requirement": [{"label": "Priority", "keys": ["priority"]}],
+}
+
+
+def sort_presets(type_name: str) -> list[dict]:
+    """The presets a type's list offers, as copies. A type without presets
+    sorts by single columns only. A preset key the pages lack is skipped by
+    static/list-view.js."""
+    return [{"label": p["label"], "keys": list(p["keys"])} for p in SORT_PRESETS.get(type_name, [])]
+
+
+def term_type() -> str:
+    """The type the Domain Terms list is declared as: the metamodel's type for
+    `wiki/domain-terms/` (`domain-term`), else the older `glossary-term`."""
+    return metamodel.type_for_folder("domain-terms") or "glossary-term"
+
+
 def list_spec(type_name: str) -> dict:
     """What a section list declares for static/list-view.js (FR-021): its type
-    and the sort orders the metamodel gives that type."""
-    return {"type": type_name, "orders": metamodel.sort_orders(type_name)}
+    and the sort presets the dashboard offers for it."""
+    return {"type": type_name, "orders": sort_presets(type_name)}
 
 
 app.jinja_env.globals["list_spec"] = list_spec
@@ -2320,27 +2347,42 @@ def _mermaid_goal_epic_tree(goals: dict, hierarchy: dict,
     return "\n".join(lines)
 
 
-def _mermaid_fr_subtree(node: dict | None) -> str | None:
-    """One FR's own breakdown as a focused mermaid, drawn on its FR page so the
-    hierarchy overview can stay compact. Handles both an epic root (→ its Features
-    → their Stories, plus stories hung straight off the epic) and a feature root
-    (→ its Stories). Descendant nodes click through to their own FR page.
-    Returns None when the node is a leaf (a story, or an un-broken-down FR)."""
+def fr_building_blocks(stem: str) -> list[Page]:
+    """The building blocks whose `drivers:` name this requirement (rel-drivers),
+    by id. The link is stored on the block only, never on the requirement."""
+    return [p for p in sorted(load_folder("building-blocks"), key=lambda q: q.id)
+            if stem in links_of(p, "drivers")]
+
+
+def _mermaid_fr_subtree(node: dict | None, blocks: list[Page] | None = None,
+                        links: list[dict] | None = None) -> str | None:
+    """One FR's detail diagram (FR-047), drawn on its FR page so the hierarchy
+    overview can stay compact: its breakdown and its building blocks. Handles
+    an epic root (→ its Features → their Stories, plus stories hung straight
+    off the epic), a feature root (→ its Stories) and a leaf. `blocks` are the
+    root's own building blocks, joined by a dashed edge. Every node but the
+    root clicks through to its page and is added to `links`, the text links
+    beside the diagram (QR-001). `node` needs `id` and `title` only.
+    Returns None when the root has neither children nor building blocks."""
     if not node:
         return None
+    blocks = blocks or []
     feats = node.get("features") or []
     own_stories = node.get("stories") or []          # set when the root is a feature
     direct = node.get("direct_stories") or []        # epic's stories without a feature
-    if not feats and not own_stories and not direct:
+    if not feats and not own_stories and not direct and not blocks:
         return None
     rid = _diagram_node_id(node["id"])
     lines = ["graph TD", f'  {rid}["{node["id"]}<br/>{_clean_label(node["title"])}"]:::root']
+    drawn: list[dict] = []
 
     def child(parent_nid: str, rec: dict, css: str) -> str:
         nid = _diagram_node_id(rec["id"])
         label = _clean_label(rec["title"])
+        url = f'/functional-requirements/{rec["stem"]}'
         lines.append(f'  {parent_nid} --> {nid}["{rec["id"]}<br/>{label}"]:::{css}')
-        lines.append(f'  click {nid} "/functional-requirements/{rec["stem"]}"')
+        lines.append(f'  click {nid} "{url}"')
+        drawn.append({"id": rec["id"], "title": rec["title"], "url": url})
         return nid
 
     for f in feats:
@@ -2351,12 +2393,20 @@ def _mermaid_fr_subtree(node: dict | None) -> str | None:
         child(rid, s, "story")
     for s in direct:
         child(rid, s, "story")
+    for b in blocks:
+        nid = _diagram_node_id(b.id)
+        lines.append(f'  {rid} -.-> {nid}[["{b.id}<br/>{_clean_label(b.title)}"]]:::block')
+        lines.append(f'  click {nid} "{_page_url(b.folder, b.stem)}"')
+        drawn.append(_node_link(b))
 
     lines += [
         "  classDef root fill:#2f6fb3,stroke:#7fc0ff,color:#ffffff,stroke-width:2px,font-weight:bold;",
         "  classDef feature fill:#d7dbe3,stroke:#9aa3b2,color:#15202e;",
         "  classDef story fill:#f3f6fb,stroke:#c4ccd9,color:#15202e;",
+        "  classDef block fill:#e3efe6,stroke:#6f9b7c,color:#15202e;",
     ]
+    if links is not None:
+        links.extend(drawn)
     return "\n".join(lines)
 
 
@@ -3355,7 +3405,7 @@ def glossary_view():
         })
     # Default order is alphabetical by term; other orders are applied client-side.
     rows.sort(key=lambda r: r["title"].lower())
-    return render_template("glossary.html", rows=rows, total=len(rows),
+    return render_template("glossary.html", rows=rows, total=len(rows), term_type=term_type(),
                            maturity=maturity(p.status for p in pages))
 
 
@@ -4422,10 +4472,13 @@ def fr_view(stem):
     if fr["n_stories"] is None:  # feature/story carry no precomputed count
         fr["n_stories"] = len(fr["stories"])
 
-    diagram = _mermaid_fr_subtree(node)
+    diagram_links: list[dict] = []
+    # a requirement outside the hierarchy (an orphan) still shows its blocks
+    diagram = _mermaid_fr_subtree(node or {"id": page.id, "title": page.title},
+                                  fr_building_blocks(stem), diagram_links)
     trace = build_trace(stem, "functional-requirements")
     return render_template(
-        "fr.html", fr=fr, body_html=body_html, diagram=diagram,
+        "fr.html", fr=fr, body_html=body_html, diagram=diagram, diagram_links=diagram_links,
         ancestors=_fr_ancestors(stem),
         trace=trace,
         relations=build_relations_panel(stem, exclude=trace_stems(trace)),

@@ -4,15 +4,15 @@ type: issue
 title: Define the clarify loop
 status: open
 created: 2026-11-11
-updated: 2026-11-12
+updated: 2026-11-21
 sources: ["[[SRC-008-grilling-session-on-showing-the-method]]"]
 related: ["[[FR-011-explain-the-three-loops]]"]
 tags: [issue]
 severity: minor
 kind: gap
-category: systems42
+category: method
 raised-by: Gernot Starke
-owner: Gernot Starke and team
+owner: "[[STK-012-maintainers]]"
 resolved: null
 ---
 

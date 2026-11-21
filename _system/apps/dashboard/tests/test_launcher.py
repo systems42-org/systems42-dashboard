@@ -116,14 +116,15 @@ def test_local_needs_the_dashboard_code():
         assert "ghcr.io" not in called, called
 
 
-def _uv_run(yaml, uv_script='#!/bin/sh\necho "$@" >> "$UV_LOG"\nexit 0\n', **extra_env):
+def _uv_run(yaml, uv_script='#!/bin/sh\necho "$@" >> "$UV_LOG"\nexit 0\n',
+            curl_script="#!/bin/sh\nexit 7\n", **extra_env):
     """`./dashboard.sh uv` with a stub `uv` that logs its arguments, and a
-    `curl` that finds nothing on the port. Returns the run, the uv log and
-    the docker log."""
+    `curl` that finds nothing on the port (unless `curl_script` says
+    otherwise). Returns the run, the uv log and the docker log."""
     with tempfile.TemporaryDirectory() as tmp:
         root = _wiki(tmp, yaml)
         bin_dir, docker_log = _stubs(tmp)
-        (bin_dir / "curl").write_text("#!/bin/sh\nexit 7\n", encoding="utf-8")
+        (bin_dir / "curl").write_text(curl_script, encoding="utf-8")
         if uv_script:
             f = bin_dir / "uv"
             f.write_text(uv_script, encoding="utf-8")
@@ -173,6 +174,15 @@ def test_uv_with_local_needs_the_dashboard_code():
     run, called, _ = _uv_run("dashboard_version: local\n")
     assert run.returncode == 1 and "_system/apps/dashboard" in run.stderr, run.stderr
     assert called == "", called
+
+
+def test_uv_on_a_busy_port_says_how_to_stop_a_uv_start():
+    """A machine that runs the uv start often has no Docker, so the hint
+    must not name only ./dashboard.sh down."""
+    run, called, _ = _uv_run('dashboard_version: "0.13.0"\n', curl_script="#!/bin/sh\nexit 0\n")
+    assert run.returncode == 1 and "already in use" in run.stderr, run.stderr
+    assert "Ctrl+C" in run.stderr, run.stderr
+    assert "systems42-dashboard\n" not in called, "it must not start a second server"
 
 
 def test_a_folder_that_is_no_wiki_is_refused():

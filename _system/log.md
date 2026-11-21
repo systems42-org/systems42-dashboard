@@ -349,3 +349,36 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Decision (Gernot Starke, 2026-11-21): the earliest tab still connected gets the rights, also when it held them before. A returning holder counts as newly connected. A session always has a Keyholder.
 - Updated: [[FR-046-shared-session-in-a-workshop]] (Keyholder rule, history). No code change: the dashboard already works this way, and two new tests in `tests/test_presence.py` hold it.
 - Not changed: [[STK-023-keyholder]] is `accepted` and still says "the rights never go back to an earlier holder". It needs the same wording, by promotion.
+
+## [2026-11-21] capture | A public website for the dashboard
+- Source: `raw/ingested/public-website-for-the-dashboard.md` ([[SRC-037-a-public-website-for-the-dashboard]]), written on 2026-11-21 from Gernot Starke's requirement and the existing site in `site/`. Grilling: [[SRC-038-grilling-session-on-the-public-website]].
+- Decisions (Gernot Starke, 2026-11-21):
+  - Goal: GOAL-002. The downloads also serve GOAL-008. No new goal.
+  - Audience: people who consider using Systems42 become an alias of STK-013. STK-022 is not brought back.
+  - The static export is, for now, only the way this site gets its demo. Publishing any wiki is out of scope.
+  - The demo shows the dashboard's own wiki. The maintainers switch it only when the other wiki's owner agrees.
+  - No measure of its own: QR-001 applies to the site.
+  - Gernot Starke keeps the imprint and the privacy notice correct.
+  - Priorities: epic Should, demo and legal information Must, the other features Should.
+  - The three gaps of the site are open points on the pages and GitHub issue #86.
+- Created: [[FR-056-a-public-website-for-the-dashboard]], [[FR-057-overview-of-the-dashboard-on-the-website]], [[FR-058-a-demo-to-try-without-installing]], [[FR-059-downloads-on-the-website]], [[FR-060-documentation-on-the-website]], [[FR-061-legal-and-project-information-on-the-website]], [[FR-062-the-website-is-built-and-published-from-the-repository]], SRC-037, SRC-038.
+- Updated: STK-013 (alias, snapshot, goal), STK-012 (goal), CON-001 (the demo), QR-001 (applies to the site), `_system/index.md`.
+- Issues: none. Every question was answered.
+- IDs: FR-054, FR-055, SRC-036 and DR-007 are taken by pull request #81, which is not merged, so this capture starts at FR-056 and SRC-037.
+- Not changed: GOAL-002 and GOAL-008 are served through the `goal:` field of the new pages.
+
+## [2026-11-21] inspect | Issue schema taken over from systems42-org/meta
+- Origin: [meta pull request 55](https://github.com/systems42-org/meta/pull/55), which adopts `category:` and `owner:` for issues.
+- Schema: `type-issue.md`, `rel-owner.md` and `_templates/issue.md` now match meta. The category `systems42` is `method`, both fields are optional, `owner:` takes a stakeholder link only.
+- Updated: six issues from `category: systems42` to `method`. Seven issues from the owner "Gernot Starke" or "Gernot Starke and team" to [[STK-012-maintainers]] (Claude's choice of stakeholder, to be checked).
+- Resolved: [[ISS-007-issue-category-and-owner-belong-in-meta]].
+- Updated: [[FR-026-issues-carry-a-category]], [[FR-028-who-answers-an-issue]], [[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]].
+- No code change: the dashboard reads the category values from the metamodel. It still shows an owner written as a plain name.
+
+## [2026-11-21] inspect | FR-047: building blocks in the detail diagram
+- Origin: issue #66.
+- Code: the diagram on a requirement's page draws its children and the building blocks whose `drivers:` name it. Test: `tests/test_fr_detail_diagram.py`.
+- Updated: [[FR-047-see-the-requirements-as-a-story-map]] (open points, history).
+- Removed: the field `building-blocks: []` from FR-047 to FR-053. The template does not define it, and nothing read it.
+- Claude's choices, to be checked: a static Mermaid diagram instead of an interactive one, and the block's `drivers:` as the only source of the link.
+- Not built: [[FR-048-show-the-delivery-status-of-a-requirement]]. It waits for the delivery fields of the Systems42 metamodel.
