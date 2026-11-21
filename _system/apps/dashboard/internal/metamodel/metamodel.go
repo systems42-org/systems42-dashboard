@@ -27,7 +27,29 @@ var (
 	urlRE       = regexp.MustCompile(`https?://[^\s<>()\]]+`)
 	slugRE      = regexp.MustCompile(`[^a-z0-9]+`)
 	blankLineRE = regexp.MustCompile(`\n\s*\n`)
+	levelsRE    = regexp.MustCompile(`(?m)^<!--\s*levels:\s*(.*?)\s*-->[ \t]*$`)
+	blockNameRE = regexp.MustCompile(`(?m)^(?:##\s+(.+?)|\*\*(.+?)\*\*.*)$`)
 )
+
+var frameworkOrder = map[string]int{
+	"req42":   0,
+	"commons": 1,
+	"arc42":   2,
+}
+
+// Data holds everything read from _system/metamodel/ and _system/notations/
+// for /metamodel, matching metamodel.py's load().
+type Data struct {
+	Meta        map[string]any
+	Frameworks  []map[string]any
+	Blocks      []map[string]any
+	Types       []map[string]any
+	Notations   []map[string]any
+	Relations   []map[string]any
+	Projections []map[string]any
+	Rules       []map[string]any
+	Present     bool
+}
 
 // Anchor is a methodological standard in _system/anchors/ (FR-035).
 type Anchor struct {
@@ -192,9 +214,36 @@ func parseMetamodelPage(path string) map[string]any {
 	if !ok || strVal(meta["type"]) != "metamodel" {
 		return nil
 	}
-	meta["_body"] = strings.TrimSpace(m[2])
+	body := strings.TrimSpace(m[2])
+	meta["_body"] = body
+	meta["_summary"] = SummaryOf(body)
 	meta["_file"] = filepath.Base(path)
 	return meta
+}
+
+// SummaryOf returns the first paragraph of a metamodel page body with the
+// leading H1 heading dropped, collapsed to one line.
+func SummaryOf(body string) string {
+	text := body
+	if loc := h1RE.FindStringIndex(text); loc != nil {
+		text = text[:loc[0]] + text[loc[1]:]
+	}
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return ""
+	}
+	parts := blankLineRE.Split(text, 2)
+	head := parts[0]
+	trimmed := strings.TrimLeft(head, " \t\r\n")
+	if strings.HasPrefix(trimmed, "-") || strings.HasPrefix(trimmed, "*") ||
+		strings.HasPrefix(trimmed, "|") || strings.HasPrefix(trimmed, "#") {
+		return ""
+	}
+	var lines []string
+	for _, l := range strings.Split(head, "\n") {
+		lines = append(lines, strings.TrimSpace(l))
+	}
+	return strings.Join(lines, " ")
 }
 
 // parseVersion reads `version:` as raw text via yaml.Node so `0.10` stays
@@ -431,6 +480,213 @@ func (r *Reader) Lifecycle(typeName string) []string {
 		out = append(out, strVal(v))
 	}
 	return out
+}
+
+// TypeForFolder returns the metamodel type name whose pages live in
+// wiki/<folder>, or "" when none matches.
+func (r *Reader) TypeForFolder(folder string) string {
+	for _, t := range r.load("types", "type") {
+		f := strVal(t["folder"])
+		if f != "" && filepath.Base(filepath.FromSlash(f)) == folder {
+			return strVal(t["name"])
+		}
+	}
+	return ""
+}
+
+// NotationSections extracts the `<!-- levels: ... -->`-marked template blocks
+// from a notation page body, in order.
+func NotationSections(body string) []map[string]any {
+	marks := levelsRE.FindAllStringSubmatchIndex(body, -1)
+	out := make([]map[string]any, 0, len(marks))
+	for i, m := range marks {
+		end := len(body)
+		if i+1 < len(marks) {
+			end = marks[i+1][0]
+		}
+		chunk := body[m[1]:end]
+		heading := ""
+		if nm := blockNameRE.FindStringSubmatch(chunk); nm != nil {
+			h := nm[1]
+			if h == "" {
+				h = nm[2]
+			}
+			heading = strings.TrimRight(strings.TrimSpace(h), ".")
+		}
+		rawLevels := body[m[2]:m[3]]
+		levels := []string{}
+		for _, s := range strings.Split(rawLevels, ",") {
+			if t := strings.TrimSpace(s); t != "" {
+				levels = append(levels, t)
+			}
+		}
+		out = append(out, map[string]any{
+			"heading": heading,
+			"levels":  levels,
+		})
+	}
+	return out
+}
+
+// Notations returns shipped notations under _system/metamodel/notations/ plus
+// project-specific notations under _system/notations/, sorted by name.
+func (r *Reader) Notations() []map[string]any {
+	raw := r.load("notations", "notation")
+	if r.NotationsDir != "" {
+		entries, err := os.ReadDir(r.NotationsDir)
+		var paths []string
+		if err == nil {
+			for _, e := range entries {
+				if strings.HasSuffix(e.Name(), ".md") {
+					paths = append(paths, filepath.Join(r.NotationsDir, e.Name()))
+				}
+			}
+			sort.Strings(paths)
+		}
+		r.forgetMissing(r.NotationsDir, paths)
+		for _, p := range paths {
+			n := r.readCached(p, "page", parseMetamodelPage)
+			if n != nil && strVal(n["construct"]) == "notation" {
+				raw = append(raw, n)
+			}
+		}
+	}
+	out := make([]map[string]any, 0, len(raw))
+	for _, n := range raw {
+		name := strings.TrimSpace(strVal(n["name"]))
+		if name == "" {
+			continue
+		}
+		n["name"] = name
+		n["_sections"] = NotationSections(strVal(n["_body"]))
+		levels := []string{}
+		if rawLevels, ok := n["levels"].([]any); ok {
+			for _, v := range rawLevels {
+				levels = append(levels, strVal(v))
+			}
+		}
+		n["levels"] = levels
+		out = append(out, n)
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		return strings.ToLower(strVal(out[i]["name"])) < strings.ToLower(strVal(out[j]["name"]))
+	})
+	return out
+}
+
+// Load parses the entire metamodel directory for /metamodel, matching metamodel.py's load().
+func (r *Reader) Load() *Data {
+	meta := r.readCached(filepath.Join(r.Dir, "meta-metamodel.md"), "page", parseMetamodelPage)
+	if meta == nil {
+		meta = map[string]any{}
+	}
+	frameworks := r.load("frameworks", "framework")
+	fwRank := func(fw map[string]any) int {
+		if idx, ok := frameworkOrder[strVal(fw["name"])]; ok {
+			return idx
+		}
+		return 99
+	}
+	sort.SliceStable(frameworks, func(i, j int) bool {
+		return fwRank(frameworks[i]) < fwRank(frameworks[j])
+	})
+
+	blocks := make([]map[string]any, 0)
+	blockPos := map[string]int{}
+	blockByID := map[string]map[string]any{}
+	for _, fw := range frameworks {
+		rawBlocks, _ := fw["blocks"].([]any)
+		for _, item := range rawBlocks {
+			bm, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			cp := make(map[string]any, len(bm)+2)
+			for k, v := range bm {
+				cp[k] = v
+			}
+			cp["framework"] = fw["name"]
+			cp["area"] = fw["area"]
+			bid := strVal(cp["id"])
+			blockPos[bid] = len(blocks)
+			blockByID[bid] = cp
+			blocks = append(blocks, cp)
+		}
+	}
+
+	types := r.load("types", "type")
+	for _, t := range types {
+		bid := strVal(t["block"])
+		if b, ok := blockByID[bid]; ok {
+			t["block_title"] = strVal(b["title"])
+			t["block_area"] = b["area"]
+		} else {
+			t["block_title"] = ""
+			t["block_area"] = nil
+		}
+	}
+	sort.SliceStable(types, func(i, j int) bool {
+		pi, ok := blockPos[strVal(types[i]["block"])]
+		if !ok {
+			pi = len(blocks)
+		}
+		pj, ok := blockPos[strVal(types[j]["block"])]
+		if !ok {
+			pj = len(blocks)
+		}
+		if pi != pj {
+			return pi < pj
+		}
+		return strVal(types[i]["name"]) < strVal(types[j]["name"])
+	})
+
+	return &Data{
+		Meta:        meta,
+		Frameworks:  frameworks,
+		Blocks:      blocks,
+		Types:       types,
+		Notations:   r.Notations(),
+		Relations:   r.load("relations", "relation"),
+		Projections: r.load("projections", "projection"),
+		Rules:       r.load("rules", "rule"),
+		Present:     len(types) > 0,
+	}
+}
+
+// Anchors maps every metamodel construct name and alias to its in-page anchor
+// ID on /metamodel, matching metamodel.py's anchors().
+func Anchors(mm *Data) map[string]string {
+	out := map[string]string{}
+	add := func(items []map[string]any, prefix string) {
+		for _, p := range items {
+			name := strVal(p["name"])
+			if name == "" {
+				continue
+			}
+			anchor := prefix + name
+			out[name] = anchor
+			if aliases, ok := p["aliases"].([]any); ok {
+				for _, a := range aliases {
+					if s := strVal(a); s != "" {
+						out[s] = anchor
+					}
+				}
+			}
+		}
+	}
+	// Types last so a bare [[goal]] resolves to the type, not the relation.
+	add(mm.Relations, "rel-")
+	add(mm.Frameworks, "fw-")
+	add(mm.Projections, "proj-")
+	add(mm.Rules, "rule-")
+	add(mm.Notations, "notation-")
+	add(mm.Types, "type-")
+	return out
+}
+
+// StrVal converts a YAML scalar value to string (matching PyYAML's str()).
+func StrVal(v any) string {
+	return strVal(v)
 }
 
 func anchorDefinition(body string) string {

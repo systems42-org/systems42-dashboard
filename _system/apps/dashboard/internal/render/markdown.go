@@ -15,14 +15,20 @@ import (
 )
 
 var (
-	calloutRE    = regexp.MustCompile(`(?m)^>[ \t]*\[!(\w+)\][ \t]*(.*)$`)
-	blockStartRE = regexp.MustCompile("^(\\s*([-*+]|\\d+[.)])\\s|\\s*#|\\s*>|\\s*\\||\\s*```|\\s*~~~|\\s{4,}\\S|\t|\\s*<)")
-	listStartRE  = regexp.MustCompile(`^\s*([-*+]|\d+[.)])\s`)
-	ulMarkerRE   = regexp.MustCompile(`^( *)([-*+])(\s.*)$`)
-	olMarkerRE   = regexp.MustCompile(`^( *)(\d+)([.)])(\s.*)$`)
-	tableSepRE   = regexp.MustCompile(`^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$`)
-	tableOpenRE  = regexp.MustCompile(`(?i)<table\b`)
-	tableCloseRE = regexp.MustCompile(`(?i)</table\s*>`)
+	calloutRE        = regexp.MustCompile(`(?m)^>[ \t]*\[!(\w+)\][ \t]*(.*)$`)
+	blockStartRE     = regexp.MustCompile("^(\\s*([-*+]|\\d+[.)])\\s|\\s*#|\\s*>|\\s*\\||\\s*```|\\s*~~~|\\s{4,}\\S|\t|\\s*<)")
+	listStartRE      = regexp.MustCompile(`^\s*([-*+]|\d+[.)])\s`)
+	ulMarkerRE       = regexp.MustCompile(`^( *)([-*+])(\s.*)$`)
+	olMarkerRE       = regexp.MustCompile(`^( *)(\d+)([.)])(\s.*)$`)
+	tableSepRE       = regexp.MustCompile(`^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$`)
+	tableOpenRE      = regexp.MustCompile(`(?i)<table\b`)
+	tableCloseRE     = regexp.MustCompile(`(?i)</table\s*>`)
+	collapseSpaceRE  = regexp.MustCompile(`\s+`)
+	labeledEndRE     = regexp.MustCompile(`\n\s*\n|\n\s*\*\*`)
+	pamBulletStartRE = regexp.MustCompile(`(?m)^[ \t]*-\s+\*\*([A-Za-z]+)\.\*\*\s+`)
+	pamBulletEndRE   = regexp.MustCompile(`\n[ \t]*-\s+\*\*|\n##\s|\n\s*\n`)
+	emphasisRE       = regexp.MustCompile(`\*(\S[^*]*?)\*`)
+	htmlTagRE        = regexp.MustCompile(`<[^>]*>`)
 )
 
 // footnoteListRenderer overrides goldmark's default <div class="footnotes">
@@ -258,4 +264,95 @@ func RenderMarkdown(body string, ctx LinkContext) string {
 		return ""
 	}
 	return SanitizeHTML(WrapTables(buf.String()), false)
+}
+
+// RenderMarkdownCustom renders Markdown using a custom outside-code link
+// rewriter (used by /metamodel for in-page construct anchors), without
+// Obsidian callout conversion or DropFollows.
+func RenderMarkdownCustom(body string, rewriteOutsideCode func(string) string) string {
+	body = strings.ReplaceAll(body, "\r\n", "\n")
+	body = UnwrapProse(body)
+	body = normalizePythonMarkdownLists(body)
+	if rewriteOutsideCode != nil {
+		body = OutsideCode(body, rewriteOutsideCode)
+	}
+	var buf bytes.Buffer
+	if err := mdConverter.Convert([]byte(body), &buf); err != nil {
+		return ""
+	}
+	return SanitizeHTML(WrapTables(buf.String()), false)
+}
+
+// RenderMarkdownInline renders one line of Markdown with a custom link rewriter
+// and strips a single outer <p>...</p> wrapper for table cells.
+func RenderMarkdownInline(body string, rewriteOutsideCode func(string) string) string {
+	h := strings.TrimSpace(RenderMarkdownCustom(body, rewriteOutsideCode))
+	if strings.HasPrefix(h, "<p>") && strings.HasSuffix(h, "</p>") && strings.Count(h, "<p>") == 1 {
+		h = h[3 : len(h)-4]
+	}
+	return h
+}
+
+// ExtractLabeled pulls the paragraph introduced by **<label>.**, collapses
+// whitespace, resolves wikilinks, and sanitises the HTML (matching app.py's
+// extract_labeled()).
+func ExtractLabeled(body, label string, ctx LinkContext) string {
+	body = strings.ReplaceAll(body, "\r\n", "\n")
+	startRE := regexp.MustCompile(`\*\*` + regexp.QuoteMeta(label) + `\.\*\*\s*`)
+	m := startRE.FindStringIndex(body)
+	if m == nil {
+		return ""
+	}
+	rest := body[m[1]:]
+	if end := labeledEndRE.FindStringIndex(rest); end != nil {
+		rest = rest[:end[0]]
+	}
+	raw := strings.TrimSpace(collapseSpaceRE.ReplaceAllString(rest, " "))
+	if raw == "" {
+		return ""
+	}
+	return SanitizeHTML(RenderWikilinks(raw, ctx), false)
+}
+
+// ExtractPAMBullet pulls a bullet-style `- **<label>.** ...` field from a page
+// body, matching app.py's extract_pam_bullet().
+func ExtractPAMBullet(body, label string, ctx LinkContext) string {
+	body = strings.ReplaceAll(body, "\r\n", "\n")
+	for _, m := range pamBulletStartRE.FindAllStringSubmatchIndex(body, -1) {
+		if strings.EqualFold(body[m[2]:m[3]], label) {
+			rest := body[m[1]:]
+			if end := pamBulletEndRE.FindStringIndex(rest); end != nil {
+				rest = rest[:end[0]]
+			}
+			raw := strings.TrimSpace(collapseSpaceRE.ReplaceAllString(rest, " "))
+			if raw == "" {
+				return ""
+			}
+			return SanitizeHTML(RenderWikilinks(raw, ctx), false)
+		}
+	}
+	return ""
+}
+
+// Emphasis turns *text* into <em>text</em> in sanitised HTML without touching
+// anything inside HTML tags or attributes (matching app.py's _emphasis()).
+func Emphasis(htmlStr string) string {
+	locs := htmlTagRE.FindAllStringIndex(htmlStr, -1)
+	if len(locs) == 0 {
+		return emphasisRE.ReplaceAllString(htmlStr, "<em>$1</em>")
+	}
+	var out strings.Builder
+	out.Grow(len(htmlStr) + 16)
+	pos := 0
+	for _, loc := range locs {
+		if loc[0] > pos {
+			out.WriteString(emphasisRE.ReplaceAllString(htmlStr[pos:loc[0]], "<em>$1</em>"))
+		}
+		out.WriteString(htmlStr[loc[0]:loc[1]])
+		pos = loc[1]
+	}
+	if pos < len(htmlStr) {
+		out.WriteString(emphasisRE.ReplaceAllString(htmlStr[pos:], "<em>$1</em>"))
+	}
+	return out.String()
 }

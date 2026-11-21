@@ -181,11 +181,14 @@ func TestHostileVault(t *testing.T) {
 			}
 		}
 	}
-	if rec := doGet(srv, "/"); rec.Code != http.StatusOK {
-		t.Fatalf("GET / = %d", rec.Code)
-	}
-	if rec := doGet(srv, "/source/SRC-001-hostile"); rec.Code != http.StatusOK {
-		t.Fatalf("GET /source/SRC-001-hostile = %d", rec.Code)
+	for _, u := range []string{
+		"/", "/req42", "/arc42", "/commons", "/req42/quality", "/req42/constraints",
+		"/metamodel", "/method", "/changes", "/issues", "/issues?status=open",
+		"/stakeholders", "/decisions", "/domain-terms", "/source/SRC-001-hostile",
+	} {
+		if rec := doGet(srv, u); rec.Code != http.StatusOK {
+			t.Fatalf("GET %s = %d", u, rec.Code)
+		}
 	}
 
 	// 2. Bad fields fall back and non-UTF-8 renders replacement chars
@@ -579,7 +582,11 @@ func TestHostileEveryType(t *testing.T) {
 		PublicURL:   "http://127.0.0.1:8080",
 	})
 
-	urls = append([]string{"/", "/does-not-exist"}, urls...)
+	urls = append([]string{
+		"/", "/req42", "/arc42", "/commons", "/req42/quality", "/req42/constraints",
+		"/metamodel", "/method", "/changes", "/issues", "/issues?status=open",
+		"/stakeholders", "/decisions", "/domain-terms", "/does-not-exist",
+	}, urls...)
 	for _, u := range urls {
 		rec := doGet(srv, u)
 		if rec.Code >= 500 {
@@ -592,7 +599,10 @@ func TestHostileEveryType(t *testing.T) {
 	}
 
 	// Non-vacuous check: escaped payload actually reached the rendered HTML
-	for _, u := range []string{"/", "/page/glossary/GLO-001-hostile", "/page/runtime-scenarios/RS-002-hostile", "/page/issues/ISS-001-hostile", "/source/SRC-001-hostile"} {
+	for _, u := range []string{
+		"/", "/req42/quality", "/metamodel", "/changes", "/issues", "/stakeholders", "/decisions", "/domain-terms",
+		"/page/glossary/GLO-001-hostile", "/page/runtime-scenarios/RS-002-hostile", "/page/issues/ISS-001-hostile", "/source/SRC-001-hostile",
+	} {
 		body := doGet(srv, u).Body.String()
 		if !strings.Contains(body, mark) || !strings.Contains(body, "&lt;script&gt;") {
 			t.Errorf("%s: expected escaped hostile payload to be rendered", u)

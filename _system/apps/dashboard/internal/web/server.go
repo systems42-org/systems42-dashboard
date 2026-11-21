@@ -247,6 +247,34 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case p == "/":
 		s.handleIndex(w, r)
+	case p == "/req42":
+		s.handleArea(w, r, "requirements")
+	case p == "/arc42":
+		s.handleArea(w, r, "architecture")
+	case p == "/commons":
+		s.handleArea(w, r, "commons")
+	case strings.HasPrefix(p, "/req42/"):
+		s.handleReq42Block(w, r)
+	case strings.HasPrefix(p, "/section/"):
+		s.handleSection(w, r)
+	case p == "/metamodel":
+		s.handleMetamodel(w, r)
+	case p == "/method":
+		s.handleMethod(w, r)
+	case p == "/changes":
+		s.handleChanges(w, r)
+	case p == "/domain-terms":
+		s.handleDomainTerms(w, r)
+	case p == "/glossary":
+		s.handleLegacyRedirect(w, r, "/domain-terms")
+	case p == "/stakeholders":
+		s.handleStakeholders(w, r)
+	case p == "/decisions":
+		s.handleDecisions(w, r)
+	case p == "/adrs":
+		s.redirect(w, r, "/decisions", http.StatusMovedPermanently)
+	case p == "/issues":
+		s.handleIssues(w, r)
 	case strings.HasPrefix(p, "/page/"):
 		s.handlePageDetail(w, r)
 	case strings.HasPrefix(p, "/source/"):
@@ -424,6 +452,12 @@ func (s *Server) renderHTML(w http.ResponseWriter, r *http.Request, status int, 
 	if r.Method != http.MethodHead {
 		_, _ = w.Write(buf.Bytes())
 	}
+}
+
+func (s *Server) redirect(w http.ResponseWriter, r *http.Request, target string, code int) {
+	w.Header().Set("Content-Security-Policy", fmt.Sprintf(pageCSPTemplate, generateNonce()))
+	w.Header().Set("X-Frame-Options", "DENY")
+	http.Redirect(w, r, target, code)
 }
 
 func (s *Server) publicURL(r *http.Request) string {

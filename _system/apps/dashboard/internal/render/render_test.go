@@ -210,3 +210,38 @@ func TestSanitizeHTMLRules(t *testing.T) {
 		t.Fatalf("wiki page kept layout style")
 	}
 }
+
+func TestExtractLabeledPAMAndEmphasis(t *testing.T) {
+	ctx := LinkContext{
+		Titles: map[string]string{"GLO-001-term": "Term"},
+		Links:  map[string]wiki.PageRef{"GLO-001-term": {Folder: "glossary", Stem: "GLO-001-term"}},
+	}
+
+	body := "# Heading\n\n**Definition.** First line\nsecond line referencing [[GLO-001-term]] and <script>x</script>.\n\n**Notes.** Ignored."
+	got := ExtractLabeled(body, "Definition", ctx)
+	if !strings.Contains(got, `href="/page/glossary/GLO-001-term"`) || strings.Contains(got, "<script>") || strings.Contains(got, "Ignored") {
+		t.Fatalf("ExtractLabeled unexpected: %s", got)
+	}
+	if ExtractLabeled(body, "Missing", ctx) != "" {
+		t.Fatal("expected empty string for missing label")
+	}
+
+	qrBody := "## Scenario\n- **Source.** Any user\n  on mobile.\n- **Measure.** Under *200 ms* via <a href=\"/x*y\">link</a>.\n\n## Next\n"
+	src := ExtractPAMBullet(qrBody, "Source", ctx)
+	if src != "Any user on mobile." {
+		t.Fatalf("ExtractPAMBullet(Source) = %q", src)
+	}
+	meas := Emphasis(ExtractPAMBullet(qrBody, "Measure", ctx))
+	if !strings.Contains(meas, "<em>200 ms</em>") || !strings.Contains(meas, `href="/x*y"`) {
+		t.Fatalf("Emphasis broke link or missed italic: %s", meas)
+	}
+
+	inline := RenderMarkdownInline("One `[[literal]]` and [[target]].", func(s string) string {
+		return ReplaceWikilinks(s, func(target, alias string) string {
+			return `<a class="wl" href="#` + target + `">` + target + `</a>`
+		})
+	})
+	if strings.HasPrefix(inline, "<p>") || !strings.Contains(inline, "<code>[[literal]]</code>") || !strings.Contains(inline, `href="#target"`) {
+		t.Fatalf("RenderMarkdownInline unexpected: %s", inline)
+	}
+}

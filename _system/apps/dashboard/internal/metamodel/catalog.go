@@ -113,6 +113,34 @@ type Section struct {
 	Framework string
 }
 
+// ToMap converts Section to the dict shape expected by templates (req42_block.html, issues.html).
+func (s Section) ToMap() map[string]any {
+	folders := make([]string, len(s.Folders))
+	copy(folders, s.Folders)
+	colors := make([]string, len(s.Colors))
+	copy(colors, s.Colors)
+	var hrefVal any
+	if s.Href != "" {
+		hrefVal = s.Href
+	}
+	var slugVal any
+	if s.Slug != "" {
+		slugVal = s.Slug
+	}
+	return map[string]any{
+		"id":        s.ID,
+		"area":      s.Area,
+		"title":     s.Title,
+		"folders":   folders,
+		"href":      hrefVal,
+		"slug":      slugVal,
+		"scope":     s.Scope,
+		"colors":    colors,
+		"note":      s.Note,
+		"framework": s.Framework,
+	}
+}
+
 // SectionFolders returns the section's folders plus the counterpart of any
 // renamed folder (glossary <-> domain-terms).
 func SectionFolders(s Section) []string {
