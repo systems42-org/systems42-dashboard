@@ -129,6 +129,8 @@ The gap audit of 2026-11-12, which this plan closes, is summarised per task unde
 
 ### Task 1: Sort orders in the metamodel (FR-021, schema)
 
+> **Superseded (2026-11-21).** The presets moved out of the metamodel into the dashboard (`SORT_PRESETS` in `app.py`, CON-006). Do not add `sort_orders` to type pages or restore the lint check.
+
 **Files:** Modify `_system/metamodel/meta-metamodel.md` (document the type key `sort_orders`), every `_system/metamodel/types/type-*.md` that has a list, `_system/scripts/metamodel-lint.py`, `metamodel.py`. Test: `tests/test_metamodel_lint.py`
 
 **Interfaces:** `sort_orders: [{label: str, keys: [field, ...]}]` on a type page. Values: functional-requirement `Priority › release › order` = `[priority, release, order]`. Issue `Status › severity` = `[status, severity]`. Decision-record `Newest first` = `[decided]`. Glossary-term `A to Z` = `[title]`. Stakeholder `Influence › interest` = `[influence, interest]`. Quality-requirement `Priority` = `[priority]`. Produces `metamodel.sort_orders(type_name) -> list[dict]`.
@@ -140,7 +142,7 @@ The gap audit of 2026-11-12, which this plan closes, is summarised per task unde
 **Files:** Create `static/list-view.js` (replaces `table-sort.js`, keep its `data-sort` contract), test `tests/test_list_view.py` (node harness like WP1 Task 1).
 
 **Interfaces:**
-- Markup: `<table data-list="<type>" data-sort-orders='<json from metamodel.sort_orders>'>`, rows carry `data-status`.
+- Markup: `<table data-list="<type>" data-sort-orders='<json from app.sort_presets, formerly metamodel.sort_orders>'>`, rows carry `data-status`.
 - Address: `?sort=<key>:<asc|desc>,<key>:<asc|desc>` and `?status=accepted|all`. Written with `history.replaceState` on every change, read on load.
 - Status filter "Agreed only" keeps rows with `data-status="accepted"` (FR-022).
 - Produces `S42List.sortRows(rows, [{key, dir}])` for tests.

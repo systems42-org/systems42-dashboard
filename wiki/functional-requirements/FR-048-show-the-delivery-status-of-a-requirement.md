@@ -11,7 +11,6 @@ tags: [functional-requirement, story-map]
 notation: agile
 level: story
 parent: ["[[FR-047-see-the-requirements-as-a-story-map]]"]
-building-blocks: []
 priority: Could
 release: unscheduled
 lane: backbone

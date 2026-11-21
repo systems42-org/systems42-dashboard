@@ -2,12 +2,14 @@
 
 Its own temporary vault with two pages per folder, one accepted and one draft.
 Per section route: one table[data-list], a sort-order picker with exactly the
-metamodel's orders for that type, every header sortable, every row linking
+dashboard's sort presets for that type, every header sortable, every row linking
 its page and carrying its status. Bad query strings show the list, never a 500.
 
 Run from the dashboard dir:
     .venv/bin/python tests/test_lists_everywhere.py
 """
+import html
+import json
 import os
 import re
 import sys
@@ -59,7 +61,6 @@ _g = _wiki / "goals" / "GOAL-001-page-1.md"
 _g.write_text(_g.read_text(encoding="utf-8").replace("stereotype: objective", "stereotype: vision"), encoding="utf-8")
 
 import app  # noqa: E402
-import metamodel  # noqa: E402
 
 client = app.app.test_client()
 
@@ -103,7 +104,7 @@ def test_one_list_table_per_section():
         assert declared == typ, (path, declared)
 
 
-def test_picker_offers_the_metamodels_orders():
+def test_picker_offers_the_sort_presets():
     for path, typ in ROUTES.items():
         body = _get(path)
         m = re.search(r'<div class="list-controls" data-list-controls="' + typ + r'"[^>]*>(.*?)</div>\s*(?=<div class="table-card)',
@@ -111,10 +112,12 @@ def test_picker_offers_the_metamodels_orders():
         assert m, (path, "no list controls")
         labels = [re.sub(r"<[^>]+>", "", o).strip().replace("&amp;", "&")
                   for o in re.findall(r'<option value="[^"]+">(.*?)</option>', m.group(1), re.S)]
-        want = [o["label"] for o in metamodel.sort_orders(typ)]
+        want = [o["label"] for o in app.sort_presets(typ)]
         assert labels == want, (path, labels, want)
         # the table carries the same orders for the script
-        assert re.search(r'<table\b[^>]*data-sort-orders=\'\[', body), path
+        m = re.search(r'<table\b[^>]*data-sort-orders=\'([^\']*)\'', body)
+        assert m, path
+        assert json.loads(html.unescape(m.group(1))) == app.sort_presets(typ), (path, m.group(1))
 
 
 def test_every_header_sorts():
@@ -166,7 +169,7 @@ def test_bad_query_strings_show_the_list():
 
 if __name__ == "__main__":
     test_one_list_table_per_section()
-    test_picker_offers_the_metamodels_orders()
+    test_picker_offers_the_sort_presets()
     test_every_header_sorts()
     test_every_row_links_its_page_and_carries_its_status()
     test_agreed_only_filter()

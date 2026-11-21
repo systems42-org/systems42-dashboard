@@ -268,9 +268,10 @@ func (s *Server) handleDomainTerms(w http.ResponseWriter, r *http.Request) {
 	})
 
 	s.renderHTML(w, r, http.StatusOK, "glossary.html", cat, map[string]any{
-		"rows":     rows,
-		"total":    len(rows),
-		"maturity": wiki.ComputeMaturity(statusesOf(pages)).ToMap(),
+		"rows":      rows,
+		"total":     len(rows),
+		"term_type": s.termType(),
+		"maturity":  wiki.ComputeMaturity(statusesOf(pages)).ToMap(),
 	}, now)
 }
 

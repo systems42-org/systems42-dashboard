@@ -15,14 +15,12 @@ naming: "the open question in one line"
 fields:
   - {name: severity, kind: enum, values: [blocker, major, minor]}
   - {name: kind, kind: enum, values: [question, contradiction, gap, ambiguity, risk]}
-  - {name: category, kind: enum, values: [requirements, architecture, commons, content, orga, systems42], doc: "which part of the work it touches; exactly one"}
+  - {name: category, kind: enum, values: [requirements, architecture, commons, content, orga, method], doc: "which part of the work it touches; optional, at most one"}
   - {name: raised-by, kind: link, relation: raised-by, doc: "`agent` or a stakeholder link"}
-  - {name: owner, kind: link, relation: owner, doc: "who is expected to answer: a name or a stakeholder link; empty means nobody yet"}
+  - {name: owner, kind: link, relation: owner, doc: "the stakeholder the question is addressed to; a stakeholder link only, empty means not yet clear"}
   - {name: resolved, kind: date, doc: "when status became resolved / wontfix"}
 anchors: [req42]
 projections: []
-sort_orders:
-  - {label: "Status › severity", keys: [status, severity]}
 ---
 
 # Type: issue
@@ -32,7 +30,14 @@ The one **meta** type (DR-003): it cross-cuts every other type through
 a question goes **after** the human was asked and did not answer (grilling first).
 
 `category` says which part of the work an issue touches, `kind` says what sort of
-problem it is. They are independent: a risk is a kind, not a category. The first
-three categories are the three areas. `content` is housekeeping of the wiki
-itself, `orga` is who decides, budget and schedule, `systems42` is the method
-itself (FR-026).
+problem it is. The two are independent: a risk is a kind, not a category. The
+values mix two things on purpose: `requirements`, `architecture` and `commons` are
+the three areas (the `area` keys of the metamodel), while `content` (housekeeping
+of the wiki itself), `orga` (authority, budget, schedule) and `method` (the
+Systems42 method: metamodel, templates, workflows) name a kind of work. The field
+is optional; leave it empty when an issue spans several areas.
+
+`owner` names the stakeholder the question is addressed to: the one whose answer
+resolves it. Most stakeholders are groups, so this is not an assignment to a
+person, and there is no due date: the wiki is not a project management tool.
+Unlike `raised-by`, it takes no literal and no free name, only a `[[STK-...]]` link.

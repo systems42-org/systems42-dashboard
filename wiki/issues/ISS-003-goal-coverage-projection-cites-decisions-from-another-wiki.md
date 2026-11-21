@@ -4,15 +4,15 @@ type: issue
 title: The goal coverage projection cites decisions from another wiki
 status: open
 created: 2026-11-13
-updated: 2026-11-14
+updated: 2026-11-21
 sources: ["[[SRC-024-grilling-session-on-the-goal-coverage-matrix]]"]
 related: ["[[FR-036-goal-coverage-matrix]]", "[[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]]"]
 tags: [issue]
 severity: minor
 kind: contradiction
-category: systems42
+category: method
 raised-by: Claude
-owner: Gernot Starke and team
+owner: "[[STK-012-maintainers]]"
 resolved: null
 ---
 

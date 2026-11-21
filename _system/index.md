@@ -93,6 +93,13 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-053-reach-the-session-controls-and-the-theme-from-one-menu]] Reach the session controls and the theme from one menu (story, Could, draft)
 - [[FR-054-a-start-without-a-container-engine]] A start without a container engine (feature, Should, draft)
 - [[FR-055-an-installable-dashboard-app]] An installable dashboard app (feature, Should, draft)
+- [[FR-056-a-public-website-for-the-dashboard]] A public website for the dashboard (epic, Should, draft)
+- [[FR-057-overview-of-the-dashboard-on-the-website]] Overview of the dashboard on the website (feature, Should, draft)
+- [[FR-058-a-demo-to-try-without-installing]] A demo to try without installing (feature, Must, draft)
+- [[FR-059-downloads-on-the-website]] Downloads on the website (feature, Should, draft)
+- [[FR-060-documentation-on-the-website]] Documentation on the website (feature, Should, draft)
+- [[FR-061-legal-and-project-information-on-the-website]] Legal and project information on the website (feature, Must, draft)
+- [[FR-062-the-website-is-built-and-published-from-the-repository]] The website is built and published from the repository (feature, Should, draft)
 
 ## Quality requirements
 
@@ -123,12 +130,12 @@ every capture (`_system/workflows/capture.md`, step 7).
 
 - [[ISS-001-who-holds-the-keys-in-parallel-work]] Who holds the keys when two people work in parallel (resolved)
 - [[ISS-002-define-the-clarify-loop]] Define the clarify loop (open)
-- [[ISS-003-goal-coverage-projection-cites-decisions-from-another-wiki]] The goal coverage projection cites decisions from another wiki (open, systems42, meta #37)
-- [[ISS-004-where-the-metamodel-declares-its-version]] Where the metamodel declares its version (open, systems42, meta #39)
-- [[ISS-005-the-method-lint-imports-dashboard-code]] The method's lint imports dashboard code (open, systems42, meta #40)
+- [[ISS-003-goal-coverage-projection-cites-decisions-from-another-wiki]] The goal coverage projection cites decisions from another wiki (open, method, meta #37)
+- [[ISS-004-where-the-metamodel-declares-its-version]] Where the metamodel declares its version (open, method, meta #39)
+- [[ISS-005-the-method-lint-imports-dashboard-code]] The method's lint imports dashboard code (open, method, meta #40)
 - [[ISS-006-other-container-engines-than-docker]] Should the dashboard run with other container engines than Docker (open, requirements, #24)
-- [[ISS-007-issue-category-and-owner-belong-in-meta]] Issue category and owner fields belong in meta (open, systems42, meta #53)
-- [[ISS-008-q42-dimensions-belong-in-meta]] Q42 dimensions for quality requirements belong in meta (open, systems42, meta #35)
+- [[ISS-007-issue-category-and-owner-belong-in-meta]] Issue category and owner fields belong in meta (resolved, method, meta #53)
+- [[ISS-008-q42-dimensions-belong-in-meta]] Q42 dimensions for quality requirements belong in meta (open, method, meta #35)
 
 ## Sources
 
@@ -168,3 +175,5 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-034-dashboard-requirements-moved-from-meta]] Dashboard requirements that still lived in meta (document)
 - [[SRC-035-grilling-session-on-the-requirements-moved-from-meta]] Grilling session on the requirements moved from meta (interview)
 - [[SRC-036-grilling-session-on-running-without-a-container-engine]] Grilling session on running without a container engine (interview)
+- [[SRC-037-a-public-website-for-the-dashboard]] A public website for the dashboard (document)
+- [[SRC-038-grilling-session-on-the-public-website]] Grilling session on the public website (interview)

@@ -11,7 +11,6 @@ tags: [functional-requirement, domain-terms]
 notation: agile
 level: story
 parent: ["[[FR-040-two-views-of-the-same-terms]]"]
-building-blocks: []
 priority: Should
 release: unscheduled
 lane: backbone

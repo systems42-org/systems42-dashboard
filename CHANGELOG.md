@@ -13,6 +13,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
 ## [Unreleased]
 
 ### Fixed
+- Launcher: `./dashboard.sh uv` loads only the dashboard's own modules. Started from a folder that holds an `app.py` or `preflight.py`, it used to load those instead. Relative path settings such as `WIKI_CONFIG` still mean the folder they were given in. When the port is busy, the message names Ctrl+C for a uv start, not only `./dashboard.sh down`, which needs Docker.
 - Dashboard: a wikilink inside inline code or a fenced code block shows as written, on wiki pages and on /metamodel, instead of as an escaped link tag. A `~~~` fence renders as code instead of being joined into the paragraph around it.
 - Dashboard: Reload now also clears the cached metamodel and anchor pages, and a wiki page rewritten with the same mtime but a different size is read again without a reload (#58).
 - Dashboard: a functional requirement page renders in 12 ms instead of 35 ms, because each page's links are worked out once. Deleted pages and anchors leave the parse caches, the caches take a lock under gunicorn's four threads, and link titles come from the same pages the lists show (#68).
@@ -38,6 +39,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - Dashboard (Go, Phase 2): full metamodel reader (`Load`, `Notations`, `Anchors`, `TypeForFolder`), area views (`/req42`, `/arc42`, `/commons`), generic block and section routes (`/req42/quality`, `/req42/constraints`, `/section/<id>`), `/metamodel` (including its cytoscape type-and-relation graph and live examples), `/method`, `/changes`, `/issues` (server-side filters in the address), `/stakeholders`, `/decisions` (and `/adrs` redirect), `/domain-terms` (and `/glossary` redirect), hostile-vault checks on every Phase 2 route, and 358 route parity checks across 7 wikis (FR-055, DR-007, issue #80).
 - Dashboard (Go, Phase 1): Markdown rendering with `goldmark`, wikilinks (pages, sources and method anchors), Obsidian callouts, table wrapping, HTML sanitiser (`internal/render`), `/page/<folder>/<stem>` and `/source/<stem>` detail views with provenance, relations, traceability and issue panels, legacy ADR/FR/use-case redirects, Go hostile-vault security tests (`internal/web/hostile_vault_test.go`), and parity checks across all detail and source routes without diagram projections. Enlarged the Go logo in the footer and aligned the footer sub-line on one baseline (FR-055, DR-007, issue #80).
 - Dashboard (Go, Phase 0): Go module under `_system/apps/dashboard/` (`cmd/systems42-dashboard/`, `internal/wiki`, `internal/metamodel`, `internal/web`), embedded static/brand/template assets via `go:embed`, CON-005 preflight, `wiki.yaml` reader, home page, `make app-start` (`./dashboard.sh app-start`), shared Jinja2 templates via `gonja/v2` (answering issue #80 question 2), Python vs Go parity test (`tests/test_parity.py`), and a `go` job in `.github/workflows/ci.yml` (FR-055, DR-007, issue #80).
+- Dashboard: the diagram on a functional requirement's page also shows the building blocks whose `drivers:` name the requirement, with a dashed edge (FR-047, #66). A requirement without children shows the diagram when it has building blocks. Every page in the diagram is also a text link below it.
 - Launcher: `./dashboard.sh uv` (also `make uv`) starts the release a wiki names with [uv](https://docs.astral.sh/uv/) instead of Docker, for machines where no container engine runs, such as a virtual machine. Every release from the next one on carries a wheel for it (FR-054, DR-007).
 - Dashboard repository: GitHub Actions runs `./dashboard.sh test` on every pull
   request and push to `main` (`.github/workflows/ci.yml`). The test summary
@@ -62,6 +64,8 @@ Unreleased changes sit at the top until the next Starter Kit release.
   next.
 
 ### Changed
+- Dashboard: the multi-column sort presets of the section lists (FR-021) live in the dashboard (`SORT_PRESETS` in `app.py`), not in the metamodel (CON-006). The Domain Terms list takes `domain-term` when the metamodel has that type. The type key `sort_orders:` and its lint check are gone from `_system/metamodel/`, as in the Systems42 meta repository; delete it from your type pages if you added it.
+- Issues: `category:` and `owner:` follow the Systems42 metamodel (meta pull request 55). The category `systems42` is now `method`, both fields are optional, and `owner:` takes a `[[STK-...]]` link only. Rename `category: systems42` to `method` in your issues. The dashboard still shows an owner written as a plain name.
 - Dashboard: the sections come from the repository's metamodel
   (`_system/metamodel/frameworks/`, FR-044), not from a list in `catalog.py`.
   A renamed or added section shows on the home page, the area pages and in
