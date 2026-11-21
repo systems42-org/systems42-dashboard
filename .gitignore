@@ -5,3 +5,4 @@ _system/apps/dashboard/.venv
 .superpowers/
 harvest-*.patch
 site/_site/
+dist/

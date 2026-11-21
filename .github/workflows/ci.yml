@@ -1,6 +1,8 @@
 # Runs the dashboard's test scripts on every pull request and on every push
 # to main, the same way `make test` runs them locally (in the Dockerfile's
-# test stage). release.yml runs them again before a release.
+# test stage). The `go` job builds and tests the Go implementation (FR-055,
+# issue #80) and checks route parity against the Python reference.
+# release.yml runs the tests again before a release.
 name: ci
 
 on:
@@ -19,3 +21,37 @@ jobs:
 
       - name: Tests
         run: ./dashboard.sh test
+
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: _system/apps/dashboard/go.mod
+          cache-dependency-path: _system/apps/dashboard/go.sum
+
+      - name: Go tests
+        working-directory: _system/apps/dashboard
+        run: go test -race ./...
+
+      - name: Go build (no cgo)
+        working-directory: _system/apps/dashboard
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          go build -o "$RUNNER_TEMP/systems42-dashboard" ./cmd/systems42-dashboard
+          "$RUNNER_TEMP/systems42-dashboard" --version
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Parity tests
+        working-directory: _system/apps/dashboard
+        env:
+          GO_DASHBOARD_BIN: ${{ runner.temp }}/systems42-dashboard
+        run: |
+          python -m pip install --quiet --disable-pip-version-check -r requirements.txt
+          python tests/test_parity.py

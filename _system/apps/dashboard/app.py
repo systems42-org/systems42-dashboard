@@ -4490,14 +4490,14 @@ def fr_view(stem):
 
 
 _QR_SCENARIO = ("Source", "Stimulus", "Environment", "Response", "Measure")
-_EMPHASIS_RE = re.compile(r"\*(\S[^*]*?)\*")
+_INLINE_EMPHASIS_RE = re.compile(r"\*(\S[^*]*?)\*")
 
 
 def _emphasis(html: str) -> str:
     """Turn `*text*` into <em>text</em> in sanitised HTML. Only the text
     between tags is touched, so a `*` inside a tag or an attribute stays as it
     is, and an emphasis never spans a tag."""
-    return "".join(part if part.startswith("<") else _EMPHASIS_RE.sub(r"<em>\1</em>", part)
+    return "".join(part if part.startswith("<") else _INLINE_EMPHASIS_RE.sub(r"<em>\1</em>", part)
                    for part in re.split(r"(<[^>]*>)", html))
 
 
