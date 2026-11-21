@@ -121,6 +121,13 @@ func (e *Engine) Template(name string) (*exec.Template, error) {
 	return tpl, nil
 }
 
+// ClearCache drops every cached compiled template.
+func (e *Engine) ClearCache() {
+	e.mu.Lock()
+	e.cache = map[string]*exec.Template{}
+	e.mu.Unlock()
+}
+
 // Render compiles (if needed) and renders name with data into wr.
 func (e *Engine) Render(wr io.Writer, name string, data map[string]any) error {
 	tpl, err := e.Template(name)

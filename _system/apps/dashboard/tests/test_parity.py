@@ -81,8 +81,6 @@ UNPORTED_EXACT: dict[str, str] = {
     "/who": "Phase 5",
     "/help": "Phase 5",
     "/about": "Phase 5",
-    "/presence/count": "Phase 5",
-    "/presence/list": "Phase 5",
     "/settings": "Phase 5",
 }
 
@@ -111,6 +109,8 @@ STATIC_SAMPLE_ROUTES = (
 # Fixed routes exercised on every wiki.
 FIXED_ROUTES = (
     "/",
+    "/presence/count",
+    "/presence/list",
     "/brand/mark-dark.svg",
     "/brand/mark-light.svg",
     "/brand/favicon.svg",

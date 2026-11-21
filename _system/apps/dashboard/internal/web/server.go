@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"hash/crc32"
 	"io"
@@ -21,6 +22,7 @@ import (
 	"time"
 
 	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/metamodel"
+	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/session"
 	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/wiki"
 )
 
@@ -64,21 +66,24 @@ type Options struct {
 	PublicURL   string
 	Logger      *log.Logger
 	Now         func() time.Time
+	OnShutdown  func(reason string)
 }
 
 // Server serves the Systems42 dashboard over net/http.
 type Server struct {
-	Paths     wiki.Paths
-	Store     *wiki.Store
-	Metamodel *metamodel.Reader
-	Templates *Engine
-	StaticFS  fs.FS
-	BrandsFS  fs.FS
-	Version   string
-	DisplayTZ string
-	PublicURL string
-	Logger    *log.Logger
-	Now       func() time.Time
+	Paths      wiki.Paths
+	Store      *wiki.Store
+	Metamodel  *metamodel.Reader
+	Session    *session.Tracker
+	Templates  *Engine
+	StaticFS   fs.FS
+	BrandsFS   fs.FS
+	Version    string
+	DisplayTZ  string
+	PublicURL  string
+	Logger     *log.Logger
+	Now        func() time.Time
+	OnShutdown func(reason string)
 
 	staticHashes map[string]string
 	themeTokens  string
@@ -105,6 +110,7 @@ func NewServer(opts Options) *Server {
 		Paths:        opts.Paths,
 		Store:        wiki.NewStore(opts.Paths),
 		Metamodel:    metamodel.NewReader(opts.Paths.MetamodelDir, opts.Paths.NotationsDir, opts.Paths.AnchorsDir),
+		Session:      session.NewTracker(session.Options{Now: nowFn}),
 		StaticFS:     opts.StaticFS,
 		BrandsFS:     opts.BrandsFS,
 		Version:      strings.TrimSpace(opts.Version),
@@ -112,6 +118,7 @@ func NewServer(opts Options) *Server {
 		PublicURL:    strings.TrimSpace(opts.PublicURL),
 		Logger:       logger,
 		Now:          nowFn,
+		OnShutdown:   opts.OnShutdown,
 		staticHashes: computeStaticHashes(opts.StaticFS),
 		themeTokens:  extractThemeTokens(opts.StaticFS),
 		warned:       map[string]bool{},
@@ -217,14 +224,33 @@ func (s *Server) isHidden(cat *metamodel.Catalog, keyOrID string) bool {
 
 // ServeHTTP dispatches all dashboard routes.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	p := r.URL.Path
+	if r.Method == http.MethodPost {
+		switch p {
+		case "/ping":
+			s.handlePing(w, r)
+		case "/leaving":
+			s.handleLeaving(w, r)
+		case "/reload":
+			s.handleReload(w, r)
+		case "/disconnect-all":
+			s.handleDisconnectAll(w, r)
+		default:
+			s.handleNotFound(w, r)
+		}
+		return
+	}
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		s.handleNotFound(w, r)
 		return
 	}
-	p := r.URL.Path
 	switch {
 	case p == "/":
 		s.handleIndex(w, r)
+	case p == "/presence/count":
+		s.handlePresenceCount(w, r)
+	case p == "/presence/list":
+		s.handlePresenceList(w, r)
 	case strings.HasPrefix(p, "/static/"):
 		s.handleStatic(w, r)
 	case p == "/brand/intro.html":
@@ -824,4 +850,74 @@ func (s *Server) handleNotFound(w http.ResponseWriter, r *http.Request) {
 	now := s.Now()
 	cat := metamodel.BuildCatalog(s.Metamodel.Blocks())
 	s.renderHTML(w, r, http.StatusNotFound, "not_found.html", cat, nil, now)
+}
+
+func writeJSON(w http.ResponseWriter, r *http.Request, status int, v any) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if r.Method != http.MethodHead {
+		_, _ = w.Write(b)
+	}
+}
+
+func readClientID(r *http.Request) string {
+	defer r.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(r.Body, 4096))
+	if err != nil || len(body) == 0 {
+		return "anon"
+	}
+	var payload struct {
+		ClientID any `json:"client_id"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil || payload.ClientID == nil {
+		return "anon"
+	}
+	return session.NormalizeClientID(fmt.Sprint(payload.ClientID))
+}
+
+func (s *Server) handlePing(w http.ResponseWriter, r *http.Request) {
+	cid := readClientID(r)
+	reply := s.Session.Ping(cid, r.UserAgent())
+	writeJSON(w, r, http.StatusOK, reply)
+}
+
+func (s *Server) handleLeaving(w http.ResponseWriter, r *http.Request) {
+	cid := readClientID(r)
+	s.Session.Leaving(cid)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) handlePresenceCount(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, r, http.StatusOK, map[string]int{"count": s.Session.Count()})
+}
+
+func (s *Server) handlePresenceList(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, r, http.StatusOK, map[string]any{"clients": s.Session.List()})
+}
+
+func (s *Server) handleReload(w http.ResponseWriter, r *http.Request) {
+	s.Store.ClearCache()
+	s.Metamodel.ClearCaches()
+	s.Templates.ClearCache()
+	writeJSON(w, r, http.StatusOK, map[string]bool{"ok": true})
+}
+
+func (s *Server) handleDisconnectAll(w http.ResponseWriter, r *http.Request) {
+	cid := readClientID(r)
+	if !s.Session.IsFacilitator(cid) {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	if s.OnShutdown != nil {
+		go func() {
+			time.Sleep(400 * time.Millisecond)
+			s.OnShutdown("disconnect-all requested by facilitator")
+		}()
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

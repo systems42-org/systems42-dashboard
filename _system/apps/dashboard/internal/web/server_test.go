@@ -170,3 +170,66 @@ func TestVersionAndMetamodelNoticesAndIntroOff(t *testing.T) {
 		t.Fatalf("expected 404 for /brand/intro.html when intro: off, got %d", recIntro.Code)
 	}
 }
+
+func TestHeartbeatPresenceReloadAndDisconnect(t *testing.T) {
+	srv := newRepoServer(t)
+
+	// Before any ping: count is 0, list is empty array
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/presence/count", nil))
+	if rec.Code != http.StatusOK || rec.Body.String() != `{"count":0}` {
+		t.Fatalf("GET /presence/count = %d %s", rec.Code, rec.Body.String())
+	}
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/presence/list", nil))
+	if rec.Code != http.StatusOK || rec.Body.String() != `{"clients":[]}` {
+		t.Fatalf("GET /presence/list = %d %s", rec.Code, rec.Body.String())
+	}
+
+	// First tab pings -> Yoda + facilitator
+	req := httptest.NewRequest(http.MethodPost, "/ping", strings.NewReader(`{"client_id":"tab-a"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"nickname":"Yoda"`) || !strings.Contains(rec.Body.String(), `"is_facilitator":true`) {
+		t.Fatalf("POST /ping = %d %s", rec.Code, rec.Body.String())
+	}
+
+	// Count is now 1
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/presence/count", nil))
+	if rec.Code != http.StatusOK || rec.Body.String() != `{"count":1}` {
+		t.Fatalf("GET /presence/count after ping = %d %s", rec.Code, rec.Body.String())
+	}
+
+	// Reload succeeds
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/reload", nil))
+	if rec.Code != http.StatusOK || rec.Body.String() != `{"ok":true}` {
+		t.Fatalf("POST /reload = %d %s", rec.Code, rec.Body.String())
+	}
+
+	// Non-facilitator disconnect-all is rejected with 403
+	req = httptest.NewRequest(http.MethodPost, "/disconnect-all", strings.NewReader(`{"client_id":"other"}`))
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("non-facilitator /disconnect-all = %d, want 403", rec.Code)
+	}
+
+	// Facilitator disconnect-all returns 204
+	req = httptest.NewRequest(http.MethodPost, "/disconnect-all", strings.NewReader(`{"client_id":"tab-a"}`))
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("facilitator /disconnect-all = %d, want 204", rec.Code)
+	}
+
+	// /leaving returns 204
+	req = httptest.NewRequest(http.MethodPost, "/leaving", strings.NewReader(`{"client_id":"tab-a"}`))
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("POST /leaving = %d, want 204", rec.Code)
+	}
+}

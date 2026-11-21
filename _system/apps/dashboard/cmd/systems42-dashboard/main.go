@@ -67,6 +67,7 @@ func run(args []string) int {
 	addr := net.JoinHostPort(host, port)
 
 	logger := log.New(os.Stderr, "", log.LstdFlags)
+	shutdownCh := make(chan string, 1)
 	srv := web.NewServer(web.Options{
 		Paths:       paths,
 		StaticFS:    dashboard.StaticFS(),
@@ -76,6 +77,12 @@ func run(args []string) int {
 		DisplayTZ:   os.Getenv("TZ"),
 		PublicURL:   os.Getenv("DASH_PUBLIC_URL"),
 		Logger:      logger,
+		OnShutdown: func(reason string) {
+			select {
+			case shutdownCh <- reason:
+			default:
+			}
+		},
 	})
 
 	ln, err := net.Listen("tcp", addr)
@@ -100,6 +107,12 @@ func run(args []string) int {
 	select {
 	case sig := <-sigCh:
 		logger.Printf("received %s, shutting down", sig)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = httpServer.Shutdown(ctx)
+		return 0
+	case reason := <-shutdownCh:
+		logger.Printf("dashboard shutdown: %s", reason)
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		_ = httpServer.Shutdown(ctx)
