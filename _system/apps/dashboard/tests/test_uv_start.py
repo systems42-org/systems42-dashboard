@@ -10,6 +10,8 @@ tests/run-all.sh counts as skipped.
 Run from the dashboard dir:
     .venv/bin/python tests/test_uv_start.py
 """
+import functools
+import http.server
 import os
 import re
 import shutil
@@ -18,6 +20,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import urllib.request
 import zipfile
@@ -66,13 +69,57 @@ def test_the_wheel_holds_what_the_image_holds(wheel):
     assert prefix + "__init__.py" in names
 
 
+def test_relative_path_settings_keep_the_folder_they_were_given_in(tmp):
+    """cli.py changes into its own folder before gunicorn starts. A path
+    setting such as WIKI_CONFIG=custom.yaml still means the file in the
+    folder the launcher was started from."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("dashboard_cli", HERE / "cli.py")
+    cli = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(cli)
+    start = Path(tmp).resolve()
+    names = ("WIKI_DIR", "RAW_SOURCES_DIR", "WIKI_CONFIG", "DOCS_DIR",
+             "METAMODEL_DIR", "NOTATIONS_DIR", "ANCHORS_DIR")
+    saved = {k: os.environ.get(k) for k in (*names, "REPO_DIR", "PYTHONPATH")}
+    saved_argv, saved_cwd, saved_execv = sys.argv, os.getcwd(), os.execv
+    seen = {}
+    try:
+        for k in names:
+            os.environ[k] = f"rel/{k.lower()}"
+        os.environ["WIKI_CONFIG"] = "/abs/custom.yaml"
+        # An absolute path through a symlink stays as given: metamodel.py
+        # finds notations/ and anchors/ next to METAMODEL_DIR.
+        (start / "shared" / "metamodel").mkdir(parents=True)
+        (start / "schema").mkdir()
+        (start / "schema" / "metamodel").symlink_to(start / "shared" / "metamodel")
+        os.environ["METAMODEL_DIR"] = str(start / "schema" / "metamodel")
+        os.chdir(start)
+        sys.argv = ["systems42-dashboard", "."]
+        os.execv = lambda *a: seen.update({k: os.environ[k] for k in names}, cwd=os.getcwd())
+        cli.main()
+    finally:
+        os.execv, sys.argv = saved_execv, saved_argv
+        os.chdir(saved_cwd)
+        for k, v in saved.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+    assert Path(seen["cwd"]).resolve() == HERE, seen["cwd"]
+    for k in names:
+        if k not in ("WIKI_CONFIG", "METAMODEL_DIR"):
+            assert seen[k] == str(start / "rel" / k.lower()), (k, seen[k])
+    assert seen["WIKI_CONFIG"] == "/abs/custom.yaml", seen["WIKI_CONFIG"]
+    assert seen["METAMODEL_DIR"] == str(start / "schema" / "metamodel"), seen["METAMODEL_DIR"]
+
+
 def _free_port():
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         return s.getsockname()[1]
 
 
-def test_the_launcher_serves_a_wiki_from_the_wheel(wheel, tmp):
+def _make_wiki(tmp):
     root = Path(tmp) / "mywiki"
     (root / "wiki").mkdir(parents=True)
     (root / "raw").mkdir()
@@ -81,10 +128,20 @@ def test_the_launcher_serves_a_wiki_from_the_wheel(wheel, tmp):
     (root / "_system" / "wiki.yaml").write_text(
         f'system_name: "Wheel Test"\ndashboard_version: "{VERSION}"\n', encoding="utf-8")
     shutil.copy(_REPO / "dashboard.sh", root / "dashboard.sh")
+    # Modules that share a name with the dashboard's own, in the folder the
+    # launcher is started from. The dashboard must load its own.
+    for name in ("app.py", "preflight.py"):
+        (root / name).write_text(f'raise SystemExit("loaded {name} from the wiki folder")\n', encoding="utf-8")
+    return root
+
+
+def _serve(root, wheel, **extra_env):
+    """Start `./dashboard.sh uv` from the wiki folder, check the home page,
+    stop it."""
     port = _free_port()
-    env = {**os.environ, "DASH_WHEEL": str(wheel), "DASH_PORT": str(port), "DASH_NO_BROWSER": "1"}
+    env = {**os.environ, "DASH_WHEEL": str(wheel), "DASH_PORT": str(port), "DASH_NO_BROWSER": "1", **extra_env}
     env.pop("REPO_DIR", None)
-    server = subprocess.Popen(["bash", str(root / "dashboard.sh"), "uv"], env=env, start_new_session=True,
+    server = subprocess.Popen(["bash", str(root / "dashboard.sh"), "uv"], cwd=root, env=env, start_new_session=True,
                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     try:
         page = None
@@ -107,9 +164,43 @@ def test_the_launcher_serves_a_wiki_from_the_wheel(wheel, tmp):
         server.wait(timeout=20)
 
 
+def _wheel_server(wheel):
+    """Serve the wheel's folder over HTTP, as the GitHub release serves it.
+    Returns the server and the wheel's address."""
+    class Quiet(http.server.SimpleHTTPRequestHandler):
+        def log_message(self, *args):
+            pass
+
+    handler = functools.partial(Quiet, directory=str(wheel.parent))
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server, f"http://127.0.0.1:{server.server_address[1]}/{wheel.name}"
+
+
+def test_the_launcher_serves_a_wiki_from_the_wheel(wheel, tmp):
+    """The first start fetches the wheel by its address, as from a release."""
+    root = _make_wiki(tmp)
+    server, url = _wheel_server(wheel)
+    try:
+        _serve(root, url)
+    finally:
+        server.shutdown()
+        server.server_close()
+    return root, url
+
+
+def test_a_release_started_once_starts_again_without_network(root, url):
+    """FR-054: the second start needs no network. The address it was fetched
+    from is gone, and UV_OFFLINE keeps every uv call in the launcher, the
+    fallback fetch too, to uv's cache."""
+    _serve(root, url, UV_OFFLINE="1")
+
+
 if __name__ == "__main__":
     with tempfile.TemporaryDirectory() as tmp:
         wheel = _build(tmp)
         test_the_wheel_holds_what_the_image_holds(wheel)
-        test_the_launcher_serves_a_wiki_from_the_wheel(wheel, tmp)
+        test_relative_path_settings_keep_the_folder_they_were_given_in(tmp)
+        root, url = test_the_launcher_serves_a_wiki_from_the_wheel(wheel, tmp)
+        test_a_release_started_once_starts_again_without_network(root, url)
     print("OK: uv start")

@@ -18,7 +18,8 @@
 #
 # DASH_PORT sets the port (8080). DASH_PUBLIC_URL sets the address of the QR
 # code. DASH_NO_BROWSER=1 starts without opening a browser. DASH_WHEEL names
-# the wheel `uv` runs, as a file or an address, for a machine without network.
+# the wheel `uv` runs, as a file or an address, for a machine that cannot reach
+# GitHub. uv still needs Python 3.12 and the libraries, from its cache or an index.
 #
 set -euo pipefail
 

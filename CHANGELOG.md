@@ -13,6 +13,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
 ## [Unreleased]
 
 ### Fixed
+- Launcher: `./dashboard.sh uv` loads only the dashboard's own modules. Started from a folder that holds an `app.py` or `preflight.py`, it used to load those instead. Relative path settings such as `WIKI_CONFIG` still mean the folder they were given in. When the port is busy, the message names Ctrl+C for a uv start, not only `./dashboard.sh down`, which needs Docker.
 - Dashboard: a wikilink inside inline code or a fenced code block shows as written, on wiki pages and on /metamodel, instead of as an escaped link tag. A `~~~` fence renders as code instead of being joined into the paragraph around it.
 - Dashboard: Reload now also clears the cached metamodel and anchor pages, and a wiki page rewritten with the same mtime but a different size is read again without a reload (#58).
 - Dashboard: a functional requirement page renders in 12 ms instead of 35 ms, because each page's links are worked out once. Deleted pages and anchors leave the parse caches, the caches take a lock under gunicorn's four threads, and link titles come from the same pages the lists show (#68).
