@@ -11,7 +11,6 @@ tags: [functional-requirement, page-frame]
 notation: agile
 level: story
 parent: ["[[FR-034-read-a-page-with-its-links]]"]
-building-blocks: []
 priority: Should
 release: unscheduled
 lane: backbone

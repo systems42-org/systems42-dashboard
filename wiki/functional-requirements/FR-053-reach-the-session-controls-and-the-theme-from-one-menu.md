@@ -11,7 +11,6 @@ tags: [functional-requirement, page-frame]
 notation: agile
 level: story
 parent: ["[[FR-013-header-and-footer-on-every-page]]"]
-building-blocks: []
 priority: Could
 release: unscheduled
 lane: backbone
