@@ -8,7 +8,8 @@ updated: 2026-11-11
 sources: ["[[SRC-009-guided-path-through-the-wiki]]", "[[SRC-008-grilling-session-on-showing-the-method]]"]
 related: ["[[FR-011-explain-the-three-loops]]", "[[STK-001-readers]]", "[[STK-008-workshop-participants-and-facilitators]]", "[[STK-013-people-learning-or-presenting-systems42]]", "[[STK-023-keyholder]]"]
 tags: ["functional-requirement", "method"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-010-show-the-method]]"]
 priority: Should
 release: unscheduled

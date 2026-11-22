@@ -8,7 +8,8 @@ updated: 2026-11-11
 sources: ["[[SRC-007-show-the-method]]", "[[SRC-008-grilling-session-on-showing-the-method]]"]
 related: ["[[ISS-002-define-the-clarify-loop]]", "[[STK-001-readers]]"]
 tags: ["functional-requirement", "method"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-010-show-the-method]]"]
 priority: Should
 release: unscheduled

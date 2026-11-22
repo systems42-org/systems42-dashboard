@@ -8,7 +8,8 @@ updated: 2026-11-20
 sources: ["[[SRC-019-the-dashboard-as-a-product]]", "[[SRC-027-dashboard-distribution-and-metamodel-contract]]", "[[SRC-028-grilling-session-on-dashboard-distribution]]", "[[SRC-030-default-brand-and-instance-brands]]", "[[SRC-031-grilling-session-on-the-default-brand]]"]
 related: ["[[FR-031-branding-is-configuration]]", "[[STK-013-people-learning-or-presenting-systems42]]", "[[FR-045-a-prompt-template-for-a-brand]]", "[[STK-012-maintainers]]"]
 tags: ["functional-requirement", "product"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-029-the-dashboard-as-a-product]]"]
 priority: Should
 release: unscheduled

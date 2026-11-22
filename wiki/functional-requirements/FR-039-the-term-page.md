@@ -8,7 +8,8 @@ updated: 2026-11-14
 sources: ["[[SRC-025-domain-terms-and-their-two-views]]", "[[SRC-026-grilling-session-on-domain-terms]]"]
 related: ["[[FR-034-read-a-page-with-its-links]]"]
 tags: ["functional-requirement", "domain-terms"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-037-domain-terms]]"]
 priority: Must
 release: unscheduled

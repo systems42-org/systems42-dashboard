@@ -8,7 +8,8 @@ updated: 2026-11-12
 sources: ["[[SRC-013-browse-by-area-and-section]]", "[[SRC-014-grilling-session-on-browsing]]"]
 related: ["[[FR-012-guided-path-through-the-wiki]]", "[[GOAL-001-trusted-answers]]"]
 tags: ["functional-requirement", "navigation"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-017-browse-by-area-and-section]]"]
 priority: Must
 release: unscheduled

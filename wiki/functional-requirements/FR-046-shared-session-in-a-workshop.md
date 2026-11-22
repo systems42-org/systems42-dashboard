@@ -8,7 +8,8 @@ updated: 2026-11-21
 sources: ["[[SRC-032-shared-session-in-a-workshop]]", "[[SRC-033-grilling-session-on-the-shared-session]]"]
 related: ["[[STK-023-keyholder]]", "[[STK-008-workshop-participants-and-facilitators]]", "[[STK-013-people-learning-or-presenting-systems42]]", "[[FR-015-read-the-formalities-in-the-footer]]", "[[FR-023-areas-and-sections-follow-the-tailoring]]", "[[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[CON-001-proof-of-concept-not-production-ready]]"]
 tags: ["functional-requirement", "method"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-010-show-the-method]]"]
 priority: Should
 release: unscheduled

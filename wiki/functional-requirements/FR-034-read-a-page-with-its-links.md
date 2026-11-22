@@ -8,7 +8,8 @@ updated: 2026-11-19
 sources: ["[[SRC-021-read-a-page-with-its-links]]", "[[SRC-022-grilling-session-on-reading-a-page]]"]
 related: ["[[FR-027-issues-on-the-page-they-affect]]", "[[FR-035-method-terms-lead-to-their-definition]]", "[[FR-020-know-where-you-are]]"]
 tags: ["functional-requirement", "navigation"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-017-browse-by-area-and-section]]"]
 priority: Must
 release: unscheduled

@@ -8,7 +8,8 @@ updated: 2026-11-17
 sources: ["[[SRC-027-dashboard-distribution-and-metamodel-contract]]", "[[SRC-028-grilling-session-on-dashboard-distribution]]"]
 related: ["[[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]]", "[[FR-023-areas-and-sections-follow-the-tailoring]]", "[[CON-005-the-dashboard-works-on-systems42-derivatives-only]]", "[[STK-012-maintainers]]"]
 tags: ["functional-requirement", "navigation"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-017-browse-by-area-and-section]]"]
 priority: Must
 release: unscheduled

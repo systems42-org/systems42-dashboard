@@ -8,7 +8,8 @@ updated: 2026-11-13
 sources: ["[[SRC-021-read-a-page-with-its-links]]", "[[SRC-022-grilling-session-on-reading-a-page]]"]
 related: ["[[FR-034-read-a-page-with-its-links]]", "[[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]]", "[[STK-013-people-learning-or-presenting-systems42]]"]
 tags: ["functional-requirement", "method"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-010-show-the-method]]"]
 priority: Should
 release: unscheduled

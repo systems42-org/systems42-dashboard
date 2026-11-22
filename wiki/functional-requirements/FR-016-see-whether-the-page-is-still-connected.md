@@ -8,7 +8,8 @@ updated: 2026-11-11
 sources: ["[[SRC-010-header-and-footer-on-every-page]]", "[[SRC-011-grilling-session-on-header-and-footer]]"]
 related: ["[[STK-008-workshop-participants-and-facilitators]]", "[[FR-015-read-the-formalities-in-the-footer]]"]
 tags: ["functional-requirement", "page-frame"]
-stereotype: story
+notation: agile
+level: story
 parent: ["[[FR-013-header-and-footer-on-every-page]]"]
 priority: Should
 release: unscheduled

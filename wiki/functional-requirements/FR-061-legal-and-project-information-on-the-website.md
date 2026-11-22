@@ -8,7 +8,8 @@ updated: 2026-11-21
 sources: ["[[SRC-037-a-public-website-for-the-dashboard]]", "[[SRC-038-grilling-session-on-the-public-website]]"]
 related: ["[[STK-020-data-protection-and-security-officers]]"]
 tags: ["functional-requirement", "website"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-056-a-public-website-for-the-dashboard]]"]
 priority: Must
 release: unscheduled

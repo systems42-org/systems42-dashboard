@@ -8,7 +8,8 @@ updated: 2026-11-12
 sources: ["[[SRC-015-see-what-is-still-open]]", "[[SRC-016-grilling-session-on-open-issues]]"]
 related: ["[[FR-001-search-the-wiki]]", "[[FR-018-orientation-on-the-first-page]]", "[[FR-019-section-at-a-glance]]", "[[FR-021-sort-lists]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[STK-001-readers]]"]
 tags: ["functional-requirement", "issues"]
-stereotype: epic
+notation: agile
+level: epic
 parent: []
 priority: Must
 release: unscheduled

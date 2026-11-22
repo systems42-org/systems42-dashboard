@@ -8,7 +8,8 @@ updated: 2026-11-12
 sources: ["[[SRC-013-browse-by-area-and-section]]", "[[SRC-014-grilling-session-on-browsing]]", "[[SRC-015-see-what-is-still-open]]", "[[SRC-016-grilling-session-on-open-issues]]"]
 related: ["[[FR-018-orientation-on-the-first-page]]"]
 tags: ["functional-requirement", "navigation"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-017-browse-by-area-and-section]]"]
 priority: Must
 release: unscheduled

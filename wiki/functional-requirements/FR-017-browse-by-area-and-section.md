@@ -8,7 +8,8 @@ updated: 2026-11-19
 sources: ["[[SRC-013-browse-by-area-and-section]]", "[[SRC-014-grilling-session-on-browsing]]"]
 related: ["[[FR-001-search-the-wiki]]", "[[FR-013-header-and-footer-on-every-page]]", "[[STK-001-readers]]", "[[STK-008-workshop-participants-and-facilitators]]"]
 tags: ["functional-requirement", "navigation"]
-stereotype: epic
+notation: agile
+level: epic
 parent: []
 priority: Must
 release: unscheduled

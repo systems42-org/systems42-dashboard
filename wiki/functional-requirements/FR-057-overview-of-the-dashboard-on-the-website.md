@@ -8,7 +8,8 @@ updated: 2026-11-21
 sources: ["[[SRC-037-a-public-website-for-the-dashboard]]", "[[SRC-038-grilling-session-on-the-public-website]]"]
 related: ["[[FR-058-a-demo-to-try-without-installing]]", "[[FR-059-downloads-on-the-website]]", "[[FR-060-documentation-on-the-website]]"]
 tags: ["functional-requirement", "website"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-056-a-public-website-for-the-dashboard]]"]
 priority: Should
 release: unscheduled

@@ -8,7 +8,8 @@ updated: 2026-11-21
 sources: ["[[SRC-037-a-public-website-for-the-dashboard]]", "[[SRC-038-grilling-session-on-the-public-website]]"]
 related: ["[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[FR-030-numbered-releases]]", "[[FR-058-a-demo-to-try-without-installing]]"]
 tags: ["functional-requirement", "website"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-056-a-public-website-for-the-dashboard]]"]
 priority: Should
 release: unscheduled

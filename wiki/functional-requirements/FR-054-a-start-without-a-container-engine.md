@@ -8,7 +8,8 @@ updated: 2026-11-20
 sources: ["[[SRC-036-grilling-session-on-running-without-a-container-engine]]"]
 related: ["[[FR-042-start-a-pinned-release-with-one-command]]", "[[FR-050-stop-the-dashboard-when-nobody-is-watching]]", "[[CON-003-docker-is-the-supported-way-to-run-it]]", "[[QR-002-runs-alike-on-linux-and-macos]]", "[[DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go]]", "[[FR-055-an-installable-dashboard-app]]"]
 tags: ["functional-requirement", "product"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-029-the-dashboard-as-a-product]]"]
 priority: Should
 release: unscheduled

@@ -8,7 +8,8 @@ updated: 2026-11-19
 sources: ["[[SRC-025-domain-terms-and-their-two-views]]", "[[SRC-026-grilling-session-on-domain-terms]]"]
 related: ["[[QR-001-usable-on-phone-and-tablet]]", "[[FR-017-browse-by-area-and-section]]"]
 tags: ["functional-requirement", "domain-terms"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-037-domain-terms]]"]
 priority: Should
 release: unscheduled

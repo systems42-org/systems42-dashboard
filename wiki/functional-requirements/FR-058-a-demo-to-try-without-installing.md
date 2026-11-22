@@ -8,7 +8,8 @@ updated: 2026-11-21
 sources: ["[[SRC-037-a-public-website-for-the-dashboard]]", "[[SRC-038-grilling-session-on-the-public-website]]"]
 related: ["[[FR-010-show-the-method]]", "[[CON-001-proof-of-concept-not-production-ready]]", "[[FR-046-shared-session-in-a-workshop]]", "[[FR-001-search-the-wiki]]", "[[STK-012-maintainers]]"]
 tags: ["functional-requirement", "website"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-056-a-public-website-for-the-dashboard]]"]
 priority: Must
 release: unscheduled

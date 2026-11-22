@@ -8,7 +8,8 @@ updated: 2026-11-20
 sources: ["[[SRC-015-see-what-is-still-open]]", "[[SRC-016-grilling-session-on-open-issues]]"]
 related: ["[[FR-019-section-at-a-glance]]", "[[FR-021-sort-lists]]", "[[FR-022-lists-keep-sort-and-filter-in-their-address]]", "[[FR-026-issues-carry-a-category]]", "[[FR-028-who-answers-an-issue]]", "[[STK-001-readers]]", "[[ISS-007-issue-category-and-owner-belong-in-meta]]"]
 tags: ["functional-requirement", "issues"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-024-see-what-is-still-open]]"]
 priority: Must
 release: unscheduled

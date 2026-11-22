@@ -8,7 +8,8 @@ updated: 2026-11-19
 sources: ["[[SRC-005-search-the-wiki]]", "[[SRC-006-grilling-session-on-search]]", "[[SRC-035-grilling-session-on-the-requirements-moved-from-meta]]"]
 related: ["[[STK-001-readers]]", "[[STK-008-workshop-participants-and-facilitators]]", "[[CON-001-proof-of-concept-not-production-ready]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]"]
 tags: ["functional-requirement", "search"]
-stereotype: epic
+notation: agile
+level: epic
 parent: []
 priority: Must
 release: unscheduled
