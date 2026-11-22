@@ -1,5 +1,5 @@
 cask "systems42-dashboard" do
-  version "0.12.0"
+  version "0.13.0"
   sha256 :no_check # Updated per release from Systems42-Dashboard-<version>-universal.dmg.sha256
 
   url "https://github.com/systems42-org/systems42-dashboard/releases/download/v#{version}/Systems42-Dashboard-#{version}-universal.dmg"
