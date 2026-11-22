@@ -65,11 +65,25 @@
   <div class="container">
     <div class="section-head">
       <h2>Quick installation snippets</h2>
-      <p>Copy into any Systems42 derivative repository.</p>
+      <p>Choose the option that fits your machine: macOS app, standalone binary, uv or Docker. Every step is in the <a href="/docs/install/">install guide</a>.</p>
     </div>
     <div class="card-grid-2">
       <div class="card">
-        <h3>Install launcher via curl</h3>
+        <h3>macOS Desktop App (<code>.dmg</code>)</h3>
+        <p>Open <code>Systems42-Dashboard-{{ version }}-universal.dmg</code>, drag <strong>Systems42 Dashboard.app</strong> into <strong>Applications</strong>, and launch it. Pick any Systems42 wiki folder from the menu bar or drop a folder onto the app icon.</p>
+        <p>The app is ad-hoc signed (not Apple-notarised). After downloading via a browser, approve it once in <em>System Settings → Privacy &amp; Security → Open Anyway</em>, or clear the browser quarantine flag in a terminal:</p>
+        <pre><code>xattr -dr com.apple.quarantine "/Applications/Systems42 Dashboard.app"</code></pre>
+        <p>Downloading with <code>curl</code> avoids the browser quarantine flag altogether:</p>
+        <pre><code>curl -fsSLO https://github.com/systems42-org/systems42-dashboard/releases/download/v{{ version }}/Systems42-Dashboard-{{ version }}-universal.dmg</code></pre>
+      </div>
+      <div class="card">
+        <h3>Standalone Go binary (Linux &amp; Windows)</h3>
+        <pre><code>tar -xzf systems42-dashboard-{{ version }}-linux-amd64.tar.gz
+./systems42-dashboard --open /path/to/your-wiki</code></pre>
+        <p>Pass <code>--port 0</code> to pick any free port or <code>--check /path/to/your-wiki</code> to run the Systems42 layout check. Works offline with zero external runtime.</p>
+      </div>
+      <div class="card">
+        <h3>Install launcher via curl (Docker or uv)</h3>
         <pre><code>curl -fsSLO https://dashboard.systems42.org/downloads/dashboard.sh
 chmod +x dashboard.sh
 ./dashboard.sh up   # Docker, or ./dashboard.sh uv without Docker</code></pre>
@@ -88,7 +102,7 @@ dashboard_version: "{{ version }}"</code></pre>
 
     <div class="callout">
       <strong>Supported platforms &amp; scope</strong>
-      <p>Run with Docker or uv on Linux and macOS, with the universal macOS desktop app (macOS 14+), or with standalone Go binaries on Linux and Windows. All variants read your wiki strictly read-only and run offline after install. Built for local reading and trusted workshop rooms, with no login and no write access to your wiki.</p>
+      <p>Run with Docker or uv on Linux and macOS, with the universal macOS desktop app (macOS 14+), or with standalone Go binaries on Linux and Windows. All variants read your wiki strictly read-only, share full route parity, and run offline after install. Read the <a href="/docs/go-dashboard/">Go Dashboard Requirements Summary</a> for design details and trade-offs.</p>
     </div>
   </div>
 </section>

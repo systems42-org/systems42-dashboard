@@ -1,6 +1,9 @@
 # Builds dashboard.systems42.org into site/_site/ and deploys that folder
 # directly to GitHub Pages via GitHub Actions (no gh-pages branch).
 #
+# Publishes on every push to main and after every release. Builds and checks,
+# without publishing, on every pull request.
+#
 # Repository setup (Settings -> Pages):
 #   Source: GitHub Actions
 #   Custom domain: dashboard.systems42.org (DNS CNAME -> systems42-org.github.io.)
@@ -11,19 +14,17 @@
 name: site
 
 on:
+  # Every merge to main publishes the site. No path filter: the demo shows the
+  # whole repository (wiki, metamodel, anchors, log), so any change can show.
   push:
     branches: [main]
-    tags: ["v*"]
-    paths:
-      - "site/**"
-      - "wiki/**"
-      - "docs/**"
-      - "dashboard.sh"
-      - "CHANGELOG.md"
-      - "Makefile"
-      - "_system/wiki.yaml"
-      - "_system/apps/dashboard/**"
-      - ".github/workflows/site.yml"
+  # A pull request builds the site and runs its checks, without publishing.
+  pull_request:
+  # Once a release is published its downloads exist: publish again, so the
+  # links of the new release number never stay broken.
+  workflow_run:
+    workflows: [release]
+    types: [completed]
   workflow_dispatch:
     inputs:
       demo_wiki_repo:
@@ -37,11 +38,13 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
-  cancel-in-progress: false
+  group: ${{ github.event_name == 'pull_request' && format('site-pr-{0}', github.ref) || 'pages' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
+    # After a release run, only for a release tag (v1.2.3), not for its other runs.
+    if: github.event_name != 'workflow_run' || startsWith(github.event.workflow_run.head_branch, 'v')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout dashboard repository
@@ -62,18 +65,21 @@ jobs:
           fi
 
       - name: Setup Pages
+        if: github.event_name != 'pull_request'
         uses: actions/configure-pages@v5
 
       - name: Build static site
         run: make site DEMO_WIKI="${{ steps.demo.outputs.path }}"
 
       - name: Upload site/_site artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
           path: site/_site
 
   deploy:
     needs: build
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

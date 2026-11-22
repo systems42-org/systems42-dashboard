@@ -86,26 +86,23 @@
   <div class="container">
     <div class="section-head">
       <h2>Start on your own Systems42 wiki in two minutes</h2>
-      <p>Pin a dashboard release in <code>_system/wiki.yaml</code>, drop the thin launcher <code>dashboard.sh</code> into your repository, and run it with Docker.</p>
+      <p>Run natively with the macOS app or standalone Go binaries (no Docker, uv or Python), or use the thin launcher <code>dashboard.sh</code> with Docker or uv.</p>
     </div>
     <div class="card-grid-2">
       <div class="card">
-        <h3>1. Download the launcher</h3>
-        <pre><code>curl -fsSLO https://dashboard.systems42.org/downloads/dashboard.sh
-chmod +x dashboard.sh</code></pre>
-        <p>Pin the release in <code>_system/wiki.yaml</code>:</p>
-        <pre><code>dashboard_version: "{{ version }}"
-brand: systems42</code></pre>
+        <h3>Native Go app &amp; binaries (zero dependencies)</h3>
+        <p>Install the universal macOS app from the release <code>.dmg</code> and pick any wiki folder from the menu bar, or run a static Go binary on Linux or Windows:</p>
+        <pre><code>systems42-dashboard --open /path/to/your-wiki</code></pre>
+        <p>One app opens any Systems42 wiki read-only, with no Docker, uv or Python required.</p>
+        <a class="card-link" href="/downloads/">Download macOS app &amp; binaries →</a>
       </div>
       <div class="card">
-        <h3>2. Launch the dashboard</h3>
-        <pre><code># With Docker (Linux &amp; macOS, offline after first pull)
-./dashboard.sh up
-
-# Stop again
-./dashboard.sh down</code></pre>
-        <p>Need container image details, release notes or SHA-256 checksums?</p>
-        <a class="card-link" href="/downloads/">Go to Downloads →</a>
+        <h3>Pinned launcher (<code>dashboard.sh</code> for Docker or uv)</h3>
+        <pre><code>curl -fsSLO https://dashboard.systems42.org/downloads/dashboard.sh
+chmod +x dashboard.sh
+./dashboard.sh up   # Docker, or ./dashboard.sh uv without Docker</code></pre>
+        <p>Reads <code>dashboard_version: "{{ version }}"</code> from <code>_system/wiki.yaml</code> and runs offline after the first pull.</p>
+        <a class="card-link" href="/docs/#running">Compare all ways to run →</a>
       </div>
     </div>
   </div>

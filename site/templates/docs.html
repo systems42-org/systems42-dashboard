@@ -14,6 +14,11 @@
   <div class="container">
     <div class="card-grid-2">
       <article class="card">
+        <h3>Install, Start and Update</h3>
+        <p>Step by step for all three forms of the dashboard, Docker, uv and the app: install, start, stop, update and remove.</p>
+        <a class="card-link" href="/docs/install/">Read the Install Guide →</a>
+      </article>
+      <article class="card">
         <h3>Getting Started with Systems42</h3>
         <p>Full walkthrough for product owners, architects and engineers: capturing sources from <code>raw/</code>, grilling requirements and inspecting the wiki.</p>
         <a class="card-link" href="/docs/getting-started/">Read Getting Started →</a>
@@ -92,12 +97,51 @@
     </ul>
     <p>If a brand folder is missing or incomplete, the dashboard falls back to the shipped <code>systems42</code> brand without showing an error.</p>
 
+    <h2 id="running">Ways to run the dashboard</h2>
+    <p>Every delivery method serves the exact same pages, search, diagrams and workshop session features (verified on every pull request by the Python vs Go route parity suite):</p>
+    <table class="info-table">
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>Requires</th>
+          <th>Release pinning</th>
+          <th>Best for</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>macOS App</strong> (<code>.dmg</code>)</td>
+          <td>macOS 14+ (universal)</td>
+          <td>One app opens any wiki; shows mismatch notice if <code>dashboard_version:</code> differs</td>
+          <td>Mac users and VMs without Docker, uv, Python or a terminal</td>
+        </tr>
+        <tr>
+          <td><strong>Standalone Go binary</strong></td>
+          <td>None (static binary)</td>
+          <td>One binary opens any wiki; shows mismatch notice if versions differ</td>
+          <td>Linux and Windows machines without Docker or Python</td>
+        </tr>
+        <tr>
+          <td><strong>uv</strong> (<code>./dashboard.sh uv</code>)</td>
+          <td><code>uv</code></td>
+          <td>Runs the exact Python wheel named in <code>dashboard_version:</code></td>
+          <td>Linux/macOS machines and VMs without Docker</td>
+        </tr>
+        <tr>
+          <td><strong>Docker</strong> (<code>./dashboard.sh up</code>)</td>
+          <td>Docker</td>
+          <td>Pulls the exact GHCR image named in <code>dashboard_version:</code></td>
+          <td>Standard developer and CI workflow</td>
+        </tr>
+      </tbody>
+    </table>
+
     <h2 id="workshops">Workshops &amp; shared sessions</h2>
     <ul>
-      <li>Start the dashboard on the facilitator's laptop with <code>./dashboard.sh up</code> (or <code>make dev</code>).</li>
+      <li>Start the dashboard on the facilitator's laptop with <code>./dashboard.sh up</code> (Docker), <code>./dashboard.sh uv</code> (uv), the macOS desktop app, or <code>systems42-dashboard --open /path/to/wiki</code>.</li>
       <li>Participants scan the QR code on the home page (or project <code>/join</code>) to open the same wiki on their phones or laptops with zero installation.</li>
       <li>The first browser tab to connect becomes the <strong>Keyholder</strong> ("Yoda") and controls the temporary <strong>View</strong> dialog and <strong>Disconnect all</strong>.</li>
-      <li>Closing the last open tab stops the container automatically.</li>
+      <li>Closing the last open tab stops the server or container automatically.</li>
     </ul>
 
     <h2 id="scope">Read-only &amp; security scope</h2>
