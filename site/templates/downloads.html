@@ -1,12 +1,12 @@
 {% extends "layout.html" %}
 {% block title %}Downloads{% endblock %}
-{% block description %}Download dashboard.sh, pull the Systems42 Dashboard Docker image from GHCR, or browse GitHub releases.{% endblock %}
+{% block description %}Download the macOS desktop app (.dmg), standalone Go binaries, dashboard.sh for Docker or uv, or pull the Systems42 Dashboard image from GHCR.{% endblock %}
 {% block content %}
 <section class="page-hero">
   <div class="container">
     <div class="crumbs"><a href="/">Home</a> › Downloads</div>
     <h1>Downloads</h1>
-    <p>Current release: <strong>v{{ version }}</strong>. Every Systems42 wiki pins its dashboard release in <code>_system/wiki.yaml</code> and runs it read-only.</p>
+    <p>Current release: <strong>v{{ version }}</strong>. Run the dashboard with Docker, with uv, or natively with the Go desktop app and standalone binaries.</p>
   </div>
 </section>
 
@@ -14,14 +14,36 @@
   <div class="container">
     <div class="card-grid">
       <article class="card">
+        <h3>macOS desktop app (<code>.dmg</code>)</h3>
+        <p>Universal macOS app (Apple Silicon &amp; Intel, macOS 14+). Menu-bar launcher with folder picker and recent wikis. Needs no Docker, uv, Python or terminal.</p>
+        <div class="cta-row" style="margin-top: auto;">
+          <a class="btn btn-primary" href="https://github.com/systems42-org/systems42-dashboard/releases/download/v{{ version }}/Systems42-Dashboard-{{ version }}-universal.dmg" rel="noopener">Download macOS App (.dmg)</a>
+        </div>
+        <a class="card-link" href="https://github.com/systems42-org/systems42-dashboard/releases/download/v{{ version }}/Systems42-Dashboard-{{ version }}-universal.dmg.sha256" rel="noopener">SHA-256 checksum →</a>
+      </article>
+
+      <article class="card">
         <h3>Launcher script (<code>dashboard.sh</code>)</h3>
-        <p>The only dashboard file a wiki repository needs. Reads <code>dashboard_version:</code> from <code>_system/wiki.yaml</code>, mounts your repo read-only, and opens your browser.</p>
+        <p>The only dashboard file a wiki repository needs. Reads <code>dashboard_version:</code> from <code>_system/wiki.yaml</code> and starts the pinned release with Docker (<code>./dashboard.sh up</code>) or uv (<code>./dashboard.sh uv</code>).</p>
         <p class="checksum">SHA-256: {{ launcher_sha256 }}</p>
         <div class="cta-row" style="margin-top: auto;">
           <a class="btn btn-primary" href="/downloads/dashboard.sh" download="dashboard.sh">Download dashboard.sh</a>
         </div>
       </article>
 
+      <article class="card">
+        <h3>Standalone Go binaries (Linux &amp; Windows)</h3>
+        <p>Single static binary with all templates and assets embedded. Needs no Docker or Python: run <code>systems42-dashboard --open /path/to/wiki</code>.</p>
+        <ul style="margin: 0.4rem 0 0.8rem; padding-left: 1.2rem;">
+          <li><a href="https://github.com/systems42-org/systems42-dashboard/releases/download/v{{ version }}/systems42-dashboard-{{ version }}-linux-amd64.tar.gz" rel="noopener">Linux x86_64 (<code>.tar.gz</code>)</a></li>
+          <li><a href="https://github.com/systems42-org/systems42-dashboard/releases/download/v{{ version }}/systems42-dashboard-{{ version }}-linux-arm64.tar.gz" rel="noopener">Linux arm64 (<code>.tar.gz</code>)</a></li>
+          <li><a href="https://github.com/systems42-org/systems42-dashboard/releases/download/v{{ version }}/systems42-dashboard-{{ version }}-windows-amd64.zip" rel="noopener">Windows x86_64 (<code>.zip</code>)</a></li>
+        </ul>
+        <a class="card-link" href="https://github.com/systems42-org/systems42-dashboard/releases/download/v{{ version }}/systems42-dashboard-{{ version }}-cli.sha256" rel="noopener">Binary SHA-256 checksums →</a>
+      </article>
+    </div>
+
+    <div class="card-grid-2" style="margin-top: 1.15rem;">
       <article class="card">
         <h3>Container image (Docker)</h3>
         <p>Multi-architecture image (<code>linux/amd64</code> and <code>linux/arm64</code>) published publicly on GitHub Container Registry. No registry login required.</p>
@@ -30,8 +52,8 @@
       </article>
 
       <article class="card">
-        <h3>GitHub releases &amp; source</h3>
-        <p>Every numbered release tags the repository, publishes its container image and generates release notes on GitHub.</p>
+        <h3>GitHub releases &amp; Python wheel</h3>
+        <p>Every numbered release publishes the container image, the Python wheel for <code>./dashboard.sh uv</code>, the macOS <code>.dmg</code> and the standalone Go binaries from one tag.</p>
         <pre><code>./dashboard.sh update</code></pre>
         <a class="card-link" href="https://github.com/systems42-org/systems42-dashboard/releases/tag/v{{ version }}" rel="noopener">Release v{{ version }} on GitHub →</a>
       </article>
@@ -50,7 +72,7 @@
         <h3>Install launcher via curl</h3>
         <pre><code>curl -fsSLO https://dashboard.systems42.org/downloads/dashboard.sh
 chmod +x dashboard.sh
-./dashboard.sh up</code></pre>
+./dashboard.sh up   # Docker, or ./dashboard.sh uv without Docker</code></pre>
         <p>Update to the newest published release later with <code>./dashboard.sh update</code>.</p>
       </div>
       <div class="card">
@@ -66,7 +88,7 @@ dashboard_version: "{{ version }}"</code></pre>
 
     <div class="callout">
       <strong>Supported platforms &amp; scope</strong>
-      <p>Supported on Linux and macOS with Docker. After the first start with network access, the dashboard runs fully offline. It is built for local reading and trusted workshop rooms, with no login and no write access to your wiki.</p>
+      <p>Run with Docker or uv on Linux and macOS, with the universal macOS desktop app (macOS 14+), or with standalone Go binaries on Linux and Windows. All variants read your wiki strictly read-only and run offline after install. Built for local reading and trusted workshop rooms, with no login and no write access to your wiki.</p>
     </div>
   </div>
 </section>
