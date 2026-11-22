@@ -293,8 +293,7 @@ private func plain(_ blocks: [Block]) -> String { text(allInlines(blocks).filter
     }
 
     @Test func strikethroughKeepsItsText() throws {
-        #expect(try blocks("~~gone~~ here") == [.paragraph([.text("gone"), .text(" here")])]
-                || (try blocks("~~gone~~ here")) == [.paragraph([.text("gone here")])])
+        #expect(try blocks("~~gone~~ here") == [.paragraph([.text("gone here")])])
     }
 
     @Test func footnoteDoesNotCrashAndKeepsItsText() throws {
