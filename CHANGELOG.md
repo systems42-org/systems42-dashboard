@@ -73,6 +73,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
   next.
 
 ### Changed
+- Dashboard release 0.14.0 (`_system/apps/dashboard/VERSION`).
 - `make` lists its targets in two groups: those for every Systems42 wiki and those for the dashboard's repository only.
 - This repository's own wiki follows meta's current method ([#103](https://github.com/systems42-org/systems42-dashboard/issues/103)): domain terms, requirement notations, the arc42 types of meta DR-040. Q42 quality requirements and C6 named "Issues" stay until [meta#35](https://github.com/systems42-org/meta/issues/35) settles them. The entity diagram takes its section from its route, so its breadcrumb works without a `data-models/` folder (Python and Go).
 - Dashboard: crosscutting concepts are read from `wiki/crosscutting-concepts/` (type `crosscutting-concept`), no longer from `wiki/concepts/`. Move your `CC-` pages to the new folder (DR-040, issue #100).
