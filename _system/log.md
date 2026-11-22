@@ -396,3 +396,10 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Decided by Gernot Starke: Docker is the primary form, uv is for machines without a container engine, the app runs on macOS. A constraint page names the constraint and says nothing about plans or status. "Nothing goes to a third party" is a quality requirement with priority Must, because the strategy rests on requirements. Projection and server rendering get no decision record of their own. The Python dashboard is the reference for the app. Tests as plain scripts are a crosscutting concept for the Python dashboard only.
 - Already on record, linked only: release per wiki (DR-004, DR-007), no access control (CON-001), text next to every diagram (QR-001, DR-006), tailoring by configuration (DR-002).
 - Docs: `docs/INSTALL.md` says the programs for Linux and Windows come without support.
+
+## [2026-11-22] capture | Managing development with make
+- Sources: [[SRC-041-managing-development-with-make]], [[SRC-042-grilling-session-on-development-with-make]].
+- Created: [[FR-063-manage-development-with-make]], a feature under FR-029 for the maintainers.
+- Updated: [[FR-029-the-dashboard-as-a-product]] (children).
+- Decided by Gernot Starke: one feature that states the rules and names the targets per task area, without restating what each does. It covers four task areas (run, test and clean, website, releases), not every command of the launcher.
+- Claude's choices, to be checked: priority Should, no goal linked, `app-bundle` listed under releases although the source does not name it.

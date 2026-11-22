@@ -98,6 +98,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-060-documentation-on-the-website]] Documentation on the website (feature, Should, draft)
 - [[FR-061-legal-and-project-information-on-the-website]] Legal and project information on the website (feature, Must, draft)
 - [[FR-062-the-website-is-built-and-published-from-the-repository]] The website is built and published from the repository (feature, Should, draft)
+- [[FR-063-manage-development-with-make]] Manage development with make (feature, Should, draft)
 
 ## Quality requirements
 
@@ -187,3 +188,5 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-038-grilling-session-on-the-public-website]] Grilling session on the public website (interview)
 - [[SRC-039-solution-strategy-of-the-dashboard]] Solution strategy of the dashboard (document)
 - [[SRC-040-grilling-session-on-the-solution-strategy]] Grilling session on the solution strategy (interview)
+- [[SRC-041-managing-development-with-make]] Managing development with make (document)
+- [[SRC-042-grilling-session-on-development-with-make]] Grilling session on development with make (interview)
