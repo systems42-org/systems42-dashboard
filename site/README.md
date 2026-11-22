@@ -2,6 +2,22 @@
 
 Static showcase, documentation, downloads and interactive `/demo/` export for the Systems42 Dashboard, deployed directly from `site/_site/` via GitHub Actions (no `gh-pages` branch).
 
+## How the site is built
+
+The site has its own build, `site/build.py`. It is a Python script, and it uses no site generator. `make site` runs it in the dashboard's Docker image (`site/build.sh`), so it needs Docker and no local Python. The script does five things, in this order:
+
+1. **Demo.** It loads the dashboard's own code (`_system/apps/dashboard/app.py`) on the demo wiki and asks it for every page, starting from a list of routes and following the links it finds. Each page is saved as a file under `/demo/`, with its links rewritten and everything removed that needs a running dashboard (joining, connected tabs, View dialog, Reload).
+2. **Files.** It copies the site's stylesheet, the marks of the `systems42` brand, `dashboard.sh` and `CNAME`, and works out the SHA-256 checksum of `dashboard.sh`.
+3. **Pages.** It renders the pages of the site from the Jinja templates in `site/templates/`: overview, downloads, docs and imprint. The release number comes from `_system/apps/dashboard/VERSION`, the changelog excerpt from `CHANGELOG.md`.
+4. **Guides.** It renders four Markdown files from `docs/` as pages under `/docs/`: `INSTALL.md`, `GETTING-STARTED.md`, `prompts/brand-mark-and-intro.md` and `go-dashboard-requirements-summary.md`.
+5. **Checks.** It fails when a required page is missing, when a link inside the site leads nowhere, or when a demo page still calls a running dashboard.
+
+The result is the folder `site/_site/`. The `site` workflow (`.github/workflows/site.yml`) runs the same `make site` and hands that folder to GitHub Pages as it is. GitHub does no build of its own.
+
+The workflow publishes the site on every push to `main` and once more after every release, when the downloads of the new release exist. On a pull request it builds the site and runs the checks, without publishing.
+
+To put a new guide on the site, add its Markdown file to `docs/`, add one `write_page(...)` call in `build_site()` and link it from `site/templates/docs.html`.
+
 ## Build and preview locally
 
 Build into `site/_site/` (gitignored, runs in Docker):

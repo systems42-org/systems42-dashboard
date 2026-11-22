@@ -142,11 +142,14 @@ jobs:
           cache-dependency-path: _system/apps/dashboard/go.sum
 
       - name: Import Apple signing certificate (when configured)
-        if: ${{ secrets.APPLE_SIGN_P12 != '' && secrets.APPLE_SIGN_PASSWORD != '' }}
         env:
           APPLE_SIGN_P12: ${{ secrets.APPLE_SIGN_P12 }}
           APPLE_SIGN_PASSWORD: ${{ secrets.APPLE_SIGN_PASSWORD }}
         run: |
+          if [ -z "${APPLE_SIGN_P12:-}" ] || [ -z "${APPLE_SIGN_PASSWORD:-}" ]; then
+            echo "→ No Apple signing certificate configured; build will use ad-hoc signing."
+            exit 0
+          fi
           KEYCHAIN="$RUNNER_TEMP/build.keychain-db"
           KEYCHAIN_PASS="$(uuidgen)"
           security create-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN"
@@ -158,10 +161,13 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASS" "$KEYCHAIN"
 
       - name: Prepare Apple notarisation key (when configured)
-        if: ${{ secrets.APPLE_NOTARY_KEY != '' }}
         env:
           APPLE_NOTARY_KEY: ${{ secrets.APPLE_NOTARY_KEY }}
         run: |
+          if [ -z "${APPLE_NOTARY_KEY:-}" ]; then
+            echo "→ No Apple notarisation key configured; skipping notarisation."
+            exit 0
+          fi
           echo "$APPLE_NOTARY_KEY" | base64 --decode > "$RUNNER_TEMP/notary.p8"
           chmod 600 "$RUNNER_TEMP/notary.p8"
           echo "APPLE_NOTARY_KEY_PATH=$RUNNER_TEMP/notary.p8" >> "$GITHUB_ENV"
@@ -184,13 +190,25 @@ jobs:
     needs: [check-and-test, image-and-wheel, cli-binaries, macos-app]
     runs-on: ubuntu-latest
     steps:
+      # Download only our release artifacts by name so docker/build-push-action's
+      # internal .dockerbuild metadata artifact is never downloaded or published.
       - uses: actions/download-artifact@v4
         with:
+          name: wheel
           path: dist
-          merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: cli-binaries
+          path: dist
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-dmg
+          path: dist
 
       - name: GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.check-and-test.outputs.version }}
-        run: gh release create "$GITHUB_REF_NAME" --title "$VERSION" --generate-notes dist/*
+        run: gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "$VERSION" --generate-notes dist/*

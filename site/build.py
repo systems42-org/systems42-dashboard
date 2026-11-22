@@ -4,7 +4,7 @@
 Outputs a ready-to-publish GitHub Pages directory containing:
   - /               Landing page (arc42-inspired header & footer)
   - /downloads/     Downloadable dashboard.sh + SHA-256, Docker/GHCR, uv wheel, changelog
-  - /docs/          Configuration, branding, workshops, Getting Started & brand prompt
+  - /docs/          Configuration, branding, workshops, Install guide, Getting Started & brand prompt
   - /imprint/       Imprint (Impressum) & Privacy (Datenschutz)
   - /demo/          Static interactive export of a Systems42 wiki using the real dashboard
   - /CNAME          dashboard.systems42.org
@@ -419,6 +419,7 @@ def verify_output(out_dir: Path) -> None:
         "downloads/dashboard.sh",
         "docs/index.html",
         "docs/getting-started/index.html",
+        "docs/install/index.html",
         "imprint/index.html",
         "demo/index.html",
         "demo/search/index.html",
@@ -535,6 +536,17 @@ def build_site(repo_dir: Path, demo_wiki: Path, out_dir: Path) -> None:
             doc_title="Getting Started",
             doc_lead="Capturing, grilling and inspecting requirements in a Systems42 wiki.",
             body_html=render_markdown(gs_path.read_text(encoding="utf-8")),
+        )
+
+    install_path = repo_dir / "docs" / "INSTALL.md"
+    if install_path.is_file():
+        write_page(
+            "doc_page.html",
+            "docs/install/index.html",
+            active_nav="docs",
+            doc_title="Install, Start and Update",
+            doc_lead="Step by step for Docker, uv and the app: install, start, stop, update and remove.",
+            body_html=render_markdown(install_path.read_text(encoding="utf-8")),
         )
 
     prompt_path = repo_dir / "docs" / "prompts" / "brand-mark-and-intro.md"
