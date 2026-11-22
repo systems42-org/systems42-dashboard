@@ -24,7 +24,8 @@ let package = Package(
         .target(name: "Systems42UI", dependencies: ["Systems42Kit"]),
         .executableTarget(
             name: "Systems42Dashboard",
-            dependencies: ["Systems42UI", "Systems42Kit"]
+            dependencies: ["Systems42UI", "Systems42Kit"],
+            exclude: ["Systems42Dashboard.entitlements"]
         ),
         // Locates Tests/Fixtures and Tests/Golden for the test targets.
         .target(name: "Systems42TestSupport", path: "Tests/Systems42TestSupport"),
