@@ -13,7 +13,6 @@ name: site
 on:
   push:
     branches: [main]
-    tags: ["v*"]
     paths:
       - "site/**"
       - "wiki/**"
