@@ -518,6 +518,35 @@ func (s *Server) handleBuildingBlocks(w http.ResponseWriter, r *http.Request) {
 	}, now)
 }
 
+func (s *Server) handleStrategy(w http.ResponseWriter, r *http.Request) {
+	now := s.Now()
+	cat := metamodel.BuildCatalog(s.Metamodel.Blocks())
+	block, ok := cat.BySlug["strategy"]
+	if !ok {
+		s.handleNotFound(w, r)
+		return
+	}
+	sn := newSnapshot(s.Store)
+	byStem := sn.byStem()
+	pages := sortedByID(sn.folder("solution-strategy"))
+
+	rows := make([]map[string]any, 0, len(pages))
+	for _, p := range pages {
+		row := archRow(p, "solution-strategy")
+		row["drivers"] = linkGroups(wiki.LinksOf(p, "drivers", byStem), byStem)
+		row["decisions"] = linkGroups(wiki.LinksOf(p, "decisions", byStem), byStem)
+		row["replaced_by"] = linkGroups(wiki.LinksOf(p, "superseded-by", byStem), byStem)
+		rows = append(rows, row)
+	}
+
+	s.renderHTML(w, r, http.StatusOK, "strategy.html", cat, map[string]any{
+		"block":    block.ToMap(),
+		"rows":     rows,
+		"total":    len(pages),
+		"maturity": wiki.ComputeMaturity(statusesOf(pages)).ToMap(),
+	}, now)
+}
+
 func (s *Server) handleConcepts(w http.ResponseWriter, r *http.Request) {
 	now := s.Now()
 	cat := metamodel.BuildCatalog(s.Metamodel.Blocks())
@@ -528,7 +557,7 @@ func (s *Server) handleConcepts(w http.ResponseWriter, r *http.Request) {
 	}
 	sn := newSnapshot(s.Store)
 	byStem := sn.byStem()
-	pages := sortedByID(sn.folder("concepts"))
+	pages := sortedByID(sn.folder("crosscutting-concepts"))
 
 	known := make(map[string]string, len(conceptCategories))
 	for _, kv := range conceptCategories {
@@ -550,7 +579,7 @@ func (s *Server) handleConcepts(w http.ResponseWriter, r *http.Request) {
 			if matchedKey != key {
 				continue
 			}
-			row := archRow(p, "concepts")
+			row := archRow(p, "crosscutting-concepts")
 			if raw != "" && matchedKey == "" {
 				row["unknown_category"] = raw
 			} else {
@@ -569,7 +598,7 @@ func (s *Server) handleConcepts(w http.ResponseWriter, r *http.Request) {
 
 	flat := make([]map[string]any, 0, len(pages))
 	for _, p := range pages {
-		row := archRow(p, "concepts")
+		row := archRow(p, "crosscutting-concepts")
 		raw := strings.TrimSpace(p.MetaString("category"))
 		if lbl, ok := known[strings.ToLower(raw)]; ok {
 			row["category"] = lbl
@@ -603,7 +632,7 @@ func (s *Server) handleRuntime(w http.ResponseWriter, r *http.Request) {
 	rows := make([]map[string]any, 0, len(pages))
 	for _, p := range pages {
 		row := archRow(p, "runtime-scenarios")
-		row["drivers"] = linkGroups(wiki.LinksOf(p, "drivers", byStem), byStem)
+		row["realizes"] = linkGroups(wiki.LinksOf(p, "realizes", byStem), byStem)
 		row["steps"] = len(project.StepsOf(p, byStem))
 		rows = append(rows, row)
 	}

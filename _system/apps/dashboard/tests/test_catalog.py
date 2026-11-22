@@ -58,18 +58,16 @@ def test_sections_are_the_metamodel_blocks():
     assert catalog.SECTION_BY_ID["R3"]["folders"] == ["functional-requirements"]
 
 
-def test_architecture_a2_to_a5_live_and_a1_planned():
-    live = {"A2": (["building-blocks"], "/arc42/building-blocks"),
+def test_architecture_a1_to_a5_live():
+    live = {"A1": (["solution-strategy"], "/arc42/strategy"),
+            "A2": (["building-blocks"], "/arc42/building-blocks"),
             "A3": (["deployment-nodes"], "/arc42/deployment"),
             "A4": (["runtime-scenarios"], "/arc42/runtime"),
-            "A5": (["concepts"], "/arc42/concepts")}
+            "A5": (["crosscutting-concepts"], "/arc42/concepts")}
     for s in catalog.sections_of("architecture"):
-        if s["id"] in live:
-            folders, href = live[s["id"]]
-            assert s["scope"] == "in" and s["folders"] == folders, s
-            assert s["href"] == href, s
-        else:
-            assert s["scope"] == "planned" and s["folders"] == [] and s["href"] is None, s["id"]
+        folders, href = live[s["id"]]
+        assert s["scope"] == "in" and s["folders"] == folders, s
+        assert s["href"] == href, s
 
 
 def test_out_of_scope_sections_have_no_folders_or_route():
@@ -90,7 +88,7 @@ def test_routes_are_unchanged():
     assert by_id["C5"]["href"] == "/domain-terms"
     assert by_id["C6"]["href"] == "/issues"
     assert set(catalog.SECTION_BY_SLUG) == {"functional-requirements", "models", "quality", "constraints", "scope",
-                                           "building-blocks", "deployment", "runtime", "concepts"}
+                                           "strategy", "building-blocks", "deployment", "runtime", "concepts"}
 
 
 def test_lookups():
@@ -118,7 +116,7 @@ if __name__ == "__main__":
     test_eighteen_sections_with_diagram_ids()
     test_every_wiki_folder_belongs_to_exactly_one_section()
     test_sections_are_the_metamodel_blocks()
-    test_architecture_a2_to_a5_live_and_a1_planned()
+    test_architecture_a1_to_a5_live()
     test_out_of_scope_sections_have_no_folders_or_route()
     test_routes_are_unchanged()
     test_lookups()

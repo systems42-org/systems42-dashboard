@@ -382,3 +382,9 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Removed: the field `building-blocks: []` from FR-047 to FR-053. The template does not define it, and nothing read it.
 - Claude's choices, to be checked: a static Mermaid diagram instead of an interactive one, and the block's `drivers:` as the only source of the link.
 - Not built: [[FR-048-show-the-delivery-status-of-a-requirement]]. It waits for the delivery fields of the Systems42 metamodel.
+
+## [2026-11-22] sync | Systems42 method from meta (#103)
+- Migrated with meta's `migrate-requirements` (62 FRs to `notation:` + `level:`, DR-038) and `migrate-domain-terms` (empty `glossary/`, `data-models/`, `use-cases/` gone, DR-039); `wiki/concepts/` renamed to `wiki/crosscutting-concepts/` (DR-040); then `make sync` from meta.
+- Kept, not overwritten: README, CHANGELOG, Makefile, `dashboard.sh`, `.gitignore`, `.obsidian/`, `CLAUDE.md`, `_system/README.md`; the writing-style and language rules in `AGENTS.md`; Q42 (`_system/anchors/q42.md`, `dimensions:` on quality requirements) and C6 titled "Issues" until [meta#35](https://github.com/systems42-org/meta/issues/35).
+- Lost in the sync, candidates for meta: `_system/metamodel/altitude.md` (a proposed granularity scale).
+- App tests that pinned the old metamodel follow the new one; the app's copies of the method tests are removed, they live in `_system/scripts/tests/`.

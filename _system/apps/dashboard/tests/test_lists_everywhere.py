@@ -43,7 +43,8 @@ FOLDERS = {
     "building-blocks": ("BB", "building-block", "state: current\n"),
     "deployment-nodes": ("DN", "deployment-node", "state: planned\nstereotype: host\n"),
     "runtime-scenarios": ("RS", "runtime-scenario", "state: current\n"),
-    "concepts": ("CC", "concept", "state: current\ncategory: operations\n"),
+    "crosscutting-concepts": ("CC", "crosscutting-concept", "state: current\ncategory: operations\n"),
+    "solution-strategy": ("SOL", "solution-strategy", "state: current\n"),
 }
 for folder, (prefix, typ, extra) in FOLDERS.items():
     (_wiki / folder).mkdir(parents=True)
@@ -80,7 +81,8 @@ ROUTES = {
     "/arc42/building-blocks": "building-block",
     "/arc42/deployment": "deployment-node",
     "/arc42/runtime": "runtime-scenario",
-    "/arc42/concepts": "concept",
+    "/arc42/concepts": "crosscutting-concept",
+    "/arc42/strategy": "solution-strategy",
 }
 # lists whose status is the issue lifecycle filter their status on the server
 NO_AGREED_FILTER = {"/issues"}

@@ -114,7 +114,7 @@ def test_section_lines_link_to_their_pages_and_tiles_are_not_one_big_link():
     assert 'href="/req42/functional-requirements"><code class="ml-id">R3</code>' in req
     assert 'href="/req42#tile-r2"><code class="ml-id">R2</code>' in req
     arc = body[body.index("area-tile-architecture"):body.index("area-tile-commons")]
-    assert 'href="/arc42#tile-a1"><code class="ml-id">A1</code>' in arc and 'href="/arc42/concepts"><code class="ml-id">A5</code>' in arc
+    assert 'href="/arc42/strategy"><code class="ml-id">A1</code>' in arc and 'href="/arc42/concepts"><code class="ml-id">A5</code>' in arc
     assert "tile-a6" not in arc, "A6 moved to Commons as C7 Decisions (FR-009)"
     com = body[body.index("area-tile-commons"):]
     for sid, href in (("C1", "/req42/quality"), ("C4", "/stakeholders"), ("C5", "/domain-terms"), ("C6", "/issues"),
@@ -339,8 +339,6 @@ def test_area_tiles_show_the_count_of_each_section():
         r2 = req[req.index("tile-r2"):req.index("</li>", req.index("tile-r2"))]
         assert "area-section-count" not in r2, r2
         arc = body[body.index("area-tile-architecture"):body.index("area-tile-commons")]
-        a1 = arc[arc.index("tile-a1"):arc.index("</li>", arc.index("tile-a1"))]
-        assert "area-section-count" not in a1, a1
         assert 'Building Block View<span class="area-section-count" title="0 pages">0</span>' in arc, arc
     finally:
         for f in written:

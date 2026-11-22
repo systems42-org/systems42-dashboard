@@ -117,7 +117,7 @@ def test_disconnect_all_counts_the_other_clients():
 
 
 def test_req42_route_refuses_arc42_slugs():
-    for slug in ("building-blocks", "deployment", "runtime", "concepts"):
+    for slug in ("strategy", "building-blocks", "deployment", "runtime", "concepts"):
         assert client.get(f"/req42/{slug}").status_code == 404, slug
     for slug in ("quality", "constraints", "scope", "models"):
         assert client.get(f"/req42/{slug}").status_code == 200, slug

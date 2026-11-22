@@ -77,6 +77,7 @@
   --layer-cc-ink: #4fd1c5;
   --layer-rs-ink: #c4a1ff;
   --layer-dn-ink: #e3a0d8;
+  --layer-sol-ink: #9fd0ff;
   /* area colours (DR-033): place, not action — req green (req42), arc blue (arc42), org red */
   --area-req: #7fd4a0;
   --area-arc: #7fb3f0;
@@ -144,6 +145,7 @@
   --layer-cc-ink: #0e6f66;
   --layer-rs-ink: #5b34b0;
   --layer-dn-ink: #8a3f91;
+  --layer-sol-ink: #245f8f;
   --area-req: #1f7a46;
   --area-arc: #1d5fb0;
   --area-org: #b03a3a;
@@ -1435,7 +1437,7 @@ a.mm-anchor:hover { color: var(--accent); border-color: var(--accent); }
 .mm-dot-dr { border-color: var(--layer-dr-ink); }
 .mm-dot-bb { border-color: var(--layer-bb-ink); }
 .mm-dot-cc { border-color: var(--layer-cc-ink); } .mm-dot-rs { border-color: var(--layer-rs-ink); }
-.mm-dot-dn { border-color: var(--layer-dn-ink); }
+.mm-dot-dn { border-color: var(--layer-dn-ink); } .mm-dot-sol { border-color: var(--layer-sol-ink); }
 
 /* FR-019: the open-issue count on a section tile links to those issues; it
    sits above the tile's stretched title link, like the tile CTAs. */

@@ -1430,8 +1430,9 @@ FOLDER_LABELS = {
     "stakeholders": "Stakeholder",
     "issues": "Issue",
     "decisions": "Decision record",
+    "solution-strategy": "Solution strategy",
     "building-blocks": "Building block",
-    "concepts": "Crosscutting concept",
+    "crosscutting-concepts": "Crosscutting concept",
     "runtime-scenarios": "Runtime scenario",
     "deployment-nodes": "Deployment node",
 }
@@ -1691,8 +1692,8 @@ _TYPE_FOLDER = {
     "EIF": "external-interfaces", "GOAL": "goals", "CTX": "context",
     "FR": "functional-requirements", "CON": "constraints", "ISS": "issues",
     "UC": "functional-requirements", "ACT": "activity-models", "QR": "quality-requirements",
-    "DR": "decisions", "BB": "building-blocks", "CC": "concepts",
-    "RS": "runtime-scenarios", "DN": "deployment-nodes",
+    "DR": "decisions", "SOL": "solution-strategy", "BB": "building-blocks",
+    "CC": "crosscutting-concepts", "RS": "runtime-scenarios", "DN": "deployment-nodes",
 }
 
 
@@ -1849,10 +1850,11 @@ _TYPE_LABEL = {
     "DT": "Domain terms", "GLO": "Glossary", "STK": "Stakeholders", "DM": "Data models", "CTX": "Context",
     "EIF": "External interfaces", "GOAL": "Goals", "FR": "Functional requirements",
     "UC": "Use cases", "ACT": "Activity models", "QR": "Quality requirements",
-    "CON": "Constraints", "DR": "Decisions", "BB": "Building blocks", "CC": "Concepts",
-    "RS": "Runtime scenarios", "DN": "Deployment nodes", "ISS": "Issues",
+    "CON": "Constraints", "DR": "Decisions", "SOL": "Solution strategies", "BB": "Building blocks",
+    "CC": "Crosscutting concepts", "RS": "Runtime scenarios", "DN": "Deployment nodes", "ISS": "Issues",
 }
-_REL_TYPE_ORDER = ["DT", "GLO", "STK", "DM", "CTX", "EIF", "GOAL", "FR", "UC", "ACT", "QR", "CON", "DR", "BB", "CC", "RS", "DN", "ISS"]
+_REL_TYPE_ORDER = ["DT", "GLO", "STK", "DM", "CTX", "EIF", "GOAL", "FR", "UC", "ACT", "QR", "CON", "DR",
+                   "SOL", "BB", "CC", "RS", "DN", "ISS"]
 
 
 def build_relations_panel(stem: str, exclude: set[str] | None = None) -> dict:
@@ -2645,15 +2647,20 @@ def build_drivers(stem: str) -> list[dict]:
     return _link_groups(links_of(p, "drivers")) if p else []
 
 
-# --- arc42 A3/A4/A5 and `state` (DR-010) -------------------------------------
+# --- arc42 A1/A3/A4/A5 and `state` (DR-010) ----------------------------------
 #
 # Every architecture page says whether it describes today's landscape or the
 # target (`state:`); a replaced current-state page names its successor in
-# `superseded-by:`. Concepts govern blocks and nodes (`applies-to:`), runtime
-# scenarios order interactions (`steps:`), nodes host blocks and connect to
+# `superseded-by:`. Crosscutting concepts govern blocks and nodes
+# (`applies-to:`), runtime scenarios order interactions (`steps:`) and name the
+# requirement they carry out (`realizes:`), nodes host blocks and connect to
 # each other. All reverse sides are projected here, never stored.
 
-ARCH_FOLDERS = ("building-blocks", "concepts", "runtime-scenarios", "deployment-nodes")
+ARCH_FOLDERS = ("solution-strategy", "building-blocks", "crosscutting-concepts", "runtime-scenarios",
+                "deployment-nodes")
+# The folders whose `drivers:` the Addressed-by panel reads (proj-addressed-by).
+# A runtime scenario names its requirement in `realizes:` instead.
+_DRIVER_FOLDERS = ("decisions",) + tuple(f for f in ARCH_FOLDERS if f != "runtime-scenarios")
 _STATES = ("outdated", "current", "planned", "target")
 
 
@@ -2688,34 +2695,40 @@ def _struct_targets(p: Page, field: str, keys: tuple[str, ...]) -> list[str]:
     return out
 
 
-def _arch_pages() -> list[Page]:
-    return [p for f in ARCH_FOLDERS for p in sorted(load_folder(f), key=lambda q: q.id)]
-
-
 def build_addressed_by(stem: str) -> list[dict]:
     """Decision records and architecture pages whose `drivers:` name this page."""
-    hits = [p.stem for p in sorted(load_folder("decisions"), key=lambda q: q.id) + _arch_pages()
+    hits = [p.stem for f in _DRIVER_FOLDERS for p in sorted(load_folder(f), key=lambda q: q.id)
             if stem in links_of(p, "drivers")]
     return _link_groups(hits)
+
+
+def build_realized_by(stem: str) -> list[dict]:
+    """The runtime scenarios whose `realizes:` name this page (rel-realizes)."""
+    return _link_groups([p.stem for p in sorted(load_folder("runtime-scenarios"), key=lambda q: q.id)
+                         if stem in links_of(p, "realizes")])
 
 
 # Requirement folders a `drivers:` link may point at (rel-drivers).
 _ADDRESSABLE = {"goals", "functional-requirements", "quality-requirements", "constraints",
                 "activity-models"}
+# Folders a runtime scenario's `realizes:` may point at (rel-realizes).
+_REALIZABLE = {"functional-requirements", "activity-models"}
 
 
 def build_trace(stem: str, folder: str) -> dict:
     """The typed traceability panels of one page: drivers + shaped-by on
     architecture pages and decision records, the arc42 forward and reverse
-    links, addressed-by on a requirement. Empty lists where a panel does not
-    apply."""
-    keys = ("drivers", "shaped_by", "used_by", "addressed_by", "replaced_by", "replaces",
-            "applies_to", "governed_by", "hosts", "deployed_on", "takes_part_in")
+    links, addressed-by and realized-by on a requirement. Empty lists where a
+    panel does not apply."""
+    keys = ("drivers", "realizes", "shaped_by", "used_by", "addressed_by", "realized_by", "replaced_by",
+            "replaces", "applies_to", "governed_by", "hosts", "deployed_on", "takes_part_in")
     trace: dict = {k: [] for k in keys}
     me = (next((p for p in load_folder(folder) if p.stem == stem), None)
           if folder in ARCH_FOLDERS or folder == "decisions" else None)
-    if folder in ARCH_FOLDERS or folder == "decisions":
+    if folder in _DRIVER_FOLDERS:
         trace["drivers"] = build_drivers(stem)
+    if folder == "runtime-scenarios" and me:
+        trace["realizes"] = _link_groups(links_of(me, "realizes"))
     if me and folder != "decisions":
         trace["shaped_by"] = _link_groups(links_of(me, "decisions"))
     if me:
@@ -2728,19 +2741,22 @@ def build_trace(stem: str, folder: str) -> dict:
         trace["deployed_on"] = _link_groups([p.stem for p in sorted(load_folder("deployment-nodes"), key=lambda q: q.id)
                                              if stem in links_of(p, "hosts")])
     if folder in ("building-blocks", "deployment-nodes"):
-        trace["governed_by"] = _link_groups([p.stem for p in sorted(load_folder("concepts"), key=lambda q: q.id)
+        trace["governed_by"] = _link_groups([p.stem for p in sorted(load_folder("crosscutting-concepts"), key=lambda q: q.id)
                                              if stem in links_of(p, "applies-to")])
     if folder in ("building-blocks", "deployment-nodes", "external-interfaces", "stakeholders"):
         trace["takes_part_in"] = _link_groups(
             [p.stem for p in sorted(load_folder("runtime-scenarios"), key=lambda q: q.id)
              if stem in _struct_targets(p, "steps", ("from", "to"))])
-    if folder == "concepts" and me:
+    if folder == "crosscutting-concepts" and me:
         trace["applies_to"] = _link_groups(links_of(me, "applies-to"))
     if folder == "deployment-nodes" and me:
         trace["hosts"] = _link_groups(links_of(me, "hosts"))
     if folder in _ADDRESSABLE:
         trace["addressed_by"] = build_addressed_by(stem)
-    # what realizes a use case is its breakdown on the FR page (DR-038)
+    if folder in _REALIZABLE:
+        trace["realized_by"] = build_realized_by(stem)
+    # the stories that realize a use case are its breakdown on the FR page
+    # (DR-038); realized_by holds the runtime scenarios only
     return trace
 
 
@@ -3047,11 +3063,28 @@ def _arch_row(p: Page, folder: str) -> dict:
             "url": _page_url(folder, p.stem)}
 
 
+@app.route("/arc42/strategy")
+def strategy_view():
+    """A1 Solution Strategy: every strategy page, marked by state, with what it
+    answers and the decisions it summarises."""
+    block = catalog.SECTION_BY_SLUG.get("strategy") or abort(404)
+    pages = sorted(load_folder("solution-strategy"), key=lambda q: q.id)
+    rows = []
+    for p in pages:
+        row = _arch_row(p, "solution-strategy")
+        row["drivers"] = _link_groups(links_of(p, "drivers"))
+        row["decisions"] = _link_groups(links_of(p, "decisions"))
+        row["replaced_by"] = _link_groups(links_of(p, "superseded-by"))
+        rows.append(row)
+    return render_template("strategy.html", block=block, rows=rows, total=len(pages),
+                           maturity=maturity(p.status for p in pages))
+
+
 @app.route("/arc42/concepts")
 def concepts_view():
     """A5 Crosscutting Concepts: grouped by arc42 topic, with what each governs."""
     block = catalog.SECTION_BY_SLUG.get("concepts") or abort(404)
-    pages = sorted(load_folder("concepts"), key=lambda q: q.id)
+    pages = sorted(load_folder("crosscutting-concepts"), key=lambda q: q.id)
     known = dict(_CONCEPT_CATEGORIES)
     groups = []
     for key, label in _CONCEPT_CATEGORIES + [(None, "Uncategorised")]:
@@ -3061,7 +3094,7 @@ def concepts_view():
             cat = raw.lower()
             if (cat if cat in known else None) != key:
                 continue
-            row = _arch_row(p, "concepts")
+            row = _arch_row(p, "crosscutting-concepts")
             row["unknown_category"] = raw if raw and cat not in known else ""
             row["applies_to"] = _link_groups(links_of(p, "applies-to"))
             rows.append(row)
@@ -3069,7 +3102,7 @@ def concepts_view():
             groups.append({"label": label, "rows": rows})
     flat = []
     for p in pages:
-        row = _arch_row(p, "concepts")
+        row = _arch_row(p, "crosscutting-concepts")
         raw = str(p.meta.get("category") or "").strip()
         row["category"] = known.get(raw.lower(), raw)
         flat.append(row)
@@ -3085,7 +3118,7 @@ def runtime_view():
     rows = []
     for p in pages:
         row = _arch_row(p, "runtime-scenarios")
-        row["drivers"] = _link_groups(links_of(p, "drivers"))
+        row["realizes"] = _link_groups(links_of(p, "realizes"))
         row["steps"] = len(steps_of(p))
         rows.append(row)
     return render_template("runtime.html", block=block, rows=rows, total=len(pages),
