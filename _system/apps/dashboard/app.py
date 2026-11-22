@@ -5138,7 +5138,7 @@ def help_view():
 
 _MM_DR_RE = re.compile(r"^DR-\d{3}\b")
 # a same-site path only: `//host` and `/\host` would leave the site
-_MM_ROUTE_RE = re.compile(r"^(/(?![/\\])\S*)")
+_MM_ROUTE_RE = re.compile(r"^(/(?![/\\])[^\s,;)]*)")
 
 
 def _mm_dr_link(ref: str, label: str = "") -> str:
