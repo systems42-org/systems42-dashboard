@@ -11,8 +11,8 @@ import tempfile
 from pathlib import Path
 
 WIKI_FOLDERS = [
-    "glossary", "goals", "stakeholders", "context", "external-interfaces",
-    "data-models", "activity-models", "functional-requirements",
+    "domain-terms", "goals", "stakeholders", "context", "external-interfaces",
+    "activity-models", "functional-requirements",
     "quality-requirements", "constraints", "issues",
 ]
 
@@ -30,16 +30,16 @@ sys.path.insert(0, str(HERE))
 
 import app  # noqa: E402
 
-GLO = """---
+TERM = """---
 id: {id}
-type: glossary-term
+type: domain-term
 title: {title}
 status: {status}
 created: 2026-09-07
 updated: 2026-09-07
 sources: []
 related: []
-tags: [glossary]
+tags: [domain-term]
 ---
 
 # {title}
@@ -60,7 +60,7 @@ def test_maturity_buckets_and_aliases():
 
 def test_bar_renders_on_home_tile_and_list_page():
     for i, st in ((1, "draft"), (2, "accepted")):
-        (_wiki / "glossary" / f"GLO-00{i}-t{i}.md").write_text(GLO.format(id=f"GLO-00{i}", title=f"T{i}", status=st), encoding="utf-8")
+        (_wiki / "domain-terms" / f"DT-00{i}-t{i}.md").write_text(TERM.format(id=f"DT-00{i}", title=f"T{i}", status=st), encoding="utf-8")
     try:
         app._PARSE_CACHE.clear()
         c = app.app.test_client()
@@ -72,7 +72,7 @@ def test_bar_renders_on_home_tile_and_list_page():
         assert 'class="maturity' in page
     finally:
         for i in (1, 2):
-            (_wiki / "glossary" / f"GLO-00{i}-t{i}.md").unlink()
+            (_wiki / "domain-terms" / f"DT-00{i}-t{i}.md").unlink()
 
 
 if __name__ == "__main__":

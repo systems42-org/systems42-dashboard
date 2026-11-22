@@ -8,8 +8,7 @@ Run from the dashboard dir:
 WIKI_DIR points at tests/fixtures/wiki; the metamodel is the real one, since
 the page's whole point is to agree with it. The anchors are a temporary
 folder of their own (ANCHORS_DIR). The requirement notations (DR-038) are
-tested in test_notations.py, against fixture notation files: this
-repository's own metamodel declares none until it is migrated.
+tested in test_notations.py, against fixture notation files.
 """
 import os
 import sys
@@ -40,7 +39,6 @@ def test_loader_reads_every_construct():
     assert mm["present"]
     assert len(mm["types"]) == 17, [t["name"] for t in mm["types"]]
     assert mm["relations"] and mm["projections"] and mm["rules"]
-    assert "altitude" not in mm                  # removed by DR-038
     assert isinstance(mm["notations"], list)
     assert [f["name"] for f in mm["frameworks"]] == ["req42", "commons", "arc42"]
     # types come in block order: goals (R1) first, the blockless source last
@@ -104,8 +102,7 @@ def test_page_renders_tables_graph_and_examples():
         assert 'href="/page/decisions/DR-001-carts-expire-after-a-day">DR-001</a>' in app._mm_wikilinks(
             "[[DR-001-carts-expire-after-a-day|DR-001]]", {})
     assert '<a class="mm-anchor" href="#anchor-pam"' in body and 'id="anchor-pam"' in body
-    # the altitude scale is gone (DR-038); requirement notations replace it
-    assert 'id="altitude"' not in body and "Requirement notations" in body
+    assert "Requirement notations" in body
     # the graph script and data are on the page
     assert "metamodel-graph.js" in body and 'id="mm-graph-data"' in body
 

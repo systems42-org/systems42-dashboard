@@ -11,8 +11,8 @@ import tempfile
 from pathlib import Path
 
 WIKI_FOLDERS = [
-    "glossary", "goals", "stakeholders", "context", "external-interfaces",
-    "data-models", "activity-models", "functional-requirements",
+    "domain-terms", "goals", "stakeholders", "context", "external-interfaces",
+    "activity-models", "functional-requirements",
     "quality-requirements", "constraints", "issues",
 ]
 
@@ -45,39 +45,39 @@ source-type: document
 origin: raw/ingested/brief.md
 captured: 2026-09-06
 sha256: n/a
-ingested-pages: ["[[GLO-001-tour]]"]
+ingested-pages: ["[[DT-001-tour]]"]
 ---
 
 # Project brief
 
 The one-page brief the sponsor sent.
 """, encoding="utf-8")
-(_wiki / "glossary" / "GLO-001-tour.md").write_text("""---
-id: GLO-001
-type: glossary-term
+(_wiki / "domain-terms" / "DT-001-tour.md").write_text("""---
+id: DT-001
+type: domain-term
 title: Tour
 status: draft
 created: 2026-09-06
 updated: 2026-09-06
 sources: ["[[raw/sources/SRC-001-brief]]"]
 related: []
-tags: [glossary]
+tags: [domain-term]
 ---
 
 # Tour
 
 **Definition.** A travelling exhibition.
 """, encoding="utf-8")
-(_wiki / "glossary" / "GLO-002-show.md").write_text("""---
-id: GLO-002
-type: glossary-term
+(_wiki / "domain-terms" / "DT-002-show.md").write_text("""---
+id: DT-002
+type: domain-term
 title: Show
 status: draft
 created: 2026-09-06
 updated: 2026-09-06
 sources: []
 related: []
-tags: [glossary]
+tags: [domain-term]
 ---
 
 # Show
@@ -87,16 +87,16 @@ tags: [glossary]
 # A bare string (not a YAML list) for `sources:` — malformed frontmatter that
 # still names exactly one real source; provenance() must treat it as a
 # one-element list rather than iterating its characters.
-(_wiki / "glossary" / "GLO-003-single.md").write_text("""---
-id: GLO-003
-type: glossary-term
+(_wiki / "domain-terms" / "DT-003-single.md").write_text("""---
+id: DT-003
+type: domain-term
 title: Single
 status: draft
 created: 2026-09-06
 updated: 2026-09-06
 sources: "[[raw/sources/SRC-001-brief]]"
 related: []
-tags: [glossary]
+tags: [domain-term]
 ---
 
 # Single
@@ -128,7 +128,7 @@ Frontmatter with HTML in it.
 
 def test_provenance_resolves_source_records():
     app._PARSE_CACHE.clear()
-    page = app._parse(_wiki / "glossary" / "GLO-001-tour.md", "glossary")
+    page = app._parse(_wiki / "domain-terms" / "DT-001-tour.md", "domain-terms")
     rows = app.provenance(page)
     assert rows == [{"id": "SRC-001", "title": "Project brief", "stem": "SRC-001-brief", "type": "document",
                      "origin": "raw/ingested/brief.md", "captured": "2026-09-06", "url": "/source/SRC-001-brief"}], rows
@@ -137,9 +137,9 @@ def test_provenance_resolves_source_records():
 def test_chips_on_detail_pages():
     app._PARSE_CACHE.clear()
     c = app.app.test_client()
-    sourced = c.get("/page/glossary/GLO-001-tour").get_data(as_text=True)
+    sourced = c.get("/page/domain-terms/DT-001-tour").get_data(as_text=True)
     assert 'class="chip chip-src"' in sourced and "SRC-001" in sourced
-    unsourced = c.get("/page/glossary/GLO-002-show").get_data(as_text=True)
+    unsourced = c.get("/page/domain-terms/DT-002-show").get_data(as_text=True)
     assert "chip-unsourced" in unsourced
 
 
@@ -147,7 +147,7 @@ def test_source_page_renders_and_links_back():
     app._PARSE_CACHE.clear()
     body = app.app.test_client().get("/source/SRC-001-brief").get_data(as_text=True)
     assert "Project brief" in body and "raw/ingested/brief.md" in body
-    assert "/page/glossary/GLO-001-tour" in body        # ingested-pages resolved
+    assert "/page/domain-terms/DT-001-tour" in body        # ingested-pages resolved
     assert app.app.test_client().get("/source/SRC-999-nope").status_code == 404
 
 
@@ -165,7 +165,7 @@ def test_unresolved_and_empty_source_refs():
     (dashed, url=None) rather than vanish; a None/blank entry must produce
     nothing at all rather than an empty chip."""
     app._PARSE_CACHE.clear()
-    page = app._parse(_wiki / "glossary" / "GLO-001-tour.md", "glossary")
+    page = app._parse(_wiki / "domain-terms" / "DT-001-tour.md", "domain-terms")
     page.meta["sources"] = ["[[raw/sources/SRC-404-ghost]]", None, "", "   "]
     rows = app.provenance(page)
     assert len(rows) == 1, rows
@@ -174,7 +174,7 @@ def test_unresolved_and_empty_source_refs():
 
 def test_provenance_accepts_bare_string_sources():
     app._PARSE_CACHE.clear()
-    page = app._parse(_wiki / "glossary" / "GLO-003-single.md", "glossary")
+    page = app._parse(_wiki / "domain-terms" / "DT-003-single.md", "domain-terms")
     rows = app.provenance(page)
     assert len(rows) == 1, rows
     assert rows[0]["url"] == "/source/SRC-001-brief", rows

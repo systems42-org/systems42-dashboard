@@ -219,14 +219,11 @@ func BuildRecords(allPages []*wiki.Page, titles map[string]string, linkIdx map[s
 	return records
 }
 
-// Synonyms builds lower-cased title+alias synonym groups from domain terms and
-// legacy glossary pages (FR-003).
-func Synonyms(domainTerms, glossary []*wiki.Page) [][]string {
-	terms := make([]*wiki.Page, 0, len(domainTerms)+len(glossary))
-	terms = append(terms, domainTerms...)
-	terms = append(terms, glossary...)
-	out := make([][]string, 0, len(terms))
-	for _, p := range terms {
+// Synonyms builds lower-cased title+alias synonym groups from domain terms
+// (FR-003).
+func Synonyms(domainTerms []*wiki.Page) [][]string {
+	out := make([][]string, 0, len(domainTerms))
+	for _, p := range domainTerms {
 		group := make([]string, 0, 1+len(p.Aliases()))
 		if t := strings.ToLower(strings.TrimSpace(p.Title())); t != "" {
 			group = append(group, t)
@@ -242,10 +239,10 @@ func Synonyms(domainTerms, glossary []*wiki.Page) [][]string {
 }
 
 // BuildIndex returns {records, synonyms} for /search.json and /search.
-func BuildIndex(allPages, domainTerms, glossary []*wiki.Page, titles map[string]string, linkIdx map[string]wiki.PageRef, sources map[string]*wiki.Page) map[string]any {
+func BuildIndex(allPages, domainTerms []*wiki.Page, titles map[string]string, linkIdx map[string]wiki.PageRef, sources map[string]*wiki.Page) map[string]any {
 	return map[string]any{
 		"records":  BuildRecords(allPages, titles, linkIdx, sources),
-		"synonyms": Synonyms(domainTerms, glossary),
+		"synonyms": Synonyms(domainTerms),
 	}
 }
 

@@ -53,19 +53,15 @@
   --chip-bg: rgba(255,255,255,.08);
   --on-accent: #06101f;        /* text on an --accent fill */
   --tint-ink: #cfe2ff;         /* text on blue-tinted surfaces */
-  --bz-glo: #8fb6e8;
-  --bz-dm: #8fd8c4;
-  --layer-glo-ink: #5fa3e8;    /* term-network frames + legend (DR-023): one per type */
-  --layer-dt-ink: var(--layer-glo-ink);
-  --layer-dm-ink: #8fd8c4;
+  --bz-dt: #8fb6e8;
+  --layer-dt-ink: #5fa3e8;    /* term-network frames + legend (DR-023): one per type */
   --layer-stk-ink: #e6b667;
   --layer-eif-ink: #b39ad6;
   --layer-goal-ink: #e0c068;
   --layer-rest-ink: #aab4c9;
   /* the remaining types, for the metamodel graph on /metamodel (DR-035);
-     the term network keeps its five named layers + REST */
+     the term network keeps its named layers + REST */
   --layer-fr-ink: #86d48e;
-  --layer-uc-ink: #5fcbdc;
   --layer-act-ink: #f0a56a;
   --layer-qr-ink: #e39ad8;
   --layer-con-ink: #cfa37c;
@@ -123,17 +119,13 @@
   --chip-bg: rgba(20,33,60,.06);
   --on-accent: #ffffff;        /* --accent is dark here, so this flips */
   --tint-ink: #17457f;
-  --bz-glo: #2f6fb3;
-  --bz-dm: #1c7a66;
-  --layer-glo-ink: #2f6fb3;
-  --layer-dt-ink: var(--layer-glo-ink);
-  --layer-dm-ink: #14705c;
+  --bz-dt: #2f6fb3;
+  --layer-dt-ink: #2f6fb3;
   --layer-stk-ink: #8a5c10;
   --layer-eif-ink: #59418c;
   --layer-goal-ink: #7a6014;
   --layer-rest-ink: #4d5a72;
   --layer-fr-ink: #1f7a46;
-  --layer-uc-ink: #0f6e80;
   --layer-act-ink: #a85a14;
   --layer-qr-ink: #8c2f7e;
   --layer-con-ink: #7a4e23;
@@ -514,7 +506,7 @@ a.wl:hover { border-bottom-style: solid; border-bottom-color: var(--accent); }
 
 /* stakeholder list: keep rows compact — the snapshot is a *preview* (full text on the
    detail page), so clamp it to a few lines instead of letting the long paragraph wrap
-   the row to full height. Related GLO/DM links sit below as small chips. */
+   the row to full height. Related domain terms sit below as small chips. */
 .stk-profile {
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
   overflow: hidden;
@@ -526,8 +518,7 @@ a.wl:hover { border-bottom-style: solid; border-bottom-color: var(--accent); }
   white-space: nowrap; max-width: 18ch; overflow: hidden; text-overflow: ellipsis;
 }
 .bz:hover { border-color: var(--accent); color: var(--ink); }
-.bz-GLO { color: var(--bz-glo); border-color: rgba(47,111,179,.55); }
-.bz-DM  { color: var(--bz-dm); border-color: rgba(58,143,125,.55); }
+.bz-DT { color: var(--bz-dt); border-color: rgba(47,111,179,.55); }
 .bz-more { color: var(--ink-dim); }
 
 /* ---- search + filter toolbar ---- */
@@ -943,7 +934,6 @@ html.etsu-disconnected {
 }
 .dm-chip:hover { color: var(--ink); border-color: var(--accent); }
 .dm-chip.is-on { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
-.dm-chip.is-stub { font-style: italic; }   /* a term marked as data, not yet modelled */
 .dm-note { color: var(--ink-soft); font-size: .82rem; font-style: italic;
   margin-top: 1.2rem; }
 
@@ -1114,14 +1104,12 @@ html.etsu-disconnected {
   border-radius: 999px; padding: 0 .4rem;
 }
 /* each layer button carries its type colour (button = legend, DR-023) */
-.layer-DM   { border-color: var(--layer-dm-ink); color: var(--layer-dm-ink); }
 .layer-STK  { border-color: var(--layer-stk-ink); color: var(--layer-stk-ink); }
 .layer-EIF  { border-color: var(--layer-eif-ink); color: var(--layer-eif-ink); }
 .layer-GOAL { border-color: var(--layer-goal-ink); color: var(--layer-goal-ink); }
 .layer-BB   { border-color: var(--layer-bb-ink); color: var(--layer-bb-ink); }
 .layer-REST { border-color: var(--layer-rest-ink); color: var(--layer-rest-ink); }
 .layer-btn.on { color: var(--card); background: var(--ink-soft); border-color: var(--ink-soft); }
-.layer-DM.on   { background: var(--layer-dm-ink); }
 .layer-STK.on  { background: var(--layer-stk-ink); }
 .layer-EIF.on  { background: var(--layer-eif-ink); }
 .layer-GOAL.on { background: var(--layer-goal-ink); }
@@ -1193,13 +1181,13 @@ html.etsu-disconnected {
 @media (max-width: 560px) { .lg-label { min-width: 0; width: 100%; } }
 .lg-item { display: inline-flex; align-items: center; gap: .4rem; }
 .lg-dot { width: 16px; height: 16px; border-radius: 4px; border: 3px solid transparent; background: var(--card); flex: none; }
-.lg-GLO { border-color: var(--layer-glo-ink); } .lg-DM { border-color: var(--layer-dm-ink); }
+.lg-DT { border-color: var(--layer-dt-ink); }
 .lg-STK { border-color: var(--layer-stk-ink); } .lg-EIF { border-color: var(--layer-eif-ink); }
 .lg-BB { border-color: var(--layer-bb-ink); } .lg-GOAL { border-color: var(--layer-goal-ink); } .lg-REST { border-color: var(--layer-rest-ink); }
-.lg-state-agreed { border-color: var(--layer-glo-ink); }
-.lg-state-draft { border-color: var(--layer-glo-ink); border-style: dashed; }
-.lg-state-deprecated { border-color: var(--layer-glo-ink); border-style: dotted; opacity: .6; }
-.lg-state-assume { border-color: var(--layer-glo-ink); }
+.lg-state-agreed { border-color: var(--layer-dt-ink); }
+.lg-state-draft { border-color: var(--layer-dt-ink); border-style: dashed; }
+.lg-state-deprecated { border-color: var(--layer-dt-ink); border-style: dotted; opacity: .6; }
+.lg-state-assume { border-color: var(--layer-dt-ink); }
 /* full title of a clipped node, shown next to it on hover (glossary-graph.js) */
 .graph-tip { position: absolute; z-index: 5; max-width: 22rem; padding: .35rem .6rem;
   font-size: var(--step--1); line-height: 1.35; white-space: pre-line;
@@ -1427,10 +1415,9 @@ a.mm-anchor:hover { color: var(--accent); border-color: var(--accent); }
 .mm-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space-3) var(--space-4); }
 /* legend swatches for every type, one token each (the term network's five + the rest) */
 .mm-dot-dt { border-color: var(--layer-dt-ink); }
-.mm-dot-glo { border-color: var(--layer-glo-ink); } .mm-dot-dm { border-color: var(--layer-dm-ink); }
 .mm-dot-stk { border-color: var(--layer-stk-ink); } .mm-dot-eif { border-color: var(--layer-eif-ink); }
 .mm-dot-goal { border-color: var(--layer-goal-ink); } .mm-dot-fr { border-color: var(--layer-fr-ink); }
-.mm-dot-uc { border-color: var(--layer-uc-ink); } .mm-dot-act { border-color: var(--layer-act-ink); }
+.mm-dot-act { border-color: var(--layer-act-ink); }
 .mm-dot-qr { border-color: var(--layer-qr-ink); } .mm-dot-con { border-color: var(--layer-con-ink); }
 .mm-dot-ctx { border-color: var(--layer-ctx-ink); } .mm-dot-iss { border-color: var(--layer-iss-ink); }
 .mm-dot-src { border-color: var(--layer-src-ink); border-style: dashed; }

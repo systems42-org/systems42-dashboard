@@ -1,4 +1,4 @@
-"""Old model URLs preserve their filters through one permanent redirect."""
+"""The glossary and data-model URLs of the old schema are gone (DR-039)."""
 import os
 from pathlib import Path
 import sys
@@ -18,19 +18,9 @@ with tempfile.TemporaryDirectory() as temp:
     import app
 
     client = app.app.test_client()
-    for old, new in (
-        ("/glossary", "/domain-terms"),
-        ("/graph/glossary", "/graph/domain-terms"),
-        ("/data-model", "/entity-diagram"),
-    ):
-        for query in ("", "?edges=structured", "?context=Sales%20%26%20Orders&focus=DT-001-order",
-                      "?x=1&x=2&empty="):
-            response = client.get(old + query)
-            assert response.status_code == 301, (old, response.status_code)
-            assert response.headers["Location"] == new + query
-            canonical = client.get(response.headers["Location"])
-            assert canonical.status_code == 200, new
-            assert "Location" not in canonical.headers
+    for old in ("/glossary", "/graph/glossary", "/data-model"):
+        response = client.get(old)
+        assert response.status_code == 404, (old, response.status_code)
 
     for route in ("/", "/commons", "/domain-terms", "/graph/domain-terms",
                   "/entity-diagram", "/req42/models"):

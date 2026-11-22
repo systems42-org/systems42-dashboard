@@ -56,7 +56,7 @@ _ENTRY = {k: PAYLOAD for k in ("data", "direction", "format", "trigger", "messag
                                 "protocol", "name", "type", "label", "kind", "multiplicity",
                                 "verb", "cardinality")}
 _ENTRY.update({"from": "[[STK-001-hostile]]", "to": "[[BB-001-hostile]]",
-               "target": "[[DM-001-hostile]]"})
+               "target": "[[DT-001-hostile]]"})
 
 _tmp = Path(tempfile.mkdtemp())
 _wiki = _tmp / "wiki"
@@ -122,7 +122,7 @@ for n, kept in enumerate((True, False), start=1):
     _write(_wiki / "domain-terms" / f"DT-00{n}-hostile.md", meta)
 # requirement notations (DR-038): one page per place the FR views put it —
 # Agile epic → feature, a sea-level use case refined by an Agile story (a root
-# with "Realized by"), another notation, and a notation and level that are
+# with "Refined by"), another notation, and a notation and level that are
 # the payload themselves (listed outside the Agile hierarchy)
 _fr = {k: _hostile(v, k in STRUCTURAL) for k, v in _template_fields("functional-requirement").items()}
 _fr.pop("stereotype", None)
@@ -142,7 +142,7 @@ for _stem, _extra in (
 
 _src = {k: _hostile(v, k in {"id", "type"}) for k, v in _template_fields("source").items()}
 _src.update(id="SRC-001", title=PAYLOAD,
-            **{"ingested-pages": [PAYLOAD, "[[GLO-001-hostile]]"]})
+            **{"ingested-pages": [PAYLOAD, "[[DT-001-hostile]]"]})
 _write(_sources / "SRC-001-hostile.md", _src)
 
 # method anchors: one with a plain name the pages link to, one named by the payload
@@ -271,7 +271,7 @@ def _routes() -> list[str]:
     urls += [f"/req42/{slug}" for slug in app.catalog.SECTION_BY_SLUG]
     urls += [f"/section/{sid}" for sid in app.catalog.SECTION_BY_ID]
     urls += [f"/brand/{name}" for name in app.BRAND_MARKS] + ["/about/files/m.svg"]
-    urls += ["/entity-diagram?focus=DT-001-hostile", "/entity-diagram?focus=DM-001-hostile",
+    urls += ["/entity-diagram?focus=DT-001-hostile", "/entity-diagram?focus=DT-002-hostile",
              "/entity-diagram?context=" + PAYLOAD, "/graph/domain-terms?edges=structured",
              "/search?q=" + PAYLOAD, "/issues?status=" + PAYLOAD + "&section=R1&category=" + PAYLOAD]
     return urls
@@ -319,7 +319,7 @@ def test_no_route_renders_wiki_text_as_live_markup():
 def test_the_payload_was_actually_rendered():
     # guard against a vacuous pass: the hostile text must reach the pages, escaped
     client = app.app.test_client()
-    for url in ("/page/glossary/GLO-001-hostile", "/metamodel", "/about", "/goals",
+    for url in ("/page/domain-terms/DT-001-hostile", "/metamodel", "/about", "/goals",
                 "/page/runtime-scenarios/RS-002-hostile", "/req42/functional-requirements",
                 "/functional-requirements/UC-011-use-case"):
         body = client.get(url).get_data(as_text=True)
@@ -329,7 +329,7 @@ def test_the_payload_was_actually_rendered():
     assert [e["id"] for e in h["epics"]] == ["FR-011"], h["epics"]
     assert [u["id"] for u in h["use_cases"]] == ["UC-011"], h["use_cases"]
     assert {"FR-014", "FR-015"} <= {o["id"] for o in h["other_notations"]}, h["other_notations"]
-    assert "Realized by" in client.get("/functional-requirements/UC-011-use-case").get_data(as_text=True)
+    assert "Refined by" in client.get("/functional-requirements/UC-011-use-case").get_data(as_text=True)
     body = client.get("/metamodel").get_data(as_text=True)
     assert body.count('class="mm-row"') and 'id="notation-agile"' in body
 

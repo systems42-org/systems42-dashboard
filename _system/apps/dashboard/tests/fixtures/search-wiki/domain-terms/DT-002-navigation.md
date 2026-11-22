@@ -1,9 +1,11 @@
 ---
-id: GLO-002
-type: glossary-term
+id: DT-002
+type: domain-term
 title: Navigation
 status: draft
-tags: [glossary]
+tags:
+- domain-term
+aliases: []
 ---
 
 # Navigation

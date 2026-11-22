@@ -24,8 +24,8 @@ import tempfile
 from pathlib import Path
 
 WIKI_FOLDERS = [
-    "glossary", "goals", "stakeholders", "context", "external-interfaces",
-    "data-models", "activity-models", "functional-requirements",
+    "domain-terms", "goals", "stakeholders", "context", "external-interfaces",
+    "activity-models", "functional-requirements",
     "quality-requirements", "constraints", "issues",
 ]
 
@@ -48,7 +48,7 @@ ROOT = Path(__file__).resolve().parent.parent
 BASE = (ROOT / "templates" / "base.html").read_text(encoding="utf-8")
 CSS = (ROOT / "static" / "style.css").read_text(encoding="utf-8")
 
-TERM = _wiki / "glossary" / "GLO-001-provenance.md"
+TERM = _wiki / "domain-terms" / "DT-001-provenance.md"
 
 
 def _write_term(title, keep_mtime=False):
@@ -58,15 +58,15 @@ def _write_term(title, keep_mtime=False):
     before = TERM.stat().st_mtime_ns if keep_mtime and TERM.exists() else None
     TERM.write_text(
         "---\n"
-        "id: GLO-001\n"
-        "type: glossary-term\n"
+        "id: DT-001\n"
+        "type: domain-term\n"
         f"title: {title}\n"
         "status: accepted\n"
         "created: 2026-09-09\n"
         "updated: 2026-09-09\n"
         "sources: []\n"
         "related: []\n"
-        "tags: [glossary]\n"
+        "tags: [domain-term]\n"
         "---\n\n"
         f"# {title}\n\n**Definition.** A term.\n",
         encoding="utf-8",

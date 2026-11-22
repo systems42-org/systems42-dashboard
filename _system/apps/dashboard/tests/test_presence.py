@@ -19,8 +19,8 @@ import time
 from pathlib import Path
 
 WIKI_FOLDERS = [
-    "glossary", "goals", "stakeholders", "context", "external-interfaces",
-    "data-models", "activity-models", "functional-requirements",
+    "domain-terms", "goals", "stakeholders", "context", "external-interfaces",
+    "activity-models", "functional-requirements",
     "quality-requirements", "constraints", "issues",
 ]
 

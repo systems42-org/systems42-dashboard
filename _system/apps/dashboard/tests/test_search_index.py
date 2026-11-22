@@ -71,7 +71,7 @@ def test_aliases():
 def test_links_both_directions():
     links = _rec("STK-023")["links"]
     assert "ISS-001" in links, links                    # ISS-001 links STK-023
-    assert {"GLO-001", "FR-001", "STK-020"} <= set(links), links   # STK-023 links these
+    assert {"DT-001", "FR-001", "STK-020"} <= set(links), links   # STK-023 links these
     assert "STK-023" not in links
 
 

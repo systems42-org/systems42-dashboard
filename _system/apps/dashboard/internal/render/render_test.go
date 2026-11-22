@@ -213,13 +213,13 @@ func TestSanitizeHTMLRules(t *testing.T) {
 
 func TestExtractLabeledPAMAndEmphasis(t *testing.T) {
 	ctx := LinkContext{
-		Titles: map[string]string{"GLO-001-term": "Term"},
-		Links:  map[string]wiki.PageRef{"GLO-001-term": {Folder: "glossary", Stem: "GLO-001-term"}},
+		Titles: map[string]string{"DT-001-term": "Term"},
+		Links:  map[string]wiki.PageRef{"DT-001-term": {Folder: "domain-terms", Stem: "DT-001-term"}},
 	}
 
-	body := "# Heading\n\n**Definition.** First line\nsecond line referencing [[GLO-001-term]] and <script>x</script>.\n\n**Notes.** Ignored."
+	body := "# Heading\n\n**Definition.** First line\nsecond line referencing [[DT-001-term]] and <script>x</script>.\n\n**Notes.** Ignored."
 	got := ExtractLabeled(body, "Definition", ctx)
-	if !strings.Contains(got, `href="/page/glossary/GLO-001-term"`) || strings.Contains(got, "<script>") || strings.Contains(got, "Ignored") {
+	if !strings.Contains(got, `href="/page/domain-terms/DT-001-term"`) || strings.Contains(got, "<script>") || strings.Contains(got, "Ignored") {
 		t.Fatalf("ExtractLabeled unexpected: %s", got)
 	}
 	if ExtractLabeled(body, "Missing", ctx) != "" {

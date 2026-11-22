@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 # folder -> (prefix, type, extra frontmatter)
 FOLDERS = {
     "goals": ("GOAL", "goal", "stereotype: objective\nhorizon: 2027\n"),
-    "glossary": ("GLO", "glossary-term", ""),
+    "domain-terms": ("DT", "domain-term", "stereotype: entity\n"),   # also feeds the entity diagram
     "stakeholders": ("STK", "stakeholder", "influence: high\ninterest: low\n"),
     "decisions": ("DR", "decision-record", "kind: business\ndecided: 2026-11-01\n"),
     "issues": ("ISS", "issue", "severity: major\nkind: question\ncategory: content\n"),
@@ -37,7 +37,6 @@ FOLDERS = {
     "context": ("CTX", "context", ""),
     "external-interfaces": ("EIF", "external-interface", ""),
     "activity-models": ("ACT", "activity-model", ""),
-    "data-models": ("DM", "data-model", ""),
     "functional-requirements": ("FR", "functional-requirement",
                                 "notation: agile\nlevel: epic\npriority: Must\nrelease: R1\norder: 2\n"),
     "building-blocks": ("BB", "building-block", "state: current\n"),

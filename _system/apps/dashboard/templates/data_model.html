@@ -25,7 +25,7 @@
   <a class="dm-chip{% if not focus %} is-on{% endif %}"
      href="/entity-diagram{% if context %}?context={{ context | urlencode }}{% endif %}">Whole model</a>
   {% for n in nodes %}
-  <a class="dm-chip{% if focus == n.key %} is-on{% endif %}{% if n.stub %} is-stub{% endif %}"
+  <a class="dm-chip{% if focus == n.key %} is-on{% endif %}"
      href="/entity-diagram?focus={{ n.key }}{% if context %}&amp;context={{ context | urlencode }}{% endif %}">{{ n.label }}</a>
   {% endfor %}
 </nav>
@@ -37,8 +37,6 @@
   <figcaption>
     {% if focus %}{{ nodes | selectattr("key", "equalto", focus) | map(attribute="label") | first }}
       and its direct neighbours{% elif context %}Bounded context: {{ context }}{% else %}The whole model{% endif %}.
-    {% if stubs %}A <code>&lt;&lt;term&gt;&gt;</code> box is a glossary term marked as data with no DM page yet
-      ({{ stubs | length }}){% endif %}
   </figcaption>
 </figure>
 {% endif %}

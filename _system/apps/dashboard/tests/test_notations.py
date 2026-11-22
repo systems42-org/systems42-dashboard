@@ -4,11 +4,9 @@
 `_system/metamodel/notations/` and a project's own from `_system/notations/`
 and shows them on /metamodel. No pytest dependency.
 
-This repository's own metamodel has no notations yet (it is migrated
-separately), so the test builds a metamodel of its own: a copy of the real
-one with the shipped notation files from tests/fixtures/notations/ added and
-the removed altitude scale and use-case type left out, plus one project
-notation.
+The test builds a metamodel of its own: a copy of the real one with the
+notation files from tests/fixtures/notations/ in place of its own, plus one
+project notation.
 
 Run from the dashboard dir:
     .venv/bin/python tests/test_notations.py
@@ -24,13 +22,7 @@ REPO = HERE.parents[3]
 _tmp = Path(tempfile.mkdtemp())
 _mm = _tmp / "_system" / "metamodel"
 shutil.copytree(REPO / "_system" / "metamodel", _mm)
-(_mm / "altitude.md").unlink(missing_ok=True)
-(_mm / "types" / "type-use-case.md").unlink(missing_ok=True)   # use cases are a notation now
 shutil.copytree(HERE / "fixtures" / "notations", _mm / "notations", dirs_exist_ok=True)
-# a rule narrowed by notation and level, as rule-fr-traces-to-goal is in DR-038
-_rule = _mm / "rules" / "rule-fr-traces-to-goal.md"
-_rule.write_text(_rule.read_text(encoding="utf-8").replace(
-    "stereotype: [epic, feature]", "notation: agile, level: [epic, feature]"), encoding="utf-8")
 
 _own = _tmp / "_system" / "notations"
 _own.mkdir(parents=True)
@@ -136,7 +128,7 @@ def test_metamodel_page_shows_levels_fields_and_sections():
     r = app.app.test_client().get("/metamodel")
     assert r.status_code == 200
     body = r.get_data(as_text=True)
-    assert 'href="#notations"' in body and 'id="altitude"' not in body
+    assert 'href="#notations"' in body
     uc = _row(body, "notation-use-case")
     assert "kite → sea → fish" in uc
     assert "<code>scope-building-block</code> *" in uc

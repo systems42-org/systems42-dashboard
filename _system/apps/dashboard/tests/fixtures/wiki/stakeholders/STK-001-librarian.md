@@ -7,8 +7,8 @@ created: 2026-09-06
 updated: 2026-09-06
 sources: []
 related:
-  - "[[GLO-003-member]]"
-  - "[[GLO-002-loan]]"
+  - "[[DT-003-member]]"
+  - "[[DT-002-loan]]"
 tags: [stakeholder]
 aliases: [Front desk]
 role: Library staff

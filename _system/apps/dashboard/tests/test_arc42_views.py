@@ -431,9 +431,6 @@ def test_detail_panels_and_state_badge():
     code, body = _get("/functional-requirements/UC-001-reset-credentials")
     assert code == 200 and "state-badge" not in body    # requirements carry no state
     assert "Realized by" in body and "RS-001" in body   # a use case is an FR (DR-038)
-    # a former /page/use-cases/ link lands on the requirement that kept its name
-    code, _ = _get("/page/use-cases/UC-001-reset-credentials")
-    assert code == 301, code
 
 
 def test_concepts_view():

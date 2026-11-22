@@ -49,8 +49,8 @@ func TestHostileVault(t *testing.T) {
 	sourcesDir := filepath.Join(repo, "raw", "sources")
 	docsDir := filepath.Join(repo, "docs")
 	folders := []string{
-		"glossary", "domain-terms", "goals", "stakeholders", "context", "external-interfaces",
-		"data-models", "activity-models", "use-cases", "functional-requirements",
+		"domain-terms", "goals", "stakeholders", "context", "external-interfaces",
+		"activity-models", "functional-requirements",
 		"quality-requirements", "constraints", "issues", "building-blocks", "decisions",
 		"solution-strategy", "crosscutting-concepts", "runtime-scenarios", "deployment-nodes",
 	}
@@ -64,13 +64,13 @@ func TestHostileVault(t *testing.T) {
 	// Broken frontmatter, blank titles, scalars where lists belong
 	writePage(t, wikiDir, "issues", "ISS-001-string-frontmatter", "just a string", "# T\n")
 	writePage(t, wikiDir, "constraints", "CON-001-list-frontmatter", "- a\n- b", "# T\n")
-	writePage(t, wikiDir, "glossary", "GLO-001-blank-title", "id: GLO-001\ntitle:\nstatus: draft\ntags: single\naliases: Alias\nrelated: 7", "**Definition.** plain.\n")
-	writePage(t, wikiDir, "functional-requirements", "FR-001-scalar-parent", "id: FR-001\ntitle: Scalar parent\nstereotype: story\nparent: 7\ngoal: 7\nrelated: 7", "# T\n")
-	writePage(t, wikiDir, "use-cases", "UC-001-scalar-goal", "id: UC-001\ntitle: Use case\ngoal: 7\nrelated: 7\nparent: 7", "# T\n")
+	writePage(t, wikiDir, "domain-terms", "DT-101-blank-title", "id: DT-101\ntitle:\nstatus: draft\ntags: single\naliases: Alias\nrelated: 7", "**Definition.** plain.\n")
+	writePage(t, wikiDir, "functional-requirements", "FR-001-scalar-parent", "id: FR-001\ntitle: Scalar parent\nnotation: agile\nlevel: story\nparent: 7\ngoal: 7\nrelated: 7", "# T\n")
+	writePage(t, wikiDir, "functional-requirements", "UC-001-scalar-goal", "id: UC-001\ntitle: Use case\nnotation: use-case\nlevel: sea\ngoal: 7\nrelated: 7\nparent: 7", "# T\n")
 	writePage(t, wikiDir, "stakeholders", "STK-001-list-influence", "id: STK-001\ntitle: Lists\ninfluence: [high]\ninterest: [low]\nprovides: 7\nreceives: 7", "# T\n")
 	writePage(t, wikiDir, "context", "CTX-001-scalar-flows", "id: CTX-001\ntitle: Ctx\nrelated: 7", "# T\n")
 	writePage(t, wikiDir, "external-interfaces", "EIF-001-scalar-flows", "id: EIF-001\ntitle: Eif\npartner: x\nflows: 7", "# T\n")
-	writePage(t, wikiDir, "data-models", "DM-001-scalar-relationships", "id: DM-001\ntitle: Entity\nrelationships: 7\nparent: 7\nrelated: 7", "# T\n")
+	writePage(t, wikiDir, "domain-terms", "DT-002-scalar-relationships", "id: DT-002\ntitle: Entity\nstereotype: entity\nrelationships: 7\nparent: 7\nrelated: 7", "# T\n")
 	writePage(t, wikiDir, "domain-terms", "DT-001-scalar-lists", "id: DT-001\ntitle: Term\nstereotype: entity\nattributes: 7\nrelationships: 7\nrelated: 7\naliases: 7", "**Definition.** A term.\n")
 	writePage(t, wikiDir, "quality-requirements", "QR-001-scalar-dimensions", "id: QR-001\ntitle: Quality\ndimensions: 7\nrelated: 7", "# T\n")
 	writePage(t, wikiDir, "building-blocks", "BB-001-scalars", "id: BB-001\ntitle: Block\nstate: current\nparent: 7\nuses: 7\ndrivers: 7\ndecisions: 7", "# T\n")
@@ -82,17 +82,17 @@ func TestHostileVault(t *testing.T) {
 	writePage(t, wikiDir, "decisions", "DR-001-scalars", "id: DR-001\ntitle: Decision\nkind: 7\ndrivers: 7\ntags: 7", "# T\n")
 
 	// Non-UTF-8 bytes (Latin-1)
-	_ = os.WriteFile(filepath.Join(wikiDir, "glossary", "GLO-002-latin1.md"),
-		[]byte("---\nid: GLO-002\ntitle: Latin-1\n---\n**Definition.** Gr\xfc\xdfe.\n"), 0o644)
+	_ = os.WriteFile(filepath.Join(wikiDir, "domain-terms", "DT-102-latin1.md"),
+		[]byte("---\nid: DT-102\ntitle: Latin-1\n---\n**Definition.** Gr\xfc\xdfe.\n"), 0o644)
 
 	// Hostile markup
-	writePage(t, wikiDir, "glossary", "GLO-003-hostile-title",
-		`id: GLO-003`+"\n"+`title: "<img src=x onerror=alert(1)>"`,
-		"**Definition.** <script>alert(2)</script> see [[GLO-004-linker]].\n")
-	writePage(t, wikiDir, "glossary", "GLO-004-linker",
-		"id: GLO-004\ntitle: Linker",
-		"**Definition.** Points at [[GLO-003-hostile-title]] and "+
-			"[[GLO-003-hostile-title|<b>an alias</b>]].\n\n"+
+	writePage(t, wikiDir, "domain-terms", "DT-103-hostile-title",
+		`id: DT-103`+"\n"+`title: "<img src=x onerror=alert(1)>"`,
+		"**Definition.** <script>alert(2)</script> see [[DT-104-linker]].\n")
+	writePage(t, wikiDir, "domain-terms", "DT-104-linker",
+		"id: DT-104\ntitle: Linker",
+		"**Definition.** Points at [[DT-103-hostile-title]] and "+
+			"[[DT-103-hostile-title|<b>an alias</b>]].\n\n"+
 			`<a href="javascript:alert(3)">click</a> <img src=x onerror=alert(4)>`+"\n\n"+
 			`<div id="settings-dialog" class="fbtn">hijack</div>`+"\n\n"+
 			"| a | b |\n|:--|--:|\n| 1 | 2 |\n\n```mermaid\ngraph TD; A-->B\n```\n\n"+
@@ -103,7 +103,7 @@ func TestHostileVault(t *testing.T) {
 
 	// Hostile source record
 	_ = os.WriteFile(filepath.Join(sourcesDir, "SRC-001-hostile.md"),
-		[]byte("---\nid: SRC-001\ntitle: Source\ntype: source\ningested-pages: \"<b>x</b> [[GLO-004-linker]]\"\ntags: one\n---\n# Source\n\n<script>alert(6)</script>\n"), 0o644)
+		[]byte("---\nid: SRC-001\ntitle: Source\ntype: source\ningested-pages: \"<b>x</b> [[DT-104-linker]]\"\ntags: one\n---\n# Source\n\n<script>alert(6)</script>\n"), 0o644)
 
 	// Files beside and above wiki/
 	_ = os.WriteFile(filepath.Join(repo, "outside.md"), []byte("---\nid: OUT\ntitle: Outside\n---\nTOP SECRET\n"), 0o644)
@@ -126,14 +126,14 @@ func TestHostileVault(t *testing.T) {
 	// Symlinks out of the wiki vs inside the wiki
 	outDir := filepath.Join(tmp, "outside")
 	_ = os.MkdirAll(outDir, 0o755)
-	_ = os.WriteFile(filepath.Join(outDir, "notes.md"), []byte("---\nid: GLO-099\ntitle: Linked out\n---\nLINKED SECRET\n"), 0o644)
+	_ = os.WriteFile(filepath.Join(outDir, "notes.md"), []byte("---\nid: DT-199\ntitle: Linked out\n---\nLINKED SECRET\n"), 0o644)
 	_ = os.WriteFile(filepath.Join(outDir, "SRC-099-notes.md"), []byte("---\nid: SRC-099\ntitle: Linked out\n---\nLINKED SECRET\n"), 0o644)
-	_ = os.Symlink(filepath.Join(outDir, "notes.md"), filepath.Join(wikiDir, "glossary", "GLO-005-linked-out.md"))
+	_ = os.Symlink(filepath.Join(outDir, "notes.md"), filepath.Join(wikiDir, "domain-terms", "DT-105-linked-out.md"))
 	_ = os.Symlink(outDir, filepath.Join(wikiDir, "linked"))
 	_ = os.Symlink(filepath.Join(outDir, "SRC-099-notes.md"), filepath.Join(sourcesDir, "SRC-002-linked-out.md"))
 
 	writePage(t, wikiDir, "constraints", "CON-002-link-target", "id: CON-002\ntitle: Linked inside", "LINKED INSIDE\n")
-	_ = os.Symlink(filepath.Join(wikiDir, "constraints", "CON-002-link-target.md"), filepath.Join(wikiDir, "glossary", "GLO-006-linked-in.md"))
+	_ = os.Symlink(filepath.Join(wikiDir, "constraints", "CON-002-link-target.md"), filepath.Join(wikiDir, "domain-terms", "DT-106-linked-in.md"))
 	_ = os.MkdirAll(filepath.Join(wikiDir, ".shared"), 0o755)
 	_ = os.WriteFile(filepath.Join(wikiDir, ".shared", "LNK-001-inside.md"), []byte("---\nid: LNK-001\ntitle: In a linked folder\n---\nLINKED FOLDER\n"), 0o644)
 	_ = os.Symlink(filepath.Join(wikiDir, ".shared"), filepath.Join(wikiDir, "shared"))
@@ -171,7 +171,7 @@ func TestHostileVault(t *testing.T) {
 				continue
 			}
 			stem := strings.TrimSuffix(e.Name(), ".md")
-			if stem == "GLO-005-linked-out" {
+			if stem == "DT-105-linked-out" {
 				continue
 			}
 			// Skip filename with double quote in raw URL path unless percent-encoded
@@ -196,44 +196,44 @@ func TestHostileVault(t *testing.T) {
 	}
 
 	// 2. Bad fields fall back and non-UTF-8 renders replacement chars
-	p := srv.Store.LoadPage("glossary", "GLO-001-blank-title")
-	if p == nil || p.Title() != "GLO-001-blank-title" || len(p.Aliases()) != 1 || p.Aliases()[0] != "Alias" || len(p.AsStringList("tags")) != 1 || p.AsStringList("tags")[0] != "single" {
-		t.Fatalf("GLO-001 fallback failed: %+v", p)
+	p := srv.Store.LoadPage("domain-terms", "DT-101-blank-title")
+	if p == nil || p.Title() != "DT-101-blank-title" || len(p.Aliases()) != 1 || p.Aliases()[0] != "Alias" || len(p.AsStringList("tags")) != 1 || p.AsStringList("tags")[0] != "single" {
+		t.Fatalf("DT-101 fallback failed: %+v", p)
 	}
-	if rec := doGet(srv, "/page/glossary/GLO-002-latin1"); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "Gr\uFFFD\uFFFDe") {
+	if rec := doGet(srv, "/page/domain-terms/DT-102-latin1"); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "Gr\uFFFD\uFFFDe") {
 		t.Fatalf("Latin-1 fallback failed: status=%d", rec.Code)
 	}
 
 	// 3. Titles and bodies render inert, while legitimate content survives
-	rec := doGet(srv, "/page/glossary/GLO-004-linker")
+	rec := doGet(srv, "/page/domain-terms/DT-104-linker")
 	body := rec.Body.String()
 	onerrorRE := regexp.MustCompile(`<img[^>]*onerror`)
 	if onerrorRE.MatchString(body) {
-		t.Error("hostile img onerror survived in GLO-004-linker")
+		t.Error("hostile img onerror survived in DT-104-linker")
 	}
 	for _, want := range []string{
 		`&lt;img src=x onerror=alert(1)&gt;`,
 		`&lt;b&gt;an alias&lt;/b&gt;`,
 		`style="text-align:left"`,
 		`class="language-mermaid"`,
-		`<a class="wl" href="/page/glossary/GLO-003-hostile-title">`,
+		`<a class="wl" href="/page/domain-terms/DT-103-hostile-title">`,
 		`id="fn:1"`,
 		`class="footnote-ref"`,
 	} {
 		if !strings.Contains(body, want) {
-			t.Errorf("GLO-004-linker missing expected safe content %q", want)
+			t.Errorf("DT-104-linker missing expected safe content %q", want)
 		}
 	}
 	for _, bad := range []string{"javascript:alert", "<script>alert", `class="fbtn"`} {
 		if strings.Contains(body, bad) {
-			t.Errorf("GLO-004-linker leaked %q", bad)
+			t.Errorf("DT-104-linker leaked %q", bad)
 		}
 	}
 	if strings.Count(body, `id="settings-dialog"`) != 1 {
 		t.Errorf("wiki text clobbered id=settings-dialog (count=%d)", strings.Count(body, `id="settings-dialog"`))
 	}
-	if rec := doGet(srv, "/page/glossary/GLO-003-hostile-title"); strings.Contains(rec.Body.String(), "<script>alert(2)") {
-		t.Error("script tag leaked in GLO-003-hostile-title")
+	if rec := doGet(srv, "/page/domain-terms/DT-103-hostile-title"); strings.Contains(rec.Body.String(), "<script>alert(2)") {
+		t.Error("script tag leaked in DT-103-hostile-title")
 	}
 
 	// 4. Frontmatter strings escaped in /source/SRC-001-hostile
@@ -241,7 +241,7 @@ func TestHostileVault(t *testing.T) {
 	if strings.Contains(srcBody, "<b>x</b>") || !strings.Contains(srcBody, "&lt;b&gt;x&lt;/b&gt;") {
 		t.Error("ingested-pages ran as markup in /source/SRC-001-hostile")
 	}
-	if !strings.Contains(srcBody, `href="/page/glossary/GLO-004-linker"`) {
+	if !strings.Contains(srcBody, `href="/page/domain-terms/DT-104-linker"`) {
 		t.Error("wikilink in ingested-pages did not resolve")
 	}
 	if strings.Contains(srcBody, "<script>alert(6)") {
@@ -251,8 +251,8 @@ func TestHostileVault(t *testing.T) {
 	// 5. Traversal guards on /page/, /source/, /brand/
 	for _, url := range []string{
 		"/page/../outside", "/page/./outside", "/page/.obsidian/outside", "/page/%2e%2e/outside",
-		"/page/no-such-folder/GLO-004-linker",
-		"/page/glossary/..", "/page/glossary/.", "/page/glossary/..%2Foutside",
+		"/page/no-such-folder/DT-104-linker",
+		"/page/domain-terms/..", "/page/domain-terms/.", "/page/domain-terms/..%2Foutside",
 		"/source/..", "/source/../outside", "/source/%2e%2e%2foutside", "/source/no-such-source",
 		"/brand/secret.svg", "/brand/intro.html", "/brand/..%2Fsecret.txt", "/brand/%2e%2e",
 	} {
@@ -270,7 +270,7 @@ func TestHostileVault(t *testing.T) {
 
 	// 6. Symlinks outside wiki rejected; symlinks inside wiki work
 	for _, url := range []string{
-		"/page/glossary/GLO-005-linked-out", "/page/linked/notes",
+		"/page/domain-terms/DT-105-linked-out", "/page/linked/notes",
 		"/page/linked/SRC-099-notes", "/source/SRC-002-linked-out", "/source/SRC-099",
 	} {
 		rec := doGet(srv, url)
@@ -281,19 +281,16 @@ func TestHostileVault(t *testing.T) {
 	if home := doGet(srv, "/").Body.String(); strings.Contains(home, "LINKED SECRET") || strings.Contains(home, "Linked out") {
 		t.Error("outside symlink leaked onto home page")
 	}
-	if rec := doGet(srv, "/page/glossary/GLO-006-linked-in"); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "LINKED INSIDE") {
+	if rec := doGet(srv, "/page/domain-terms/DT-106-linked-in"); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "LINKED INSIDE") {
 		t.Errorf("inside file symlink failed: status=%d", rec.Code)
 	}
 	if rec := doGet(srv, "/page/shared/LNK-001-inside"); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "LINKED FOLDER") {
 		t.Errorf("inside dir symlink failed: status=%d", rec.Code)
 	}
 
-	// 7. Redirects: /page/adr/* and /page/functional-requirements/*
-	if rec := doGet(srv, "/page/adr/0001-scalars"); rec.Code != http.StatusMovedPermanently || rec.Header().Get("Location") != "/page/decisions/DR-001-scalars" {
-		t.Errorf("ADR redirect = %d -> %q", rec.Code, rec.Header().Get("Location"))
-	}
-	if rec := doGet(srv, "/page/adr/9999-missing"); rec.Code != http.StatusMovedPermanently || rec.Header().Get("Location") != "/decisions" {
-		t.Errorf("missing ADR redirect = %d -> %q", rec.Code, rec.Header().Get("Location"))
+	// 7. Redirects: /page/functional-requirements/* (the old /page/adr/* URLs are gone)
+	if rec := doGet(srv, "/page/adr/0001-scalars"); rec.Code != http.StatusNotFound {
+		t.Errorf("GET /page/adr/... = %d, want 404", rec.Code)
 	}
 	if rec := doGet(srv, "/page/functional-requirements/FR-001-scalar-parent"); rec.Code != http.StatusFound || rec.Header().Get("Location") != "/functional-requirements/FR-001-scalar-parent" {
 		t.Errorf("FR redirect = %d -> %q", rec.Code, rec.Header().Get("Location"))
@@ -303,7 +300,7 @@ func TestHostileVault(t *testing.T) {
 	scriptTagRE := regexp.MustCompile(`<script\b[^>]*>`)
 	cspNonceRE := regexp.MustCompile(`'nonce-([\w-]{16,})'`)
 	nonces := map[string]bool{}
-	for _, url := range []string{"/", "/page/glossary/GLO-004-linker", "/source/SRC-001-hostile", "/no-such-page"} {
+	for _, url := range []string{"/", "/page/domain-terms/DT-104-linker", "/source/SRC-001-hostile", "/no-such-page"} {
 		rec := doGet(srv, url)
 		csp := rec.Header().Get("Content-Security-Policy")
 		if !strings.Contains(csp, "default-src 'self'") ||
@@ -448,7 +445,7 @@ func TestHostileEveryType(t *testing.T) {
 		"level": true, "kind": true, "parent": true, "state": true, "lane": true,
 	}
 	entryMap := map[string]any{
-		"from": "[[STK-001-hostile]]", "to": "[[BB-001-hostile]]", "target": "[[DM-001-hostile]]",
+		"from": "[[STK-001-hostile]]", "to": "[[BB-001-hostile]]", "target": "[[DT-001-hostile]]",
 	}
 	for _, k := range []string{"data", "direction", "format", "trigger", "message", "note", "protocol", "name", "type", "label", "kind", "multiplicity", "verb", "cardinality"} {
 		entryMap[k] = payload
@@ -547,7 +544,7 @@ func TestHostileEveryType(t *testing.T) {
 	}
 	srcMeta["id"] = "SRC-001"
 	srcMeta["title"] = payload
-	srcMeta["ingested-pages"] = []any{payload, "[[GLO-001-hostile]]"}
+	srcMeta["ingested-pages"] = []any{payload, "[[DT-001-hostile]]"}
 	writeMeta(filepath.Join(sourcesDir, "SRC-001-hostile.md"), srcMeta)
 	urls = append(urls, "/source/SRC-001-hostile")
 
@@ -634,7 +631,7 @@ func TestHostileEveryType(t *testing.T) {
 	for _, u := range []string{
 		"/", "/req42/quality", "/metamodel", "/changes", "/issues", "/stakeholders", "/decisions", "/domain-terms",
 		"/search", "/about",
-		"/page/glossary/GLO-001-hostile", "/page/runtime-scenarios/RS-002-hostile", "/page/issues/ISS-001-hostile", "/source/SRC-001-hostile",
+		"/page/domain-terms/DT-001-hostile", "/page/runtime-scenarios/RS-002-hostile", "/page/issues/ISS-001-hostile", "/source/SRC-001-hostile",
 	} {
 		body := doGet(srv, u).Body.String()
 		if !strings.Contains(body, mark) || !strings.Contains(body, "&lt;script&gt;") {

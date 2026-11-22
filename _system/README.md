@@ -6,8 +6,8 @@ Internal machinery for the wiki. Not requirements content — this is *about* th
   (formerly audit; content lint), **relations** (graph/link lint), **report**. `AGENTS.md` points here; `CLAUDE.md` imports `AGENTS.md` for Claude Code.
 - `metamodel/` — the explicit metamodel: `meta-metamodel.md` is the
   framework-agnostic language (type, relation, framework, projection, anchor,
-  altitude-scale, rule); `types/`, `relations/`, `frameworks/`, `projections/`,
-  `altitude.md`, `rules/` are the req42 instances. `scripts/metamodel-lint.py`
+  notation, rule); `types/`, `relations/`, `frameworks/`, `projections/`,
+  `notations/`, `rules/` are the req42 instances. `scripts/metamodel-lint.py`
   keeps templates and the dashboard catalog in agreement with it.
 - `anchors/` — reusable methodological standards (SMART, PAM, user-story-format,
   INVEST, MoSCoW) cited across content types. Method, not domain knowledge; see its

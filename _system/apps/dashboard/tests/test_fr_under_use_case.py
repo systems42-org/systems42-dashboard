@@ -128,17 +128,17 @@ def test_story_inherits_the_use_case_goals():
     print("OK goal inherited from UC-001")
 
 
-def test_use_case_page_shows_realized_by():
+def test_use_case_page_shows_refined_by():
     client = app.app.test_client()
     r = client.get("/functional-requirements/UC-001-borrow-a-book")
     assert r.status_code == 200
     body = r.get_data(as_text=True)
-    head = body[body.index("Realized by"):]
+    head = body[body.index("Refined by"):]
     assert "FR-007" in head and "Direct on use case" in head, head[:600]
     assert "use-case · Sea" in body
     body = client.get("/functional-requirements/UC-002-renew-a-loan").get_data(as_text=True)
-    assert "Realized by" not in body
-    print("OK realized by: FR-007")
+    assert "Refined by" not in body
+    print("OK refined by: FR-007")
 
 
 def test_use_case_counts_as_a_column_and_serves_its_goal():
@@ -170,7 +170,7 @@ if __name__ == "__main__":
     test_use_case_is_a_hierarchy_root()
     test_ancestors_end_at_the_use_case()
     test_story_inherits_the_use_case_goals()
-    test_use_case_page_shows_realized_by()
+    test_use_case_page_shows_refined_by()
     test_use_case_counts_as_a_column_and_serves_its_goal()
     test_pages_render()
     shutil.rmtree(_VAULT.parent, ignore_errors=True)

@@ -75,6 +75,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - This repository's own wiki follows meta's current method ([#103](https://github.com/systems42-org/systems42-dashboard/issues/103)): domain terms, requirement notations, the arc42 types of meta DR-040. Q42 quality requirements and C6 named "Issues" stay until [meta#35](https://github.com/systems42-org/meta/issues/35) settles them. The entity diagram takes its section from its route, so its breadcrumb works without a `data-models/` folder (Python and Go).
 - Dashboard: crosscutting concepts are read from `wiki/crosscutting-concepts/` (type `crosscutting-concept`), no longer from `wiki/concepts/`. Move your `CC-` pages to the new folder (DR-040, issue #100).
 - Dashboard: a runtime scenario names the functional requirement or activity model it carries out in `realizes:`, no longer in `drivers:`. The scenario page lists them under *Realizes*, the requirement or activity model page lists the scenario under *Realized by*, and a scenario no longer shows under *Addressed by*. Rename `drivers:` to `realizes:` in your runtime scenarios (DR-040, issue #102).
+- Dashboard: a use case page lists the features and stories under it as *Refined by*, not *Realized by*. *Realized by* now always means the runtime scenarios that carry it out.
 - Dashboard release 0.13.0 (`_system/apps/dashboard/VERSION`).
 - Dashboard: the multi-column sort presets of the section lists (FR-021) live in the dashboard (`SORT_PRESETS` in `app.py`), not in the metamodel (CON-006). The Domain Terms list takes `domain-term` when the metamodel has that type. The type key `sort_orders:` and its lint check are gone from `_system/metamodel/`, as in the Systems42 meta repository; delete it from your type pages if you added it.
 - Issues: `category:` and `owner:` follow the Systems42 metamodel (meta pull request 55). The category `systems42` is now `method`, both fields are optional, and `owner:` takes a `[[STK-...]]` link only. Rename `category: systems42` to `method` in your issues. The dashboard still shows an owner written as a plain name.
@@ -96,6 +97,19 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - This repository no longer creates project wikis: `_system/scripts/new-project.sh`,
   its test `test-new-project.sh`, `migrate-decisions.py` and the `new-project`
   skill are gone. New projects come from the Systems42 meta repository.
+- Dashboard: wikis on the old schema are no longer supported. Migrate them
+  with meta's `migrate-requirements` and `migrate-domain-terms` first. The
+  dashboard no longer reads `wiki/glossary/`, `wiki/data-models/` or
+  `wiki/use-cases/`, knows no `GLO-` or `DM-` pages, and draws no `<<term>>`
+  stubs in the entity diagram. Entity attributes come from `attributes:`
+  only, relationships from `to`, `label` and `multiplicity` only (the
+  `**Attributes.**` bullet list and the `target`, `verb` and `cardinality`
+  keys are gone). `/glossary`, `/graph/glossary`, `/data-model` and
+  `/page/use-cases/<id>` answer 404 instead of redirecting. Use cases with a
+  `UC-` ID in `wiki/functional-requirements/` still work (DR-038, DR-039).
+- Dashboard: the old redirects `/adrs`, `/page/adr/<stem>` and `/req42/backlog`
+  are gone and answer 404. Use `/decisions`, `/page/decisions/<DR>` and
+  `/req42/functional-requirements`.
 
 ### Changed
 - Dashboard: the first page shows the first sentence of the vision under the

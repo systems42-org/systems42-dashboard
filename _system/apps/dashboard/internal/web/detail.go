@@ -3,12 +3,9 @@ package web
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"path"
-	"path/filepath"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/metamodel"
@@ -19,7 +16,6 @@ import (
 
 var (
 	leadingH1RE = regexp.MustCompile(`^\s*#\s+.*(?:\n|$)`)
-	adrStemRE   = regexp.MustCompile(`^(\d{4})-(.+)$`)
 )
 
 var addressableFolders = map[string]bool{
@@ -542,35 +538,9 @@ func (s *Server) handlePageDetail(w http.ResponseWriter, r *http.Request) {
 	}
 	folder, stem := parts[0], parts[1]
 
-	if folder == "adr" {
-		if m := adrStemRE.FindStringSubmatch(stem); m != nil {
-			n, _ := strconv.Atoi(m[1])
-			newStem := fmt.Sprintf("DR-%03d-%s", n, m[2])
-			candidate := filepath.Join(s.Paths.WikiDir, "decisions", newStem+".md")
-			if st, err := os.Stat(candidate); err == nil && st.Mode().IsRegular() && wiki.ResolvesInside(s.Paths.WikiDir, candidate) {
-				s.redirect(w, r, wiki.PageURL("decisions", newStem), http.StatusMovedPermanently)
-				return
-			}
-		}
-		s.redirect(w, r, "/decisions", http.StatusMovedPermanently)
-		return
-	}
-
 	if folder == "functional-requirements" {
 		s.redirect(w, r, "/functional-requirements/"+stem, http.StatusFound)
 		return
-	}
-
-	if folder == "use-cases" && !strings.ContainsAny(stem, `/\`) && stem != "." && stem != ".." {
-		ucPath := filepath.Join(s.Paths.WikiDir, "use-cases", stem+".md")
-		frPath := filepath.Join(s.Paths.WikiDir, "functional-requirements", stem+".md")
-		_, ucErr := os.Stat(ucPath)
-		if ucErr != nil {
-			if st, err := os.Stat(frPath); err == nil && st.Mode().IsRegular() && wiki.ResolvesInside(s.Paths.WikiDir, frPath) {
-				s.redirect(w, r, "/functional-requirements/"+stem, http.StatusMovedPermanently)
-				return
-			}
-		}
 	}
 
 	if !wiki.IsWikiFolder(s.Paths.WikiDir, folder) {
@@ -623,13 +593,13 @@ func (s *Server) handlePageDetail(w http.ResponseWriter, r *http.Request) {
 			diagramLinks = dl
 		}
 		contextFlows = project.BuildContextFlows(eifs)
-	case "domain-terms", "glossary":
-		eg := project.BuildGlossaryEgoGraph(sn.all(), sn.folder("domain-terms"), sn.folder("glossary"), sn.folder("data-models"), stem)
+	case "domain-terms":
+		eg := project.BuildGlossaryEgoGraph(sn.all(), sn.folder("domain-terms"), stem)
 		if eg != nil {
 			egoGraph = eg
 			counts := eg["layer_counts"].(map[string]int)
 			layers := []map[string]any{}
-			for _, kv := range [][2]string{{"DM", "Data model"}, {"STK", "Stakeholder"}, {"GOAL", "Goals"}, {"BB", "Building block"}} {
+			for _, kv := range [][2]string{{"STK", "Stakeholder"}, {"GOAL", "Goals"}, {"BB", "Building block"}} {
 				if c := counts[kv[0]]; c > 0 {
 					layers = append(layers, map[string]any{"key": kv[0], "label": kv[1], "count": c})
 				}

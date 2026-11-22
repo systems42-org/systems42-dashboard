@@ -96,7 +96,7 @@ func (s *Server) renderBlockList(w http.ResponseWriter, r *http.Request, cat *me
 	linkCtx := s.linkContext(sn)
 
 	var pages []*wiki.Page
-	for _, folder := range metamodel.SectionFolders(block) {
+	for _, folder := range block.Folders {
 		pages = append(pages, sn.folder(folder)...)
 	}
 	pages = sortedByID(pages)
@@ -145,9 +145,9 @@ func (s *Server) renderBlockList(w http.ResponseWriter, r *http.Request, cat *me
 		contextFlows = project.BuildContextFlows(eifs)
 	}
 	if slug == "models" {
-		dm, dt, glo := sn.folder("data-models"), sn.folder("domain-terms"), sn.folder("glossary")
-		nodes := project.DataModelNodes(dm, dt, glo)
-		edges := project.DataModelEdges(dm, dt, glo)
+		dt := sn.folder("domain-terms")
+		nodes := project.DataModelNodes(dt)
+		edges := project.DataModelEdges(dt)
 		entityDiagram = nilIfEmpty(project.BuildDataModelFullDiagram(nodes, edges, "", ""))
 	}
 
@@ -233,20 +233,13 @@ func (s *Server) handleChanges(w http.ResponseWriter, r *http.Request) {
 	}, now)
 }
 
-func (s *Server) handleLegacyRedirect(w http.ResponseWriter, r *http.Request, destination string) {
-	if r.URL.RawQuery != "" {
-		destination += "?" + r.URL.RawQuery
-	}
-	s.redirect(w, r, destination, http.StatusMovedPermanently)
-}
-
 func (s *Server) handleDomainTerms(w http.ResponseWriter, r *http.Request) {
 	now := s.Now()
 	cat := metamodel.BuildCatalog(s.Metamodel.Blocks())
 	sn := newSnapshot(s.Store)
 	linkCtx := s.linkContext(sn)
 
-	pages := append(append([]*wiki.Page{}, sn.folder("domain-terms")...), sn.folder("glossary")...)
+	pages := sn.folder("domain-terms")
 	rows := make([]map[string]any, 0, len(pages))
 	for _, p := range pages {
 		rows = append(rows, map[string]any{
@@ -268,10 +261,9 @@ func (s *Server) handleDomainTerms(w http.ResponseWriter, r *http.Request) {
 	})
 
 	s.renderHTML(w, r, http.StatusOK, "glossary.html", cat, map[string]any{
-		"rows":      rows,
-		"total":     len(rows),
-		"term_type": s.termType(),
-		"maturity":  wiki.ComputeMaturity(statusesOf(pages)).ToMap(),
+		"rows":     rows,
+		"total":    len(rows),
+		"maturity": wiki.ComputeMaturity(statusesOf(pages)).ToMap(),
 	}, now)
 }
 
@@ -298,25 +290,17 @@ func (s *Server) handleStakeholders(w http.ResponseWriter, r *http.Request) {
 			if q == nil {
 				continue
 			}
-			tp := wiki.TypeOf(st)
-			if tp != "DT" && tp != "GLO" && tp != "DM" {
+			if wiki.TypeOf(st) != "DT" {
 				continue
 			}
 			rel = append(rel, map[string]any{
 				"id":    q.ID(),
 				"label": q.Title(),
-				"type":  tp,
+				"type":  "DT",
 				"url":   "/page/" + q.Folder + "/" + st,
 			})
 		}
 		sort.SliceStable(rel, func(i, j int) bool {
-			ti := rel[i]["type"].(string)
-			tj := rel[j]["type"].(string)
-			gi := ti != "DT" && ti != "GLO"
-			gj := tj != "DT" && tj != "GLO"
-			if gi != gj {
-				return !gi
-			}
 			return rel[i]["id"].(string) < rel[j]["id"].(string)
 		})
 		relShown := rel
@@ -434,7 +418,7 @@ func (s *Server) handleIssues(w http.ResponseWriter, r *http.Request) {
 		if sec.ID == "C6" {
 			continue
 		}
-		for _, f := range metamodel.SectionFolders(sec) {
+		for _, f := range sec.Folders {
 			folderSection[f] = sec.ID
 		}
 	}

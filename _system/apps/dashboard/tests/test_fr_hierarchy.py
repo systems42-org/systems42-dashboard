@@ -169,22 +169,20 @@ def test_body_wikilinks_become_hyperlinks():
     print("OK wikilinks -> hyperlinks")
 
 
-def test_old_backlog_route_redirects():
-    """/req42/backlog was the block's pre-2026 name: a permanent
-    redirect keeps old links alive; the real page answers 200 under its new name."""
+def test_old_backlog_route_is_gone():
+    """/req42/backlog was the block's pre-2026 name; it no longer redirects."""
     client = app.app.test_client()
-    r = client.get("/req42/backlog")
-    assert r.status_code == 301 and r.headers["Location"].endswith("/req42/functional-requirements"), r.status_code
+    assert client.get("/req42/backlog").status_code == 404
     assert client.get("/req42/functional-requirements").status_code == 200
 
 
 def test_unplaced_requirements_stay_visible():
-    """A page the Agile projection cannot place (other notation, no notation,
-    an unmigrated `stereotype:` page) is listed, never silently dropped."""
+    """A page the Agile projection cannot place (other notation, no notation)
+    is listed, never silently dropped."""
     extra = [
         app.Page("UC-009-find", {"id": "UC-009", "title": "Find", "notation": "use-case",
                                  "level": "sea"}, "", "functional-requirements"),
-        app.Page("FR-090-legacy", {"id": "FR-090", "title": "Legacy", "stereotype": "epic"},
+        app.Page("FR-090-unplaced", {"id": "FR-090", "title": "No notation"},
                  "", "functional-requirements"),
         app.Page("FR-091-ears", {"id": "FR-091", "title": "Shall", "notation": "ears",
                                  "level": "requirement"}, "", "functional-requirements"),
@@ -271,7 +269,7 @@ def test_features_and_stories_may_refine_a_use_case():
     assert "UC-010" not in other and {"UC-011", "UC-012"} <= other, other
     assert "UC-010" not in {e["id"] for e in bl["epics"]}
     assert node is uc and level == "sea", (node, level)
-    assert "Realized by" in uc_page and "FR-091" in uc_page and "FR-093" in uc_page
+    assert "Refined by" in uc_page and "FR-091" in uc_page and "FR-093" in uc_page
     assert "Use cases refined by features and stories" in overview and "UC-010" in overview
     assert "UC-010" in crumbs, crumbs
     print("OK use case refined by Agile children")
@@ -327,5 +325,5 @@ if __name__ == "__main__":
     test_fr_ancestors()
     test_fr_route_redirect_and_404()
     test_body_wikilinks_become_hyperlinks()
-    test_old_backlog_route_redirects()
+    test_old_backlog_route_is_gone()
     print("ALL PASSED")

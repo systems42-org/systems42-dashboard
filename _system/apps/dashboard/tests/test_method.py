@@ -15,7 +15,7 @@ from pathlib import Path
 
 _tmp = Path(tempfile.mkdtemp())
 _wiki = _tmp / "wiki"
-for _f in ("issues", "goals", "glossary"):
+for _f in ("issues", "goals", "domain-terms"):
     (_wiki / _f).mkdir(parents=True)
 os.environ["WIKI_DIR"] = str(_wiki)
 os.environ["WIKI_CONFIG"] = str(_tmp / "wiki.yaml")

@@ -28,7 +28,7 @@ window.AQ_GLOSSARY_GRAPH = (function () {
       card: token('--card', '#16223d'), ink: token('--ink', '#e8eef9'),
       dim: token('--ink-dim', '#6f81a3'),
       accent: token('--accent', '#3ea6ff'), font: token('--font-text', 'sans-serif'),
-      GLO: token('--layer-glo-ink', '#5fa3e8'), DM: token('--layer-dm-ink', '#8fd8c4'),
+      DT: token('--layer-dt-ink', '#5fa3e8'),
       STK: token('--layer-stk-ink', '#e6b667'), EIF: token('--layer-eif-ink', '#b39ad6'),
       GOAL: token('--layer-goal-ink', '#e0c068'), BB: token('--layer-bb-ink', '#7fb8ff'),
       REST: token('--layer-rest-ink', '#aab4c9')
@@ -40,17 +40,17 @@ window.AQ_GLOSSARY_GRAPH = (function () {
     s = String(s || '');
     return s.length > n ? s.slice(0, n - 1).replace(/\s+\S*$/, '') + '…' : s;
   }
-  // GLO: the term itself. Neighbours: ID on the first line, clipped title below.
+  // DT: the term itself. Neighbours: ID on the first line, clipped title below.
   function label(ele) {
     var d = ele.data();
-    if (d.type === 'GLO') return d.label || d.id;
+    if (d.type === 'DT') return d.label || d.id;
     var id = String(d.id).split('-').slice(0, 2).join('-');
     return id + '\n' + clip(d.label, TITLE_CLIP);
   }
   // Tooltip text: the full title (and a term's aliases) whenever the node clips it.
   function tipText(ele) {
     var d = ele.data(), parts = [];
-    if (d.type === 'GLO') { if (d.aliases) parts.push('also: ' + d.aliases); }
+    if (d.type === 'DT') { if (d.aliases) parts.push('also: ' + d.aliases); }
     else if ((d.label || '').length > TITLE_CLIP) parts.push(d.label);
     return parts.join('\n');
   }
@@ -73,15 +73,14 @@ window.AQ_GLOSSARY_GRAPH = (function () {
           'shape': 'round-rectangle', 'background-color': t.card, 'background-opacity': 1,
           'color': t.ink, 'text-outline-width': 0, 'border-style': 'solid'
       }},
-      { selector: 'node[type="GLO"]', style: Object.assign({
+      { selector: 'node[type="DT"]', style: Object.assign({
           'padding': 'mapData(degree, 0, 8, 14, 28)', 'font-weight': 600
-      }, frame(t.GLO, 3.5)) },
+      }, frame(t.DT, 3.5)) },
       // state on a term = frame STYLE (the frame colour is taken by the type)
-      { selector: 'node[type="GLO"][state="draft"]', style: { 'border-style': 'dashed' }},
-      { selector: 'node[type="GLO"][state="deprecated"]', style: {
+      { selector: 'node[type="DT"][state="draft"]', style: { 'border-style': 'dashed' }},
+      { selector: 'node[type="DT"][state="deprecated"]', style: {
           'border-style': 'dotted', 'color': t.dim, 'opacity': 0.6 }},
-      { selector: 'node[type="GLO"][?assumption]', style: { 'font-style': 'italic' }},
-      { selector: 'node[type="DM"]',   style: frame(t.DM, 3) },
+      { selector: 'node[type="DT"][?assumption]', style: { 'font-style': 'italic' }},
       { selector: 'node[type="STK"]',  style: frame(t.STK, 3) },
       { selector: 'node[type="EIF"]',  style: frame(t.EIF, 3) },
       { selector: 'node[type="GOAL"]', style: frame(t.GOAL, 3) },
@@ -206,7 +205,7 @@ window.AQ_GLOSSARY_GRAPH = (function () {
   }
 
   // Compact, mostly-read-only ego snippet for a glossary detail page. Shows the focal
-  // term + its direct GLO neighbours by default; the DM/STK/GOAL buttons reveal the
+  // term + its direct term neighbours by default; the STK/GOAL/BB buttons reveal the
   // term's neighbours of that type (1-hop). A node tap opens that page.
   function mountEgo(opts) {
     var cytoscape = window.cytoscape;
@@ -240,9 +239,9 @@ window.AQ_GLOSSARY_GRAPH = (function () {
       l.run();
     }
 
-    // default: focal term + direct GLO neighbours; cross-type neighbours hidden
+    // default: focal term + direct term neighbours; cross-type neighbours hidden
     cy.batch(function () {
-      cy.nodes().filter(function (n) { return n.data('type') !== 'GLO'; }).addClass('hidden');
+      cy.nodes().filter(function (n) { return n.data('type') !== 'DT'; }).addClass('hidden');
       cy.edges().filter(function (e) { return !!e.data('cross'); }).addClass('hidden');
     });
 

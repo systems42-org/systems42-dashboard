@@ -299,11 +299,11 @@ func TestPageAndSourceDetailRoutes(t *testing.T) {
 		t.Errorf("SRC-036 missing source-facts or ingested-pages link")
 	}
 
-	// Legacy redirects
+	// The old ADR URLs are gone; /page/functional-requirements/* still redirects
 	rec = httptest.NewRecorder()
 	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/page/adr/0007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go", nil))
-	if rec.Code != http.StatusMovedPermanently || rec.Header().Get("Location") != "/page/decisions/DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go" {
-		t.Fatalf("ADR redirect = %d -> %q", rec.Code, rec.Header().Get("Location"))
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("GET /page/adr/... = %d, want 404", rec.Code)
 	}
 
 	rec = httptest.NewRecorder()
@@ -331,16 +331,18 @@ func TestPhase2AreasListsMetamodelAndCustomSection(t *testing.T) {
 		t.Fatalf("GET /req42/building-blocks = %d, want 404", rec.Code)
 	}
 
-	// Redirects preserve CSP + XFO + query
+	// Redirects keep the security headers
 	rec = httptest.NewRecorder()
-	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/glossary?sort=title", nil))
-	if rec.Code != http.StatusMovedPermanently || rec.Header().Get("Location") != "/domain-terms?sort=title" || rec.Header().Get("X-Frame-Options") != "DENY" {
-		t.Fatalf("GET /glossary?sort=title = %d loc=%q xfo=%q", rec.Code, rec.Header().Get("Location"), rec.Header().Get("X-Frame-Options"))
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/page/functional-requirements/FR-055-second-implementation-in-go", nil))
+	if rec.Code != http.StatusFound || rec.Header().Get("X-Frame-Options") != "DENY" {
+		t.Fatalf("GET /page/functional-requirements/... = %d xfo=%q", rec.Code, rec.Header().Get("X-Frame-Options"))
 	}
-	rec = httptest.NewRecorder()
-	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/adrs", nil))
-	if rec.Code != http.StatusMovedPermanently || rec.Header().Get("Location") != "/decisions" {
-		t.Fatalf("GET /adrs = %d loc=%q", rec.Code, rec.Header().Get("Location"))
+	for _, old := range []string{"/glossary", "/graph/glossary", "/data-model", "/adrs", "/req42/backlog"} {
+		rec = httptest.NewRecorder()
+		srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, old, nil))
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("GET %s = %d, want 404", old, rec.Code)
+		}
 	}
 	rec = httptest.NewRecorder()
 	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/section/C6", nil))
@@ -464,19 +466,6 @@ func TestPhase3ProjectionRoutesAndFilters(t *testing.T) {
 		srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, u, nil))
 		if rec.Code != http.StatusOK {
 			t.Fatalf("GET %s = %d, want 200", u, rec.Code)
-		}
-	}
-
-	// Phase 3 legacy redirects
-	for _, pair := range [][2]string{
-		{"/data-model?context=Core", "/entity-diagram?context=Core"},
-		{"/graph/glossary?edges=related", "/graph/domain-terms?edges=related"},
-		{"/req42/backlog", "/req42/functional-requirements"},
-	} {
-		rec := httptest.NewRecorder()
-		srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, pair[0], nil))
-		if rec.Code != http.StatusMovedPermanently || rec.Header().Get("Location") != pair[1] {
-			t.Fatalf("GET %s = %d loc=%q, want 301 -> %q", pair[0], rec.Code, rec.Header().Get("Location"), pair[1])
 		}
 	}
 

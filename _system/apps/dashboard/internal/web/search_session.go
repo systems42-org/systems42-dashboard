@@ -32,7 +32,6 @@ func (s *Server) buildSearchIndex(sn *requestSnapshot) map[string]any {
 	return search.BuildIndex(
 		sn.all(),
 		sn.folder("domain-terms"),
-		sn.folder("glossary"),
 		sn.titleIndex(),
 		sn.linkIndex(),
 		sn.sourceIndex(),

@@ -10,8 +10,8 @@ import tempfile
 from pathlib import Path
 
 WIKI_FOLDERS = [
-    "glossary", "goals", "stakeholders", "context", "external-interfaces",
-    "data-models", "activity-models", "functional-requirements",
+    "domain-terms", "goals", "stakeholders", "context", "external-interfaces",
+    "activity-models", "functional-requirements",
     "quality-requirements", "constraints", "issues",
 ]
 _tmp = Path(tempfile.mkdtemp())
@@ -40,7 +40,7 @@ def test_bar_on_section_and_area_pages_only():
     assert 'class="area-bar area-bar-req"' in _get("/req42/functional-requirements")
     assert 'class="area-bar area-bar-2 area-bar-req area-bar-arc"' in _get("/stakeholders")
     assert 'class="area-bar area-bar-2 area-bar-req area-bar-arc"' in _get("/commons")
-    for path in ("/", "/adrs", "/search", "/join"):
+    for path in ("/", "/search", "/join"):
         assert 'class="area-bar' not in _get(path), path
 
 

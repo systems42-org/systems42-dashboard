@@ -173,12 +173,10 @@ func (s *Server) handleEntityDiagram(w http.ResponseWriter, r *http.Request) {
 	sn := newSnapshot(s.Store)
 	linkCtx := s.linkContext(sn)
 
-	dmPages := sn.folder("data-models")
 	dtPages := sn.folder("domain-terms")
-	gloPages := sn.folder("glossary")
 
-	nodes := project.DataModelNodes(dmPages, dtPages, gloPages)
-	edges := project.DataModelEdges(dmPages, dtPages, gloPages)
+	nodes := project.DataModelNodes(dtPages)
+	edges := project.DataModelEdges(dtPages)
 	contexts := project.DataModelContexts(nodes)
 
 	q := r.URL.Query()
@@ -218,23 +216,15 @@ func (s *Server) handleEntityDiagram(w http.ResponseWriter, r *http.Request) {
 		crumb, crumbHref = sec.Title, metamodel.SectionHref(sec)
 	}
 
-	stubs := make([]map[string]any, 0)
-	for _, n := range nodes {
-		if stub, _ := n["stub"].(bool); stub {
-			stubs = append(stubs, n)
-		}
-	}
-
 	s.renderHTML(w, r, http.StatusOK, "data_model.html", cat, map[string]any{
 		"diagram":       nilIfEmpty(diagram),
 		"crumb":         crumb,
 		"crumb_href":    crumbHref,
-		"entities":      project.DataModelEntities(dmPages, dtPages, linkCtx),
+		"entities":      project.DataModelEntities(dtPages, linkCtx),
 		"nodes":         nodes,
 		"contexts":      contexts,
 		"context":       nilIfEmpty(ctxFilter),
 		"focus":         nilIfEmpty(focus),
-		"stubs":         stubs,
 		"needs_mermaid": true,
 	}, now)
 }
@@ -252,14 +242,11 @@ func (s *Server) handleGlossaryGraph(w http.ResponseWriter, r *http.Request) {
 	graph := project.BuildGlossaryGraph(
 		sn.all(),
 		sn.folder("domain-terms"),
-		sn.folder("glossary"),
-		sn.folder("data-models"),
 		edgeFilter,
 	)
 	counts := graph["layer_counts"].(map[string]int)
 
 	namedSpec := [][2]string{
-		{"DM", "Data model"},
 		{"STK", "Stakeholder"},
 		{"EIF", "Interface"},
 		{"GOAL", "Goals"},
@@ -296,7 +283,7 @@ func (s *Server) handleGlossaryGraph(w http.ResponseWriter, r *http.Request) {
 	nGlo := 0
 	for _, n := range rawNodes {
 		d := n["data"].(map[string]any)
-		if d["type"] == "GLO" {
+		if d["type"] == "DT" {
 			nGlo++
 		}
 	}
@@ -354,26 +341,15 @@ func (s *Server) handleFunctionalRequirements(w http.ResponseWriter, r *http.Req
 		diagramLinks = []map[string]any{}
 	}
 
-	allFRPages := append([]*wiki.Page{}, frs...)
-	if containsStr(block.Folders, "use-cases") {
-		allFRPages = append(allFRPages, sn.folder("use-cases")...)
-	}
-	allFRPages = sortedByID(allFRPages)
+	allFRPages := sortedByID(append([]*wiki.Page{}, frs...))
 
 	rows := make([]map[string]any, 0, len(allFRPages))
 	for _, p := range allFRPages {
-		frPage := p.Folder == "functional-requirements"
-		url := wiki.PageURL(p.Folder, p.Stem)
-		notation := "use-case"
-		if frPage {
-			url = "/functional-requirements/" + p.Stem
-			notation = project.FRNotation(p)
-		}
 		rows = append(rows, map[string]any{
 			"id":       p.ID(),
 			"title":    p.Title(),
-			"url":      url,
-			"notation": notation,
+			"url":      "/functional-requirements/" + p.Stem,
+			"notation": project.FRNotation(p),
 			"level":    project.FRLevel(p),
 			"priority": strings.TrimSpace(p.MetaString("priority")),
 			"release":  strings.TrimSpace(p.MetaString("release")),

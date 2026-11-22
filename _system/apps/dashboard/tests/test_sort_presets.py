@@ -27,7 +27,7 @@ def test_presets_per_type():
         "functional-requirement": [{"label": "Priority › release › order", "keys": ["priority", "release", "order"]}],
         "issue": [{"label": "Status › severity", "keys": ["status", "severity"]}],
         "decision-record": [{"label": "Newest first", "keys": ["decided"]}],
-        "glossary-term": [{"label": "A to Z", "keys": ["title"]}],
+        "domain-term": [{"label": "A to Z", "keys": ["title"]}],
         "stakeholder": [{"label": "Influence › interest", "keys": ["influence", "interest"]}],
         "quality-requirement": [{"label": "Priority", "keys": ["priority"]}],
     }
@@ -49,21 +49,17 @@ def test_a_preset_cannot_be_changed_through_its_result():
     assert app.SORT_PRESETS["issue"][0]["keys"] == ["status", "severity"]
 
 
-def test_domain_terms_list_takes_the_declared_term_type():
-    # this repository's metamodel has the domain-term type (meta DR-039)
-    assert app.term_type() == "domain-term"
-    real = metamodel.type_for_folder
-    try:
-        metamodel.type_for_folder = lambda folder: "domain-term" if folder == "domain-terms" else None
-        assert app.term_type() == "domain-term"
-        assert app.list_spec(app.term_type())["orders"] == [{"label": "A to Z", "keys": ["title"]}]
-    finally:
-        metamodel.type_for_folder = real
+def test_domain_terms_list_takes_the_domain_term_type():
+    # the metamodel's type for wiki/domain-terms/ (meta DR-039)
+    assert metamodel.type_for_folder("domain-terms") == "domain-term"
+    tpl = (Path(app.__file__).parent / "templates" / "glossary.html").read_text(encoding="utf-8")
+    assert 'list_spec("domain-term")' in tpl
+    assert app.list_spec("domain-term")["orders"] == [{"label": "A to Z", "keys": ["title"]}]
 
 
 if __name__ == "__main__":
     test_presets_per_type()
     test_no_type_page_declares_sort_orders()
     test_a_preset_cannot_be_changed_through_its_result()
-    test_domain_terms_list_takes_the_declared_term_type()
+    test_domain_terms_list_takes_the_domain_term_type()
     print("ALL PASSED")

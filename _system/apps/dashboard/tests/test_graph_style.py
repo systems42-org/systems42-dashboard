@@ -18,7 +18,7 @@ CSS = (ROOT / "static" / "style.css").read_text(encoding="utf-8")
 GRAPH = (ROOT / "templates" / "graph.html").read_text(encoding="utf-8")
 DETAIL = (ROOT / "templates" / "detail.html").read_text(encoding="utf-8")
 
-TYPE_TOKENS = ["--layer-glo-ink", "--layer-dm-ink", "--layer-stk-ink",
+TYPE_TOKENS = ["--layer-dt-ink", "--layer-stk-ink",
                "--layer-eif-ink", "--layer-goal-ink", "--layer-rest-ink"]
 
 
@@ -54,9 +54,9 @@ def test_type_tokens_exist_in_both_themes_and_drive_legend_and_buttons():
         assert f"{tok}:" in dark and f"{tok}:" in light, tok
     legend = CSS[CSS.index(".lg-dot {"):CSS.index(".graph-tip {")]
     assert "background: var(--card)" in legend, "legend swatches are frames like the nodes"
-    for t in ("GLO", "DM", "STK", "EIF", "GOAL", "REST"):
+    for t in ("DT", "STK", "EIF", "GOAL", "REST"):
         assert f".lg-{t} {{ border-color: var(--layer-{t.lower()}-ink)" in legend, t
-    assert not re.search(r"\.layer-(DM|STK|EIF|GOAL|REST)\s*\{[^}]*#[0-9a-f]{6}", CSS), \
+    assert not re.search(r"\.layer-(STK|EIF|GOAL|REST)\s*\{[^}]*#[0-9a-f]{6}", CSS), \
         "layer buttons take their colour from the tokens"
 
 

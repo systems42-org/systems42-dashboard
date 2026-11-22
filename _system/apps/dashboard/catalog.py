@@ -61,12 +61,6 @@ _KNOWN: dict[str, dict] = {
     "C7": {"href": "/decisions", "colors": ["req", "arc"]},
 }
 
-# DR-039 renamed wiki/glossary/ to wiki/domain-terms/. A section holding one
-# of them reads both, so the dashboard shows the terms of a wiki on either
-# side of the rename.
-_RENAMED_FOLDERS = {"glossary": "domain-terms", "domain-terms": "glossary"}
-
-
 def _href(sid: str, scope: str) -> str | None:
     """The page an "in" section opens: its own view, else the generic list."""
     if scope != "in":
@@ -105,16 +99,6 @@ SECTION_BY_SLUG: dict[str, dict] = {}
 _SECTION_BY_FOLDER: dict[str, dict] = {}
 
 
-def section_folders(section: dict) -> list[str]:
-    """The section's folders, plus the other name of a renamed one."""
-    out = list(section["folders"])
-    for f in section["folders"]:
-        other = _RENAMED_FOLDERS.get(f)
-        if other and other not in out:
-            out.append(other)
-    return out
-
-
 def refresh() -> None:
     """Read the sections from the metamodel again. The lookups below change
     only when the sections do."""
@@ -124,7 +108,7 @@ def refresh() -> None:
         return
     folder_owner: dict[str, dict] = {}
     for s in sections:
-        for f in section_folders(s):
+        for f in s["folders"]:
             folder_owner.setdefault(f, s)
     SECTIONS = sections
     SECTION_BY_ID = {s["id"]: s for s in sections}

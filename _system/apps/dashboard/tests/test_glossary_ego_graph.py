@@ -1,6 +1,6 @@
 """Plain-assert test for build_glossary_ego_graph() — no pytest dependency.
 
-The per-term ego snippet on a glossary detail page (DR-023): a 1-hop slice of
+The per-term ego snippet on a domain term's detail page (DR-023): a 1-hop slice of
 build_glossary_graph() around one focal term. Run like the sibling test:
     .venv/bin/python tests/test_glossary_ego_graph.py
 
@@ -40,7 +40,7 @@ def test_ego_is_a_valid_1hop_slice():
 
     checked = 0
     for stem in sorted(full_ids):
-        if type_of[stem] != "GLO":
+        if type_of[stem] != "DT":
             continue
         ego = app.build_glossary_ego_graph(stem)
         assert ego is not None, stem
@@ -51,7 +51,7 @@ def test_ego_is_a_valid_1hop_slice():
         focus = [n["data"]["id"] for n in ego["nodes"] if n["data"].get("focus")]
         assert focus == [stem], (stem, focus)
 
-        # node set == focal + neighbours of type GLO/DM/STK/GOAL (1-hop, type-filtered)
+        # node set == focal + neighbours of type DT/STK/GOAL/BB (1-hop, type-filtered)
         expected = {stem} | {n for n in full_neighbours(stem)
                              if type_of.get(n) in app._EGO_TYPES}
         assert ids == expected, (stem, ids ^ expected)
@@ -62,7 +62,7 @@ def test_ego_is_a_valid_1hop_slice():
             d = e["data"]
             assert d["source"] in ids and d["target"] in ids, (stem, d)
 
-        # layer_counts == DM/STK/GOAL cross edges actually present in the slice
+        # layer_counts == STK/GOAL/BB cross edges actually present in the slice
         tally = {}
         for e in ego["edges"]:
             d = e["data"]
@@ -71,23 +71,22 @@ def test_ego_is_a_valid_1hop_slice():
         assert ego["layer_counts"] == tally, (stem, ego["layer_counts"], tally)
         checked += 1
 
-    assert checked, "no GLO terms found"
+    assert checked, "no domain terms found"
 
-    # a non-glossary / unknown stem yields no snippet
+    # an unknown stem yields no snippet
     assert app.build_glossary_ego_graph("does-not-exist") is None
 
-    # GLO-004-shelf: exactly one glossary-internal edge (to GLO-001-book), and no
-    # cross-type relations of its own — so, unlike the old GLO-027 special case,
-    # its ego graph offers no layer buttons at all.
-    shelf = app.build_glossary_ego_graph("GLO-004-shelf")
+    # DT-004-shelf: exactly one term-to-term edge (to DT-001-book), and no
+    # cross-type relations of its own, so its ego graph offers no layer buttons.
+    shelf = app.build_glossary_ego_graph("DT-004-shelf")
     assert shelf is not None
     glo_internal = [e for e in shelf["edges"] if e["data"].get("cross") is False]
-    assert len(glo_internal) == 1, "GLO-004-shelf should have exactly one GLO-GLO edge"
+    assert len(glo_internal) == 1, "DT-004-shelf should have exactly one term-to-term edge"
     assert shelf["layer_counts"] == {}, \
-        "GLO-004-shelf has no cross-type relations, so no layer buttons"
+        "DT-004-shelf has no cross-type relations, so no layer buttons"
 
-    print(f"OK: ego graphs valid for {checked} GLO terms; "
-          f"GLO-004-shelf layers={shelf['layer_counts']}")
+    print(f"OK: ego graphs valid for {checked} terms; "
+          f"DT-004-shelf layers={shelf['layer_counts']}")
 
 
 if __name__ == "__main__":

@@ -42,10 +42,10 @@ def _page(folder, name, front, body=""):
     (_wiki / folder / f"{name}.md").write_text("\n".join(lines), encoding="utf-8")
 
 
-_page("glossary", "GLO-001-account", ["id: GLO-001", "type: glossary-term", "title: Account",
-      "status: draft", "tags: [glossary]", 'related: ["[[GLO-002-password]]", "[[STK-001-member]]"]'])
-_page("glossary", "GLO-002-password", ["id: GLO-002", "type: glossary-term", "title: Password",
-      "status: draft", "tags: [glossary]", "related: []"])
+_page("domain-terms", "DT-001-account", ["id: DT-001", "type: domain-term", "title: Account",
+      "status: draft", "tags: [domain-term]", 'related: ["[[DT-002-password]]", "[[STK-001-member]]"]'])
+_page("domain-terms", "DT-002-password", ["id: DT-002", "type: domain-term", "title: Password",
+      "status: draft", "tags: [domain-term]", "related: []"])
 _page("goals", "GOAL-001-self-service", ["id: GOAL-001", "type: goal", "title: Self service",
       "status: draft", "tags: [goal]", "related: []", "stereotype: vision", "parent: []"])
 _page("goals", "GOAL-002-fewer-calls", ["id: GOAL-002", "type: goal", "title: Fewer calls",

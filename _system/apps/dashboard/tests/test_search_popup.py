@@ -15,8 +15,8 @@ import tempfile
 from pathlib import Path
 
 WIKI_FOLDERS = [
-    "glossary", "goals", "stakeholders", "context", "external-interfaces",
-    "data-models", "activity-models", "functional-requirements",
+    "domain-terms", "goals", "stakeholders", "context", "external-interfaces",
+    "activity-models", "functional-requirements",
     "quality-requirements", "constraints", "issues",
 ]
 _tmp = Path(tempfile.mkdtemp())
@@ -52,16 +52,16 @@ def _write(folder, stem, **kw):
 
 
 def test_index_endpoint():
-    _write("glossary", "GLO-001-training", id="GLO-001", type="glossary-term",
+    _write("domain-terms", "DT-001-training", id="DT-001", type="domain-term",
            title="Training", body="Ein Training führt zur Prüfung.")
     app._PARSE_CACHE.clear()
     r = app.app.test_client().get("/search.json")
     assert r.status_code == 200 and r.is_json
     data = r.get_json()
     assert set(data) == {"records", "synonyms"}, set(data)
-    rec = next(x for x in data["records"] if x["id"] == "GLO-001")
+    rec = next(x for x in data["records"] if x["id"] == "DT-001")
     assert {"id", "type", "title", "status", "url", "aliases", "plain", "fields", "links"} <= set(rec), rec
-    assert rec["url"] == "/page/glossary/GLO-001-training"
+    assert rec["url"] == "/page/domain-terms/DT-001-training"
     assert "Prüfung" in rec["plain"]
     assert ["training"] in data["synonyms"]
 
@@ -80,7 +80,7 @@ def test_ranker_title_before_body():
         return
     recs = [
         {"id": "ISS-001", "type": "Issue", "title": "Unklar", "plain": "Es geht um Training."},
-        {"id": "GLO-001", "type": "Glossary term", "title": "Training", "plain": ""},
+        {"id": "DT-001", "type": "Domain term", "title": "Training", "plain": ""},
         {"id": "UC-001", "type": "Use case", "title": "Trainingstermin einreichen", "plain": ""},
         {"id": "STK-001", "type": "Stakeholder", "title": "Anbieter", "plain": "Bietet an."},
     ]
@@ -90,7 +90,7 @@ def test_ranker_title_before_body():
               ", 'Training').map(function (h) { return [h.rec.id, h.score]; })));")
     out = subprocess.run(["node", "-e", script], capture_output=True, text=True, check=True).stdout
     ranked = json.loads(out)
-    assert [i for i, _ in ranked] == ["GLO-001", "UC-001", "ISS-001"], ranked   # exact, prefix, body; no STK
+    assert [i for i, _ in ranked] == ["DT-001", "UC-001", "ISS-001"], ranked   # exact, prefix, body; no STK
     assert ranked[0][1] == 100 and ranked[1][1] == 92 and ranked[2][1] < 55, ranked
 
 

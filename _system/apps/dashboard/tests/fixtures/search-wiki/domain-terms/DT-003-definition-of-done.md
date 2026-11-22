@@ -1,10 +1,12 @@
 ---
-id: GLO-003
-type: glossary-term
+id: DT-003
+type: domain-term
 title: Definition of Done
 status: draft
-aliases: [DoD]
-tags: [glossary]
+aliases:
+- DoD
+tags:
+- domain-term
 ---
 
 # Definition of Done

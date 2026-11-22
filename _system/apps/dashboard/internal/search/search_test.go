@@ -34,7 +34,6 @@ func loadFixtureIndex(t *testing.T) (map[string]any, []*wiki.Page) {
 	idx := search.BuildIndex(
 		allPages,
 		store.LoadFolder("domain-terms"),
-		store.LoadFolder("glossary"),
 		wiki.TitleIndex(allPages),
 		wiki.LinkIndex(allPages),
 		wiki.SourceIndex(store.LoadSources()),
@@ -81,7 +80,7 @@ func TestSearchIndexStructureAndPlain(t *testing.T) {
 	for _, id := range stk23Links {
 		linkSet[id] = true
 	}
-	if !linkSet["ISS-001"] || !linkSet["GLO-001"] || !linkSet["FR-001"] || linkSet["STK-023"] {
+	if !linkSet["ISS-001"] || !linkSet["DT-001"] || !linkSet["FR-001"] || linkSet["STK-023"] {
 		t.Fatalf("STK-023 links = %v", stk23Links)
 	}
 

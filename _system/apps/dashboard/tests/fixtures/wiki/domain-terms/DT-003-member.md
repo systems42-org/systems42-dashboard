@@ -1,16 +1,18 @@
 ---
-id: GLO-003
-type: glossary-term
+id: DT-003
+type: domain-term
 title: Member
 status: accepted
 created: 2026-09-06
 updated: 2026-09-06
 sources: []
 related:
-  - "[[GLO-002-loan]]"
-  - "[[STK-001-librarian]]"
-tags: [glossary]
-aliases: [Borrower]
+- '[[DT-002-loan]]'
+- '[[STK-001-librarian]]'
+tags:
+- domain-term
+aliases:
+- Borrower
 bounded-context: Lending
 agreed: true
 ---

@@ -10,4 +10,4 @@ related: ["[[FR-001-run-a-workshop]]", "[[FR-002-export-the-board]]", "[[FR-003-
 
 # Keyholder
 
-The person that started the dashboard app. Works with the [[GLO-001-facilitator|facilitator]] in every workshop.
+The person that started the dashboard app. Works with the [[DT-001-facilitator|facilitator]] in every workshop.

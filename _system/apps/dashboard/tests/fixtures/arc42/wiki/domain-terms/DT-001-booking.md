@@ -1,13 +1,16 @@
 ---
-id: GLO-001
-type: glossary-term
+id: DT-001
+type: domain-term
 title: Buchung
 status: draft
 created: 2026-10-19
 updated: 2026-10-19
 sources: []
-related: ["[[BB-001-booking]]"]
-tags: [glossary-term]
+related:
+- '[[BB-001-booking]]'
+tags:
+- domain-term
+aliases: []
 ---
 
 # Buchung

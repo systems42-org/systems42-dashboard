@@ -7,7 +7,7 @@ created: 2026-09-06
 updated: 2026-09-06
 sources: []
 related:
-  - "[[GLO-002-loan]]"
+  - "[[DT-002-loan]]"
 tags: [functional-requirement]
 notation: agile
 level: story

@@ -1,18 +1,10 @@
-"""The data-model class diagram — a projection, like every other diagram here.
+"""The entity diagram (R4) — a projection, like every other diagram here.
 
-Two carriers feed it, and the split is the decision worth guarding (DR-027):
-
-  * a `DM-` page is the carrier of record. It holds identity, attributes and a
-    `relationships:` list in frontmatter, which is where the edges come from —
-    body prose is for humans, frontmatter is for the projection, exactly as
-    `flows:` works for the context diagram (DR-026).
-  * a glossary term marked `stereotype: entity` (or `value-object`) appears as a
-    STUB class: named, empty, annotated `<<term>>`. It costs one line during a
-    workshop and makes an unmodelled entity visible as work outstanding instead
-    of invisible.
-
-A DM page supersedes the stub for the same concept, so nothing is ever drawn
-twice — that is the rule this suite mostly exists to hold.
+A domain term with `stereotype: entity | value-object | sum-type` is a class.
+It holds identity, `attributes:` and a `relationships:` list in frontmatter,
+which is where the edges come from. Body prose is for humans, frontmatter is
+for the projection, exactly as `flows:` works for the context diagram (DR-026).
+A term without such a stereotype stays out of the model.
 
 Run from the dashboard dir:
     .venv/bin/python tests/test_data_model_diagram.py
@@ -23,8 +15,8 @@ import tempfile
 from pathlib import Path
 
 WIKI_FOLDERS = [
-    "glossary", "goals", "stakeholders", "context", "external-interfaces",
-    "data-models", "activity-models", "functional-requirements",
+    "domain-terms", "goals", "stakeholders", "context", "external-interfaces",
+    "activity-models", "functional-requirements",
     "quality-requirements", "constraints", "issues",
 ]
 
@@ -42,64 +34,41 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
 
-_DM = _wiki / "data-models"
-_GLO = _wiki / "glossary"
+_DT = _wiki / "domain-terms"
 
 
-def _dm(num, title, context, attributes=(), relationships=(), related=(),
-        stereotype="entity", parent=()):
+def _dt(num, title, context, attributes=(), relationships=(), stereotype="entity", parent=()):
     front = [
-        "---", f"id: DM-{num}", "type: data-model", f"title: {title}",
+        "---", f"id: DT-{num}", "type: domain-term", f"title: {title}",
         "status: draft", "created: 2026-09-09", "updated: 2026-09-09",
-        "sources: []", f"related: [{', '.join(related)}]", "tags: [data-model]",
-        f"stereotype: {stereotype}", f"parent: [{', '.join(parent)}]",
-        f"bounded-context: {context}", "source-of-truth: System X",
-        "relationships:",
-    ]
-    front += [f"  - {{ {r} }}" for r in relationships]
-    front += ["---", "", f"# {title}", "", "**Attributes.**"]
-    front += [f"- `{a}` : text — a field" for a in attributes]
-    front += [""]
-    _DM.joinpath(f"DM-{num}-{title.lower().replace(' ', '-')}.md").write_text(
-        "\n".join(front), encoding="utf-8")
-
-
-def _glo(num, title, context, stereotype=None):
-    front = [
-        "---", f"id: GLO-{num}", "type: glossary-term", f"title: {title}",
-        "status: accepted", "created: 2026-09-09", "updated: 2026-09-09",
-        "sources: []", "related: []", "tags: [glossary]", "aliases: []",
-        f"bounded-context: {context}", "agreed: true",
+        "sources: []", "related: []", "tags: [domain-term]", "aliases: []",
+        f"bounded-context: {context}", f"parent: [{', '.join(parent)}]",
     ]
     if stereotype:
-        front.append(f"stereotype: {stereotype}")
+        front += [f"stereotype: {stereotype}", "source-of-truth: System X"]
+    front += ["attributes:"] + [f"  - {{name: {a}, type: text}}" for a in attributes]
+    front += ["relationships:"] + [f"  - {{ {r} }}" for r in relationships]
     front += ["---", "", f"# {title}", "", "**Definition.** A thing.", ""]
-    _GLO.joinpath(f"GLO-{num}-{title.lower().replace(' ', '-')}.md").write_text(
+    _DT.joinpath(f"DT-{num}-{title.lower().replace(' ', '-')}.md").write_text(
         "\n".join(front), encoding="utf-8")
 
 
 # Catalog context: Artwork owns Lots, and inherits from Asset.
-_dm("001", "Artwork", "Catalog", attributes=["id", "title"], relationships=[
-    "verb: contains, target: \"[[DM-002-lot]]\", cardinality: 1..*, kind: composition",
-    "verb: is a, target: \"[[DM-004-asset]]\", kind: inheritance",
-    "verb: dangles, target: \"[[DM-999-nowhere]]\", kind: association",
-], related=['"[[GLO-002-artwork]]"'])
-_dm("002", "Lot", "Catalog", attributes=["id", "lot-number"])
-_dm("004", "Asset", "Catalog", attributes=["id"])
+_dt("001", "Artwork", "Catalog", attributes=["id", "title"], relationships=[
+    "label: contains, to: \"[[DT-002-lot]]\", multiplicity: 1..*, kind: composition",
+    "label: is a, to: \"[[DT-004-asset]]\", kind: generalization",
+    "label: dangles, to: \"[[DT-999-nowhere]]\", kind: association",
+])
+_dt("002", "Lot", "Catalog", attributes=["id", "lot-number"])
+_dt("004", "Asset", "Catalog", attributes=["id"])
 # a second bounded context, so the filter has something to exclude
-_dm("003", "Payment", "Billing", attributes=["amount"])
+_dt("003", "Payment", "Billing", attributes=["amount"])
 # a sum-type variant: `parent:` alone must draw the inheritance (DR-019)
-_dm("005", "Sold Artwork", "Catalog", stereotype="entity",
-    parent=['"[[DM-001-artwork]]"'])
-
-# marked, and NOT modelled anywhere -> a stub class
-_glo("001", "Provenance", "Catalog", stereotype="entity")
-# marked, but DM-001 claims it via related: -> must NOT double as a stub
-_glo("002", "Artwork", "Catalog", stereotype="entity")
-# not marked at all -> not in the data model
-_glo("003", "Tour", "Catalog")
+_dt("005", "Sold Artwork", "Catalog", parent=['"[[DT-001-artwork]]"'])
+# no stereotype -> not in the model
+_dt("006", "Tour", "Catalog", stereotype=None)
 # a German title: the ASCII identifier must not swallow the umlaut
-_glo("004", "Durchführungsart", "Catalog", stereotype="value-object")
+_dt("007", "Durchführungsart", "Catalog", stereotype="value-object")
 
 
 def _diagram(**kw):
@@ -108,7 +77,7 @@ def _diagram(**kw):
     return d
 
 
-def test_a_dm_page_becomes_a_class_with_its_attributes():
+def test_a_structured_term_becomes_a_class_with_its_attributes():
     d = _diagram()
     assert "classDiagram" in d, d
     assert "class Artwork" in d, d
@@ -127,10 +96,8 @@ def test_a_hyphenated_attribute_name_survives():
     assert "+lot-number" in _diagram(), _diagram()
 
 
-def test_a_marked_glossary_term_becomes_an_empty_stub_class():
-    d = _diagram()
-    assert "class Provenance" in d, d
-    assert "<<term>>" in d, "a stub must be annotated so the room can see it is unmodelled"
+def test_a_value_object_is_marked_with_its_stereotype():
+    assert "<<value-object>>" in _diagram(), _diagram()
 
 
 def test_an_umlaut_survives_as_label_and_is_transliterated_in_the_identifier():
@@ -153,21 +120,13 @@ def test_an_ascii_single_word_title_needs_no_label():
     assert 'Artwork["Artwork"]' not in d, "a label that repeats the identifier is noise"
 
 
-def test_an_unmarked_glossary_term_stays_out_of_the_model():
-    """The glossary is not the data model. Only a marked term is promoted."""
+def test_a_term_without_stereotype_stays_out_of_the_model():
+    """The terminology is not the data model. Only a structured term is drawn."""
     assert "Tour" not in _diagram()
 
 
-def test_a_dm_page_supersedes_the_term_it_claims():
-    """GLO-002 Artwork is marked, but DM-001 links it — one class, not two."""
-    d = _diagram()
-    assert d.count("class Artwork") == 1, d
-    artwork = [l for l in d.splitlines() if "class Artwork" in l][0]
-    assert "<<term>>" not in artwork, "the modelled entity must not render as a stub"
-
-
 def test_relationships_carry_verb_cardinality_and_kind():
-    """`cardinality:` is the multiplicity at the TARGET end, and only there —
+    """`multiplicity:` applies at the TARGET end, and only there —
     inventing a source multiplicity from it puts a meaningless "0" on the
     owning side of any `0..*`."""
     d = _diagram()
@@ -187,7 +146,7 @@ def test_inheritance_points_from_the_base_class():
 
 
 def test_a_relationship_to_a_missing_page_is_dropped():
-    assert "DM-999" not in _diagram() and "nowhere" not in _diagram().lower()
+    assert "DT-999" not in _diagram() and "nowhere" not in _diagram().lower()
 
 
 def test_the_bounded_context_filter_narrows_the_diagram():
@@ -197,7 +156,7 @@ def test_the_bounded_context_filter_narrows_the_diagram():
 
 
 def test_focus_keeps_one_entity_and_its_direct_neighbours():
-    d = _diagram(focus="DM-001-artwork")
+    d = _diagram(focus="DT-001-artwork")
     assert "class Artwork" in d and "class Lot" in d and "class Asset" in d, d
     assert "Payment" not in d, "focus is one hop, not the whole vault"
 

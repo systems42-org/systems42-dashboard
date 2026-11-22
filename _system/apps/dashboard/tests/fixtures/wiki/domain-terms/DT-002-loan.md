@@ -1,16 +1,18 @@
 ---
-id: GLO-002
-type: glossary-term
+id: DT-002
+type: domain-term
 title: Loan
 status: accepted
 created: 2026-09-06
 updated: 2026-09-06
 sources: []
 related:
-  - "[[GLO-001-book]]"
-  - "[[GLO-003-member]]"
-tags: [glossary]
-aliases: [Checkout]
+- '[[DT-001-book]]'
+- '[[DT-003-member]]'
+tags:
+- domain-term
+aliases:
+- Checkout
 bounded-context: Lending
 agreed: true
 ---
