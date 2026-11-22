@@ -4,7 +4,7 @@ type: functional-requirement
 title: The dashboard as a product
 status: draft
 created: 2026-11-13
-updated: 2026-11-20
+updated: 2026-11-22
 sources: ["[[SRC-019-the-dashboard-as-a-product]]", "[[SRC-020-grilling-session-on-the-dashboard-as-a-product]]", "[[SRC-027-dashboard-distribution-and-metamodel-contract]]", "[[SRC-028-grilling-session-on-dashboard-distribution]]", "[[SRC-036-grilling-session-on-running-without-a-container-engine]]"]
 related: ["[[CON-003-docker-is-the-supported-way-to-run-it]]", "[[QR-002-runs-alike-on-linux-and-macos]]", "[[DR-004-releases-are-container-images-pinned-per-wiki]]", "[[CON-001-proof-of-concept-not-production-ready]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[STK-012-maintainers]]", "[[DR-005-the-dashboard-lives-in-its-own-repository]]", "[[CON-005-the-dashboard-works-on-systems42-derivatives-only]]", "[[DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go]]"]
 tags: ["functional-requirement", "product"]
@@ -43,7 +43,7 @@ These rules hold for every feature below:
 ## Hierarchy
 
 - **Parent:** none (epic).
-- **Children:** projected from the `parent:` backlinks: [[FR-030-numbered-releases]], [[FR-031-branding-is-configuration]], [[FR-032-example-brands-to-try]], [[FR-033-runnable-dashboard-in-the-starter-kit]], [[FR-042-start-a-pinned-release-with-one-command]], [[FR-043-the-dashboard-checks-the-metamodel-version]], [[FR-045-a-prompt-template-for-a-brand]], [[FR-054-a-start-without-a-container-engine]], [[FR-055-an-installable-dashboard-app]].
+- **Children:** projected from the `parent:` backlinks: [[FR-030-numbered-releases]], [[FR-031-branding-is-configuration]], [[FR-032-example-brands-to-try]], [[FR-033-runnable-dashboard-in-the-starter-kit]], [[FR-042-start-a-pinned-release-with-one-command]], [[FR-043-the-dashboard-checks-the-metamodel-version]], [[FR-045-a-prompt-template-for-a-brand]], [[FR-054-a-start-without-a-container-engine]], [[FR-055-an-installable-dashboard-app]], [[FR-063-manage-development-with-make]].
 
 > [!note] Open points
 > None. Gernot Starke agreed Should for the epic and FR-030, FR-032, FR-033, and Must for FR-031, on 2026-11-13.

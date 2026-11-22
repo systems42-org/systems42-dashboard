@@ -388,3 +388,18 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Kept, not overwritten: README, CHANGELOG, Makefile, `dashboard.sh`, `.gitignore`, `.obsidian/`, `CLAUDE.md`, `_system/README.md`; the writing-style and language rules in `AGENTS.md`; Q42 (`_system/anchors/q42.md`, `dimensions:` on quality requirements) and C6 titled "Issues" until [meta#35](https://github.com/systems42-org/meta/issues/35).
 - Dropped in the sync: `_system/metamodel/altitude.md` (a proposed granularity scale). Meta leads the metamodel, so it does not come back.
 - App tests that pinned the old metamodel follow the new one; the app's copies of the method tests are removed, they live in `_system/scripts/tests/`.
+
+## [2026-11-22] capture | Solution strategy of the dashboard
+- Sources: [[SRC-039-solution-strategy-of-the-dashboard]], [[SRC-040-grilling-session-on-the-solution-strategy]].
+- Created: [[SOL-001-systems42-dashboard]] (state current), [[QR-004-the-wikis-content-stays-on-the-machine]], [[CON-007-the-python-dashboard-is-the-reference-for-the-app]], [[CC-001-tests-of-the-python-dashboard-are-plain-scripts]].
+- Updated: [[CON-003-docker-is-the-supported-way-to-run-it]] (new title, names the constraint only), and links on STK-020, CON-001, FR-055, DR-007.
+- Decided by Gernot Starke: Docker is the primary form, uv is for machines without a container engine, the app runs on macOS. A constraint page names the constraint and says nothing about plans or status. "Nothing goes to a third party" is a quality requirement with priority Must, because the strategy rests on requirements. Projection and server rendering get no decision record of their own. The Python dashboard is the reference for the app. Tests as plain scripts are a crosscutting concept for the Python dashboard only.
+- Already on record, linked only: release per wiki (DR-004, DR-007), no access control (CON-001), text next to every diagram (QR-001, DR-006), tailoring by configuration (DR-002).
+- Docs: `docs/INSTALL.md` says the programs for Linux and Windows come without support.
+
+## [2026-11-22] capture | Managing development with make
+- Sources: [[SRC-041-managing-development-with-make]], [[SRC-042-grilling-session-on-development-with-make]].
+- Created: [[FR-063-manage-development-with-make]], a feature under FR-029 for the maintainers.
+- Updated: [[FR-029-the-dashboard-as-a-product]] (children).
+- Decided by Gernot Starke: one feature that states the rules and names the targets per task area, without restating what each does. It covers four task areas (run, test and clean, website, releases), not every command of the launcher.
+- Closing round: Gernot Starke confirmed priority Should. Claude's choices, to be checked: the goal [[GOAL-008-one-way-into-every-systems42-wiki]], and `app-bundle` listed under releases although the source does not name it.

@@ -4,9 +4,9 @@ type: decision-record
 title: The dashboard gets a uv start and a second implementation in Go
 status: draft
 created: 2026-11-20
-updated: 2026-11-20
+updated: 2026-11-22
 sources: ["[[SRC-036-grilling-session-on-running-without-a-container-engine]]"]
-related: ["[[DR-004-releases-are-container-images-pinned-per-wiki]]", "[[DR-005-the-dashboard-lives-in-its-own-repository]]", "[[CON-003-docker-is-the-supported-way-to-run-it]]", "[[STK-010-operators]]", "[[STK-012-maintainers]]"]
+related: ["[[DR-004-releases-are-container-images-pinned-per-wiki]]", "[[DR-005-the-dashboard-lives-in-its-own-repository]]", "[[CON-003-docker-is-the-supported-way-to-run-it]]", "[[STK-010-operators]]", "[[STK-012-maintainers]]", "[[CON-007-the-python-dashboard-is-the-reference-for-the-app]]"]
 tags: [decision-record]
 aliases: []
 kind: architecture

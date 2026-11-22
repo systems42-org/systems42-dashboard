@@ -4,9 +4,9 @@ type: functional-requirement
 title: An installable dashboard app
 status: draft
 created: 2026-11-20
-updated: 2026-11-20
+updated: 2026-11-22
 sources: ["[[SRC-036-grilling-session-on-running-without-a-container-engine]]"]
-related: ["[[FR-054-a-start-without-a-container-engine]]", "[[DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go]]", "[[FR-043-the-dashboard-checks-the-metamodel-version]]", "[[CON-003-docker-is-the-supported-way-to-run-it]]", "[[CON-005-the-dashboard-works-on-systems42-derivatives-only]]"]
+related: ["[[FR-054-a-start-without-a-container-engine]]", "[[DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go]]", "[[FR-043-the-dashboard-checks-the-metamodel-version]]", "[[CON-003-docker-is-the-supported-way-to-run-it]]", "[[CON-005-the-dashboard-works-on-systems42-derivatives-only]]", "[[CON-007-the-python-dashboard-is-the-reference-for-the-app]]"]
 tags: ["functional-requirement", "product"]
 notation: agile
 level: feature

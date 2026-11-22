@@ -8,6 +8,8 @@ The Systems42 dashboard shows a Systems42 wiki in the browser, read-only. It com
 | **uv** | [uv](https://docs.astral.sh/uv/) | Linux, macOS | Docker cannot run, for example in a virtual machine |
 | **App** | nothing | macOS 14 or later, Linux, Windows | you want no terminal, no Docker and no Python |
 
+The app is supported on macOS. The programs for Linux and Windows come without support.
+
 Docker and uv start through the launcher script `dashboard.sh` and run exactly the release your wiki names. The app is installed once per machine and opens every wiki.
 
 The uv form and the app exist from release 0.13.0 on. All downloads are on <https://dashboard.systems42.org/downloads/>.

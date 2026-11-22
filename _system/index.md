@@ -98,21 +98,32 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-060-documentation-on-the-website]] Documentation on the website (feature, Should, draft)
 - [[FR-061-legal-and-project-information-on-the-website]] Legal and project information on the website (feature, Must, draft)
 - [[FR-062-the-website-is-built-and-published-from-the-repository]] The website is built and published from the repository (feature, Should, draft)
+- [[FR-063-manage-development-with-make]] Manage development with make (feature, Should, draft)
 
 ## Quality requirements
 
 - [[QR-001-usable-on-phone-and-tablet]] Usable on phone and tablet (usable, flexible, should, draft)
 - [[QR-002-runs-alike-on-linux-and-macos]] Runs alike on Linux and macOS (flexible, operable, should, draft)
 - [[QR-003-works-in-every-current-browser]] Works in every current browser (flexible, reliable, should, draft)
+- [[QR-004-the-wikis-content-stays-on-the-machine]] The wiki's content stays on the machine (secure, reliable, must, draft)
 
 ## Constraints
 
 - [[CON-001-proof-of-concept-not-production-ready]] The dashboard is a proof of concept, not production-ready for every environment (draft)
 - [[CON-002-dashboard-never-writes-to-the-wiki]] The dashboard never writes to the wiki (draft)
-- [[CON-003-docker-is-the-supported-way-to-run-it]] Docker and uv are the supported ways to run the dashboard (draft)
+- [[CON-003-docker-is-the-supported-way-to-run-it]] The dashboard runs in Docker, with uv, or as an app (draft)
 - [[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]] The dashboard shows the metamodel, it does not define it (draft)
 - [[CON-005-the-dashboard-works-on-systems42-derivatives-only]] The dashboard works on Systems42 derivatives only (draft)
 - [[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]] The dashboard depends on the metamodel, never the reverse (draft)
+- [[CON-007-the-python-dashboard-is-the-reference-for-the-app]] The Python dashboard is the reference for the app (draft)
+
+## Solution strategy
+
+- [[SOL-001-systems42-dashboard]] Systems42 Dashboard (current, draft)
+
+## Crosscutting concepts
+
+- [[CC-001-tests-of-the-python-dashboard-are-plain-scripts]] Tests of the Python dashboard are plain scripts (development, current, draft)
 
 ## Decisions
 
@@ -175,3 +186,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-036-grilling-session-on-running-without-a-container-engine]] Grilling session on running without a container engine (interview)
 - [[SRC-037-a-public-website-for-the-dashboard]] A public website for the dashboard (document)
 - [[SRC-038-grilling-session-on-the-public-website]] Grilling session on the public website (interview)
+- [[SRC-039-solution-strategy-of-the-dashboard]] Solution strategy of the dashboard (document)
+- [[SRC-040-grilling-session-on-the-solution-strategy]] Grilling session on the solution strategy (interview)
+- [[SRC-041-managing-development-with-make]] Managing development with make (document)
+- [[SRC-042-grilling-session-on-development-with-make]] Grilling session on development with make (interview)
