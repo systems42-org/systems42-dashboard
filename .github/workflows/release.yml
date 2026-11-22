@@ -190,10 +190,22 @@ jobs:
     needs: [check-and-test, image-and-wheel, cli-binaries, macos-app]
     runs-on: ubuntu-latest
     steps:
+      # Download only our release artifacts by name so docker/build-push-action's
+      # internal .dockerbuild metadata artifact is never downloaded or published.
       - uses: actions/download-artifact@v4
         with:
+          name: wheel
           path: dist
-          merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: cli-binaries
+          path: dist
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-dmg
+          path: dist
 
       - name: GitHub release
         env:
