@@ -39,7 +39,7 @@ As a [[STK-010-operators|person who runs the dashboard]] inside a virtual machin
 ## Hierarchy
 
 - **Parent:** [[FR-029-the-dashboard-as-a-product]]
-- **Children:** none.
+- **Children:** [[FR-064-install-the-app-with-homebrew]]
 
 > [!note] Open points
 > - Whether the app shows the pages in the browser or in a window of its own is not decided.

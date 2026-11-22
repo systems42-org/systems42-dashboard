@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-22
 updated: 2026-11-22
 sources: ["[[SRC-044-building-blocks-of-the-systems42-dashboard]]", "[[SRC-045-grilling-session-on-context-and-building-blocks]]"]
-related: ["[[SOL-002-three-ways-to-run-the-dashboard]]", "[[SOL-005-local-and-offline-execution]]"]
+related: ["[[FR-064-install-the-app-with-homebrew]]", "[[SOL-002-three-ways-to-run-the-dashboard]]", "[[SOL-005-local-and-offline-execution]]"]
 tags: [building-block]
 parent: "[[CTX-001-systems42-dashboard-context]]"
 drivers: ["[[GOAL-008-one-way-into-every-systems42-wiki]]", "[[FR-055-an-installable-dashboard-app]]", "[[QR-004-the-wikis-content-stays-on-the-machine]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[CON-003-docker-is-the-supported-way-to-run-it]]", "[[CON-005-the-dashboard-works-on-systems42-derivatives-only]]"]
@@ -23,7 +23,7 @@ superseded-by:
 
 ## Purpose / Responsibility
 
-Native Swift and AppKit menu-bar application (`Systems42 Dashboard.app`, packaged as a universal `arm64` and `x86_64` `.dmg` and Homebrew cask) that lets macOS users open any Systems42 wiki without Docker, uv or a terminal ([[FR-055-an-installable-dashboard-app]]). It validates selected folders, stores a local list of recent wikis, starts and stops one embedded [[BB-003-go-dashboard]] process per open wiki and opens the dashboard URL in the default browser.
+Native Swift and AppKit menu-bar application (`Systems42 Dashboard.app`, packaged as a universal `arm64` and `x86_64` `.dmg`) that lets macOS users open any Systems42 wiki without Docker, uv or a terminal ([[FR-055-an-installable-dashboard-app]]). It validates selected folders, stores a local list of recent wikis, starts and stops one embedded [[BB-003-go-dashboard]] process per open wiki and opens the dashboard URL in the default browser. Future extension: an install with Homebrew ([[FR-064-install-the-app-with-homebrew]]).
 
 ## Interfaces
 
