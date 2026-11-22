@@ -25,9 +25,16 @@ enum ListStates {
         return (try? encoder.encode(states)).flatMap { String(data: $0, encoding: .utf8) } ?? ""
     }
 
-    /// Empty for text that is empty or cannot be read.
+    /// An entry that cannot be read does not spoil the others.
+    private struct Entry: Decodable {
+        let state: ListState?
+        init(from decoder: Decoder) throws { state = try? ListState(from: decoder) }
+    }
+
+    /// The readable entries. Empty for text that is empty or not a JSON object.
     static func decode(_ text: String) -> [String: ListState] {
-        (try? JSONDecoder().decode([String: ListState].self, from: Data(text.utf8))) ?? [:]
+        let entries = (try? JSONDecoder().decode([String: Entry].self, from: Data(text.utf8))) ?? [:]
+        return entries.compactMapValues(\.state)
     }
 
     static func updating(_ text: String, section: String, with state: ListState) -> String {

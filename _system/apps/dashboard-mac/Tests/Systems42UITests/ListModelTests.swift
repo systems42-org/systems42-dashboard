@@ -100,6 +100,53 @@ private let requirements = "functional-requirements"
         #expect(m.filterFields.first { $0.field == "category" }?.values.isEmpty == false)
     }
 
+    private func restricted() async throws -> (WikiSession, ListModel, SidebarRow) {
+        let (s, m) = try await model("search", folder: "issues")
+        let row = try #require(s.sidebar.flatMap(\.rows).first { $0.section.folders.contains("stakeholders") })
+        return (s, m, row)
+    }
+
+    @Test func issueRestrictionShowsExactlyTheCountedIssues() async throws {
+        let (s, m, row) = try await restricted()
+        let all = ids(m)
+        #expect(row.openIssues == 1)
+        s.showIssues(of: row.section.id)
+        #expect(m.rows.count == 1)
+        #expect(m.issueRestriction == "Open issues about \(row.section.title)")
+        let counted = s.openIssueIDs(of: row.section.id)
+        #expect(Set(ids(m)) == counted)
+        s.clearIssueFilter()
+        #expect(m.issueRestriction == nil)
+        #expect(ids(m) == all)
+        #expect(all.count > 1)
+    }
+
+    @Test func issueRestrictionSurvivesASortChange() async throws {
+        let (s, m, row) = try await restricted()
+        s.showIssues(of: row.section.id)
+        m.state.sort = [SortKey(field: "severity", ascending: false)]
+        #expect(m.rows.count == 1)
+        m.toggleFilter(field: ListModel.statusField, value: "resolved")
+        #expect(m.rows.isEmpty)
+    }
+
+    @Test func pickingTheIssuesSectionInTheSidebarShowsAllIssues() async throws {
+        let (s, m, row) = try await restricted()
+        s.showIssues(of: row.section.id)
+        #expect(s.selectedSection == m.sectionID)
+        s.select(section: row.section.id)
+        s.select(section: m.sectionID)
+        #expect(m.issueRestriction == nil)
+        #expect(m.rows.count > 1)
+    }
+
+    @Test func otherSectionsIgnoreTheRestriction() async throws {
+        let (s, _, row) = try await restricted()
+        let other = ListModel(session: s, section: row.section)
+        s.showIssues(of: row.section.id)
+        #expect(other.issueRestriction == nil)
+    }
+
     @Test func stateSurvivesEncoding() async throws {
         let (s, m) = try await model("basic", folder: requirements)
         m.state.sort = [SortKey(field: "release", ascending: false), SortKey(field: "priority", ascending: true)]
@@ -216,6 +263,63 @@ private let requirements = "functional-requirements"
         #expect(order.arrange(pages, sort: [SortKey(field: "lane", ascending: false)], filters: [:], agreedOnly: false).map(\.id) == ["FR-1", "FR-2", "FR-10"])
     }
 
+    @Test func undeclaredEnumValuesStayAfterDeclaredOnesWhenDescending() {
+        let pages = [fake("A-1", ["lane": "zzz"]), fake("A-2", ["lane": "backbone"]), fake("A-3", ["lane": "display"]), fake("A-4", [:])]
+        let order = PageOrder(enums: ["lane": ["backbone", "platform", "display"]], statuses: nil)
+        let down = order.arrange(pages, sort: [SortKey(field: "lane", ascending: false)], filters: [:], agreedOnly: false)
+        #expect(down.map(\.id) == ["A-3", "A-2", "A-1", "A-4"])
+    }
+
+    @Test func textSortIgnoresDiacriticsAndCase() {
+        let pages = [fake("A-1", ["role": "Zebra"]), fake("A-2", ["role": "Ärztin"]), fake("A-3", ["role": "arzt"]), fake("A-4", ["role": "Arzu"])]
+        let order = PageOrder(enums: [:], statuses: nil)
+        let up = order.arrange(pages, sort: [SortKey(field: "role")], filters: [:], agreedOnly: false)
+        #expect(up.map(\.id) == ["A-3", "A-2", "A-4", "A-1"])
+    }
+
+    @Test func oneBrokenEntryKeepsTheOthers() {
+        let good = ListState(sort: [SortKey(field: "x")], mode: "list")
+        let text = #"{"A": {"sort": 5}, "B": \#(String(data: try! JSONEncoder().encode(good), encoding: .utf8)!), "C": "nope"}"#
+        #expect(ListStates.decode(text) == ["B": good])
+        let written = ListStates.updating(text, section: "D", with: good)
+        #expect(Set(ListStates.decode(written).keys) == ["B", "D"])
+        let fresh = ListStates.updating("{not json", section: "D", with: good)
+        #expect(ListStates.decode(fresh) == ["D": good])
+    }
+
+    @Test func columnsStartWithTheUniversalFieldsOfTheMetamodel() async throws {
+        let (s, m) = try await model("basic", folder: requirements)
+        let universal = s.metamodel.universalFields
+        #expect(universal.starts(with: ["id", "type", "title", "status"]))
+        #expect(Array(m.columns.prefix(universal.count)) == universal)
+        #expect(m.columns.contains("priority"))
+    }
+
+    @Test func sortPickerOffersOnlyUnusedColumns() async throws {
+        let (_, m) = try await model("basic", folder: requirements)
+        let used = m.state.sort.map(\.field)
+        #expect(m.unusedColumns.allSatisfy { !used.contains($0) })
+        #expect(m.unusedColumns.count == m.columns.count - used.count)
+        let before = m.state.sort
+        m.replaceSortKey(at: 0, with: used[1])
+        m.addSortKey(used[2])
+        #expect(m.state.sort == before)
+    }
+
+    @Test func aReplacedWikiReachesAnExistingModel() async throws {
+        let copy = try Fixture.tempCopy("basic")
+        defer { try? FileManager.default.removeItem(at: copy.deletingLastPathComponent()) }
+        let s = await WikiSession.open(try Preflight.open(copy))
+        let section = try #require(s.metamodel.sections.first { $0.folders.contains(requirements) })
+        let m = ListModel(session: s, section: section)
+        #expect(m.rows.count == 6)
+        let file = copy.appending(path: "wiki/functional-requirements/FR-006-catalog-maintenance.md")
+        try FileManager.default.removeItem(at: file)
+        s.replace(with: LoadedWiki(root: try Preflight.open(copy)))
+        #expect(m.rows.count == 5)
+        #expect(!ids(m).contains("FR-006"))
+    }
+
     @Test func largeListIsQuick() {
         let priorities = ["Must", "Should", "Could", "Won't"]
         let pages = (1...5000).map { n in
@@ -233,7 +337,8 @@ private let requirements = "functional-requirements"
             )
         }
         #expect(result.count == 3334)
-        #expect(time < .milliseconds(200), "took \(time)")
+        // Measured 70 ms in a debug build. The limit leaves a factor of 5 for a loaded CI machine.
+        #expect(time < .milliseconds(400), "took \(time)")
     }
 }
 

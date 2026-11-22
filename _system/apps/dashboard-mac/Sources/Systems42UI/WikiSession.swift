@@ -25,7 +25,7 @@ struct LoadedWiki: Sendable {
                     issues.formUnion(store.openIssues(for: page.ref).map(\.id))
                 }
             }
-            found.openIssues = issues.count
+            found.openIssueIDs = issues
             figures[section.id] = found
         }
         self.config = WikiConfig.load(root)
@@ -71,8 +71,10 @@ struct LoadedWiki: Sendable {
     /// The section whose issues the issues section lists, set by `showIssues(of:)`.
     public private(set) var issueFilter: WikiSection.ID?
 
-    private let figures: [String: SectionFigures]
-    public let orientation: Orientation?
+    private var figures: [String: SectionFigures]
+    public private(set) var orientation: Orientation?
+    /// Counts up each time the loaded wiki is replaced, so models know their rows are stale.
+    public private(set) var revision = 0
     private var history: [Place] = []
     private var position = -1
 
@@ -90,6 +92,15 @@ struct LoadedWiki: Sendable {
         metamodel = loaded.metamodel
         figures = loaded.figures
         orientation = loaded.orientation
+    }
+
+    /// Swaps in a freshly read wiki. Models read through the session, so they follow on their next read.
+    func replace(with loaded: LoadedWiki) {
+        store = loaded.store
+        metamodel = loaded.metamodel
+        figures = loaded.figures
+        orientation = loaded.orientation
+        revision += 1
     }
 
     /// Reads the wiki on the calling thread. The app uses `open(_:)` instead.
@@ -137,8 +148,17 @@ struct LoadedWiki: Sendable {
     /// Selects the section and page a link points at. Other targets and missing pages do nothing.
     public func open(_ target: LinkTarget) {
         guard case .page(let ref) = target, store.page(ref) != nil else { return }
+        issueFilter = nil
         go(to: Place(section: section(of: ref)?.id, page: ref))
     }
+
+    /// The ids of the open issues that point at a page of the section, as the sidebar counts them.
+    func openIssueIDs(of section: WikiSection.ID) -> Set<String> {
+        figures[section]?.openIssueIDs ?? []
+    }
+
+    /// Shows all issues again.
+    public func clearIssueFilter() { issueFilter = nil }
 
     /// Opens the issues section, filtered to the issues that point at `section`.
     public func showIssues(of section: WikiSection.ID) {
@@ -150,6 +170,7 @@ struct LoadedWiki: Sendable {
     /// Shows a section with no page chosen, and records the place. The one way to change section.
     public func select(section id: WikiSection.ID?) {
         guard let id else { return }
+        issueFilter = nil
         go(to: Place(section: id, page: nil))
     }
 

@@ -3,68 +3,130 @@ import Observation
 import Systems42Kit
 
 /// The list of the pages of one section: sort, filters and the rows they give.
+/// Pages and metamodel are read through the session, so a reload reaches an existing model.
 @MainActor @Observable public final class ListModel {
     /// The mode that shows plain rows. Projection modes come with later issues.
     public static let listMode = "list"
-    public static let statusField = UniversalField.status
+    public static let statusField = PageKey.status
     private static let enumKind = "enum"
 
     public let sectionID: WikiSection.ID
     public var state: ListState
-    public let presets: [SortPreset]
-    /// Status first, then every enum field of the section's types, with the values the metamodel declares.
-    public let filterFields: [(field: String, values: [String])]
-    /// The fields a list can sort by: id, title, status and every field of the section's types.
-    public let columns: [String]
     public let modes: [String] = [ListModel.listMode]
 
     private let session: WikiSession
-    private let pages: [Page]
-    private let order: PageOrder
-    @ObservationIgnored private var cache: (state: ListState, agreedOnly: Bool, rows: [Page])?
+    private let fallbackSection: WikiSection
+
+    /// What the metamodel says about the section's types, read again after a reload.
+    private struct Setup {
+        let section: WikiSection
+        let presets: [SortPreset]
+        let columns: [String]
+        let enums: [(field: String, values: [String])]
+        let lifecycle: [String]?
+        let order: PageOrder
+    }
+
+    @ObservationIgnored private var setupCache: (revision: Int, setup: Setup)?
+    @ObservationIgnored private var rowCache: (key: RowKey, rows: [Page])?
+
+    private struct RowKey: Equatable {
+        let state: ListState
+        let agreedOnly: Bool
+        let revision: Int
+        let issueFilter: WikiSection.ID?
+    }
 
     /// `state` is a restored one. Parts of it that name a field the types no longer have are dropped.
     public init(session: WikiSession, section: WikiSection, state: ListState? = nil) {
         self.session = session
         sectionID = section.id
-        let metamodel = session.metamodel
-        let types = section.types.compactMap { metamodel.type(named: $0) }
-        pages = section.folders.flatMap { session.store.pages(in: $0) }
-        presets = section.types.lazy.map { metamodel.sortPresets(for: $0) }.first { !$0.isEmpty } ?? []
+        fallbackSection = section
+        self.state = ListState(mode: Self.listMode)
+        self.state = sanitized(state)
+    }
 
+    private var setup: Setup {
+        if let setupCache, setupCache.revision == session.revision { return setupCache.setup }
+        let metamodel = session.metamodel
+        let section = metamodel.sections.first { $0.id == sectionID } ?? fallbackSection
+        let types = section.types.compactMap { metamodel.type(named: $0) }
         var declared: [String: [String]] = [:]
-        var fieldNames: [String] = [UniversalField.id, UniversalField.title, UniversalField.status]
         var enumNames: [String] = []
+        // Fields every page has come first, in the order the meta-metamodel declares them.
+        let universal = metamodel.universalFields
+        var columns = ([PageKey.id, PageKey.title, PageKey.status].filter { !universal.contains($0) }) + universal
         for field in types.flatMap(\.fields) {
-            if !fieldNames.contains(field.name) { fieldNames.append(field.name) }
+            if !columns.contains(field.name) { columns.append(field.name) }
             guard field.kind == Self.enumKind, !field.values.isEmpty else { continue }
             if declared[field.name] == nil { enumNames.append(field.name) }
             // Types of one section that share a field name share its values, the first type's order first.
             declared[field.name, default: []] += field.values.filter { !(declared[field.name] ?? []).contains($0) }
         }
         let lifecycle = metamodel.lifecycle(of: section)
-        let statuses = lifecycle ?? Array(Set(pages.map(\.status).filter { !$0.isEmpty })).sorted()
-        columns = fieldNames
-        order = PageOrder(enums: declared, statuses: lifecycle)
-        let filterFields = [(field: UniversalField.status, values: statuses)]
-            + enumNames.filter { $0 != UniversalField.status }.map { (field: $0, values: declared[$0] ?? []) }
-        self.filterFields = filterFields
-
-        let first = presets.first?.keys ?? []
-        var restored = state ?? ListState(sort: first, mode: Self.listMode)
-        let known = Set(fieldNames)
-        if !restored.sort.allSatisfy({ known.contains($0.field) }) { restored.sort = first }
-        restored.filters = restored.filters.filter { name, _ in filterFields.contains { $0.field == name } }
-        if restored.mode != Self.listMode { restored.mode = Self.listMode }
-        self.state = restored
+        let setup = Setup(
+            section: section,
+            presets: section.types.lazy.map { metamodel.sortPresets(for: $0) }.first { !$0.isEmpty } ?? [],
+            columns: columns,
+            enums: enumNames.filter { $0 != PageKey.status }.map { (field: $0, values: declared[$0] ?? []) },
+            lifecycle: lifecycle,
+            order: PageOrder(enums: declared, statuses: lifecycle)
+        )
+        setupCache = (session.revision, setup)
+        return setup
     }
 
-    /// The pages that pass the filters, in sort order. Computed again only when state or `agreedOnly` change.
+    private func sanitized(_ restored: ListState?) -> ListState {
+        let first = presets.first?.keys ?? []
+        var result = restored ?? ListState(sort: first, mode: Self.listMode)
+        let known = Set(columns)
+        if !result.sort.allSatisfy({ known.contains($0.field) }) { result.sort = first }
+        let offered = Set(filterFields.map(\.field))
+        result.filters = result.filters.filter { offered.contains($0.key) }
+        if result.mode != Self.listMode { result.mode = Self.listMode }
+        return result
+    }
+
+    private var pages: [Page] { setup.section.folders.flatMap { session.store.pages(in: $0) } }
+
+    public var presets: [SortPreset] { setup.presets }
+    /// The fields a list can sort by: the universal fields, then every field of the section's types.
+    public var columns: [String] { setup.columns }
+
+    /// Status first, then every enum field of the section's types, with the values the metamodel declares.
+    public var filterFields: [(field: String, values: [String])] {
+        let setup = self.setup
+        let statuses = setup.lifecycle ?? Array(Set(pages.map(\.status).filter { !$0.isEmpty })).sorted()
+        return [(field: PageKey.status, values: statuses)] + setup.enums
+    }
+
+    /// The restriction to the open issues about another section, nil when there is none.
+    /// The issues section shows it after the sidebar's "open" link was used.
+    public var issueRestriction: String? {
+        guard let about = session.issueFilter, session.metamodel.issueSection?.id == sectionID else { return nil }
+        let title = session.metamodel.sections.first { $0.id == about }?.title ?? about
+        return "Open issues about \(title)"
+    }
+
+    public func clearIssueRestriction() { session.clearIssueFilter() }
+
+    /// The pages that pass the restriction and the filters, in sort order. Computed again only when
+    /// the state, `agreedOnly`, the restriction or the loaded wiki change.
     public var rows: [Page] {
-        let agreedOnly = session.agreedOnly
-        if let cache, cache.state == state, cache.agreedOnly == agreedOnly { return cache.rows }
-        let rows = order.arrange(pages, sort: state.sort, filters: state.filters, agreedOnly: agreedOnly)
-        cache = (state, agreedOnly, rows)
+        let key = RowKey(
+            state: state,
+            agreedOnly: session.agreedOnly,
+            revision: session.revision,
+            issueFilter: issueRestriction == nil ? nil : session.issueFilter
+        )
+        if let rowCache, rowCache.key == key { return rowCache.rows }
+        var candidates = pages
+        if let about = key.issueFilter {
+            let counted = session.openIssueIDs(of: about)
+            candidates = candidates.filter { counted.contains($0.id) }
+        }
+        let rows = setup.order.arrange(candidates, sort: state.sort, filters: state.filters, agreedOnly: key.agreedOnly)
+        rowCache = (key, rows)
         return rows
     }
 
@@ -74,8 +136,8 @@ import Systems42Kit
 
     /// Short values shown next to the title: the status, then the fields of the first preset.
     public func badges(of page: Page) -> [String] {
-        let shown = [UniversalField.status]
-            + (presets.first?.keys.map(\.field) ?? []).filter { ![UniversalField.id, UniversalField.title, UniversalField.status].contains($0) }
+        let plain = [PageKey.id, PageKey.title, PageKey.status]
+        let shown = [PageKey.status] + (presets.first?.keys.map(\.field) ?? []).filter { !plain.contains($0) }
         return shown.map { value(of: $0, in: page) }.filter { !$0.isEmpty }
     }
 
@@ -93,16 +155,20 @@ import Systems42Kit
 
     public func clearFilters() { state.filters = [:] }
 
+    /// The columns the sort does not use yet.
+    public var unusedColumns: [String] {
+        columns.filter { column in !state.sort.contains { $0.field == column } }
+    }
+
     /// Adds a column as the last key, ascending. A column already in the sort stays where it is.
     public func addSortKey(_ field: String) {
-        guard columns.contains(field), !state.sort.contains(where: { $0.field == field }) else { return }
+        guard unusedColumns.contains(field) else { return }
         state.sort.append(SortKey(field: field))
     }
 
     /// Puts another column in place of the key at `index`. A column already in the sort is left alone.
     public func replaceSortKey(at index: Int, with field: String) {
-        guard state.sort.indices.contains(index), columns.contains(field),
-              !state.sort.contains(where: { $0.field == field }) else { return }
+        guard state.sort.indices.contains(index), unusedColumns.contains(field) else { return }
         state.sort[index] = SortKey(field: field, ascending: state.sort[index].ascending)
     }
 

@@ -70,7 +70,9 @@ private struct SortEditor: View {
                     Picker("Column \(index + 1)", selection: Binding(
                         get: { key.field }, set: { model.replaceSortKey(at: index, with: $0) }
                     )) {
-                        ForEach(model.columns, id: \.self) { Text(FieldLabel.text($0)).tag($0) }
+                        ForEach(model.columns.filter { $0 == key.field || model.unusedColumns.contains($0) }, id: \.self) {
+                            Text(FieldLabel.text($0)).tag($0)
+                        }
                     }
                     .labelsHidden()
                     Button(key.ascending ? "Ascending" : "Descending", systemImage: key.ascending ? "arrow.up" : "arrow.down") {
@@ -83,7 +85,7 @@ private struct SortEditor: View {
                 }
             }
             Menu("Add column") {
-                ForEach(model.columns.filter { column in !model.state.sort.contains { $0.field == column } }, id: \.self) { column in
+                ForEach(model.unusedColumns, id: \.self) { column in
                     Button(FieldLabel.text(column)) { model.addSortKey(column) }
                 }
             }

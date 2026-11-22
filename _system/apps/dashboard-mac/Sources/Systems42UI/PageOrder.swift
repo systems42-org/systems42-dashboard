@@ -1,12 +1,6 @@
 import Foundation
 import Systems42Kit
 
-/// The keys every page has, whatever its type (AGENTS.md: universal frontmatter). Everything else
-/// a list sorts or filters by comes from the metamodel (CON-006).
-enum UniversalField {
-    static let id = "id", title = "title", status = "status"
-}
-
 /// Sorts and filters pages. Pure, so it can be tested without a window.
 struct PageOrder: Sendable {
     /// Declared values in order, per field. Status holds the lifecycle.
@@ -15,7 +9,7 @@ struct PageOrder: Sendable {
     /// `enums`: the declared values of each enum field. `statuses`: the lifecycle, nil when there is none.
     init(enums: [String: [String]], statuses: [String]?) {
         var all = enums
-        if let statuses { all[UniversalField.status] = statuses }
+        if let statuses { all[PageKey.status] = statuses }
         ranks = all.mapValues { values in
             Dictionary(values.enumerated().map { ($1.lowercased(), $0) }, uniquingKeysWith: { first, _ in first })
         }
@@ -32,9 +26,9 @@ struct PageOrder: Sendable {
         case nil:
             // `id` and `title` fall back to the file name in `Page`.
             switch field {
-            case UniversalField.id: return [page.id]
-            case UniversalField.title: return [page.title]
-            case UniversalField.status: return page.status.isEmpty ? [] : [page.status]
+            case PageKey.id: return [page.id]
+            case PageKey.title: return [page.title]
+            case PageKey.status: return page.status.isEmpty ? [] : [page.status]
             default: return []
             }
         }
@@ -58,16 +52,21 @@ struct PageOrder: Sendable {
         let rows = kept.map { page in Row(page: page, cells: sort.map { cell(for: $0.field, in: page) }) }
         return rows.sorted { a, b in
             for (at, key) in sort.enumerated() {
-                switch (a.cells[at], b.cells[at]) {
-                case (nil, nil): continue
-                // A missing value is no small value: last in both directions.
-                case (nil, _): return false
-                case (_, nil): return true
-                case let (x?, y?):
-                    var order = x.rank < y.rank ? ComparisonResult.orderedAscending : x.rank > y.rank ? .orderedDescending : Self.compare(x.text, y.text)
-                    if !key.ascending { order = order == .orderedAscending ? .orderedDescending : order == .orderedDescending ? .orderedAscending : order }
-                    if order != .orderedSame { return order == .orderedAscending }
+                guard let x = a.cells[at], let y = b.cells[at] else {
+                    // A missing value is no small value: last of all, in both directions.
+                    if a.cells[at] == nil, b.cells[at] == nil { continue }
+                    return a.cells[at] != nil
                 }
+                var order: ComparisonResult
+                switch (x.rank, y.rank) {
+                case let (p?, q?): order = p < q ? .orderedAscending : p > q ? .orderedDescending : .orderedSame
+                // A declared value comes before an undeclared one, in both directions.
+                case (_?, nil): return true
+                case (nil, _?): return false
+                case (nil, nil): order = Self.compare(x.text, y.text)
+                }
+                if !key.ascending { order = order == .orderedAscending ? .orderedDescending : order == .orderedDescending ? .orderedAscending : order }
+                if order != .orderedSame { return order == .orderedAscending }
             }
             return Self.idBefore(a.page, b.page)
         }.map(\.page)
@@ -78,21 +77,22 @@ struct PageOrder: Sendable {
         let cells: [Cell?]
     }
 
-    /// The sort value of one field. Declared enum values rank by their position, others rank after them.
+    /// The sort value of one field. `rank` is the position among the declared values of an enum field,
+    /// nil for a value that is not declared and for a field that is no enum.
     private struct Cell {
-        let rank: Int
+        let rank: Int?
         let text: String
     }
 
     private func cell(for field: String, in page: Page) -> Cell? {
         let text = Self.text(of: field, in: page)
         if text.isEmpty { return nil }
-        guard let declared = ranks[field] else { return Cell(rank: 0, text: text) }
-        return Cell(rank: declared[text.lowercased()] ?? declared.count, text: text)
+        return Cell(rank: ranks[field]?[text.lowercased()], text: text)
     }
 
+    /// Numbers count as numbers, case and diacritics are ignored (Arzt next to Ärztin), as in the Go dashboard.
     private static func compare(_ a: String, _ b: String) -> ComparisonResult {
-        a.compare(b, options: [.numeric, .caseInsensitive])
+        a.compare(b, options: [.numeric, .caseInsensitive, .diacriticInsensitive])
     }
 
     private static func idBefore(_ a: Page, _ b: Page) -> Bool {

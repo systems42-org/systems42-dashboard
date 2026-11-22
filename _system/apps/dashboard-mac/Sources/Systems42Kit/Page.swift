@@ -22,6 +22,12 @@ public struct PageRef: Hashable, Sendable {
     }
 }
 
+/// The universal fields the code needs a meaning for. `meta-metamodel` lists the universal fields
+/// (`Metamodel.universalFields`) but does not say which one is the id, the title or the status.
+public enum PageKey {
+    public static let id = "id", title = "title", status = "status"
+}
+
 /// One wiki page. A page that could not be read fully still exists: its
 /// `problems` say what went wrong, and `id` and `title` fall back to the stem.
 public struct Page: Identifiable, Sendable {
@@ -62,13 +68,13 @@ public struct Page: Identifiable, Sendable {
                 return ""
             }
         }
-        let id = scalar("id")
-        let title = scalar("title")
+        let id = scalar(PageKey.id)
+        let title = scalar(PageKey.title)
         self.ref = ref
         self.id = id.isEmpty ? ref.stem : id
         self.type = scalar("type")
         self.title = title.isEmpty ? ref.stem : title
-        self.status = scalar("status")
+        self.status = scalar(PageKey.status)
         self.fields = read.fields
         self.body = split.body
         self.problems = problems

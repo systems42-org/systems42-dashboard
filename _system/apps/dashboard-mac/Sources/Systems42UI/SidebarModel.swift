@@ -34,7 +34,9 @@ let agreedStatus = "accepted"
 struct SectionFigures: Sendable {
     /// Page counts per status, in the order the statuses first appear.
     private(set) var byStatus: [(status: String, count: Int)] = []
-    var openIssues = 0
+    /// The ids of the open issues that point at a page of the section, each issue once.
+    var openIssueIDs = Set<String>()
+    var openIssues: Int { openIssueIDs.count }
 
     var count: Int { byStatus.reduce(0) { $0 + $1.count } }
     var agreed: Int { byStatus.first { $0.status == agreedStatus }?.count ?? 0 }
