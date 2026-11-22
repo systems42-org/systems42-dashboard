@@ -20,11 +20,17 @@ define the content types and conventions.
 
 ## Quick start
 
-1. `./dashboard.sh` (or `make dev`) starts the dashboard in Docker at
-   `http://localhost:8080`. It starts the release that `dashboard_version:` in
-   `_system/wiki.yaml` names. This repository names `local` and builds the
-   dashboard from its own code. Without Docker, `./dashboard.sh uv` (or
-   `make uv`) starts the same release with [uv](https://docs.astral.sh/uv/).
+1. Start the dashboard in one of three ways:
+   - **Docker:** `./dashboard.sh` (or `make dev`) starts the release that
+     `dashboard_version:` in `_system/wiki.yaml` names at
+     `http://localhost:8080`. This repository names `local` and builds from its
+     own code.
+   - **uv (no Docker):** `./dashboard.sh uv` (or `make uv`) starts the same
+     pinned release with [uv](https://docs.astral.sh/uv/).
+   - **Desktop app (no Docker, uv or Python):** install **Systems42 Dashboard**
+     from the release `.dmg` on macOS and open any Systems42 wiki folder (or run
+     `make app-start` / `make app-bundle` in this repository). See
+     [`docs/go-dashboard-requirements-summary.md`](docs/go-dashboard-requirements-summary.md).
 2. Open this folder in Obsidian with **Open folder as vault**.
 3. Point your agent at this folder. `AGENTS.md` holds the rules; Claude Code reads
    it through `CLAUDE.md` and finds the skills in `.claude/skills/`.

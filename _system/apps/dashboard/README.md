@@ -58,9 +58,11 @@ local`: the launcher builds the image from `_system/apps/dashboard/` at every
 start. The launcher hands every command it does not know to `dev.sh` here:
 
 ```sh
-./dashboard.sh rebuild  # build the local image from scratch, then start
-./dashboard.sh local    # no Docker: run Flask directly on http://localhost:8000
-./dashboard.sh test     # run the test scripts in Docker (also `make test`)
+./dashboard.sh rebuild    # build the local image from scratch, then start
+./dashboard.sh local      # no Docker: run Flask directly on http://localhost:8000
+./dashboard.sh app-start  # no Docker: build and start the Go dashboard (also `make app-start`)
+./dashboard.sh app-bundle # macOS: build universal Systems42 Dashboard.app and DMG into dist/ (also `make app-bundle`)
+./dashboard.sh test       # run the test scripts in Docker (also `make test`)
 ```
 
 `local` is the older way to run without Docker and promises nothing. Use
@@ -444,6 +446,80 @@ The metamodel is pinned twice: `test_metamodel_lint.py` runs
 agree with `_system/metamodel/`, with no dashboard code present), and `test_metamodel_page.py`
 checks the `/metamodel` page (loader, graph as a pure projection, every type a
 row with an anchor and a colour token, wikilink resolution, live examples).
+
+## Go implementation
+
+A second implementation of the dashboard in Go lives in this folder next to the
+Python reference (FR-055, DR-007, issue #80). Both share `static/`,
+`templates/`, `brands/`, `help.md` and `VERSION` without copies (`assets.go`
+embeds them with `go:embed`). `Dockerfile` and `pyproject.toml` name their
+files one by one, so Go files stay out of the container image and the wheel.
+
+Phases 0 to 8 are in place with full route parity across every dashboard
+endpoint, a universal macOS desktop app and GitHub Actions release packaging.
+See [`docs/go-dashboard-requirements-summary.md`](../../../docs/go-dashboard-requirements-summary.md)
+for the requirements and trade-offs behind the Go implementation.
+
+- **Server (`cmd/systems42-dashboard/`, `internal/`):** home page, static and
+  brand endpoints, heartbeat/presence API and FR-050 self-shutdown watchdog
+  (`internal/session`), Markdown and wikilink renderer with HTML sanitiser
+  (`internal/render`), `/page/<folder>/<stem>` and `/source/<stem>` detail
+  views, areas (`/req42`, `/arc42`, `/commons`), generic block and section
+  routes (`/req42/<slug>`, `/section/<id>`), `/metamodel`, `/method`,
+  `/changes`, `/issues`, `/stakeholders`, `/decisions`, `/domain-terms`, all
+  Mermaid and cytoscape projections (`internal/project`), search index and
+  filters (`internal/search`: `/search`, `/search.json`), session, help and
+  about routes (`/join`, `/who`, `/help`, `/about`, `/about/files/<path>`,
+  `GET`/`POST /settings`), and the hostile-vault security suite
+  (`internal/web/hostile_vault_test.go`).
+- **macOS desktop app (`macos/`):** native AppKit menu-bar launcher
+  (`AppDelegate.swift`) bundling the universal `CGO_ENABLED=0` Go binary, with
+  folder picker, Finder drag-and-drop, CON-005 preflight alerts, one free port
+  per wiki (`--port 0 --ready-json`), recent wikis stored under
+  `~/Library/Application Support/Systems42 Dashboard/recent.json` (never in the
+  wiki), universal `.dmg` packaging (`make app-bundle`), Homebrew cask
+  (`macos/Casks/systems42-dashboard.rb`), and automated release builds in
+  `.github/workflows/release.yml` (signing and notarisation activate when
+  `APPLE_SIGN_*` and `APPLE_NOTARY_*` secrets are configured).
+
+From the repository root, `make app-start` (or `./dashboard.sh app-start`)
+builds the pure-Go binary into a temporary file, starts it on
+`http://localhost:8080` against this wiki and opens the browser. Ctrl+C stops
+it and removes the temporary binary.
+
+Build and run directly without cgo from this directory:
+
+```sh
+CGO_ENABLED=0 go build ./cmd/systems42-dashboard
+./systems42-dashboard --version
+./systems42-dashboard /path/to/systems42-wiki
+```
+
+Run the Go unit tests and the Python vs Go parity test:
+
+```sh
+go test -race ./...
+uv run --no-project --python 3.12 --with-requirements requirements.txt python tests/test_parity.py
+```
+
+`tests/test_parity.py` starts both implementations on every wiki under
+`tests/fixtures/`, a synthetic notices wiki and this repository's own wiki,
+then compares status codes, CSP and framing headers, normalised HTML, JSON and
+static bytes, and runs `tests/test_search_examples.py` against the live Go
+server. All routes now have parity with 0 entries remaining in `UNPORTED_EXACT`
+and `UNPORTED_PREFIXES`.
+
+**Template spike (issue #80, question 2).** The Go dashboard runs the existing
+40 Jinja2 templates directly through `github.com/nikolalohinski/gonja/v2`
+instead of porting them to `html/template`. Four targeted shims in
+`internal/web/templates.go` cover what `gonja/v2` omits: N-tuple `for`
+unpacking (`base.html`, `_list.html`), top-level `from`/`import`/`set`/`macro`
+statements in child templates that extend `base.html`, module-scoped
+`from ... import ...` for sibling and chained macros (`_trace.html`,
+`_macros.html`, `_list.html`, `_tile.html`), and preserving the safe flag on
+block-`set` captures (`crumbs_html` in `base.html`). `internal/web/template_spike_test.go`
+verifies all 40 templates parse and tests `base.html`, `_macros.html` and
+`detail.html` under the race detector.
 
 ## Obsidian
 

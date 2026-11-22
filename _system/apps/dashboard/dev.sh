@@ -4,10 +4,13 @@
 # repository has this file. The launcher (dashboard.sh in the repository
 # root) hands every command it does not know to this script, so these work:
 #
-#   ./dashboard.sh rebuild  build the local image from scratch, then start
-#   ./dashboard.sh local    run Flask directly, without Docker, on port 8000;
-#                           Ctrl+C stops it
-#   ./dashboard.sh test     run the test scripts in Docker
+#   ./dashboard.sh rebuild    build the local image from scratch, then start
+#   ./dashboard.sh local      run Flask directly, without Docker, on port 8000;
+#                             Ctrl+C stops it
+#   ./dashboard.sh app-start  build and run the Go dashboard without Docker;
+#                             Ctrl+C stops it
+#   ./dashboard.sh app-bundle build the macOS .app bundle and .dmg into dist/
+#   ./dashboard.sh test       run the test scripts in Docker
 #   ./dashboard.sh version X.Y.Z   raise VERSION, as a pull request
 #   ./dashboard.sh publish  publish the release that VERSION names
 #
@@ -158,6 +161,58 @@ case "${1:-}" in
     fi
     wait "$server_pid" || true
     ;;
+  app-start)
+    # Build and start the Go dashboard (FR-055, issue #80) without Docker, in
+    # the foreground. Ctrl+C stops it. The binary goes into a temp file and is
+    # removed on exit so the repository stays clean.
+    command -v go >/dev/null 2>&1 || stop "Go is not installed or not on PATH."
+    port="${DASH_PORT:-8080}"
+    url="http://localhost:$port"
+    if command -v curl >/dev/null 2>&1 && curl -s --max-time 1 -o /dev/null "$url/"; then
+      stop "Port $port is already in use. Stop the other dashboard first (make down), or set DASH_PORT."
+    fi
+    ip=""
+    if command -v ipconfig >/dev/null 2>&1; then
+      ip="$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || true)"
+    elif command -v hostname >/dev/null 2>&1; then
+      ip="$(hostname -I 2>/dev/null | awk '{print $1}' || true)"
+    fi
+    public="${DASH_PUBLIC_URL:-http://${ip:-localhost}:$port}"
+    bin="$(mktemp "${TMPDIR:-/tmp}/systems42-dashboard-go.XXXXXX")"
+    server_pid=""
+    cleanup_app() {
+      if [ -n "$server_pid" ]; then kill "$server_pid" 2>/dev/null || true; fi
+      rm -f "$bin"
+    }
+    trap cleanup_app EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    (cd "$HERE" && CGO_ENABLED=0 go build -o "$bin" ./cmd/systems42-dashboard) || stop "Go build failed."
+    version="$("$bin" --version)"
+    DASH_PORT="$port" DASH_PUBLIC_URL="$public" "$bin" "$ROOT" &
+    server_pid=$!
+    tries=60
+    while :; do
+      kill -0 "$server_pid" 2>/dev/null || stop "The Go dashboard did not start (see the error above)."
+      command -v curl >/dev/null 2>&1 || break
+      curl -sf --max-time 1 -o /dev/null "$url/" && break
+      tries=$((tries - 1))
+      if [ "$tries" -le 0 ]; then echo "… server did not answer yet; reload if the page fails."; break; fi
+      sleep 0.25
+    done
+    echo "✓ Go dashboard ${version} running at ${url} (no Docker). Ctrl+C stops it."
+    echo "✓ Others in the room: ${public} (QR on the home page)"
+    if [ -z "${DASH_NO_BROWSER:-}" ]; then
+      if command -v open >/dev/null 2>&1; then open "$url"
+      elif command -v xdg-open >/dev/null 2>&1; then xdg-open "$url"
+      fi
+    fi
+    wait "$server_pid" || true
+    ;;
+  app-bundle)
+    shift
+    exec "$HERE/macos/build-app.sh" "$@"
+    ;;
   test)
     # The test stage of the Dockerfile: the shipped image's Python and
     # libraries, plus make and node, which some scripts call. The repository
@@ -205,7 +260,7 @@ case "${1:-}" in
     ;;
   *)
     echo "Unknown command: ${1:-}" >&2
-    echo "Usage: ./dashboard.sh [up|down|logs|update|clean|uv|rebuild|local|test|version X.Y.Z|publish]" >&2
+    echo "Usage: ./dashboard.sh [up|down|logs|update|clean|uv|rebuild|local|app-start|app-bundle|test|version X.Y.Z|publish]" >&2
     exit 2
     ;;
 esac
