@@ -28,4 +28,4 @@ context_role:        # context-diagram label / merge key; empty→title, shared 
 **Concerns / pains.**
 - <what they fear, dislike, or are blocked by>
 
-**Interactions.** <[[UC-...]] use cases and [[FR-...]] functional requirements they touch.>
+**Interactions.** <[[FR-...]] functional requirements they touch, including use-case requirements.>

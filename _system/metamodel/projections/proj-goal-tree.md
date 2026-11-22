@@ -5,7 +5,7 @@ name: goal-tree
 aliases: [proj-goal-tree]
 reads:
   - {type: goal, fields: [stereotype, parent, short_title, tile_claim]}
-  - {type: functional-requirement, fields: [stereotype, goal]}
+  - {type: functional-requirement, fields: [notation, level, goal]}
 output: mermaid
 stored: false
 implemented: "/goals and /req42/functional-requirements"

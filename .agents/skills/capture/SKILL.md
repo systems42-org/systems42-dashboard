@@ -11,17 +11,18 @@ argument-hint: "[source file in the raw/ inbox, or empty to pick one]"
 
 # /capture — run one Capture loop
 
-Run the wiki's Capture loop ([[GLO-003-capture]], [[ACT-001-capture]]) on **one**
+Run the wiki's Capture loop ([[DT-003-capture]], [[ACT-001-capture]]) on **one**
 source from the `raw/` inbox. The procedure is `_system/workflows/capture.md`; this
 skill only resolves the argument, enforces the gates, and hands over to it.
 
 ## 1. Resolve the source
 
-`$ARGUMENTS` names the source. Accept a path, a bare filename, or a distinctive
-fragment of the filename; match it against the top level of `raw/` (the inbox —
-not `raw/ingested/`, `raw/sources/`, `raw/assets/`, `raw/examples/`).
+The argument the user gave (`$ARGUMENTS` in Claude Code) names the source.
+Accept a path, a bare filename, or a distinctive fragment of the filename; match
+it against the top level of `raw/` (the inbox — not `raw/ingested/`,
+`raw/sources/`, `raw/assets/`, `raw/examples/`).
 
-| `$ARGUMENTS` | Do |
+| Argument | Do |
 |---|---|
 | matches exactly one inbox file | capture it |
 | matches several | list the matches, ask which one |
@@ -41,9 +42,9 @@ source, in the order given, and keep separate log entries.
 
 - **Before writing any page:** activate the `grill-requirements` skill and
   stress-test the source against the wiki. No page is written before this pass.
-- **Before filing any Issue:** put the open questions to the human in one numbered
-  round (the `grilling` skill, or plainly in chat if that skill is not available —
-  say so). Only what the human leaves unanswered becomes an `ISS-NNN`.
+- **Before filing any Issue:** put the open questions to the human in a closing
+  round (`capture.md` step 6: numbered, each with your recommended answer). Only
+  what the human leaves unanswered becomes an `ISS-NNN`.
 
 ## 4. Done means
 
@@ -62,8 +63,8 @@ Then report to the human, keeping these apart — never lump them under "still o
 - **Not yet captured** — other sources still in the `raw/` inbox. Nothing about
   them is recorded yet; each needs its own capture run.
 
-Say explicitly when the human answered every grilling question, so no Issues
-were needed.
+Say explicitly when the human answered every closing-round question, so no
+Issues were needed.
 
 ## Red flags
 

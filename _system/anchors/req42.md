@@ -37,11 +37,11 @@ them in English throughout, per its ubiquitous-language decision.
 | 01 | Business Goals | `wiki/goals/` — one type, `stereotype: vision\|objective`; the vision is the roof, objectives hang under it via `parent:`; framed via [[PAM]] (req42's primary notation), promoted to [[SMART]] once a horizon is set |
 | 02 | Stakeholders | `wiki/stakeholders/` |
 | 03 | Scope | `wiki/context/` (boundary, in/out-of-scope) + `wiki/external-interfaces/` (neighbours) |
-| 04 | Functional Requirements (DE: Funktionale Anforderungen; called "Product Backlog" until the 2026 edition) | `wiki/functional-requirements/` — one type, `stereotype: epic\|feature\|story`; **Epic → Feature → Story** via `parent:` links, projected as a [[story-mapping\|story map]]; [[user-story-format]], [[acceptance-criteria]], [[INVEST]], [[MoSCoW]]. Plus `wiki/use-cases/` — use cases are functional requirements too, a parallel form with their own `goal:` list (DR-011) |
-| 05 | Supporting Models | `wiki/activity-models/`, `wiki/data-models/` |
-| 06 | Quality Requirements | `wiki/quality-requirements/` ([[Q42]] dimensions + quality scenarios) |
+| 04 | Functional Requirements (DE: Funktionale Anforderungen; called "Product Backlog" until the 2026 edition) | `wiki/functional-requirements/` — one type with notation-specific `level:` vocabularies; Agile defaults to **Epic → Feature → Story**, Cockburn use cases are FRs too; hierarchy via `parent:` and projected as a [[story-mapping\|story map]]; [[user-story-format]], [[acceptance-criteria]], [[INVEST]], [[MoSCoW]] |
+| 05 | Supporting Models | `wiki/activity-models/` and [[proj-entity-diagram|entity diagram]] |
+| 06 | Quality Requirements | `wiki/quality-requirements/` (ISO 25010 + ATAM) |
 | 07 | Constraints | `wiki/constraints/` (arc42 categories) |
-| 08 | Domain Terminology | `wiki/glossary/` (ubiquitous language) |
+| 08 | Domain Terminology | `wiki/domain-terms/` (ubiquitous language) |
 | 09 | Assets | *out of scope* — project resourcing |
 | 10 | Teams | *out of scope* — org/team setup |
 | 11 | Roadmaps | *out of scope* — release planning |
@@ -52,7 +52,7 @@ deliberately don't capture. Section 03 has two types, Context and External inter
 
 ## Checklist (audit / grill — coverage lens)
 - [ ] Goals are explicit and framed ([[PAM]]/[[SMART]]) — no silent work without goals.
-- [ ] Stakeholders, glossary, constraints and quality requirements each have at least the obvious entries.
+- [ ] Stakeholders, domain terms, constraints and quality requirements each have at least the obvious entries.
 - [ ] Functional requirements (stories/features) trace to a goal and a stakeholder.
 - [ ] Supporting models exist where a flow/structure is non-trivial; linked both ways.
 - [ ] Risks & assumptions are captured as Issues / `[!assumption]`, not left implicit.

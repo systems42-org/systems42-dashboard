@@ -14,7 +14,7 @@ judgment call (same stance as `inspect.md`).
 
 1. **Concept identity across types (≈100 % — auto-fix).** Pages of different types that
    share the same kebab slug-suffix (or an identical `title:`) denote the *same domain
-   concept* — e.g. `GLO-010-entity-c` ⇄ `DM-003-entity-c`. They must be reciprocally
+   concept* — e.g. `DT-010-entity-c` ⇄ `BB-003-entity-c`. They must be reciprocally
    linked in `related:`. Add the missing back-link on whichever side omits it.
 2. **Asymmetric `related:` (high — auto-fix).** A lists B in `related:` but B omits A.
    Repair reciprocity — but **only** for the symmetric relation `related:`. Never touch
@@ -28,7 +28,7 @@ judgment call (same stance as `inspect.md`).
    feed — and that node should list the entities it governs. Suggest; let the
    human confirm. Also flag a **raw-path string** (e.g. `` `raw/drafts/…-format-vorschlag.md` ``)
    used where a wikilink to a boundary owner belongs.
-4. **Unlinked mentions (low–medium — candidate).** Prose names a *defined* glossary term
+4. **Unlinked mentions (low–medium — candidate).** Prose names a *defined* domain term
    (its `title:` or an `aliases:` entry) without wrapping it in a wikilink. Inverse of
    `inspect.md`'s "missing pages" check. Higher false-positive rate ⇒ suggest only, with a
    high threshold (skip incidental/self mentions).
@@ -42,18 +42,18 @@ judgment call (same stance as `inspect.md`).
    the `related:` edges in both directions for Tier 2; scan config/import markers plus
    `*-format-vorschlag.md` drafts for Tier 3. Tier 1 + the Tier-2 `related:` reciprocity
    gaps are implemented deterministically in **`_system/scripts/concept-cluster-audit.py`**
-   (`python3 _system/scripts/concept-cluster-audit.py` from the repo root) — act on its
+   (`python3 _system/scripts/concept-cluster-audit.py` from the repo root, using the dashboard’s PyYAML dependency) — act on its
    `GAPS` list. The same script prints each cluster's definition-leads side by side, which
    feeds the *content*-drift review owned by `inspect.md` (conflicting canonical meanings →
    `ISS-NNN`, never auto-merge).
-3. **Tier 4 is the only LLM pass.** Scan prose for glossary titles/aliases that appear
+3. **Tier 4 is the only LLM pass.** Scan prose for domain term titles/aliases that appear
    without a wikilink and decide whether each mention is referential or incidental.
 4. **Classify & act.** Auto-apply Tier-1 (and clearly-symmetric Tier-2) `related:`
    back-links; route everything judgmental to a candidate list / `ISS-NNN`.
 
 ## Output
 1. A **relationship report** in chat, grouped by tier and confidence, each candidate
-   stating the exact edge proposed (e.g. "add `[[DM-003-entity-c]]` to `GLO-010`
+   stating the exact edge proposed (e.g. "add `[[BB-003-entity-c]]` to `DT-010`
    `related:`").
 2. **Auto-fix** only Tier-1 reciprocal `related:` back-links (and exact-match symmetric
    Tier-2). Bump `updated:` on every page you touch.

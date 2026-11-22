@@ -25,4 +25,4 @@ trigger: <what starts it>
 **Exceptions.**
 - <deviation> → <handling>
 
-**Related.** <[[UC-...]], [[FR-...]]>
+**Related.** <[[FR-...]]>

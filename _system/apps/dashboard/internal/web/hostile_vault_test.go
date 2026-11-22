@@ -433,14 +433,14 @@ func TestHostileEveryType(t *testing.T) {
 	})
 
 	typeFolders := map[string]string{
-		"glossary-term": "glossary", "goal": "goals", "stakeholder": "stakeholders",
+		"domain-term": "domain-terms", "goal": "goals", "stakeholder": "stakeholders",
 		"context": "context", "external-interface": "external-interfaces",
-		"data-model": "data-models", "activity-model": "activity-models",
-		"use-case": "use-cases", "functional-requirement": "functional-requirements",
+		"activity-model": "activity-models", "functional-requirement": "functional-requirements",
 		"quality-requirement": "quality-requirements", "constraint": "constraints",
 		"building-block": "building-blocks", "deployment-node": "deployment-nodes",
-		"runtime-scenario": "runtime-scenarios", "concept": "concepts",
-		"decision-record": "decisions", "issue": "issues",
+		"runtime-scenario": "runtime-scenarios", "crosscutting-concept": "crosscutting-concepts",
+		"solution-strategy": "solution-strategy",
+		"decision-record":   "decisions", "issue": "issues",
 	}
 	structural := map[string]bool{
 		"id": true, "type": true, "status": true, "stereotype": true,

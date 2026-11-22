@@ -6,7 +6,7 @@ status: draft         # draft | review | accepted | deprecated
 created: {{date}}
 updated: {{date}}
 sources: []
-related: []           # [[FR-...]], [[QR-...]], [[CON-...]], [[GLO-...]], other [[DR-...]]
+related: []           # [[FR-...]], [[QR-...]], [[CON-...]], [[DT-...]], other [[DR-...]]
 tags: [decision-record]
 aliases: []           # former IDs, e.g. ADR-0012
 kind: undefined       # architecture | business | undefined (only when genuinely unclear)
@@ -14,7 +14,7 @@ decided: {{date}}     # when the decision was taken (not when the page was writt
 decision-makers: []   # optional: names of the people who decided ([[MADR]])
 consulted: []         # optional: names of the people whose advice was sought
 informed: []          # optional: names of the people who were told
-drivers: []           # [[GOAL-...]], [[UC-...]], [[FR-...]], [[QR-...]], [[CON-...]] this decision rests on
+drivers: []           # [[GOAL-...]], [[FR-...]], [[QR-...]], [[CON-...]] this decision rests on
 amends: []            # [[DR-...]] whose points this record changes
 superseded-by: []     # [[DR-...]] successor; set together with status: deprecated
 ---

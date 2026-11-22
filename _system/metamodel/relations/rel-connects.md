@@ -5,7 +5,7 @@ name: connects
 aliases: [rel-connects]
 field: connects
 direction: directed
-semantics: communication
+semantics: association
 inverse: connected-from
 inverse_stored: false
 reciprocity: none
@@ -16,5 +16,5 @@ edges:
 
 # Relation: connects
 
-A channel between nodes (or to an external system), labelled with its protocol in
+A channel between nodes, or to an external system, labelled with its protocol in
 the [[proj-deployment-diagram]].

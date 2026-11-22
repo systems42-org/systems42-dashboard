@@ -212,7 +212,11 @@ func (s *Server) handleEntityDiagram(w http.ResponseWriter, r *http.Request) {
 	}
 
 	diagram := project.BuildDataModelFullDiagram(nodes, edges, ctxFilter, focus)
-	crumb, crumbHref := sectionCrumb(cat, "data-models")
+	// the entity diagram is an R4 projection over domain terms, not a folder of its own
+	var crumb, crumbHref any
+	if sec, ok := cat.SectionForPath("/entity-diagram"); ok {
+		crumb, crumbHref = sec.Title, metamodel.SectionHref(sec)
+	}
 
 	stubs := make([]map[string]any, 0)
 	for _, n := range nodes {

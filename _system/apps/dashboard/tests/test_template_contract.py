@@ -59,7 +59,7 @@ NON_WIKI_PREFIXES = {"SRC"}
 # this repository's own `_templates/` declare only once they are migrated:
 # `_templates/functional-requirement.md` still carries `stereotype:`. Remove
 # the entry with the migration; the test fails once a template declares it.
-KNOWN_UNTIL_MIGRATION = {"notation"}
+KNOWN_UNTIL_MIGRATION: set[str] = set()
 
 
 def _templates() -> list[Path]:

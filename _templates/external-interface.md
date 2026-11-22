@@ -6,7 +6,7 @@ status: draft        # draft | review | accepted | deprecated
 created: {{date}}
 updated: {{date}}
 sources: []
-related: []          # [[CTX-...]] it belongs to, [[UC-...]], [[DM-...]], [[STK-...]]
+related: []          # [[CTX-...]] it belongs to, [[FR-...]], [[DT-...]], [[STK-...]]
 tags: [external-interface]
 partner: <neighbouring SYSTEM on the other side>   # EIF is for real external systems; human roles carry their flows on the [[STK-...]]
 tier:                # optional: supply | support | demand | core-operations — band of the source context diagram this node came from

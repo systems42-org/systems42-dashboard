@@ -3728,7 +3728,10 @@ def _section_crumb(folder: str) -> dict:
     """The section level of a wiki page's path (FR-020): where the page
     belongs, not how the reader got there. A folder outside the sections
     gives no section level, so the path reads Home › page."""
-    sec = catalog.section_for_folder(folder)
+    return _crumb_of(catalog.section_for_folder(folder))
+
+
+def _crumb_of(sec: dict | None) -> dict:
     return {"crumb": sec["title"], "crumb_href": catalog.section_href(sec)} if sec else {"crumb": None, "crumb_href": None}
 
 
@@ -4373,7 +4376,7 @@ def data_model_view():
         matches = [n["key"] for n in nodes if focus in n["aliases"]]
         focus = matches[0] if len(matches) == 1 else None
     diagram = build_data_model_full_diagram(context=context, focus=focus)
-    return render_template("data_model.html", diagram=diagram, **_section_crumb("data-models"),
+    return render_template("data_model.html", diagram=diagram, **_crumb_of(catalog.section_for_path("/entity-diagram")),
                            entities=data_model_entities(), nodes=nodes,
                            contexts=contexts, context=context, focus=focus,
                            stubs=[n for n in nodes if n["stub"]],

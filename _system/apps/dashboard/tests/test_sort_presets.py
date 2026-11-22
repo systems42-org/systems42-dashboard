@@ -50,8 +50,8 @@ def test_a_preset_cannot_be_changed_through_its_result():
 
 
 def test_domain_terms_list_takes_the_declared_term_type():
-    # this repository's metamodel still has glossary-term only
-    assert app.term_type() == "glossary-term"
+    # this repository's metamodel has the domain-term type (meta DR-039)
+    assert app.term_type() == "domain-term"
     real = metamodel.type_for_folder
     try:
         metamodel.type_for_folder = lambda folder: "domain-term" if folder == "domain-terms" else None

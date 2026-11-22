@@ -12,5 +12,5 @@ source: "_system/workflows/relations.md tier 1"
 
 # Rule: same slug, same concept
 
-A `GLO-` term and a `DM-` entity with the same slug denote one domain concept;
-capture adds the link at write time, the linter mops up history.
+A domain term and the building block that implements it can share a name.
+Capture links the two views of that concept.

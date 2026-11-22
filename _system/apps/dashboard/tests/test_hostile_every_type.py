@@ -38,13 +38,13 @@ PAYLOAD = (f'<script>{MARK}()</script><img src=x onerror={MARK}()>'
            f'<span id="settings-dialog" class="fbtn">{MARK}span</span>')
 
 TYPE_FOLDERS = {
-    "glossary-term": "glossary", "goal": "goals", "stakeholder": "stakeholders",
+    "domain-term": "domain-terms", "goal": "goals", "stakeholder": "stakeholders",
     "context": "context", "external-interface": "external-interfaces",
-    "data-model": "data-models", "activity-model": "activity-models",
-    "use-case": "use-cases", "functional-requirement": "functional-requirements",
+    "activity-model": "activity-models", "functional-requirement": "functional-requirements",
     "quality-requirement": "quality-requirements", "constraint": "constraints",
     "building-block": "building-blocks", "deployment-node": "deployment-nodes",
-    "runtime-scenario": "runtime-scenarios", "concept": "concepts",
+    "runtime-scenario": "runtime-scenarios", "crosscutting-concept": "crosscutting-concepts",
+    "solution-strategy": "solution-strategy",
     "decision-record": "decisions", "issue": "issues",
 }
 # fields that steer which projection a page lands in: kept as the template has
@@ -112,10 +112,10 @@ for _name, _folder in TYPE_FOLDERS.items():
 _write(_wiki / "goals" / "GOAL-009-vision.md",
        {"id": "GOAL-009", "title": PAYLOAD, "stereotype": "vision", "beneficiary": [PAYLOAD],
         "tile_claim": PAYLOAD, "short_title": PAYLOAD})
-# domain terms have no template here; take the fields of the fixture's term
+# domain terms: add the fields of the fixture's structured term to the template's pages
 _dt = (HERE / "fixtures/domain-model/wiki/domain-terms/DT-001-customer.md").read_text(encoding="utf-8")
 _dt_fields = yaml.safe_load(_dt.split("---")[1])
-(_wiki / "domain-terms").mkdir()
+(_wiki / "domain-terms").mkdir(exist_ok=True)
 for n, kept in enumerate((True, False), start=1):
     meta = {k: _hostile(v, kept and k in STRUCTURAL) for k, v in _dt_fields.items()}
     meta.update(id=f"DT-00{n}", title=PAYLOAD)
@@ -158,8 +158,8 @@ for stem, title in (("hostile", "HOSTILE"), ("payload", PAYLOAD)):
 # paragraph (the summaries) and in every doc / note / check string
 _mm = _tmp / "metamodel"
 shutil.copytree(ROOT / "_system" / "metamodel", _mm)
-# the shipped requirement notations (this repository's metamodel has none yet)
-shutil.copytree(HERE / "fixtures" / "notations", _mm / "notations")
+# the shipped requirement notations, plus the fixture ones
+shutil.copytree(HERE / "fixtures" / "notations", _mm / "notations", dirs_exist_ok=True)
 # a project notation that is the payload through and through (DR-038)
 _own_notations = _tmp / "notations"
 _own_notations.mkdir()

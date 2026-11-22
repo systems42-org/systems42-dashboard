@@ -7,10 +7,10 @@ Produce a view over the wiki for a specific audience or question. Reports are
 
 - **Open issues** — current `ISS-NNN` by severity/status, read from `wiki/issues/`.
   Generated on demand; no standing file.
-- **Requirements coverage** — epics → features → stories → acceptance criteria, plus use-cases;
+- **Requirements coverage** — Agile epics → features → stories → acceptance criteria, plus other FR notations;
   highlight gaps.
 - **Stakeholder matrix** — influence × interest grid, with linked goals/concerns.
-- **Quality scenarios** — all `QR-NNN` as a [[Q42]] quality-scenario table; flag untestable ones.
+- **Quality scenarios** — all `QR-NNN` as an ATAM-style table; flag untestable ones.
 - **Glossary** — the agreed ubiquitous language, alphabetized, contested terms marked.
 - **Traceability** — from a source or stakeholder goal down to the stories that serve it.
 

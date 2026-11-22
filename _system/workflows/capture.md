@@ -2,7 +2,7 @@
 
 Turn one raw source into typed, interlinked wiki knowledge. This workflow was
 called **ingest** until 2026-10; "capture" is the Systems42 name for the same
-loop (see [[GLO-003-capture]] and [[ACT-001-capture]]).
+loop (see [[DT-003-capture]] and [[ACT-001-capture]]).
 
 ## The loop in one breath
 
@@ -24,14 +24,14 @@ gaps, and let decisions crystallise. Only once the grilling has settled the shar
 understanding do you proceed to the steps below. Do not skip this gate, even for
 sources that look obvious.
 
-**Two grills, and they are not the same one.** `grill-requirements` (this gate)
-stress-tests the *material* against the wiki before you write anything.
-**`grilling`** (step 6) interviews the *human* to settle the questions that
-survive the writing. The first gates starting a capture; the second gates filing
-an Issue.
+**Two passes, and they are not the same one.** `grill-requirements` (this gate)
+stress-tests the *material* against the wiki before you write anything. The
+**closing round** (step 6) asks the *human* the questions that survive the
+writing. The first gates starting a capture; the second gates filing an Issue.
 
-**Language (this project):** You may grill and ask in any language. Every page
-you write below is English throughout (see the Language convention in AGENTS.md).
+**Language:** The ubiquitous language is English (see the **Language**
+convention in `AGENTS.md`). You may grill and ask in any
+language, but every page you write below is captured **in English.**
 
 ## Steps
 
@@ -49,25 +49,61 @@ you write below is English throughout (see the Language convention in AGENTS.md)
 3. **Read & discuss.** Read the source fully. Surface the key takeaways to the
    human *before* writing pages. Agree on emphasis.
 4. **Extract by type.** For each piece of requirements knowledge, decide its type
-   (glossary / goal / stakeholder / context / external-interface / data-model /
-   activity-model / use-case / functional-requirement with `stereotype: epic | feature | story` /
-   quality-requirement / constraint). Prefer extending an existing page
+   (domain-term / goal / stakeholder / context / external-interface /
+   activity-model / functional-requirement with `notation:` and `level:` /
+   quality-requirement / constraint / building-block / solution-strategy /
+   runtime-scenario / deployment-node / crosscutting-concept). Prefer extending an existing page
    over creating a near-duplicate — check `_system/index.md` first.
 5. **Write / update pages.** Use the matching template. Assign the next free
-   `TYPE-NNN`. Wikilink every cross-reference. If the page is the *same domain concept*
-   as an existing page of another type (same slug/title — e.g. a `DM-` entity for an
-   existing `GLO-` term), add the reciprocal `related:` link on **both** pages now
+   `TYPE-NNN`: one above the highest ID ever used, never a retired one of this wiki
+   (retirements are named in `_system/log.md`, so the highest page on disk may not be the highest used). Wikilink every cross-reference. Add a stereotype and structure to an
+   existing domain term when needed. Keep one term page per meaning and context. If the page is the *same domain concept*
+   as an existing page of another type (same slug/title — e.g. a building block that implements an
+   existing domain term), add the reciprocal `related:` link on **both** pages now
    (Tier 1 of `relations.md`, so the relationship inspection stays cleanup). Link the source
    in `sources:` and add the page to the source's `ingested-pages:`. Apply the relevant
    `_system/anchors/` standard (goal frame, story format/quality, priority) and
    cite it; flag conformance gaps as Issues per step 6.
+   A **functional requirement** takes its notation in this order: one the human
+   chose explicitly for it; else `default_notation` in `_system/wiki.yaml`; else
+   `agile` (FR-004, FR-023). Building-block defaults (FR-019) are not configurable
+   yet; when the human names one, treat it as an explicit choice. Store the result
+   in `notation:` and never change it later without asking. The page is the shared
+   frontmatter of `_templates/functional-requirement.md` plus the body of the
+   notation file (`_system/metamodel/notations/notation-<name>.md`, or
+   `_system/notations/<name>.md` for a project notation), keeping only the
+   blocks whose `levels:` marker names the page's `level:`. Set
+   `building-blocks:` to the blocks the requirement concerns (FR-005).
+   Before changing an FR with `delivery: implemented` or `partial`, tell the
+   human that this edit makes its implementation claim subject to a drift check.
+   After the edit, Inspect marks it `outdated`; do not restore its former value
+   without the human's explicit confirmation that the meaning did not change.
 6. **Ask first, then flag.** Every contradiction with existing content, gap,
-   ambiguity, untestable quality requirement or missing stakeholder is a **question
-   before it is an Issue.** Collect them all, then activate the **grilling**
-   skill (Skill tool, `grilling`; the human starts the same interview with
-   `/grill-me`) and put the whole frontier to the human in one numbered round,
-   each question carrying your recommended answer. Look up anything the wiki
-   can already answer yourself — finding facts is your job, deciding is theirs.
+   ambiguity, untestable quality goal or missing stakeholder is a **question
+   before it is an Issue.** Collect them all and put them to the human in a
+   **closing round**:
+
+   - **One message, every question that can be asked now.** Number them. Each
+     names the page or claim it concerns, lays out the options where there
+     are any, and ends with the answer you recommend and why.
+   - **Hold back what depends on another open answer.** A question that only
+     makes sense once a different one is settled waits for the next round;
+     asking it now forces the human to guess.
+   - **Look facts up yourself.** Anything the wiki, the sources or the
+     repository can answer is not a question. Finding facts is your job;
+     deciding is the human's.
+   - **Then wait, and go again.** Settled answers often unlock new questions;
+     ask those in the next round. Stop when nothing is left to ask.
+
+   A round looks like this:
+
+   ```
+   **Q1 — <short title>** (<page or claim>)
+   <the question, with the options if there are any>
+   → Recommended: <answer>, because <reason>.
+
+   **Q2 — …**
+   ```
 
    Write whatever the human settles straight into the pages. Whatever they
    decline, defer, or cannot answer becomes an `ISS-NNN` linking both sides,
@@ -75,29 +111,15 @@ you write below is English throughout (see the Language convention in AGENTS.md)
    leaves unanswered is enough to fall back to Issues, so a capture never
    blocks on an open question.
 
-   The skill ships with this repo, in `.agents/skills/grilling/`. If it is not
-   among your available skills anyway, **say so plainly** and file the Issues
-   without it. A missing skill is a loud fallback, never a silent one.
-
    Never silently overwrite a conflicting claim, and never pick a side on your
-   own. A grilled answer is the human deciding; an ungrilled one is you
+   own. An answered question is the human deciding; an unasked one is you
    guessing.
 7. **Update index.** Add/adjust entries in `_system/index.md` under the right type heading.
    A decision record the session produced goes under **Decisions** like any other type.
    When a source gives the *reason* for a decision or a building block, fill its
    `drivers:` with the goals, use cases, FRs, QRs or constraints named — linked,
    not restated. Building blocks follow [[arc42]] section 5: one page per block,
-   `parent:` for the level, `uses:` for dependencies. Deployment nodes (section 7),
-   runtime scenarios (section 6) and crosscutting concepts (section 8) follow the
-   same pattern. When a source describes **existing** infrastructure or software,
-   set `state: current` (`outdated` if it is no longer in use, `planned` if it is
-   decided but not built); naming its technology (Keycloak, LDAP, …) is allowed on
-   architecture pages and, as a rule, not in requirements (DR-004 as amended by
-   DR-010). Exceptions are allowed, because requirements and architecture share
-   a grey zone (encryption, deployment and infrastructure technology), and a
-   project whose subject is technology names it in its requirements. Fill
-   `drivers:` only with reasons the source gives; an element whose reason nobody
-   knows goes to the human as a question (archaeology), not a guess.
+   `parent:` for the level, `uses:` for dependencies.
 8. **Append to `_system/log.md`.** `## [YYYY-MM-DD] capture | <source title>` followed by a
    terse list of pages created/updated and issues raised.
 9. **Archive the source.** Move the captured original from the `raw/` inbox

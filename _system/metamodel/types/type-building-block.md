@@ -21,7 +21,7 @@ fields:
   - {name: state, kind: enum, values: [outdated, current, planned, target], doc: "outdated = historical, no longer in use; current = in use today; planned = decided, not built yet; target = the intended end state; empty = target"}
   - {name: superseded-by, kind: link, relation: superseded-by, doc: "on a replaced page: its successor"}
 anchors: [arc42]
-projections: [bb-tree, whitebox, deployment-diagram, sequence-diagram, governed-by]
+projections: [bb-tree, whitebox, governed-by]
 ---
 
 # Type: building block

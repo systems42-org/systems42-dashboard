@@ -2,8 +2,7 @@
 """Concept-cluster audit — deterministic implementation of relations.md Tiers 1-2.
 
 A single domain concept (e.g. "Entity E") legitimately appears across several content
-types as different lenses: a glossary term (what the word means), a data-model entity
-(what we store), a stakeholder (what the actor wants). That is *projection*, not
+types as different lenses: a domain term describes it and a building block implements it. That is *projection*, not
 redundancy — the right handling is to LINK the lenses, never to merge them.
 
 This script finds those multi-lens clusters by grouping pages on normalized
@@ -22,6 +21,12 @@ import os
 import re
 import glob
 from collections import defaultdict
+from pathlib import Path
+
+try:
+    import yaml
+except ImportError:
+    raise SystemExit("concept-cluster-audit needs PyYAML (included in the dashboard dependencies)")
 
 WIKI = "wiki"
 LEAD_LABELS = ["Definition", "Purpose", "Snapshot", "Identity"]
@@ -29,36 +34,33 @@ ID_RE = re.compile(r"\[\[([A-Z]{2,4}-\d{3})")
 
 
 def parse(path):
-    txt = open(path, encoding="utf-8").read()
+    txt = Path(path).read_text(encoding="utf-8")
     m = re.match(r"^---\n(.*?)\n---\n(.*)$", txt, re.S)
     if not m:
         return None
     fm, body = m.group(1), m.group(2)
 
-    def field(name):
-        mm = re.search(rf"^{name}:\s*(.*)$", fm, re.M)
-        return mm.group(1).strip().strip('"').strip("'") if mm else ""
-
-    idv = field("id")
-    if not idv:
+    try:
+        meta = yaml.safe_load(fm)
+    except yaml.YAMLError as exc:
+        raise SystemExit(f"{path}: {exc}")
+    if not isinstance(meta, dict) or not meta.get("id"):
         return None
-    aliases = []
-    am = re.search(r"^aliases:\s*(\[.*\])\s*$", fm, re.M)
-    if am:
-        aliases = [a.strip().strip('"').strip("'")
-                   for a in am.group(1).strip("[]").split(",") if a.strip()]
+    aliases = meta.get("aliases") or []
+    if isinstance(aliases, str):
+        aliases = [aliases]
     leads = []
     for label in LEAD_LABELS:
         mm = re.search(rf"\*\*{label}\.\*\*\s*(.*?)(?:\n\n|\Z)", body, re.S)
         if mm:
             lead = re.sub(r"\s+", " ", mm.group(1)).strip()[:240]
             leads.append(f"{label}: {lead}")
-    role = field("role")
+    role = str(meta.get("role") or "")
     if role:
         leads.append(f"role(fm): {role[:240]}")
     return dict(
-        path=path, id=idv, type=field("type"),
-        title=field("title"), aliases=aliases,
+        path=path, id=str(meta["id"]), type=meta.get("type"),
+        title=str(meta.get("title") or ""), aliases=[a for a in aliases if isinstance(a, str)],
         folder=os.path.basename(os.path.dirname(path)),
         refs=set(ID_RE.findall(fm)) | set(ID_RE.findall(body)),
         leads=leads,

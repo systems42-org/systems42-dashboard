@@ -26,7 +26,7 @@ _mm = _tmp / "_system" / "metamodel"
 shutil.copytree(REPO / "_system" / "metamodel", _mm)
 (_mm / "altitude.md").unlink(missing_ok=True)
 (_mm / "types" / "type-use-case.md").unlink(missing_ok=True)   # use cases are a notation now
-shutil.copytree(HERE / "fixtures" / "notations", _mm / "notations")
+shutil.copytree(HERE / "fixtures" / "notations", _mm / "notations", dirs_exist_ok=True)
 # a rule narrowed by notation and level, as rule-fr-traces-to-goal is in DR-038
 _rule = _mm / "rules" / "rule-fr-traces-to-goal.md"
 _rule.write_text(_rule.read_text(encoding="utf-8").replace(
