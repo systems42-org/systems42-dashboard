@@ -26,9 +26,12 @@ public indirect enum Block: Equatable, Sendable {
 public struct RenderedPage: Equatable, Sendable {
     public let follows: [String]
     public let blocks: [Block]
+    /// Why the page is not formatted, in plain words. Empty for a sound page.
+    public let problems: [String]
 
-    public init(follows: [String], blocks: [Block]) {
+    public init(follows: [String], blocks: [Block], problems: [String] = []) {
         self.follows = follows
         self.blocks = blocks
+        self.problems = problems
     }
 }

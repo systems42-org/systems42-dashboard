@@ -6,18 +6,180 @@ import Markdown
 /// `resolve` tells what a wikilink points at, `title` what to show for a link without a label.
 /// Page text never becomes anything but these values: raw HTML is text, and a link
 /// is an outside link only with the scheme `http`, `https` or `mailto`.
+///
+/// The closures run on a worker thread while the caller waits. A page nested more deeply than
+/// the parser's stack allows (see `nestingBound`) is returned as one code block with a problem.
 public func renderPage(
     _ body: String,
+    resolve: (Wikilink) -> LinkTarget,
+    title: (LinkTarget) -> String?
+) -> RenderedPage {
+    let text = body.replacingOccurrences(of: "\r\n", with: "\n")
+    guard nestingBound(text) <= maxNesting else {
+        return RenderedPage(follows: [], blocks: [.code(language: nil, body)], problems: [tooDeepProblem])
+    }
+    return StackWorker.shared.run { convertPage(text, resolve: resolve, title: title) }
+}
+
+let tooDeepProblem = "This page is nested too deeply to format. It is shown as plain text."
+
+/// The most `nestingBound` allows. Measured in a debug build, the worst vector (lists by indent) costs
+/// about 3.5 KB of stack per counted unit, so 10,000 take 35 MB of the worker's 128 MB.
+/// The live wiki's highest bound is 151.
+let maxNesting = 10_000
+
+/// An upper bound on how deep the parser's tree can get, counted in one pass over the text.
+/// It never counts less than the real depth, because every level of every nesting construct
+/// needs at least one counted character of its own:
+/// - block quote: one `>` per level. Lazy continuation continues a quote, it opens none.
+/// - list item: one marker per level, `-`, `+`, `*`, or digits with `.` or `)`. A marker sits in the
+///   leading run of its line, which holds nothing but spaces, tabs, `>` and other markers.
+///   Counted are `-`, `+`, `.`, `)` there. A `*` is counted everywhere, the digits are not needed.
+/// - emphasis and strong emphasis: one or two `*` or `_` per level.
+/// - strikethrough: `~` per level.
+/// - link and image: a `[` per level (an image is `![`). A reference form uses `[` as well.
+/// - Not nesting: code, HTML, autolinks, headings, tables (their cells hold inlines, counted above),
+///   thematic breaks, entities.
+/// The sum over the whole document is at least the maximum over any path, so no
+/// per-paragraph reasoning is needed. It is also a loose bound: it grows with page length.
+func nestingBound(_ text: String) -> Int {
+    var count = 0
+    var inLeadingRun = true
+    for byte in text.utf8 {
+        switch byte {
+        case UInt8(ascii: "\n"):
+            inLeadingRun = true
+        case UInt8(ascii: "*"), UInt8(ascii: ">"):
+            count += 1
+        case UInt8(ascii: "_"), UInt8(ascii: "~"), UInt8(ascii: "["):
+            count += 1
+            inLeadingRun = false
+        case UInt8(ascii: "-"), UInt8(ascii: "+"), UInt8(ascii: "."), UInt8(ascii: ")"):
+            if inLeadingRun { count += 1 }
+        case UInt8(ascii: " "), UInt8(ascii: "\t"), UInt8(ascii: "0")...UInt8(ascii: "9"):
+            break
+        default:
+            inLeadingRun = false
+        }
+    }
+    return count
+}
+
+/// Parses and converts on the calling thread. `renderPage` calls it on the worker.
+func convertPage(
+    _ text: String,
     resolve: (Wikilink) -> LinkTarget,
     title: (LinkTarget) -> String?
 ) -> RenderedPage {
     withoutActuallyEscaping(resolve) { resolve in
         withoutActuallyEscaping(title) { title in
             let renderer = PageRenderer(resolve: resolve, title: title)
-            let text = renderer.prepare(body.replacingOccurrences(of: "\r\n", with: "\n"))
-            let blocks = renderer.blocks(of: Document(parsing: text), depth: 0)
-            return RenderedPage(follows: renderer.follows, blocks: blocks)
+            let source = renderer.dropFollowsNotes(text)
+            var document = Document(parsing: source)
+            if let fixed = escapingWikilinkPipes(in: source, document: document) {
+                document = Document(parsing: fixed)
+            }
+            let blocks = renderer.blocks(of: document, depth: 0)
+            return RenderedPage(follows: renderer.follows, blocks: blocks, problems: [])
         }
+    }
+}
+
+/// A pipe inside `[[target|label]]` splits a table cell. Go replaces wikilinks before parsing, so
+/// there the cell stays whole. Here, `\|` on the lines of tables, and of paragraphs of
+/// several lines (a table whose header row the pipes broke is no table yet), keeps it whole. The text of
+/// the link is the same afterwards, and `Wikilink` reads `[[a\|b]]` as target `a`, label `b`.
+/// Returns nil when nothing needs escaping.
+private func escapingWikilinkPipes(in source: String, document: Document) -> String? {
+    let bytes = Array(source.utf8)
+    let needsEscape = Wikilink.matches(in: source).contains { match in
+        match.utf8Range.contains { bytes[$0] == UInt8(ascii: "|") && bytes[$0 - 1] != UInt8(ascii: "\\") }
+    }
+    guard needsEscape else { return nil }
+    var lines: Set<Int> = []
+    var codeSafe: Set<Int> = []  // lines of a plain paragraph, where a backtick may open code
+    var stack: [Markup] = [document]
+    while let node = stack.popLast() {
+        if node is Table || node is Paragraph, let range = node.range {
+            if node is Table || range.upperBound.line > range.lowerBound.line {
+                for line in range.lowerBound.line...range.upperBound.line {
+                    lines.insert(line)
+                    if node is Paragraph { codeSafe.insert(line) }
+                }
+            }
+        }
+        if !(node is Table || node is Paragraph) { stack.append(contentsOf: node.children) }
+    }
+    guard !lines.isEmpty else { return nil }
+    var all = source.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+    var changed = false
+    for number in lines where number >= 1 && number <= all.count {
+        let bytes = Array(all[number - 1].utf8)
+        var out: [UInt8] = []
+        var position = 0
+        for match in Wikilink.matches(in: all[number - 1]) {
+            let range = match.utf8Range
+            if codeSafe.contains(number), bytes[..<range.lowerBound].filter({ $0 == UInt8(ascii: "`") }).count % 2 == 1 {
+                continue  // inside a code span, a backslash would show
+            }
+            out += bytes[position..<range.lowerBound]
+            for index in range {
+                if bytes[index] == UInt8(ascii: "|"), bytes[index - 1] != UInt8(ascii: "\\") {
+                    out.append(UInt8(ascii: "\\")); changed = true
+                }
+                out.append(bytes[index])
+            }
+            position = range.upperBound
+        }
+        out += bytes[position...]
+        all[number - 1] = String(decoding: out, as: UTF8.self)
+    }
+    return changed ? all.joined(separator: "\n") : nil
+}
+
+/// One thread with a large stack. The parser recurses once or more per nesting level, and a
+/// thread of a caller has 512 KB or 8 MB. Callers wait, so one job runs at a time.
+final class StackWorker: @unchecked Sendable {
+    static let shared = StackWorker()
+    static let stackSize = 128 << 20
+
+    private let lock = NSLock()
+    private let wake = DispatchSemaphore(value: 0)
+    private let done = DispatchSemaphore(value: 0)
+    private var job: (() -> Void)?
+    private var thread: Thread?
+
+    private init() {
+        let thread = Thread { [self] in loop() }
+        thread.stackSize = Self.stackSize
+        thread.name = "Systems42 page renderer"
+        self.thread = thread
+        thread.start()
+    }
+
+    private func loop() {
+        while true {
+            wake.wait()
+            do {
+                let work = job
+                job = nil
+                work?()
+            }
+            done.signal()
+        }
+    }
+
+    func run<T>(_ work: () -> T) -> T {
+        if Thread.current === thread { return work() }
+        lock.lock()
+        defer { lock.unlock() }
+        var result: T?
+        withoutActuallyEscaping(work) { work in
+            job = { result = work() }
+            wake.signal()
+            done.wait()
+        }
+        return result!
     }
 }
 
@@ -29,6 +191,7 @@ public func renderInline(
     title: (LinkTarget) -> String?
 ) -> [Inline] {
     let page = renderPage(text, resolve: resolve, title: title)
+    guard page.problems.isEmpty else { return [.text(text)] }
     switch page.blocks.first {
     case .paragraph(let inlines)?, .heading(_, let inlines)?:
         if page.blocks.count == 1 { return inlines }
@@ -59,15 +222,13 @@ private final class PageRenderer {
         if !trimmed.isEmpty, seenFollows.insert(trimmed.lowercased()).inserted { follows.append(trimmed) }
     }
 
-    /// Before parsing, line by line outside fenced code:
-    /// - removes `> follows ...` notes (FR-035). Same rule as the Go dashboard: a note without a
-    ///   link and with more than 6 words or any of `.!?;:` is an ordinary quote.
-    /// - bounds how deep the text can nest. The parser overflows a 512 KB stack at about 400 levels
-    ///   of quotes, lists or emphasis, so a hostile page must not reach that.
-    func prepare(_ body: String) -> String {
-        var kept: [String] = []
+    /// Removes `> follows ...` notes outside fenced code (FR-035). The fence rule is the Go
+    /// dashboard's. A note without a link and with more than 6 words or any of `.!?;:` is an
+    /// ordinary quote and stays.
+    func dropFollowsNotes(_ body: String) -> String {
+        guard body.contains("follows") else { return body }
+        var kept: [Substring] = []
         var fence: (char: Character, length: Int)?
-        var emphasis = 0  // delimiters used so far in this paragraph
         for line in body.split(separator: "\n", omittingEmptySubsequences: false) {
             if let open = Self.fence(of: line) {
                 if let current = fence {
@@ -75,15 +236,11 @@ private final class PageRenderer {
                 } else {
                     fence = open
                 }
-                emphasis = 0
-                kept.append(String(line))
-            } else if fence != nil {
-                kept.append(String(line))
-            } else if let note = Self.followsNote(line), takeFollowsNote(note) {
+                kept.append(line)
+            } else if fence == nil, let note = Self.followsNote(line), takeFollowsNote(note) {
                 continue
             } else {
-                if line.allSatisfy(\.isWhitespace) { emphasis = 0 }
-                kept.append(Self.boundedEmphasis(Self.boundedPrefix(line), used: &emphasis))
+                kept.append(line)
             }
         }
         return kept.joined(separator: "\n")
@@ -96,91 +253,11 @@ private final class PageRenderer {
             if note.split(whereSeparator: \.isWhitespace).count > 6 || note.contains(where: { ".!?;:".contains($0) }) {
                 return false
             }
-            addFollow(note.lowercased().hasPrefix("the ") ? String(note.dropFirst(4)) : note)
+            addFollow(Self.withoutLeadingThe(note))
         } else {
             links.forEach { addFollow($0.name) }
         }
         return true
-    }
-
-    private static let maxMarkers = 12, maxIndent = 48, maxDelimiters = 150
-
-    /// Keeps the first quote and list markers of a line, and at most 48 spaces of indent.
-    /// Further markers are dropped and their text stays.
-    private static func boundedPrefix(_ line: Substring) -> Substring {
-        var out = ""
-        var rest = line
-        var markers = 0
-        var indent = 0
-        while let first = rest.first {
-            if first == " " || first == "\t" {
-                if markers == 0 { indent += 1 }
-                if markers == 0 ? indent <= maxIndent : markers <= maxMarkers { out.append(first) }
-                rest = rest.dropFirst()
-                continue
-            }
-            let width = markerWidth(rest)
-            guard width > 0 else { break }
-            markers += 1
-            if markers <= maxMarkers { out += rest.prefix(width) }
-            rest = rest.dropFirst(width)
-        }
-        return markers <= maxMarkers && indent <= maxIndent ? line : Substring(out + rest.drop { $0 == " " || $0 == "\t" })
-    }
-
-    /// The length of a quote or list marker at the start of `text`, else 0.
-    private static func markerWidth(_ text: Substring) -> Int {
-        guard let first = text.first else { return 0 }
-        if first == ">" { return 1 }
-        let next = text.dropFirst().first
-        if "-*+".contains(first), next == " " || next == "\t" { return 1 }
-        let digits = text.prefix { $0.isASCII && $0.isNumber }
-        if (1...9).contains(digits.count), let mark = text.dropFirst(digits.count).first, mark == "." || mark == ")",
-           let after = text.dropFirst(digits.count + 1).first, after == " " || after == "\t" {
-            return digits.count + 1
-        }
-        return 0
-    }
-
-    /// Escapes `*` and `_` beyond the 150th of a paragraph, outside code spans, so that
-    /// emphasis cannot nest deeper than that. The escaped character shows as itself.
-    private static func boundedEmphasis(_ line: Substring, used: inout Int) -> String {
-        guard line.contains(where: { $0 == "*" || $0 == "_" }) else { return String(line) }
-        var out = ""
-        let chars = Array(line)
-        var i = 0
-        while i < chars.count {
-            let c = chars[i]
-            if c == "\\" {
-                out.append(c)
-                if i + 1 < chars.count { out.append(chars[i + 1]) }
-                i += 2
-            } else if c == "`" {
-                let run = chars[i...].prefix { $0 == "`" }.count
-                var end = i + run
-                var close: Int?
-                while end < chars.count {
-                    if chars[end] == "`" {
-                        let length = chars[end...].prefix { $0 == "`" }.count
-                        if length == run { close = end + length; break }
-                        end += length
-                    } else {
-                        end += 1
-                    }
-                }
-                let stop = close ?? i + run
-                out += String(chars[i..<stop])
-                i = stop
-            } else {
-                if c == "*" || c == "_" {
-                    used += 1
-                    if used > maxDelimiters { out.append("\\") }
-                }
-                out.append(c)
-                i += 1
-            }
-        }
-        return out
     }
 
     private static func fence(of line: Substring) -> (char: Character, length: Int)? {
@@ -200,6 +277,12 @@ private final class PageRenderer {
         guard rest.first == " " || rest.first == "\t" else { return nil }
         let note = rest.trimmingCharacters(in: .whitespaces)
         return note.isEmpty ? nil : note
+    }
+
+    /// Go's `^the\s+`, case-insensitive. Parentheses stay: `(the X)` keeps its `(the`.
+    private static func withoutLeadingThe(_ note: String) -> String {
+        guard note.lowercased().hasPrefix("the"), note.dropFirst(3).first?.isWhitespace == true else { return note }
+        return String(note.dropFirst(3).drop { $0.isWhitespace })
     }
 
     /// `<!-- follows [[Q42]], https://... -->`: the links are formats the page follows.
@@ -332,17 +415,21 @@ private final class PageRenderer {
             out.append(contentsOf: textInlines(run, inLink: inLink))
             run = ""
         }
+        var afterComment = false  // a removed comment must not leave two spaces
         for node in nodes {
+            let gapClosed = afterComment
+            afterComment = false
             if depth >= maxInlineDepth {
                 run += Self.plainText(of: node)
                 continue
             }
             switch node {
-            case let text as Text: run += text.string
+            case let text as Text:
+                run += gapClosed && run.last == " " ? String(text.string.drop { $0 == " " }) : text.string
             case is SoftBreak: run += " "
             case is LineBreak: run += "\n"
             case let html as InlineHTML:
-                if !takeFollowsComment(html.rawHTML) { run += html.rawHTML }
+                if takeFollowsComment(html.rawHTML) { afterComment = true } else { run += html.rawHTML }
             case let code as InlineCode:
                 flush(); out.append(.code(code.code))
             case let emphasis as Emphasis:

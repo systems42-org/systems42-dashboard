@@ -64,7 +64,7 @@ private func urls(_ blocks: [Block]) -> [Inline] {
 
 private func plain(_ blocks: [Block]) -> String { text(allInlines(blocks).filter { if case .text = $0 { true } else { false } }) }
 
-@Suite struct MarkdownBlocksTests {
+@Suite(.serialized) struct MarkdownBlocksTests {
     // MARK: the brief
 
     @Test func wikilinkWithLabel() throws {
@@ -338,8 +338,7 @@ private func plain(_ blocks: [Block]) -> String { text(allInlines(blocks).filter
     // MARK: robustness
 
     @Test func deepQuotesAreCappedAndKeepTheirText() throws {
-        let body = String(repeating: "> ", count: 2000) + "deep text\n"
-        let result = try blocks(body)
+        let result = try blocks(String(repeating: "> ", count: 2000) + "deep text\n")
         #expect(plain(result) == "deep text")
         #expect(depth(result) <= 20)
     }
@@ -353,24 +352,174 @@ private func plain(_ blocks: [Block]) -> String { text(allInlines(blocks).filter
         #expect(depth(result) <= 20)
     }
 
-    @Test func deepEmphasisAndBracketsDoNotCrash() throws {
-        let nested = String(repeating: "*a _b ", count: 3000) + "x" + String(repeating: "_ *", count: 3000)
-        _ = try blocks(nested)
-        _ = try blocks(String(repeating: "[", count: 5000) + String(repeating: "]", count: 5000))
-        _ = try blocks(String(repeating: "[[", count: 5000))
-        _ = try blocks(String(repeating: "[x](", count: 3000))
+    /// The vectors that overflowed the parser's stack, by nesting level. Above 5,000 levels the
+    /// indent stays flat, so the text stays small. The nesting bound counts markers, not indent.
+    private static let deepVectors: [(name: String, make: @Sendable (Int) -> String)] = [
+        ("quotes", { String(repeating: "> ", count: $0) + "x\n" }),
+        ("lists by indent in a quote", { n in (0..<n).map { "> " + String(repeating: " ", count: n > 5000 ? 0 : $0 * 2) + "- x\($0)" }.joined(separator: "\n") }),
+        ("nested images", { String(repeating: "![", count: $0) + "x" + String(repeating: "](u)", count: $0) }),
+        ("strikethrough", { String(repeating: "~~a ", count: $0) + "x" + String(repeating: " b~~", count: $0) }),
+        ("emphasis in an html tag between backticks", { "<b title=\"`" + String(repeating: "*a _b ", count: $0 / 2) + "x" + String(repeating: "_ *", count: $0 / 2) + "`\">" }),
+        ("nested links", { String(repeating: "[a ", count: $0) + "x" + String(repeating: "](b)", count: $0) }),
+        ("ordered lists by indent", { n in (0..<n).map { String(repeating: " ", count: n > 5000 ? 0 : $0 * 3) + "1. x\($0)" }.joined(separator: "\n") }),
+        ("after a fence the parser closes differently", { "- ```a`b\n" + String(repeating: "> ", count: $0) + "x\n```\n~~~ x\n" + String(repeating: "*a ", count: $0) }),
+    ]
+
+    @Test(arguments: deepVectors.indices)
+    func deepVectorsAt2000LevelsRenderWithoutCrash(_ index: Int) throws {
+        let body = Self.deepVectors[index].make(2000)
+        let page = try render(body)
+        #expect(page.problems.isEmpty, "\(Self.deepVectors[index].name)")
+        #expect(depth(page.blocks) <= 20)
+        #expect(!page.blocks.isEmpty)
     }
 
-    @Test func manyDelimitersStillReadAsTheirText() throws {
-        let words = (0..<400).map { "snake_case_\($0)" }.joined(separator: " ")
-        #expect(plain(try blocks(words)) == words)
-        let code = String(repeating: "`a_b` ", count: 400)
-        #expect(allInlines(try blocks(code)).filter { $0 == .code("a_b") }.count == 400)
+    @Test(arguments: deepVectors.indices)
+    func deepVectorsAt20000LevelsFallBackToPlainText(_ index: Int) throws {
+        let body = Self.deepVectors[index].make(20_000)
+        let page = try render(body)
+        #expect(page.blocks == [.code(language: nil, body)], "\(Self.deepVectors[index].name)")
+        #expect(page.problems == ["This page is nested too deeply to format. It is shown as plain text."])
     }
 
-    @Test func deepMixedNestingDoesNotCrash() throws {
-        let body = String(repeating: "> - ", count: 1500) + "x\n"
-        #expect(plain(try blocks(body)).contains("x"))
+    @Test func plainReadingKeepsTheProblemAndRenderInlineStaysLiteral() throws {
+        let body = String(repeating: "> ", count: 20_000) + "x"
+        let page = try render(body)
+        #expect(plainReading(page).problems == page.problems)
+        let store = try openFixture("basic")
+        #expect(renderInline(body, resolve: lookup(store), title: titleLookup(store)) == [.text(body)])
+    }
+
+    @Test func nestingBoundCountsEveryNestingCharacter() {
+        #expect(nestingBound("plain text, with a - dash. And 1) numbers") == 0)
+        #expect(nestingBound("- a\n  - b\n    + c") == 3)
+        #expect(nestingBound("1. a\n   2) b") == 2)
+        #expect(nestingBound("> > x") == 2)
+        #expect(nestingBound("*a* _b_ ~~c~~ [d](e) ![f](g)") == 2 + 2 + 4 + 1 + 1)
+        #expect(nestingBound("- * 1. x") == 3)
+    }
+
+    @Test func manyThreadsGetTheirOwnResult() throws {
+        let store = try openFixture("basic")
+        let one = renderPage("See [[FR-003]].", resolve: lookup(store), title: titleLookup(store))
+        let results = LockedList<RenderedPage>()
+        DispatchQueue.concurrentPerform(iterations: 32) { _ in
+            results.append(renderPage("See [[FR-003]].", resolve: lookup(store), title: titleLookup(store)))
+        }
+        #expect(results.values.count == 32 && results.values.allSatisfy { $0 == one })
+    }
+
+    @Test func aResolverThatRendersAgainDoesNotDeadlock() throws {
+        let page = renderPage("[[x]]", resolve: { link in
+            _ = renderInline("**\(link.name)**", resolve: { _ in .missing }, title: { _ in nil })
+            return .missing
+        }, title: { _ in nil })
+        #expect(page.blocks == [.paragraph([.link([.text("x")], .missing, raw: "x")])])
+    }
+
+    // MARK: ordinary text stays as it is
+
+    @Test func aLongListOfBoldItemsKeepsItsStrongText() throws {
+        let body = (0..<200).map { "- **item \($0)**" }.joined(separator: "\n")
+        guard case .list(false, let items)? = try blocks(body).first else { Issue.record("no list"); return }
+        #expect(items.count == 200)
+        #expect(items[199] == [.paragraph([.strong([.text("item 199")])])])
+        #expect(items.allSatisfy { if case .paragraph(let p)? = $0.first, case .strong = p[0] { true } else { false } })
+    }
+
+    @Test func aLongTableKeepsItsBoldCells() throws {
+        let body = "| A | B |\n|---|---|\n" + (0..<200).map { "| **bold \($0)** | x_y |" }.joined(separator: "\n")
+        guard case .table(_, let rows)? = try blocks(body).first else { Issue.record("no table"); return }
+        #expect(rows.count == 200)
+        #expect(rows[0] == [[.strong([.text("bold 0")])], [.text("x_y")]])
+        #expect(rows[199][0] == [.strong([.text("bold 199")])])
+    }
+
+    @Test func aLongStarLineIsARule() throws {
+        #expect(try blocks(String(repeating: "*", count: 200)) == [.rule])
+    }
+
+    @Test func anAutolinkAfterManyEmphasisPairsKeepsItsUrl() throws {
+        let body = String(repeating: "*a* ", count: 200) + "<https://a.org/a_b>"
+        let result = try blocks(body)
+        #expect(urls(result) == [.url([.text("https://a.org/a_b")], URL(string: "https://a.org/a_b")!)])
+    }
+
+    @Test func aFencedBlockInANestedListItemIsByteIdentical() throws {
+        let lines = (0..<300).map { "__dunder\($0)__ = '\\\\ \\t' * 2  # *x* _y_" }
+        let body = "- item\n  - nested\n    ```python\n" + lines.map { "    " + $0 }.joined(separator: "\n") + "\n    ```\n"
+        func code(in blocks: [Block]) -> [Block] {
+            blocks.flatMap { block -> [Block] in
+                switch block {
+                case .code: [block]
+                case .list(_, let items): code(in: items.flatMap { $0 })
+                default: []
+                }
+            }
+        }
+        #expect(code(in: try blocks(body)) == [.code(language: "python", lines.joined(separator: "\n"))])
+    }
+
+    @Test func aCodeBlockIndentedSixtySpacesKeepsItsText() throws {
+        let body = "Text.\n\n" + String(repeating: " ", count: 60) + "x = 1  # *a* _b_ > c\n"
+        #expect(try blocks(body) == [
+            .paragraph([.text("Text.")]),
+            .code(language: nil, String(repeating: " ", count: 56) + "x = 1  # *a* _b_ > c"),
+        ])
+    }
+
+    // MARK: pipes in wikilinks inside tables
+
+    @Test func aliasedWikilinkInATableCellStaysOneCell() throws {
+        let body = "| A | B |\n|---|---|\n| [[FR-002-checkout|Checkout]] | 2 |\n"
+        guard case .table(let header, let rows)? = try blocks(body).first else { Issue.record("no table"); return }
+        #expect(header.count == 2)
+        #expect(rows.count == 1 && rows[0].count == 2)
+        guard case .link(let label, .page, let raw)? = rows[0][0].first else { Issue.record("no link"); return }
+        #expect(text(label) == "Checkout" && raw == "FR-002-checkout")
+        #expect(rows[0][1] == [.text("2")])
+    }
+
+    @Test func twoAliasedWikilinksInARowAndInTheHeader() throws {
+        let body = "| [[FR-002-checkout|Out]] | B |\n|---|---|\n| [[FR-003|One]] [[FR-002-checkout#Goal|Two]] | 2 |\n"
+        guard case .table(let header, let rows)? = try blocks(body).first else { Issue.record("no table"); return }
+        #expect(text(header[0]) == "Out")
+        #expect(rows[0].count == 2)
+        #expect(text(rows[0][0]) == "One Two")
+        #expect(links([.table(header: header, rows: rows)]).count == 3)
+    }
+
+    @Test func alreadyEscapedPipesAreLeftAlone() throws {
+        let body = "| A | B |\n|---|---|\n| [[FR-002-checkout\\|Checkout]] | 2 |\n"
+        guard case .table(_, let rows)? = try blocks(body).first else { Issue.record("no table"); return }
+        #expect(rows[0].count == 2 && text(rows[0][0]) == "Checkout")
+    }
+
+    @Test func tableTextInAFenceStaysByteIdentical() throws {
+        let code = "| A | B |\n|---|---|\n| [[FR-002-checkout|Checkout]] | 2 |"
+        #expect(try blocks("```\n\(code)\n```\n") == [.code(language: nil, code)])
+        #expect(try blocks("Intro\nuse `[[a|b]]` here\n") == [.paragraph([.text("Intro use "), .code("[[a|b]]"), .text(" here")])])
+    }
+
+    @Test func wikilinkReadsAnEscapedPipe() {
+        let link = Wikilink.all(in: "[[FR-002\\|Checkout]] [[FR-002#Goal\\|Checkout]]")
+        #expect(link == [Wikilink(target: "FR-002", label: "Checkout", heading: nil),
+                         Wikilink(target: "FR-002", label: "Checkout", heading: "Goal")])
+    }
+
+    // MARK: follows details
+
+    @Test func followsLabelsAsTheGoCodeDoes() throws {
+        #expect(try render("> follows (the Geoffrey Moore format)\n").follows == ["(the Geoffrey Moore format)"])
+        #expect(try render("> follows The   Geoffrey Moore format\n").follows == ["Geoffrey Moore format"])
+        #expect(try render("> follows theory of change\n").follows == ["theory of change"])
+        #expect(try render("> follows [[MADR]] (the format, section 5)\n").follows == ["MADR"])
+    }
+
+    @Test func aFollowsCommentInTheMiddleOfALineLeavesOneSpace() throws {
+        let page = try render("Before <!-- follows [[Q42]] --> after\n")
+        #expect(page.follows == ["Q42"])
+        #expect(page.blocks == [.paragraph([.text("Before after")])])
     }
 
     @Test func plainReadingAlsoFlattensUrlsAndKeepsTheRest() throws {
@@ -393,4 +542,12 @@ private func depth(_ blocks: [Block]) -> Int {
         default: 0
         }
     }.max() ?? 0)
+}
+
+/// A list that several threads may add to.
+private final class LockedList<Element>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var items: [Element] = []
+    func append(_ item: Element) { lock.lock(); items.append(item); lock.unlock() }
+    var values: [Element] { lock.lock(); defer { lock.unlock() }; return items }
 }

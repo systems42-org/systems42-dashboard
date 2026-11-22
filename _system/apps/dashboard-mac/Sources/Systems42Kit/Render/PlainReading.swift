@@ -3,7 +3,7 @@ import Foundation
 /// The page for a reader who wants no links (FR-049): every link shows only its
 /// text. Emphasis, code and structure stay.
 public func plainReading(_ page: RenderedPage) -> RenderedPage {
-    RenderedPage(follows: page.follows, blocks: page.blocks.map(plain))
+    RenderedPage(follows: page.follows, blocks: page.blocks.map(plain), problems: page.problems)
 }
 
 private func plain(_ block: Block) -> Block {
