@@ -2,7 +2,7 @@
 # Writes Tests/Golden/<fixture>/ from what the Go dashboard answers on each
 # fixture in Tests/Fixtures/. Run it by hand, then commit the result, in a pull
 # request of its own. CI never runs it. Needs Go and Python 3 (standard
-# library only). Two runs give the same files.
+# library only) and Node, for the search queries. Two runs give the same files.
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -17,4 +17,6 @@ python3 -I "$here/scripts/export_golden.py" "$tmp/systems42-dashboard" "$here/Te
 rm -rf "$here/Tests/Golden/"*/
 mv "$tmp/golden/"* "$here/Tests/Golden/"
 find "$here/Tests/Golden" -name .DS_Store -delete
+# Replacing Tests/Golden removed the search queries, so write them again.
+"$here/scripts/export-search-queries.sh"
 echo "Golden data written to $here/Tests/Golden"

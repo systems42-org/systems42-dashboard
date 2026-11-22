@@ -8,7 +8,7 @@ or the dashboard changed:
 
     _system/apps/dashboard-mac/scripts/export-golden.sh
 
-The script needs Go and Python 3. CI never runs it. Two runs give the same
+The script needs Go, Python 3 and Node. CI never runs it. Two runs give the same
 bytes: keys are sorted, lists are sorted or in the order the dashboard shows,
 and no time, port, token, host or absolute path is stored. After a run, check
 that `git status` shows no change under `Tests/Fixtures/`.
@@ -22,6 +22,7 @@ that `git status` shows no change under `Tests/Fixtures/`.
 | `search.json` | The answer of `/search.json`, unchanged. | `/search.json` |
 | `pages.json` | Per page id: `id`, `title`, `status`, `type` (the label, such as "Domain term"), `links_to` and `linked_from` (sorted ids). | Detail page of each page in `search.json`, its "Links to" and "Linked from" lists |
 | `sections.json` | Per section id (R1 to R6, C1 to C7, A1 to A5): `title`, `area` (`req42`, `commons`, `arc42`), `folders` (sorted), `pages` (sorted ids). Every page is in exactly one section. | Tiles of `/req42`, `/commons`, `/arc42`, folders from `/metamodel`, pages from each tile's list page |
+| `queries.json` | What `static/search-rank.js` answers for about 100 queries on this fixture's `search.json`: per query the hits (`id`, `score`, `note`, and for `search` the passage as text and UTF-16 mark ranges) and the related pages. `search` also holds `filtered`: queries with a status, priority or tag filter. | `scripts/export-search-queries.sh`, run by `export-golden.sh` last |
 | `metamodel.json` | `version`, `types`, `relations`, `frameworks`, `projections`, `rules`, `anchors`, `language`. Types, relations, projections and rules keep the order of the page. | `/metamodel` |
 | `diagrams/<name>.mmd` | Mermaid text, byte for byte. | see below |
 | `diagrams/<name>.json` | Cytoscape data block, keys sorted. | see below |
