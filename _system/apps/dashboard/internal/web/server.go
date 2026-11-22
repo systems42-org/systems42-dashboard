@@ -183,16 +183,8 @@ var sortPresets = map[string][]metamodel.SortOrder{
 	"issue":                  {{Label: "Status › severity", Keys: []string{"status", "severity"}}},
 	"decision-record":        {{Label: "Newest first", Keys: []string{"decided"}}},
 	"domain-term":            {{Label: "A to Z", Keys: []string{"title"}}},
-	"glossary-term":          {{Label: "A to Z", Keys: []string{"title"}}},
 	"stakeholder":            {{Label: "Influence › interest", Keys: []string{"influence", "interest"}}},
 	"quality-requirement":    {{Label: "Priority", Keys: []string{"priority"}}},
-}
-
-func (s *Server) termType() string {
-	if t := s.Metamodel.TypeForFolder("domain-terms"); t != "" {
-		return t
-	}
-	return "glossary-term"
 }
 
 func (s *Server) listSpec(typeName string) map[string]any {
@@ -296,12 +288,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.handleGoals(w, r)
 	case p == "/entity-diagram":
 		s.handleEntityDiagram(w, r)
-	case p == "/data-model":
-		s.handleLegacyRedirect(w, r, "/entity-diagram")
 	case p == "/graph/domain-terms":
 		s.handleGlossaryGraph(w, r)
-	case p == "/graph/glossary":
-		s.handleLegacyRedirect(w, r, "/graph/domain-terms")
 	case p == "/arc42/strategy":
 		s.handleStrategy(w, r)
 	case p == "/arc42/building-blocks":
@@ -322,8 +310,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.handleChanges(w, r)
 	case p == "/domain-terms":
 		s.handleDomainTerms(w, r)
-	case p == "/glossary":
-		s.handleLegacyRedirect(w, r, "/domain-terms")
 	case p == "/stakeholders":
 		s.handleStakeholders(w, r)
 	case p == "/decisions":
@@ -663,7 +649,7 @@ func statusesOf(pages []*wiki.Page) []string {
 }
 
 func buildSectionTile(sn *requestSnapshot, sec metamodel.Section) map[string]any {
-	folders := metamodel.SectionFolders(sec)
+	folders := append([]string{}, sec.Folders...)
 	var hrefVal any
 	if sec.Href != "" {
 		hrefVal = sec.Href
@@ -708,7 +694,6 @@ func buildSectionTile(sn *requestSnapshot, sec metamodel.Section) map[string]any
 	case "R4":
 		t["unit"] = "model page"
 		t["count"] = wiki.SupportingModelCount(
-			sn.folder("data-models"),
 			sn.folder("domain-terms"),
 			sn.folder("activity-models"),
 		)
@@ -757,7 +742,7 @@ func (s *Server) buildAreaTile(sn *requestSnapshot, cat *metamodel.Catalog, area
 		if sec.Scope != "planned" {
 			allPlanned = false
 		}
-		for _, f := range metamodel.SectionFolders(sec) {
+		for _, f := range sec.Folders {
 			folders = append(folders, f)
 			pages = append(pages, sn.folder(f)...)
 		}

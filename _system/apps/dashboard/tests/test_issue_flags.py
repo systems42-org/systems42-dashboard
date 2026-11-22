@@ -11,8 +11,8 @@ import tempfile
 from pathlib import Path
 
 WIKI_FOLDERS = [
-    "glossary", "goals", "stakeholders", "context", "external-interfaces",
-    "data-models", "activity-models", "functional-requirements",
+    "domain-terms", "goals", "stakeholders", "context", "external-interfaces",
+    "activity-models", "functional-requirements",
     "quality-requirements", "constraints", "issues",
 ]
 
@@ -30,16 +30,16 @@ sys.path.insert(0, str(HERE))
 
 import app  # noqa: E402
 
-GLO = """---
-id: GLO-001
-type: glossary-term
+TERM = """---
+id: DT-001
+type: domain-term
 title: Tour
 status: accepted
 created: 2026-09-07
 updated: 2026-09-07
 sources: []
 related: []
-tags: [glossary]
+tags: [domain-term]
 ---
 
 # Tour
@@ -53,7 +53,7 @@ status: open
 created: 2026-09-07
 updated: 2026-09-07
 sources: []
-related: ["[[GLO-001-tour]]"]
+related: ["[[DT-001-tour]]"]
 tags: [issue]
 severity: major
 kind: question
@@ -70,7 +70,7 @@ status: resolved
 created: 2026-09-07
 updated: 2026-09-07
 sources: []
-related: ["[[GLO-001-tour]]"]
+related: ["[[DT-001-tour]]"]
 tags: [issue]
 severity: major
 kind: question
@@ -128,7 +128,7 @@ kind: question
 # Scope issue touching two pages
 """
 
-(_wiki / "glossary" / "GLO-001-tour.md").write_text(GLO, encoding="utf-8")
+(_wiki / "domain-terms" / "DT-001-tour.md").write_text(TERM, encoding="utf-8")
 (_wiki / "issues" / "ISS-001-open.md").write_text(ISS_OPEN, encoding="utf-8")
 (_wiki / "issues" / "ISS-002-done.md").write_text(ISS_DONE, encoding="utf-8")
 
@@ -136,8 +136,8 @@ kind: question
 def test_open_issue_counts_by_folder():
     app._PARSE_CACHE.clear()
     counts = app.open_issue_counts()
-    assert {k: len(v) for k, v in counts.items()} == {"glossary": 1}
-    assert counts == {"glossary": {"ISS-001"}}
+    assert {k: len(v) for k, v in counts.items()} == {"domain-terms": 1}
+    assert counts == {"domain-terms": {"ISS-001"}}
 
 
 def test_tile_flag_and_plural():

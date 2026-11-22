@@ -37,8 +37,7 @@
 
 <div class="graph-legend">
   <div class="lg-row"><span class="lg-label">Type</span>
-    <span class="lg-item"><span class="lg-dot lg-GLO"></span>Term</span>
-    <span class="lg-item"><span class="lg-dot lg-DM"></span>Data model</span>
+    <span class="lg-item"><span class="lg-dot lg-DT"></span>Term</span>
     <span class="lg-item"><span class="lg-dot lg-STK"></span>Stakeholder</span>
     <span class="lg-item"><span class="lg-dot lg-EIF"></span>Interface</span>
     <span class="lg-item"><span class="lg-dot lg-GOAL"></span>Goal</span>
@@ -130,20 +129,20 @@
   }
   function applyInitial() {
     cy.batch(function () {
-      cy.nodes().filter(function (n) { return n.data('type') !== 'GLO'; }).addClass('hidden');
+      cy.nodes().filter(function (n) { return n.data('type') !== 'DT'; }).addClass('hidden');
       cy.edges().filter(function (e) { return !!e.data('cross'); }).addClass('hidden');
     });
   }
 
   function showLayer(types) {
     clearFocus(false);
-    // Seed each newly-revealed node next to a visible GLO neighbour (not at 0,0,
+    // Seed each newly-revealed node next to a visible term neighbour (not at 0,0,
     // where they would all stack and the layout could not pull them apart), then
-    // relax incrementally so the existing GLO layout stays put.
+    // relax incrementally so the existing term layout stays put.
     var seeded = 0;
     types.forEach(function (t) {
       cy.nodes('[type="' + t + '"]').filter('.hidden').forEach(function (n) {
-        var anchor = n.connectedEdges().connectedNodes('[type="GLO"]').filter(':visible').first();
+        var anchor = n.connectedEdges().connectedNodes('[type="DT"]').filter(':visible').first();
         if (anchor && anchor.nonempty()) {
           var a = anchor.position(), ang = seeded * 0.7, r = 115;
           n.position({ x: a.x + Math.cos(ang) * r, y: a.y + Math.sin(ang) * r });

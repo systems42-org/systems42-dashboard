@@ -24,7 +24,7 @@ REBUILDABLE = [
     "_system/.DS_Store",
 ]
 KEPT = [
-    "wiki/glossary/GLO-001-term.md",
+    "wiki/domain-terms/DT-001-term.md",
     "wiki/.DS_Store",
     "wiki/__pycache__/looks-like-junk.pyc",
     "raw/interview.md",

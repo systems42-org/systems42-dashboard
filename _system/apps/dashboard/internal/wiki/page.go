@@ -51,8 +51,9 @@ var validArchStates = map[string]bool{
 }
 
 // TypeFolder maps stem ID prefixes to their canonical wiki subfolder.
+// UC: a migrated use case keeps its ID as a functional requirement (DR-038).
 var TypeFolder = map[string]string{
-	"DT": "domain-terms", "GLO": "glossary", "DM": "data-models", "STK": "stakeholders",
+	"DT": "domain-terms", "STK": "stakeholders",
 	"EIF": "external-interfaces", "GOAL": "goals", "CTX": "context",
 	"FR": "functional-requirements", "CON": "constraints", "ISS": "issues",
 	"UC": "functional-requirements", "ACT": "activity-models", "QR": "quality-requirements",
@@ -62,7 +63,7 @@ var TypeFolder = map[string]string{
 
 // TypeLabel maps stem ID prefixes to group labels for the relations and trace panels.
 var TypeLabel = map[string]string{
-	"DT": "Domain terms", "GLO": "Glossary", "STK": "Stakeholders", "DM": "Data models",
+	"DT": "Domain terms", "STK": "Stakeholders",
 	"CTX": "Context", "EIF": "External interfaces", "GOAL": "Goals",
 	"FR": "Functional requirements", "UC": "Use cases", "ACT": "Activity models",
 	"QR": "Quality requirements", "CON": "Constraints", "DR": "Decisions",
@@ -72,7 +73,7 @@ var TypeLabel = map[string]string{
 
 // RelTypeOrder defines the group display order in relations and trace panels.
 var RelTypeOrder = []string{
-	"DT", "GLO", "STK", "DM", "CTX", "EIF", "GOAL", "FR", "UC", "ACT",
+	"DT", "STK", "CTX", "EIF", "GOAL", "FR", "UC", "ACT",
 	"QR", "CON", "DR", "SOL", "BB", "CC", "RS", "DN", "ISS",
 }
 
@@ -82,12 +83,9 @@ var FolderLabels = map[string]string{
 	"context":                 "Context",
 	"external-interfaces":     "External interface",
 	"functional-requirements": "Functional requirement",
-	"use-cases":               "Use case",
 	"activity-models":         "Activity model",
-	"data-models":             "Data model",
 	"quality-requirements":    "Quality requirement",
 	"constraints":             "Constraint",
-	"glossary":                "Glossary term",
 	"domain-terms":            "Domain term",
 	"stakeholders":            "Stakeholder",
 	"issues":                  "Issue",
@@ -866,11 +864,10 @@ func VaultStatus(allPages, issues, sources []*Page, now time.Time, loc *time.Loc
 	}
 }
 
-// DataModelPages returns data-models/ plus structured domain-terms/ pages
-// (stereotype entity | value-object | sum-type), sorted by ID.
-func DataModelPages(dataModels, domainTerms []*Page) []*Page {
-	out := make([]*Page, 0, len(dataModels))
-	out = append(out, dataModels...)
+// DataModelPages returns the structured domain terms (stereotype entity |
+// value-object | sum-type), sorted by ID.
+func DataModelPages(domainTerms []*Page) []*Page {
+	out := make([]*Page, 0, len(domainTerms))
 	for _, p := range domainTerms {
 		st := strings.ToLower(strings.TrimSpace(p.MetaString("stereotype")))
 		if domainModelStereotypes[st] {
@@ -883,10 +880,10 @@ func DataModelPages(dataModels, domainTerms []*Page) []*Page {
 	return out
 }
 
-// SupportingModelCount returns the R4 tile headline count: data model pages
-// plus activity model pages.
-func SupportingModelCount(dataModels, domainTerms, activityModels []*Page) int {
-	return len(DataModelPages(dataModels, domainTerms)) + len(activityModels)
+// SupportingModelCount returns the R4 tile headline count: structured domain
+// terms plus activity model pages.
+func SupportingModelCount(domainTerms, activityModels []*Page) int {
+	return len(DataModelPages(domainTerms)) + len(activityModels)
 }
 
 // VisionPage returns the lowest-ID goal page with stereotype: vision, or nil.

@@ -72,39 +72,37 @@ func TestContextDiagramAndFlows(t *testing.T) {
 }
 
 func TestEntityDiagramUmlautsInheritanceAndFilters(t *testing.T) {
-	dms := []*wiki.Page{
-		mkPage("data-models", "DM-001-base", map[string]any{
-			"id": "DM-001", "title": "Durchführungsart", "bounded-context": "Core",
+	terms := []*wiki.Page{
+		mkPage("domain-terms", "DT-001-base", map[string]any{
+			"id": "DT-001", "title": "Durchführungsart", "bounded-context": "Core",
 			"stereotype": "sum-type", "attributes": []any{map[string]any{"name": "code"}},
 		}, ""),
-		mkPage("data-models", "DM-002-child", map[string]any{
-			"id": "DM-002", "title": "Präsenz", "bounded-context": "Core",
-			"parent": []any{"[[DM-001-base]]"},
+		mkPage("domain-terms", "DT-002-child", map[string]any{
+			"id": "DT-002", "title": "Präsenz", "bounded-context": "Core", "stereotype": "entity",
+			"parent": []any{"[[DT-001-base]]"},
 			"relationships": []any{
-				map[string]any{"to": "[[GLO-001-room]]", "kind": "association", "multiplicity": "1..*", "label": "uses"},
+				map[string]any{"to": "[[DT-003-room]]", "kind": "association", "multiplicity": "1..*", "label": "uses"},
 			},
 		}, ""),
-	}
-	glos := []*wiki.Page{
-		mkPage("glossary", "GLO-001-room", map[string]any{
-			"id": "GLO-001", "title": "Room", "bounded-context": "Core", "stereotype": "entity",
+		mkPage("domain-terms", "DT-003-room", map[string]any{
+			"id": "DT-003", "title": "Room", "bounded-context": "Core", "stereotype": "entity",
 		}, ""),
-		mkPage("glossary", "GLO-002-plain", map[string]any{
-			"id": "GLO-002", "title": "Plain Term",
+		mkPage("domain-terms", "DT-004-plain", map[string]any{
+			"id": "DT-004", "title": "Plain Term",
 		}, ""),
 	}
 
-	nodes := DataModelNodes(dms, nil, glos)
-	if len(nodes) != 3 { // DM-001, DM-002, GLO-001 stub (GLO-002 excluded)
+	nodes := DataModelNodes(terms)
+	if len(nodes) != 3 { // DT-001..003 (DT-004 has no stereotype)
 		t.Fatalf("expected 3 nodes, got %d", len(nodes))
 	}
-	edges := DataModelEdges(dms, nil, glos)
+	edges := DataModelEdges(terms)
 	diag := BuildDataModelFullDiagram(nodes, edges, "Core", "")
 	for _, want := range []string{
 		`class Durchfuehrungsart["Durchführungsart"] {`,
 		`<<sum-type>>`,
 		`+code`,
-		`<<term>>`,
+		`class Room`,
 		`Durchfuehrungsart <|-- Praesenz`,
 		`Praesenz --> "1..*" Room : uses`,
 	} {
@@ -112,7 +110,7 @@ func TestEntityDiagramUmlautsInheritanceAndFilters(t *testing.T) {
 			t.Errorf("entity diagram missing %q:\n%s", want, diag)
 		}
 	}
-	if focused := BuildDataModelFullDiagram(nodes, edges, "", "GLO-001-room"); strings.Contains(focused, "Durchfuehrungsart") || !strings.Contains(focused, "Praesenz") {
+	if focused := BuildDataModelFullDiagram(nodes, edges, "", "DT-003-room"); strings.Contains(focused, "Durchfuehrungsart") || !strings.Contains(focused, "Praesenz") {
 		t.Errorf("focus filter failed:\n%s", focused)
 	}
 }

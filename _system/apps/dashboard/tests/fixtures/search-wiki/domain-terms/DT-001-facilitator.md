@@ -1,10 +1,12 @@
 ---
-id: GLO-001
-type: glossary-term
+id: DT-001
+type: domain-term
 title: Facilitator
 status: accepted
-aliases: [Moderator]
-tags: [glossary]
+aliases:
+- Moderator
+tags:
+- domain-term
 ---
 
 # Facilitator

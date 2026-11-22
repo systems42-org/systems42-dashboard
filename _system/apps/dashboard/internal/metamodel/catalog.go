@@ -79,13 +79,6 @@ var knownSections = map[string]knownMeta{
 	"C7": {href: "/decisions", colors: []string{"req", "arc"}},
 }
 
-// DR-039 renamed wiki/glossary/ to wiki/domain-terms/. A section holding one
-// reads both so wikis on either side of the rename show their terms.
-var renamedFolders = map[string]string{
-	"glossary":     "domain-terms",
-	"domain-terms": "glossary",
-}
-
 var extraPathPrefixes = map[string]string{
 	"/functional-requirements/": "requirements",
 	"/entity-diagram":           "requirements",
@@ -139,24 +132,6 @@ func (s Section) ToMap() map[string]any {
 		"note":      s.Note,
 		"framework": s.Framework,
 	}
-}
-
-// SectionFolders returns the section's folders plus the counterpart of any
-// renamed folder (glossary <-> domain-terms).
-func SectionFolders(s Section) []string {
-	out := make([]string, 0, len(s.Folders)+1)
-	seen := make(map[string]bool, len(s.Folders)+1)
-	for _, f := range s.Folders {
-		out = append(out, f)
-		seen[f] = true
-	}
-	for _, f := range s.Folders {
-		if other, ok := renamedFolders[f]; ok && !seen[other] {
-			out = append(out, other)
-			seen[other] = true
-		}
-	}
-	return out
 }
 
 // Catalog holds the sections built from metamodel.Blocks() and lookup maps.
@@ -237,7 +212,7 @@ func BuildCatalog(blocks []Block) *Catalog {
 		if s.Slug != "" {
 			cat.BySlug[s.Slug] = s
 		}
-		for _, f := range SectionFolders(s) {
+		for _, f := range s.Folders {
 			if _, exists := cat.ByFolder[f]; !exists {
 				cat.ByFolder[f] = s
 			}

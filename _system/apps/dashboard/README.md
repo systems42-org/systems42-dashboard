@@ -427,8 +427,8 @@ folder: each script points the app at its own throwaway vault before
 They cover the empty vault (every route must render on day one), a populated
 fixture vault, the functional-requirements hierarchy and goal projections, the glossary graphs, the
 context diagram projection (one line per neighbour, short labels, `tier:` bands,
-and deprecated interfaces drawn nowhere), the data-model class diagram (DM pages
-plus marked glossary terms as `<<term>>` stubs, context and focus filters),
+and deprecated interfaces drawn nowhere), the entity diagram (structured domain
+terms, context and focus filters),
 `wiki_config()`, the `/about` page and its path guard, the decision records in
 `wiki/decisions/` and the old ADR redirects, presence and the "Yoda" facilitator, the light/dark theme
 contract, the `/reload` control (server-side caches cleared, `static_url`

@@ -7,7 +7,7 @@ created: 2026-09-06
 updated: 2026-09-06
 sources: []
 related:
-  - "[[GLO-001-book]]"
+  - "[[DT-001-book]]"
 tags: [stakeholder]
 aliases: [Member]
 role: Library patron

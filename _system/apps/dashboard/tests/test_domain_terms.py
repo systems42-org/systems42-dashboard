@@ -1,4 +1,4 @@
-"""A migrated vault uses one set of pages for terminology and model structure."""
+"""Domain terms carry both the terminology and the model structure (DR-039)."""
 import os
 from pathlib import Path
 import sys
@@ -12,7 +12,7 @@ with tempfile.TemporaryDirectory() as temp:
     for name, fields in {
         "DT-001-training": '''title: Training
 stereotype: entity
-aliases: [DM-009-training, GLO-001-training]
+aliases: [Course]
 attributes: [{name: training_id, type: string, identifier: true}, {name: order date}, {name: "cost {net}"}]
 relationships:
 - {to: "[[DT-002-session]]", label: schedules, kind: composition, multiplicity: "0..*"}
@@ -43,12 +43,11 @@ related: ["[[DT-003-review]]"]
         assert "+cost #123;net#125;" in diagram
         summary = client.get("/entity-diagram").get_data(as_text=True)
         assert "<code>order date</code>" in summary and "<code>cost {net}</code>" in summary
-        for legacy in ("DM-009-training", "GLO-001-training"):
-            old_focus = client.get("/data-model?focus=" + legacy, follow_redirects=True)
-            html = old_focus.get_data(as_text=True)
-            assert "and its direct neighbours" in html
-            assert "Training" in html.split("<figcaption>", 1)[1].split("</figcaption>", 1)[0]
-        assert "Review" not in diagram and "<<term>>" not in diagram
+        # an alias focuses the term it names
+        html = client.get("/entity-diagram?focus=Course").get_data(as_text=True)
+        assert "and its direct neighbours" in html
+        assert "Training" in html.split("<figcaption>", 1)[1].split("</figcaption>", 1)[0]
+        assert "Review" not in diagram
         for url, expected in (
             ("/domain-terms", "/page/domain-terms/DT-003-review"),
             ("/graph/domain-terms?edges=structured", "Structured relationships"),

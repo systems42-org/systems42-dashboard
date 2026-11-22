@@ -38,9 +38,9 @@ def test_relations_panel_outbound_inbound_and_dedup():
     # never links to itself
     assert "STK-001" not in out_ids and "STK-001" not in inb_ids
 
-    # outbound carries the glossary terms this stakeholder relates to
-    assert "GLO-003" in out_ids, "glossary term Member missing from outbound"
-    assert "GLO-002" in out_ids, "glossary term Loan missing from outbound"
+    # outbound carries the domain terms this stakeholder relates to
+    assert "DT-003" in out_ids, "domain term Member missing from outbound"
+    assert "DT-002" in out_ids, "domain term Loan missing from outbound"
     # inbound surfaces where the role is used (functional requirements)
     assert any(i.startswith("FR-") for i in inb_ids), "no FR backlinks"
 
@@ -53,7 +53,7 @@ def test_relations_panel_outbound_inbound_and_dedup():
         if it["type"] == "FR":
             assert it["url"].startswith("/functional-requirements/"), it
 
-    # groups are typed and ordered (GLO before ISS per _REL_TYPE_ORDER)
+    # groups are typed and ordered (DT before ISS per _REL_TYPE_ORDER)
     types = [g["type"] for g in rel["outbound"]]
     assert types == sorted(types, key=app._REL_TYPE_ORDER.index), types
 

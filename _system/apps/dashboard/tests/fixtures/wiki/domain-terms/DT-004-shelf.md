@@ -1,14 +1,15 @@
 ---
-id: GLO-004
-type: glossary-term
+id: DT-004
+type: domain-term
 title: Shelf
 status: draft
 created: 2026-09-06
 updated: 2026-09-06
 sources: []
 related:
-  - "[[GLO-001-book]]"
-tags: [glossary]
+- '[[DT-001-book]]'
+tags:
+- domain-term
 aliases: []
 bounded-context: Lending
 agreed: false

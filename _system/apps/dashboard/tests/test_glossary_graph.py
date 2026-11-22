@@ -39,19 +39,19 @@ def test_build_glossary_graph_shape_and_invariants():
     assert len(pairs) == len(set(pairs)), "duplicate undirected edge"
 
     # --- node classes ---
-    glo = [n for n in nodes if n["type"] == "GLO"]
-    assert glo, "no glossary nodes"
-    assert all(n["core"] for n in glo), "GLO nodes must be core"
-    assert all(not n["core"] for n in nodes if n["type"] != "GLO"), \
-        "non-GLO nodes must not be core"
+    glo = [n for n in nodes if n["type"] == "DT"]
+    assert glo, "no term nodes"
+    assert all(n["core"] for n in glo), "term nodes must be core"
+    assert all(not n["core"] for n in nodes if n["type"] != "DT"), \
+        "other nodes must not be core"
 
-    # every GLO node carries the projected display fields
+    # every term node carries the projected display fields
     for n in glo:
         assert n["state"] in ("agreed", "draft", "deprecated"), n
-        assert n["url"] == f"/page/glossary/{n['id']}", n
+        assert n["url"] == f"/page/domain-terms/{n['id']}", n
         assert isinstance(n["degree"], int)
 
-    # default view = GLO-only: core nodes + non-cross edges form a closed graph
+    # default view = terms only: core nodes + non-cross edges form a closed graph
     core_ids = {n["id"] for n in glo}
     for e in edges:
         if not e["cross"]:
@@ -60,7 +60,7 @@ def test_build_glossary_graph_shape_and_invariants():
             assert "ntype" in e, e
             assert by_id[e["target"]]["type"] == e["ntype"], e
 
-    # degree == number of incident non-cross (GLO-GLO) edges
+    # degree == number of incident non-cross (term-to-term) edges
     deg = {n["id"]: 0 for n in glo}
     for e in edges:
         if not e["cross"]:
@@ -76,29 +76,29 @@ def test_build_glossary_graph_shape_and_invariants():
             tally[e["ntype"]] = tally.get(e["ntype"], 0) + 1
     assert g["layer_counts"] == tally, (g["layer_counts"], tally)
 
-    # --- stable facts about the fixture glossary ---
-    assert "GLO-004-shelf" in by_id, "Shelf term missing"
-    assert by_id["GLO-004-shelf"]["degree"] == 1, \
-        "GLO-004-shelf has exactly one glossary-internal edge (to GLO-001-book)"
+    # --- stable facts about the fixture terms ---
+    assert "DT-004-shelf" in by_id, "Shelf term missing"
+    assert by_id["DT-004-shelf"]["degree"] == 1, \
+        "DT-004-shelf has exactly one term-to-term edge (to DT-001-book)"
     # the cross-type layer the buttons are built for; the fixture only wires a
-    # GLO -> STK edge (GLO-003-member -> STK-001-librarian), so DM/EIF/GOAL
-    # layers are legitimately absent here (unlike the old, richer vault).
+    # DT -> STK edge (DT-003-member -> STK-001-librarian), so EIF/GOAL
+    # layers are legitimately absent here.
     assert "STK" in g["layer_counts"], g["layer_counts"]
-    for t in ("DM", "EIF", "GOAL"):
+    for t in ("EIF", "GOAL"):
         assert t not in g["layer_counts"], (t, g["layer_counts"])
 
     # coloured types (own button colour) must NOT carry the grey `rest` flag,
     # else the node[rest] style would override their colour (regression guard).
-    named = {"DM", "STK", "EIF", "GOAL"}
+    named = {"STK", "EIF", "GOAL", "BB"}
     for n in nodes:
-        if n["type"] == "GLO":
+        if n["type"] == "DT":
             assert "rest" not in n, n["id"]
         elif n["type"] in named:
             assert "rest" not in n, f"{n['id']} ({n['type']}) wrongly tagged rest"
         else:
             assert n.get("rest") == 1, f"{n['id']} ({n['type']}) should be rest"
 
-    print(f"OK: {len(glo)} GLO nodes, {len(nodes)-len(glo)} neighbours, "
+    print(f"OK: {len(glo)} term nodes, {len(nodes)-len(glo)} neighbours, "
           f"{len(edges)} edges, layers={g['layer_counts']}")
 
 

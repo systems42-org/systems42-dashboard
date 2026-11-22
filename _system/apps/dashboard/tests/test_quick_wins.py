@@ -22,7 +22,7 @@ from pathlib import Path
 
 _tmp = Path(tempfile.mkdtemp())
 _wiki = _tmp / "wiki"
-for _f in ("glossary", "quality-requirements", "constraints", "issues", "decisions"):
+for _f in ("domain-terms", "quality-requirements", "constraints", "issues", "decisions"):
     (_wiki / _f).mkdir(parents=True)
 (_tmp / "sources").mkdir()
 os.environ["WIKI_DIR"] = str(_wiki)
@@ -55,10 +55,10 @@ def _page(folder, stem, id, type, title, status="draft", related=""):
 
 _page("quality-requirements", "QR-001-fast", "QR-001", "quality-requirement", "Fast")
 _page("constraints", "CON-001-small", "CON-001", "constraint", "Small")
-_page("glossary", "GLO-001-term", "GLO-001", "glossary-term", "Term")
+_page("domain-terms", "DT-001-term", "DT-001", "domain-term", "Term")
 _page("decisions", "DR-001-choice", "DR-001", "decision-record", "Choice")
 for n in range(2, 8):
-    _page("glossary", f"GLO-00{n}-term-{n}", f"GLO-00{n}", "glossary-term", f"Term {n}")
+    _page("domain-terms", f"DT-00{n}-term-{n}", f"DT-00{n}", "domain-term", f"Term {n}")
 _page("issues", "ISS-001-about-qr", "ISS-001", "issue", "About the QR", "open", '"[[QR-001-fast]]"')
 _page("issues", "ISS-002-about-con", "ISS-002", "issue", "About the constraint", "open", '"[[CON-001-small]]"')
 _page("issues", "ISS-003-closed-qr", "ISS-003", "issue", "Closed one", "resolved", '"[[QR-001-fast]]"')
@@ -90,8 +90,8 @@ def test_page_path_follows_where_the_page_belongs():
     body = client.get("/page/quality-requirements/QR-001-fast").get_data(as_text=True)
     assert _crumbs(body) == "Home › Commons › Quality Requirements › QR-001", _crumbs(body)
     assert '<a href="/req42/quality">Quality Requirements</a>' in body
-    body = client.get("/page/glossary/GLO-001-term").get_data(as_text=True)
-    assert _crumbs(body) == "Home › Commons › Domain Terms › GLO-001", _crumbs(body)
+    body = client.get("/page/domain-terms/DT-001-term").get_data(as_text=True)
+    assert _crumbs(body) == "Home › Commons › Domain Terms › DT-001", _crumbs(body)
 
 
 def test_pages_outside_sections_show_home_and_page():
@@ -156,13 +156,13 @@ def test_404_has_header_and_footer():
     body = r.get_data(as_text=True)
     assert r.status_code == 404
     assert '<nav class="mainnav"' in body and "<footer" in body
-    assert client.get("/page/glossary/GLO-999-missing").status_code == 404
+    assert client.get("/page/domain-terms/DT-999-missing").status_code == 404
 
 
 def test_header_marks_its_entry_on_every_page_it_covers():
     for path, entry in (("/page/issues/ISS-001-about-qr", "Issues"),
                         ("/page/decisions/DR-001-choice", "Decisions"),
-                        ("/page/glossary/GLO-001-term", "Domain Terms"),
+                        ("/page/domain-terms/DT-001-term", "Domain Terms"),
                         ("/graph/domain-terms", "Domain Terms"),
                         ("/issues?section=C1", "Issues")):
         cur = _current(client.get(path).get_data(as_text=True))

@@ -179,12 +179,12 @@ def test_old_backlog_route_redirects():
 
 
 def test_unplaced_requirements_stay_visible():
-    """A page the Agile projection cannot place (other notation, no notation,
-    an unmigrated `stereotype:` page) is listed, never silently dropped."""
+    """A page the Agile projection cannot place (other notation, no notation)
+    is listed, never silently dropped."""
     extra = [
         app.Page("UC-009-find", {"id": "UC-009", "title": "Find", "notation": "use-case",
                                  "level": "sea"}, "", "functional-requirements"),
-        app.Page("FR-090-legacy", {"id": "FR-090", "title": "Legacy", "stereotype": "epic"},
+        app.Page("FR-090-unplaced", {"id": "FR-090", "title": "No notation"},
                  "", "functional-requirements"),
         app.Page("FR-091-ears", {"id": "FR-091", "title": "Shall", "notation": "ears",
                                  "level": "requirement"}, "", "functional-requirements"),

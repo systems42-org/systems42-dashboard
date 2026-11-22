@@ -179,9 +179,9 @@ def test_fr003_alias_below_a_phrase_in_a_title():
 
 
 def test_fr003_synonym_group_works_both_ways():
-    assert "GLO-001" in ids("moderator")                           # the term's own alias
+    assert "DT-001" in ids("moderator")                           # the term's own alias
     assert "STK-023" in ids("moderator")                           # says "facilitator" in its body
-    assert "GLO-001" in ids("facilitator")
+    assert "DT-001" in ids("facilitator")
 
 
 def test_fr003_glossary_alias():
@@ -227,7 +227,7 @@ def test_fr004_filler_words_still_count_for_an_exact_title():
 
 def test_fr004_glossary_term_with_a_filler_word():
     assert hit("definition of done", "FR-008")["note"] == "via alias of Definition of Done"   # says only "DoD"
-    assert hit("dod", "GLO-003")["note"] == "via alias of Definition of Done"
+    assert hit("dod", "DT-003")["note"] == "via alias of Definition of Done"
 
 
 def test_fr004_only_filler_words():
@@ -260,7 +260,7 @@ def test_fr006_priority_must():
 
 def test_fr006_tag_between_title_and_body():
     found = ids("navigation")
-    title, tag, body = found.index("GLO-002"), found.index("FR-004"), found.index("FR-005")
+    title, tag, body = found.index("DT-002"), found.index("FR-004"), found.index("FR-005")
     assert title < tag < body, found
 
 
@@ -285,7 +285,7 @@ def test_fr007_body_hit_shows_marked_sentence():
 
 
 def test_fr007_title_hit_shows_first_sentence():
-    assert passages("facilitator")["GLO-001"] == '<p class="hit-passage">Person who guides a session.</p>'
+    assert passages("facilitator")["DT-001"] == '<p class="hit-passage">Person who guides a session.</p>'
 
 
 def test_fr007_title_hit_skips_headings():
@@ -340,7 +340,7 @@ def test_fr008_neighbours_of_a_title_hit():
 
 
 def test_fr008_alias_hit_counts_body_hit_does_not():
-    assert {r["id"] for r in related("jedi master")} >= {"FR-001", "GLO-001"}
+    assert {r["id"] for r in related("jedi master")} >= {"FR-001", "DT-001"}
     assert related("ask") == []                                     # ISS-001 says "ask" only in its body
 
 

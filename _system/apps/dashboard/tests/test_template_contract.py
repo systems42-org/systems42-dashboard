@@ -30,8 +30,8 @@ REPO = Path(__file__).resolve().parents[4]
 TEMPLATES = REPO / "_templates"
 
 WIKI_FOLDERS = [
-    "glossary", "goals", "stakeholders", "context", "external-interfaces",
-    "data-models", "activity-models", "functional-requirements",
+    "domain-terms", "goals", "stakeholders", "context", "external-interfaces",
+    "activity-models", "functional-requirements",
     "quality-requirements", "constraints", "issues",
 ]
 
@@ -55,13 +55,6 @@ _KEY_RE = re.compile(r"^([a-zA-Z][a-zA-Z0-9_-]*)\s*:", re.MULTILINE)
 # entry in the wiki type maps (DR-006).
 NON_WIKI_PREFIXES = {"SRC"}
 
-# Keys the dashboard reads in the requirement-notation schema (DR-038) that
-# this repository's own `_templates/` declare only once they are migrated:
-# `_templates/functional-requirement.md` still carries `stereotype:`. Remove
-# the entry with the migration; the test fails once a template declares it.
-KNOWN_UNTIL_MIGRATION: set[str] = set()
-
-
 
 def _templates() -> list[Path]:
     files = sorted(TEMPLATES.glob("*.md"))
@@ -84,11 +77,9 @@ def test_every_key_app_reads_is_declared_by_some_template():
     source = (Path(__file__).resolve().parent.parent / "app.py").read_text(encoding="utf-8")
     read = set(re.findall(r'\.meta\.get\(\s*"([^"]+)"', source))
     assert read, "found no .meta.get() reads — did app.py move?"
-    undeclared = sorted(read - declared - KNOWN_UNTIL_MIGRATION)
+    undeclared = sorted(read - declared)
     assert not undeclared, \
         f"app.py reads frontmatter keys no template declares: {undeclared}"
-    gone = KNOWN_UNTIL_MIGRATION & declared
-    assert not gone, f"now declared, remove from KNOWN_UNTIL_MIGRATION: {gone}"
 
 
 def test_every_template_id_prefix_is_known_to_the_type_maps():
@@ -118,14 +109,10 @@ def test_no_type_map_entry_is_dead():
     for name, keys in (("_TYPE_FOLDER", set(app._TYPE_FOLDER)),
                        ("_TYPE_LABEL", set(app._TYPE_LABEL)),
                        ("_REL_TYPE_ORDER", set(app._REL_TYPE_ORDER))):
-        # GLO, DM and UC: prefixes of wikis not yet migrated (meta DR-038, DR-039),
-        # which the app still reads
-        dead = sorted(keys - emitted - {"GLO", "DM", "UC"})
+        # UC: a use case migrated to a functional requirement keeps its ID
+        # (notation-use-case, DR-038)
+        dead = sorted(keys - emitted - {"UC"})
         assert not dead, f"{name} maps prefixes no template emits: {dead}"
-    # DM labels the entity-diagram row; its pages are structured domain terms
-    codes = {m["code"] for m in app.SUPPORTING_MODEL_TYPES} - {"DM"}
-    assert codes <= emitted, \
-        f"SUPPORTING_MODEL_TYPES uses codes no template emits: {sorted(codes - emitted)}"
 
 
 

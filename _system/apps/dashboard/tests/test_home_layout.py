@@ -18,8 +18,8 @@ import time
 from pathlib import Path
 
 WIKI_FOLDERS = [
-    "glossary", "goals", "stakeholders", "context", "external-interfaces",
-    "data-models", "activity-models", "functional-requirements",
+    "domain-terms", "goals", "stakeholders", "context", "external-interfaces",
+    "activity-models", "functional-requirements",
     "quality-requirements", "constraints", "issues",
 ]
 
@@ -198,16 +198,16 @@ def _area(route):
 
 
 def test_recent_changes_shape():
-    (_wiki / "glossary" / "GLO-001-x.md").write_text(
-        QR.replace("QR-001", "GLO-001").replace("quality-requirement", "glossary-term"),
+    (_wiki / "domain-terms" / "DT-001-x.md").write_text(
+        QR.replace("QR-001", "DT-001").replace("quality-requirement", "domain-term"),
         encoding="utf-8")
     try:
         app._PARSE_CACHE.clear()
         rows = app.recent_changes(5)
         assert rows and set(rows[0]) >= {"id", "title", "kind", "url", "when"}, rows
-        assert rows[0]["url"] == "/page/glossary/GLO-001-x"
+        assert rows[0]["url"] == "/page/domain-terms/DT-001-x"
     finally:
-        (_wiki / "glossary" / "GLO-001-x.md").unlink()
+        (_wiki / "domain-terms" / "DT-001-x.md").unlink()
 
 
 def _write(folder, stem, **kw):
@@ -237,14 +237,14 @@ def test_scope_tile_counts_interfaces_not_the_context_page():
 
 
 def test_supporting_models_count_model_pages():
-    """R4 counts the pages per model type (`_supporting_model_entries()`)
-    and names none of them (FR-019)."""
+    """R4 counts the structured domain terms and activity models
+    (`supporting_model_count()`) and names none of them (FR-019)."""
     f = _write("activity-models", "ACT-001-borrow", id="ACT-001", type="activity-model", title="Borrow a book")
     try:
         body = _area("/req42")
         tile = body[body.index("tile-r4"):body.index("tile-r5")]
         with app.app.test_request_context("/req42"):
-            n = sum(m["relations"] for m in app._supporting_model_entries())
+            n = app.supporting_model_count()
         assert n >= 1, n
         assert f'<span class="num">{n}</span><span class="unit">model page' in tile, tile
         assert "<ul" not in tile and "Borrow a book" not in tile, tile

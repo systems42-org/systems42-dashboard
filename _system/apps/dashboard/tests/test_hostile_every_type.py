@@ -56,7 +56,7 @@ _ENTRY = {k: PAYLOAD for k in ("data", "direction", "format", "trigger", "messag
                                 "protocol", "name", "type", "label", "kind", "multiplicity",
                                 "verb", "cardinality")}
 _ENTRY.update({"from": "[[STK-001-hostile]]", "to": "[[BB-001-hostile]]",
-               "target": "[[DM-001-hostile]]"})
+               "target": "[[DT-001-hostile]]"})
 
 _tmp = Path(tempfile.mkdtemp())
 _wiki = _tmp / "wiki"
@@ -142,7 +142,7 @@ for _stem, _extra in (
 
 _src = {k: _hostile(v, k in {"id", "type"}) for k, v in _template_fields("source").items()}
 _src.update(id="SRC-001", title=PAYLOAD,
-            **{"ingested-pages": [PAYLOAD, "[[GLO-001-hostile]]"]})
+            **{"ingested-pages": [PAYLOAD, "[[DT-001-hostile]]"]})
 _write(_sources / "SRC-001-hostile.md", _src)
 
 # method anchors: one with a plain name the pages link to, one named by the payload
@@ -271,7 +271,7 @@ def _routes() -> list[str]:
     urls += [f"/req42/{slug}" for slug in app.catalog.SECTION_BY_SLUG]
     urls += [f"/section/{sid}" for sid in app.catalog.SECTION_BY_ID]
     urls += [f"/brand/{name}" for name in app.BRAND_MARKS] + ["/about/files/m.svg"]
-    urls += ["/entity-diagram?focus=DT-001-hostile", "/entity-diagram?focus=DM-001-hostile",
+    urls += ["/entity-diagram?focus=DT-001-hostile", "/entity-diagram?focus=DT-002-hostile",
              "/entity-diagram?context=" + PAYLOAD, "/graph/domain-terms?edges=structured",
              "/search?q=" + PAYLOAD, "/issues?status=" + PAYLOAD + "&section=R1&category=" + PAYLOAD]
     return urls
@@ -319,7 +319,7 @@ def test_no_route_renders_wiki_text_as_live_markup():
 def test_the_payload_was_actually_rendered():
     # guard against a vacuous pass: the hostile text must reach the pages, escaped
     client = app.app.test_client()
-    for url in ("/page/glossary/GLO-001-hostile", "/metamodel", "/about", "/goals",
+    for url in ("/page/domain-terms/DT-001-hostile", "/metamodel", "/about", "/goals",
                 "/page/runtime-scenarios/RS-002-hostile", "/req42/functional-requirements",
                 "/functional-requirements/UC-011-use-case"):
         body = client.get(url).get_data(as_text=True)

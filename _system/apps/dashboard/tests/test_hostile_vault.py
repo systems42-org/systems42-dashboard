@@ -18,8 +18,8 @@ import tempfile
 from pathlib import Path
 
 WIKI_FOLDERS = [
-    "glossary", "domain-terms", "goals", "stakeholders", "context", "external-interfaces",
-    "data-models", "activity-models", "use-cases", "functional-requirements",
+    "domain-terms", "goals", "stakeholders", "context", "external-interfaces",
+    "activity-models", "functional-requirements",
     "quality-requirements", "constraints", "issues", "building-blocks", "decisions",
     "solution-strategy", "crosscutting-concepts", "runtime-scenarios", "deployment-nodes",
 ]
@@ -44,13 +44,10 @@ def _page(folder, stem, frontmatter, body="# T\n"):
 _page("issues", "ISS-001-string-frontmatter", "just a string")
 _page("constraints", "CON-001-list-frontmatter", "- a\n- b")
 # blank title, scalars where lists belong
-_page("glossary", "GLO-001-blank-title", "id: GLO-001\ntitle:\nstatus: draft\ntags: single\naliases: Alias\nrelated: 7",
+_page("domain-terms", "DT-101-blank-title", "id: DT-101\ntitle:\nstatus: draft\ntags: single\naliases: Alias\nrelated: 7",
       "**Definition.** plain.\n")
-_page("functional-requirements", "FR-001-scalar-parent",
-      "id: FR-001\ntitle: Scalar parent\nstereotype: story\nparent: 7\ngoal: 7\nrelated: 7")
-_page("use-cases", "UC-001-scalar-goal", "id: UC-001\ntitle: Use case\ngoal: 7\nrelated: 7\nparent: 7")
-# the same in the notation schema (DR-038): scalars and numbers in notation,
-# level, parent and goal of Agile pages and of a use case among the FRs
+# scalars and numbers in notation, level, parent and goal of Agile pages and
+# of a use case among the FRs (DR-038)
 _page("functional-requirements", "FR-002-agile-scalar-parent",
       "id: FR-002\ntitle: Agile story\nnotation: agile\nlevel: story\nparent: 7\ngoal: 7")
 _page("functional-requirements", "UC-002-use-case-scalars",
@@ -65,7 +62,8 @@ _page("stakeholders", "STK-001-list-influence",
       "id: STK-001\ntitle: Lists\ninfluence: [high]\ninterest: [low]\nprovides: 7\nreceives: 7")
 _page("context", "CTX-001-scalar-flows", "id: CTX-001\ntitle: Ctx\nrelated: 7")
 _page("external-interfaces", "EIF-001-scalar-flows", "id: EIF-001\ntitle: Eif\npartner: x\nflows: 7")
-_page("data-models", "DM-001-scalar-relationships", "id: DM-001\ntitle: Entity\nrelationships: 7\nparent: 7\nrelated: 7")
+_page("domain-terms", "DT-002-scalar-relationships",
+      "id: DT-002\ntitle: Entity\nstereotype: entity\nrelationships: 7\nparent: 7\nrelated: 7")
 _page("domain-terms", "DT-001-scalar-lists",
       "id: DT-001\ntitle: Term\nstereotype: entity\nattributes: 7\nrelationships: 7\nrelated: 7\naliases: 7",
       "**Definition.** A term.\n")
@@ -82,14 +80,14 @@ _page("solution-strategy", "SOL-001-scalars",
 _page("decisions", 'DR-002-quote" onmouseover="x', "id: DR-002\ntitle: Quote in the file name")
 _page("decisions", "DR-001-scalars", "id: DR-001\ntitle: Decision\nkind: 7\ndrivers: 7\ntags: 7")
 # not UTF-8
-(_wiki / "glossary" / "GLO-002-latin1.md").write_bytes(
-    b"---\nid: GLO-002\ntitle: Latin-1\n---\n**Definition.** Gr\xfc\xdfe.\n")
+(_wiki / "domain-terms" / "DT-102-latin1.md").write_bytes(
+    b"---\nid: DT-102\ntitle: Latin-1\n---\n**Definition.** Gr\xfc\xdfe.\n")
 # hostile markup
-_page("glossary", "GLO-003-hostile-title", 'id: GLO-003\ntitle: "<img src=x onerror=alert(1)>"',
-      "**Definition.** <script>alert(2)</script> see [[GLO-004-linker]].\n")
-_page("glossary", "GLO-004-linker", "id: GLO-004\ntitle: Linker",
-      "**Definition.** Points at [[GLO-003-hostile-title]] and "
-      "[[GLO-003-hostile-title|<b>an alias</b>]].\n\n"
+_page("domain-terms", "DT-103-hostile-title", 'id: DT-103\ntitle: "<img src=x onerror=alert(1)>"',
+      "**Definition.** <script>alert(2)</script> see [[DT-104-linker]].\n")
+_page("domain-terms", "DT-104-linker", "id: DT-104\ntitle: Linker",
+      "**Definition.** Points at [[DT-103-hostile-title]] and "
+      "[[DT-103-hostile-title|<b>an alias</b>]].\n\n"
       '<a href="javascript:alert(3)">click</a> <img src=x onerror=alert(4)>\n\n'
       '<div id="settings-dialog" class="fbtn">hijack</div>\n\n'
       "| a | b |\n|:--|--:|\n| 1 | 2 |\n\n```mermaid\ngraph TD; A-->B\n```\n\n"
@@ -98,12 +96,12 @@ _page("goals", "GOAL-001-vision", "id: GOAL-001\ntitle: Vision\nstereotype: visi
       "# Vision\n\n## Vision\n\nA vision <script>alert(5)</script>.\n")
 _page("goals", "GOAL-002-hostile-metric",
       'id: GOAL-002\ntitle: Objective\nstereotype: objective\nparent: "[[GOAL-001-vision]]"\n'
-      'metric: "<b>bold</b> [[GLO-004-linker]]"\nbeneficiary: "[[STK-001-list-influence|The Beneficiary]]"')
+      'metric: "<b>bold</b> [[DT-104-linker]]"\nbeneficiary: "[[STK-001-list-influence|The Beneficiary]]"')
 _page("goals", "GOAL-003-numeric-beneficiary",
       'id: GOAL-003\ntitle: Numeric beneficiary\nstereotype: objective\nbeneficiary: 7')
 # a source record whose ingested pages are one string, with markup
 (_sources / "SRC-001-hostile.md").write_text(
-    '---\nid: SRC-001\ntitle: Source\ntype: source\ningested-pages: "<b>x</b> [[GLO-004-linker]]"\n'
+    '---\nid: SRC-001\ntitle: Source\ntype: source\ningested-pages: "<b>x</b> [[DT-104-linker]]"\n'
     "tags: one\n---\n# Source\n\n<script>alert(6)</script>\n", encoding="utf-8")
 # markdown files beside and above wiki/, which /page/../ used to serve
 (_repo / "outside.md").write_text("---\nid: OUT\ntitle: Outside\n---\nTOP SECRET\n", encoding="utf-8")
@@ -130,15 +128,15 @@ for _m in ("mark-dark.svg", "mark-light.svg", "favicon.svg"):
 # raw/sources/), and a page and a folder that point elsewhere inside it
 _out = _tmp / "outside"
 _out.mkdir()
-(_out / "notes.md").write_text("---\nid: GLO-099\ntitle: Linked out\n---\nLINKED SECRET\n",
+(_out / "notes.md").write_text("---\nid: DT-199\ntitle: Linked out\n---\nLINKED SECRET\n",
                                encoding="utf-8")
 (_out / "SRC-099-notes.md").write_text("---\nid: SRC-099\ntitle: Linked out\n---\nLINKED SECRET\n",
                                        encoding="utf-8")
-(_wiki / "glossary" / "GLO-005-linked-out.md").symlink_to(_out / "notes.md")
+(_wiki / "domain-terms" / "DT-105-linked-out.md").symlink_to(_out / "notes.md")
 (_wiki / "linked").symlink_to(_out, target_is_directory=True)
 (_sources / "SRC-002-linked-out.md").symlink_to(_out / "SRC-099-notes.md")
 _page("constraints", "CON-002-link-target", "id: CON-002\ntitle: Linked inside", "LINKED INSIDE\n")
-(_wiki / "glossary" / "GLO-006-linked-in.md").symlink_to(_wiki / "constraints" / "CON-002-link-target.md")
+(_wiki / "domain-terms" / "DT-106-linked-in.md").symlink_to(_wiki / "constraints" / "CON-002-link-target.md")
 (_wiki / ".shared").mkdir()
 (_wiki / ".shared" / "LNK-001-inside.md").write_text(
     "---\nid: LNK-001\ntitle: In a linked folder\n---\nLINKED FOLDER\n", encoding="utf-8")
@@ -175,7 +173,7 @@ def _plain_get_routes():
 def test_no_route_breaks_on_a_bad_page():
     pages = [app._page_url(p.parent.name, p.stem) for p in _wiki.glob("*/*.md")
              if not p.parent.name.startswith(".") and p.parent.name != "linked"
-             and p.stem != "GLO-005-linked-out"]
+             and p.stem != "DT-105-linked-out"]
     failed = []
     for path in _plain_get_routes() + pages + ["/source/SRC-001-hostile"]:
         status, _ = _get(path)
@@ -185,18 +183,18 @@ def test_no_route_breaks_on_a_bad_page():
 
 
 def test_bad_fields_fall_back_instead_of_crashing():
-    page = app._parse(_wiki / "glossary" / "GLO-001-blank-title.md", "glossary")
-    assert page.title == "GLO-001-blank-title", page.title
+    page = app._parse(_wiki / "domain-terms" / "DT-101-blank-title.md", "domain-terms")
+    assert page.title == "DT-101-blank-title", page.title
     assert page.aliases == ["Alias"], page.aliases
     assert page.as_list("tags") == ["single"]
     assert app._parse(_wiki / "issues" / "ISS-001-string-frontmatter.md", "issues").meta == {}
     assert app._parse(_wiki / "constraints" / "CON-001-list-frontmatter.md", "constraints").meta == {}
-    _, body = _get("/page/glossary/GLO-002-latin1")
+    _, body = _get("/page/domain-terms/DT-102-latin1")
     assert "Latin-1" in body and "Gr��e" in body
 
 
 def test_titles_and_bodies_render_inert():
-    _, body = _get("/page/glossary/GLO-004-linker")
+    _, body = _get("/page/domain-terms/DT-104-linker")
     assert not re.search(r"<img[^>]*onerror", body), "a title or body ran as markup"
     assert "&lt;img src=x onerror=alert(1)&gt;" in body, "the hostile title is not shown escaped"
     assert "&lt;b&gt;an alias&lt;/b&gt;" in body, "a wikilink alias ran as markup"
@@ -207,9 +205,9 @@ def test_titles_and_bodies_render_inert():
     # what the wiki legitimately uses survives the sanitizer
     assert 'style="text-align:left"' in body, "table alignment lost"
     assert 'class="language-mermaid"' in body, "mermaid block lost its class"
-    assert '<a class="wl" href="/page/glossary/GLO-003-hostile-title">' in body
+    assert '<a class="wl" href="/page/domain-terms/DT-103-hostile-title">' in body
     assert 'id="fn:1"' in body and 'class="footnote-ref"' in body, "footnotes lost"
-    _, body = _get("/page/glossary/GLO-003-hostile-title")
+    _, body = _get("/page/domain-terms/DT-103-hostile-title")
     assert "<script>alert(2)" not in body
     for route in ("/domain-terms", "/search", "/"):
         _, listing = _get(route)
@@ -219,11 +217,11 @@ def test_titles_and_bodies_render_inert():
 def test_frontmatter_strings_are_escaped():
     _, body = _get("/goals")
     assert "&lt;b&gt;bold&lt;/b&gt;" in body, "a frontmatter string rendered as markup"
-    assert 'href="/page/glossary/GLO-004-linker"' in body, "its wikilink no longer resolves"
+    assert 'href="/page/domain-terms/DT-104-linker"' in body, "its wikilink no longer resolves"
     assert "<script>alert(5)" not in body, "the vision paragraph ran as markup"
     _, body = _get("/source/SRC-001-hostile")
     assert "<b>x</b>" not in body and "&lt;b&gt;x&lt;/b&gt;" in body, "ingested-pages ran as markup"
-    assert 'href="/page/glossary/GLO-004-linker"' in body
+    assert 'href="/page/domain-terms/DT-104-linker"' in body
     assert "<script>alert(6)" not in body
 
 
@@ -239,10 +237,10 @@ def test_page_route_stays_inside_the_wiki():
     for folder in ("..", ".", ".obsidian", "%2e%2e"):
         status, body = _get(f"/page/{folder}/outside")
         assert status == 404 and "TOP SECRET" not in body, folder
-    status, _ = _get("/page/no-such-folder/GLO-004-linker")
+    status, _ = _get("/page/no-such-folder/DT-104-linker")
     assert status == 404
     for stem in ("..", ".", "..%2Foutside"):
-        status, body = _get(f"/page/glossary/{stem}")
+        status, body = _get(f"/page/domain-terms/{stem}")
         assert status == 404 and "TOP SECRET" not in body, stem
         status, body = _get(f"/functional-requirements/{stem}")
         assert status == 404 and "TOP SECRET" not in body, stem
@@ -285,7 +283,7 @@ def test_served_files_cannot_run_script_in_the_dashboard():
 
 
 def test_symlinks_out_of_the_wiki_are_not_followed():
-    for url in ("/page/glossary/GLO-005-linked-out", "/page/linked/notes",
+    for url in ("/page/domain-terms/DT-105-linked-out", "/page/linked/notes",
                 "/page/linked/SRC-099-notes", "/source/SRC-002-linked-out",
                 "/source/SRC-099"):
         status, body = _get(url)
@@ -293,13 +291,13 @@ def test_symlinks_out_of_the_wiki_are_not_followed():
     for url in ("/", "/search", "/search.json", "/domain-terms", "/changes"):
         _, body = _get(url)
         assert "LINKED SECRET" not in body and "Linked out" not in body, url
-    assert app._parse(_wiki / "glossary" / "GLO-005-linked-out.md", "glossary") is None
+    assert app._parse(_wiki / "domain-terms" / "DT-105-linked-out.md", "domain-terms") is None
     assert not app._is_wiki_folder("linked")
     assert app.load_folder("linked") == []
 
 
 def test_symlinks_inside_the_wiki_still_work():
-    status, body = _get("/page/glossary/GLO-006-linked-in")
+    status, body = _get("/page/domain-terms/DT-106-linked-in")
     assert status == 200 and "LINKED INSIDE" in body
     assert app._is_wiki_folder("shared")
     status, body = _get("/page/shared/LNK-001-inside")
@@ -319,7 +317,7 @@ def test_pages_run_only_the_dashboards_own_script():
     import re
     client = app.app.test_client()
     nonces = set()
-    for url in ("/", "/page/glossary/GLO-004-linker", "/metamodel", "/about", "/search", "/no-such-page"):
+    for url in ("/", "/page/domain-terms/DT-104-linker", "/metamodel", "/about", "/search", "/no-such-page"):
         resp = client.get(url)
         csp = resp.headers.get("Content-Security-Policy", "")
         d = {x.split()[0]: x.split()[1:] for x in csp.split(";") if x.strip()}
@@ -338,12 +336,12 @@ def test_pages_run_only_the_dashboards_own_script():
         nonces.add(nonce)
     assert len(nonces) == 6, "one nonce per response"
     # a script that wiki content smuggled in would have no nonce
-    assert "<script>" not in client.get("/page/glossary/GLO-004-linker").get_data(as_text=True)
+    assert "<script>" not in client.get("/page/domain-terms/DT-104-linker").get_data(as_text=True)
 
 
 def test_pages_refuse_to_be_framed():
     client = app.app.test_client()
-    for url in ("/", "/page/glossary/GLO-004-linker", "/metamodel", "/about", "/no-such-page"):
+    for url in ("/", "/page/domain-terms/DT-104-linker", "/metamodel", "/about", "/no-such-page"):
         resp = client.get(url)
         assert resp.mimetype == "text/html", url
         assert "frame-ancestors 'none'" in resp.headers.get("Content-Security-Policy", ""), url

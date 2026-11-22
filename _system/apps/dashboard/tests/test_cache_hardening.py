@@ -21,7 +21,7 @@ from pathlib import Path
 _tmp = Path(tempfile.mkdtemp())
 _wiki = _tmp / "wiki"
 _anchors = _tmp / "anchors"
-for _f in ("glossary", "stakeholders", "issues"):
+for _f in ("domain-terms", "stakeholders", "issues"):
     (_wiki / _f).mkdir(parents=True)
 _anchors.mkdir()
 os.environ["WIKI_DIR"] = str(_wiki)
@@ -45,10 +45,10 @@ def _page(folder, stem, title, body=""):
 
 
 for _i in range(1, 6):
-    _page("glossary", f"GLO-00{_i}-term-{_i}", f"Term {_i}", "See [[STK-001-owner]].")
-_page("stakeholders", "STK-001-owner", "Owner", "Defines [[GLO-001-term-1]].")
+    _page("domain-terms", f"DT-00{_i}-term-{_i}", f"Term {_i}", "See [[STK-001-owner]].")
+_page("stakeholders", "STK-001-owner", "Owner", "Defines [[DT-001-term-1]].")
 # nested one level too deep, and at the wiki root: not wiki pages
-_page("glossary/deeper", "GLO-900-nested", "Nested")
+_page("domain-terms/deeper", "DT-900-nested", "Nested")
 (_wiki / "README.md").write_text("---\ntitle: Root readme\n---\n", encoding="utf-8")
 
 (_anchors / "MADR.md").write_text(
@@ -87,19 +87,19 @@ def test_link_targets_dump_once_per_page():
     finally:
         app.yaml.safe_dump = real
     owner = next(p for p in app.load_all_pages() if p.stem == "STK-001-owner")
-    assert owner.link_targets() == {"GLO-001-term-1"}
+    assert owner.link_targets() == {"DT-001-term-1"}
 
 
 def test_an_edited_page_gets_fresh_link_targets():
     app._PARSE_CACHE.clear()
     path = _wiki / "stakeholders" / "STK-002-editor.md"
-    _page("stakeholders", "STK-002-editor", "Editor", "Uses [[GLO-002-term-2]].")
+    _page("stakeholders", "STK-002-editor", "Editor", "Uses [[DT-002-term-2]].")
     page = app._parse(path, "stakeholders")
-    assert page.link_targets() == {"GLO-002-term-2"}
-    _page("stakeholders", "STK-002-editor", "Editor", "Uses [[GLO-003-term-3]].")
+    assert page.link_targets() == {"DT-002-term-2"}
+    _page("stakeholders", "STK-002-editor", "Editor", "Uses [[DT-003-term-3]].")
     st = path.stat()
     os.utime(path, ns=(st.st_atime_ns, st.st_mtime_ns + 1_000_000_000))
-    assert app._parse(path, "stakeholders").link_targets() == {"GLO-003-term-3"}
+    assert app._parse(path, "stakeholders").link_targets() == {"DT-003-term-3"}
     path.unlink()
 
 
@@ -108,26 +108,26 @@ def test_title_index_knows_what_load_all_pages_knows():
         stems = {p.stem for p in app.load_all_pages()}
         titles = app.title_index()
     assert set(titles) == stems, (set(titles) ^ stems)
-    assert "GLO-900-nested" not in titles and "README" not in titles
-    assert titles["GLO-001-term-1"] == "Term 1"
+    assert "DT-900-nested" not in titles and "README" not in titles
+    assert titles["DT-001-term-1"] == "Term 1"
 
 
 def test_a_deleted_page_leaves_the_cache():
-    path = _page("glossary", "GLO-050-doomed", "Doomed")
-    app.load_folder("glossary")
+    path = _page("domain-terms", "DT-050-doomed", "Doomed")
+    app.load_folder("domain-terms")
     assert path in app._PARSE_CACHE
     path.unlink()
-    assert "GLO-050-doomed" not in {p.stem for p in app.load_folder("glossary")}
+    assert "DT-050-doomed" not in {p.stem for p in app.load_folder("domain-terms")}
     assert path not in app._PARSE_CACHE
     # the other pages of the folder stay cached
-    assert _wiki / "glossary" / "GLO-001-term-1.md" in app._PARSE_CACHE
+    assert _wiki / "domain-terms" / "DT-001-term-1.md" in app._PARSE_CACHE
 
 
 def test_parse_of_a_vanished_file_drops_its_entry():
-    path = _page("glossary", "GLO-051-gone", "Gone")
-    assert app._parse(path, "glossary") is not None
+    path = _page("domain-terms", "DT-051-gone", "Gone")
+    assert app._parse(path, "domain-terms") is not None
     path.unlink()
-    assert app._parse(path, "glossary") is None
+    assert app._parse(path, "domain-terms") is None
     assert path not in app._PARSE_CACHE
 
 
@@ -142,7 +142,7 @@ def test_a_deleted_anchor_leaves_the_anchor_cache():
 
 def test_threads_parsing_at_once_agree():
     for i in range(40):
-        _page("issues", f"ISS-{100 + i}-load", f"Load {i}", "About [[GLO-001-term-1]].")
+        _page("issues", f"ISS-{100 + i}-load", f"Load {i}", "About [[DT-001-term-1]].")
     app._PARSE_CACHE.clear()
     errors, results = [], []
     start = threading.Barrier(8)

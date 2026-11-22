@@ -60,9 +60,8 @@ func TestCatalogFromRepoMetamodel(t *testing.T) {
 		}
 	}
 
-	// DR-039: both glossary and domain-terms map to C5
-	if s, ok := cat.ByFolder["glossary"]; !ok || s.ID != "C5" {
-		t.Fatalf("glossary should map to C5, got %+v (%v)", s, ok)
+	if _, ok := cat.ByFolder["glossary"]; ok {
+		t.Fatal("glossary is no folder of the metamodel (DR-039)")
 	}
 	if s, ok := cat.ByFolder["domain-terms"]; !ok || s.ID != "C5" {
 		t.Fatalf("domain-terms should map to C5, got %+v (%v)", s, ok)

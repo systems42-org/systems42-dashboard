@@ -331,16 +331,18 @@ func TestPhase2AreasListsMetamodelAndCustomSection(t *testing.T) {
 		t.Fatalf("GET /req42/building-blocks = %d, want 404", rec.Code)
 	}
 
-	// Redirects preserve CSP + XFO + query
-	rec = httptest.NewRecorder()
-	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/glossary?sort=title", nil))
-	if rec.Code != http.StatusMovedPermanently || rec.Header().Get("Location") != "/domain-terms?sort=title" || rec.Header().Get("X-Frame-Options") != "DENY" {
-		t.Fatalf("GET /glossary?sort=title = %d loc=%q xfo=%q", rec.Code, rec.Header().Get("Location"), rec.Header().Get("X-Frame-Options"))
-	}
+	// Redirects keep the security headers
 	rec = httptest.NewRecorder()
 	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/adrs", nil))
-	if rec.Code != http.StatusMovedPermanently || rec.Header().Get("Location") != "/decisions" {
-		t.Fatalf("GET /adrs = %d loc=%q", rec.Code, rec.Header().Get("Location"))
+	if rec.Code != http.StatusMovedPermanently || rec.Header().Get("Location") != "/decisions" || rec.Header().Get("X-Frame-Options") != "DENY" {
+		t.Fatalf("GET /adrs = %d loc=%q xfo=%q", rec.Code, rec.Header().Get("Location"), rec.Header().Get("X-Frame-Options"))
+	}
+	for _, old := range []string{"/glossary", "/graph/glossary", "/data-model"} {
+		rec = httptest.NewRecorder()
+		srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, old, nil))
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("GET %s = %d, want 404", old, rec.Code)
+		}
 	}
 	rec = httptest.NewRecorder()
 	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/section/C6", nil))
@@ -467,10 +469,8 @@ func TestPhase3ProjectionRoutesAndFilters(t *testing.T) {
 		}
 	}
 
-	// Phase 3 legacy redirects
+	// Phase 3 redirects
 	for _, pair := range [][2]string{
-		{"/data-model?context=Core", "/entity-diagram?context=Core"},
-		{"/graph/glossary?edges=related", "/graph/domain-terms?edges=related"},
 		{"/req42/backlog", "/req42/functional-requirements"},
 	} {
 		rec := httptest.NewRecorder()

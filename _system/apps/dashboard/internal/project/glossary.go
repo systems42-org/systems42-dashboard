@@ -10,10 +10,10 @@ import (
 
 var (
 	namedGraphTypes = map[string]bool{
-		"DM": true, "STK": true, "EIF": true, "GOAL": true, "BB": true,
+		"STK": true, "EIF": true, "GOAL": true, "BB": true,
 	}
 	egoTypes = map[string]bool{
-		"GLO": true, "DM": true, "STK": true, "GOAL": true, "BB": true,
+		"DT": true, "STK": true, "GOAL": true, "BB": true,
 	}
 )
 
@@ -34,10 +34,8 @@ type structEdgeKey struct {
 
 // BuildGlossaryGraph projects the force-directed cytoscape term network
 // (DR-023) from related: links and structured domain-model relationships.
-func BuildGlossaryGraph(allPages, domainTerms, glossaryPages, dataModels []*wiki.Page, edgeFilter string) map[string]any {
-	glossary := make([]*wiki.Page, 0, len(domainTerms)+len(glossaryPages))
-	glossary = append(glossary, domainTerms...)
-	glossary = append(glossary, glossaryPages...)
+func BuildGlossaryGraph(allPages, domainTerms []*wiki.Page, edgeFilter string) map[string]any {
+	glossary := domainTerms
 
 	gloStems := make(map[string]bool, len(glossary))
 	gloDegree := make(map[string]int, len(glossary))
@@ -89,7 +87,7 @@ func BuildGlossaryGraph(allPages, domainTerms, glossaryPages, dataModels []*wiki
 
 	if edgeFilter != "related" {
 		seenStruct := map[structEdgeKey]bool{}
-		for _, rel := range DataModelEdges(dataModels, domainTerms, glossaryPages) {
+		for _, rel := range DataModelEdges(domainTerms) {
 			src, tgt := rel["source"].(string), rel["target"].(string)
 			if !gloStems[src] || !gloStems[tgt] {
 				continue
@@ -130,7 +128,7 @@ func BuildGlossaryGraph(allPages, domainTerms, glossaryPages, dataModels []*wiki
 		nodes = append(nodes, map[string]any{
 			"id":         p.Stem,
 			"label":      p.Title(),
-			"type":       "GLO",
+			"type":       "DT",
 			"core":       true,
 			"url":        "/page/" + p.Folder + "/" + p.Stem,
 			"degree":     gloDegree[p.Stem],
@@ -185,10 +183,10 @@ func BuildGlossaryGraph(allPages, domainTerms, glossaryPages, dataModels []*wiki
 	}
 }
 
-// BuildGlossaryEgoGraph builds the 1-hop ego network for a single domain/glossary
-// term page (DR-023), returning nil when stem is not in the glossary graph.
-func BuildGlossaryEgoGraph(allPages, domainTerms, glossaryPages, dataModels []*wiki.Page, stem string) map[string]any {
-	full := BuildGlossaryGraph(allPages, domainTerms, glossaryPages, dataModels, "all")
+// BuildGlossaryEgoGraph builds the 1-hop ego network for a single domain
+// term page (DR-023), returning nil when stem is not in the term graph.
+func BuildGlossaryEgoGraph(allPages, domainTerms []*wiki.Page, stem string) map[string]any {
+	full := BuildGlossaryGraph(allPages, domainTerms, "all")
 	fullNodes := full["nodes"].([]map[string]any)
 	fullEdges := full["edges"].([]map[string]any)
 

@@ -8,8 +8,7 @@ Run from the dashboard dir:
 WIKI_DIR points at tests/fixtures/wiki; the metamodel is the real one, since
 the page's whole point is to agree with it. The anchors are a temporary
 folder of their own (ANCHORS_DIR). The requirement notations (DR-038) are
-tested in test_notations.py, against fixture notation files: this
-repository's own metamodel declares none until it is migrated.
+tested in test_notations.py, against fixture notation files.
 """
 import os
 import sys

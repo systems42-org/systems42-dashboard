@@ -99,7 +99,7 @@ def test_addressed_by_lists_dr_and_bb():
     got = {g["type"]: [l["id"] for l in g["links"]] for g in groups}
     assert got == {"DR": ["DR-001"], "BB": ["BB-001", "BB-004", "BB-007-noid"]}, got
     assert app.build_addressed_by("UC-001-find-course")[0]["links"][0]["id"] == "BB-001"
-    assert app.build_addressed_by("GLO-001-booking") == []
+    assert app.build_addressed_by("DT-001-booking") == []
 
 
 # --- routes ------------------------------------------------------------------
@@ -163,7 +163,7 @@ def test_addressed_by_not_duplicated():
 
 
 def test_glossary_term_links_back_to_block():
-    _, body = _get("/page/glossary/GLO-001-booking")
+    _, body = _get("/page/domain-terms/DT-001-booking")
     assert "BB-001" in body
 
 
@@ -172,10 +172,10 @@ def test_glossary_network_has_a_building_block_layer():
     assert g["layer_counts"].get("BB") == 1, g["layer_counts"]
     bb = next(n["data"] for n in g["nodes"] if n["data"]["id"] == "BB-001-booking")
     assert "rest" not in bb and bb["url"] == "/page/building-blocks/BB-001-booking"
-    assert app.build_glossary_ego_graph("GLO-001-booking")["layer_counts"].get("BB") == 1
+    assert app.build_glossary_ego_graph("DT-001-booking")["layer_counts"].get("BB") == 1
     _, body = _get("/graph/domain-terms")
     assert 'data-layer="BB"' in body and "lg-BB" in body
-    _, body = _get("/page/glossary/GLO-001-booking")
+    _, body = _get("/page/domain-terms/DT-001-booking")
     assert 'data-layer="BB"' in body
 
 

@@ -13,8 +13,8 @@ import tempfile
 from pathlib import Path
 
 WIKI_FOLDERS = [
-    "glossary", "goals", "stakeholders", "context", "external-interfaces",
-    "data-models", "activity-models", "functional-requirements",
+    "domain-terms", "goals", "stakeholders", "context", "external-interfaces",
+    "activity-models", "functional-requirements",
     "quality-requirements", "constraints", "issues",
 ]
 
@@ -44,7 +44,7 @@ GET_ROUTES = [
     "/issues?status=open&category=method&severity=minor&section=C1&owner=none&sort=status:asc",
 ]
 NOT_FOUND_ROUTES = [
-    "/page/glossary/GLO-001-nothing",
+    "/page/domain-terms/DT-001-nothing",
     "/functional-requirements/FR-001-nothing",
     "/source/SRC-001-nothing",
 ]

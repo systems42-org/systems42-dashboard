@@ -45,8 +45,8 @@ except ImportError:
 
 HERE = Path(__file__).resolve().parent.parent
 WIKI_FOLDERS = [
-    "domain-terms", "glossary", "goals", "stakeholders", "context", "external-interfaces",
-    "data-models", "activity-models", "use-cases", "functional-requirements",
+    "domain-terms", "goals", "stakeholders", "context", "external-interfaces",
+    "activity-models", "functional-requirements",
     "quality-requirements", "constraints", "decisions", "issues",
 ]
 

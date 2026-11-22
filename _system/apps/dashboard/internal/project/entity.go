@@ -25,18 +25,10 @@ var dmArrows = map[string]dmArrow{
 	"inheritance": {"<|--", false},
 }
 
-var dmMarkedStereotypes = map[string]bool{
-	"entity":       true,
-	"value-object": true,
-}
-
 var (
 	dmWordSplitRE     = regexp.MustCompile(`[^A-Za-z0-9]+`)
 	dmSectionStartRE  = regexp.MustCompile(`(?m)^\*\*([^*\n]+?)\.\*\*[ \t]*\n?`)
 	dmSectionEndRE    = regexp.MustCompile(`(?m)^\*\*[^*\n]+?\.\*\*|^>[ \t]*\[!|^##[ \t]`)
-	dmAttrStartRE     = regexp.MustCompile(`\*\*Attributes\.\*\*[ \t]*\n`)
-	dmAttrEndRE       = regexp.MustCompile(`(?m)^\*\*[A-Za-z][^*\n]+?\.\*\*|^>[ \t]*\[!|^##[ \t]`)
-	dmAttrBulletRE    = regexp.MustCompile("(?m)^\\s*-\\s+`([a-zA-Z][a-zA-Z0-9_-]*)`")
 	dmNoteStartRE     = regexp.MustCompile(`(?m)^>[ \t]*\[!note\][ \t]*([^\n]+)\n((?:^>.*(?:\n|$))+)`)
 	dmQuotePrefixRE   = regexp.MustCompile(`^>\s?`)
 	dmTranslitReplace = strings.NewReplacer(
@@ -83,67 +75,31 @@ func dmClassName(label string, taken map[string]bool) string {
 	return name
 }
 
-// ExtractDMAttributeNames returns attribute names from frontmatter `attributes:`
-// or from the `**Attributes.**` bullet list in the body.
+// ExtractDMAttributeNames returns attribute names from frontmatter `attributes:`.
 func ExtractDMAttributeNames(p *wiki.Page) []string {
-	if raw, exists := p.Meta["attributes"]; exists {
-		list, ok := raw.([]any)
-		if !ok {
-			return []string{}
-		}
-		out := make([]string, 0, len(list))
-		for _, item := range list {
-			m, ok := item.(map[string]any)
-			if !ok {
-				continue
-			}
-			if name, ok := m["name"].(string); ok && strings.TrimSpace(name) != "" {
-				out = append(out, name)
-			}
-		}
-		return out
-	}
-	body := strings.ReplaceAll(p.Body, "\r\n", "\n")
-	start := dmAttrStartRE.FindStringIndex(body)
-	if start == nil {
+	list, ok := p.Meta["attributes"].([]any)
+	if !ok {
 		return []string{}
 	}
-	rest := body[start[1]:]
-	if end := dmAttrEndRE.FindStringIndex(rest); end != nil {
-		rest = rest[:end[0]]
-	}
-	matches := dmAttrBulletRE.FindAllStringSubmatch(rest, -1)
-	out := make([]string, 0, len(matches))
-	for _, m := range matches {
-		out = append(out, m[1])
+	out := make([]string, 0, len(list))
+	for _, item := range list {
+		m, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		if name, ok := m["name"].(string); ok && strings.TrimSpace(name) != "" {
+			out = append(out, name)
+		}
 	}
 	return out
 }
 
-// DataModelNodes returns every class node in the entity diagram: data-models/
-// plus structured domain-terms/, followed by unclaimed marked glossary stubs.
-func DataModelNodes(dataModels, domainTerms, glossary []*wiki.Page) []map[string]any {
-	pages := wiki.DataModelPages(dataModels, domainTerms)
-
-	claimed := map[string]bool{}
-	for _, p := range pages {
-		if p.Folder != "data-models" {
-			continue
-		}
-		claimed[strings.ToLower(strings.TrimSpace(p.Title()))] = true
-		for _, raw := range p.AsList("related") {
-			if st := wiki.StemOfLink(raw); st != "" {
-				claimed[st] = true
-			}
-		}
-	}
-
+// DataModelNodes returns every class node in the entity diagram: one per
+// structured domain term.
+func DataModelNodes(domainTerms []*wiki.Page) []map[string]any {
+	pages := wiki.DataModelPages(domainTerms)
 	nodes := make([]map[string]any, 0, len(pages))
 	for _, p := range pages {
-		aliases := []string{}
-		if p.Folder == "domain-terms" {
-			aliases = p.Aliases()
-		}
 		nodes = append(nodes, map[string]any{
 			"key":        p.Stem,
 			"id":         p.ID(),
@@ -151,29 +107,7 @@ func DataModelNodes(dataModels, domainTerms, glossary []*wiki.Page) []map[string
 			"context":    strings.TrimSpace(p.MetaString("bounded-context")),
 			"stereotype": strings.ToLower(strings.TrimSpace(p.MetaString("stereotype"))),
 			"attributes": ExtractDMAttributeNames(p),
-			"aliases":    aliases,
-			"stub":       false,
-			"url":        "/page/" + p.Folder + "/" + p.Stem,
-		})
-	}
-
-	for _, p := range SortedByID(glossary) {
-		st := strings.ToLower(strings.TrimSpace(p.MetaString("stereotype")))
-		if !dmMarkedStereotypes[st] {
-			continue
-		}
-		if claimed[p.Stem] || claimed[strings.ToLower(strings.TrimSpace(p.Title()))] {
-			continue
-		}
-		nodes = append(nodes, map[string]any{
-			"key":        p.Stem,
-			"id":         p.ID(),
-			"label":      p.Title(),
-			"context":    strings.TrimSpace(p.MetaString("bounded-context")),
-			"stereotype": st,
-			"attributes": []string{},
-			"aliases":    []string{},
-			"stub":       true,
+			"aliases":    p.Aliases(),
 			"url":        "/page/" + p.Folder + "/" + p.Stem,
 		})
 	}
@@ -181,16 +115,16 @@ func DataModelNodes(dataModels, domainTerms, glossary []*wiki.Page) []map[string
 }
 
 // DataModelEdges returns the parent inheritance edges and frontmatter
-// relationships edges among existing data-model nodes.
-func DataModelEdges(dataModels, domainTerms, glossary []*wiki.Page) []map[string]any {
-	nodes := DataModelNodes(dataModels, domainTerms, glossary)
+// relationships edges among existing entity-diagram nodes.
+func DataModelEdges(domainTerms []*wiki.Page) []map[string]any {
+	nodes := DataModelNodes(domainTerms)
 	byStem := make(map[string]bool, len(nodes))
 	for _, n := range nodes {
 		byStem[n["key"].(string)] = true
 	}
 
 	out := make([]map[string]any, 0)
-	for _, p := range wiki.DataModelPages(dataModels, domainTerms) {
+	for _, p := range wiki.DataModelPages(domainTerms) {
 		for _, raw := range p.AsList("parent") {
 			tgt := wiki.StemOfLink(raw)
 			if tgt != "" && byStem[tgt] && tgt != p.Stem {
@@ -208,11 +142,7 @@ func DataModelEdges(dataModels, domainTerms, glossary []*wiki.Page) []map[string
 			if !ok {
 				continue
 			}
-			tgtRaw := entry["to"]
-			if tgtRaw == nil {
-				tgtRaw = entry["target"]
-			}
-			tgt := wiki.StemOfLink(tgtRaw)
+			tgt := wiki.StemOfLink(entry["to"])
 			if tgt == "" || !byStem[tgt] {
 				continue
 			}
@@ -226,21 +156,15 @@ func DataModelEdges(dataModels, domainTerms, glossary []*wiki.Page) []map[string
 			if _, valid := dmArrows[kind]; !valid {
 				kind = "association"
 			}
-			if tgt == p.Stem && (kind == "inheritance" || p.Folder == "data-models") {
-				continue
+			if tgt == p.Stem && kind == "inheritance" {
+				continue // a term may refer to itself, not inherit from itself
 			}
-			multRaw, hasMult := entry["multiplicity"]
-			if !hasMult {
-				multRaw = entry["cardinality"]
-			}
+			multRaw := entry["multiplicity"]
 			mult := ""
 			if multRaw != nil {
 				mult = strings.TrimSpace(wiki.ScalarString(multRaw))
 			}
 			verbRaw := entry["label"]
-			if verbRaw == nil || wiki.ScalarString(verbRaw) == "" {
-				verbRaw = entry["verb"]
-			}
 			out = append(out, map[string]any{
 				"source":      p.Stem,
 				"target":      tgt,
@@ -340,9 +264,7 @@ func BuildDataModelFullDiagram(nodes, edges []map[string]any, contextFilter, foc
 	lines := []string{"classDiagram"}
 	for _, n := range kept {
 		var body []string
-		if n["stub"].(bool) {
-			body = append(body, "    <<term>>")
-		} else if st := n["stereotype"].(string); st != "" && st != "entity" {
+		if st := n["stereotype"].(string); st != "" && st != "entity" {
 			body = append(body, fmt.Sprintf("    <<%s>>", st))
 		}
 		for _, attr := range n["attributes"].([]string) {
@@ -423,8 +345,8 @@ func extractDMNotes(p *wiki.Page, linkCtx render.LinkContext) []map[string]any {
 
 // DataModelEntities builds the per-entity catalog cards shown beneath the
 // entity diagram on /entity-diagram.
-func DataModelEntities(dataModels, domainTerms []*wiki.Page, linkCtx render.LinkContext) []map[string]any {
-	pages := wiki.DataModelPages(dataModels, domainTerms)
+func DataModelEntities(domainTerms []*wiki.Page, linkCtx render.LinkContext) []map[string]any {
+	pages := wiki.DataModelPages(domainTerms)
 	out := make([]map[string]any, 0, len(pages))
 	for _, p := range pages {
 		out = append(out, map[string]any{

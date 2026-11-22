@@ -1,15 +1,16 @@
 ---
-id: GLO-001
-type: glossary-term
+id: DT-001
+type: domain-term
 title: Book
 status: accepted
 created: 2026-09-06
 updated: 2026-09-06
 sources: []
 related:
-  - "[[GLO-002-loan]]"
-  - "[[GLO-004-shelf]]"
-tags: [glossary]
+- '[[DT-002-loan]]'
+- '[[DT-004-shelf]]'
+tags:
+- domain-term
 aliases: []
 bounded-context: Lending
 agreed: true
