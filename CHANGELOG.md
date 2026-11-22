@@ -96,6 +96,16 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - This repository no longer creates project wikis: `_system/scripts/new-project.sh`,
   its test `test-new-project.sh`, `migrate-decisions.py` and the `new-project`
   skill are gone. New projects come from the Systems42 meta repository.
+- Dashboard: wikis on the old schema are no longer supported. Migrate them
+  with meta's `migrate-requirements` and `migrate-domain-terms` first. The
+  dashboard no longer reads `wiki/glossary/`, `wiki/data-models/` or
+  `wiki/use-cases/`, knows no `GLO-` or `DM-` pages, and draws no `<<term>>`
+  stubs in the entity diagram. Entity attributes come from `attributes:`
+  only, relationships from `to`, `label` and `multiplicity` only (the
+  `**Attributes.**` bullet list and the `target`, `verb` and `cardinality`
+  keys are gone). `/glossary`, `/graph/glossary`, `/data-model` and
+  `/page/use-cases/<id>` answer 404 instead of redirecting. Use cases with a
+  `UC-` ID in `wiki/functional-requirements/` still work (DR-038, DR-039).
 
 ### Changed
 - Dashboard: the first page shows the first sentence of the vision under the
