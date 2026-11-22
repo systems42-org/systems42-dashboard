@@ -296,3 +296,84 @@ private func hostileCopy() throws -> (url: URL, outside: URL, store: () throws -
         #expect(try page(store1, "DT-996-space").title == "Space")
     }
 }
+
+@Suite struct HostileLayoutTests {
+    @Test func aWikiFolderThatIsASymlinkOutOfTheRootShowsNoPages() throws {
+        let (url, outside, _) = try hostileCopy()
+        let fm = FileManager.default
+        try fm.createDirectory(at: outside.appending(path: "domain-terms"), withIntermediateDirectories: true)
+        try write("---\nid: DT-1\ntitle: Elsewhere\n---\n", to: outside.appending(path: "domain-terms/DT-1-elsewhere.md"))
+        try fm.removeItem(at: url.appending(path: "wiki"))
+        try fm.createSymbolicLink(at: url.appending(path: "wiki"), withDestinationURL: outside)
+        let store = try openStore(url)
+        #expect(store.folders().isEmpty)
+        #expect(store.pages(in: "domain-terms").isEmpty)
+        #expect(store.page(id: "DT-1") == nil)
+    }
+
+    @Test func rawSourcesThatIsASymlinkOutOfTheRootShowsNoSources() throws {
+        let (url, outside, _) = try hostileCopy()
+        let fm = FileManager.default
+        try write("---\nid: SRC-9\ntitle: Elsewhere\n---\n", to: outside.appending(path: "SRC-9-elsewhere.md"))
+        try fm.removeItem(at: url.appending(path: "raw/sources"))
+        try fm.createSymbolicLink(at: url.appending(path: "raw/sources"), withDestinationURL: outside)
+        let store = try openStore(url)
+        #expect(store.resolve(Wikilink(target: "SRC-9", label: nil, heading: nil)) == .missing)
+        #expect(store.pages(in: terms).count == 12)
+    }
+
+    @Test func aWikiSymlinkInsideTheRootStillWorks() throws {
+        let (url, _, _) = try hostileCopy()
+        let fm = FileManager.default
+        try fm.moveItem(at: url.appending(path: "wiki"), to: url.appending(path: "real-wiki"))
+        try fm.createSymbolicLink(at: url.appending(path: "wiki"), withDestinationURL: url.appending(path: "real-wiki"))
+        let store = try openStore(url)
+        #expect(store.pages(in: terms).count == 12)
+        #expect(store.folders() == ["domain-terms", "issues"])
+    }
+
+    @Test func namesThatDifferOnlyInNormalizationAreOnePage() throws {
+        let (url, _, _) = try hostileCopy()
+        let dir = url.appending(path: "wiki/domain-terms")
+        let composed = "DT-950-caf\u{E9}.md"
+        let decomposed = "DT-950-cafe\u{301}.md"
+        try write("---\nid: DT-950\ntitle: Cafe\n---\n", to: dir.appending(path: composed))
+        var seen: [String: CachedPage] = [:]
+        let pages = Files.pages(
+            in: dir, folder: "domain-terms", inside: Files.realPath(dir) ?? "", cache: [:], seen: &seen,
+            fileNames: [composed, decomposed]
+        )
+        #expect(pages.count == 1)
+        #expect(pages.first?.title == "Cafe")
+        #expect(pages.first?.problems.count == 1)
+    }
+
+    @Test func foldersThatDifferOnlyInNormalizationAreOneFolder() throws {
+        let (url, _, _) = try hostileCopy()
+        let composed = "caf\u{E9}", decomposed = "cafe\u{301}"
+        try FileManager.default.createDirectory(at: url.appending(path: "wiki/\(composed)"), withIntermediateDirectories: true)
+        try write("---\nid: X-1\ntitle: X\n---\n", to: url.appending(path: "wiki/\(composed)/X-1-x.md"))
+        var cache: [String: CachedPage] = [:]
+        let snapshot = Snapshot.build(root: url, cache: &cache, folderNames: [composed, decomposed, "issues"])
+        #expect(snapshot.folders.count == 2)
+        #expect(snapshot.pagesByRef.count == 3)
+    }
+
+    @Test func harmlessFrontmatterIsNotTooDeep() throws {
+        let (url, _, store) = try hostileCopy()
+        let dir = url.appending(path: "wiki/domain-terms")
+        let block = "---\ntitle: Block\nnote: |\n" + String(repeating: " ", count: 150) + "deep text\n"
+            + String(repeating: " ", count: 150) + "- not a list [ ] { \n---\nbody\n"
+        try write(block, to: dir.appending(path: "DT-960-block.md"))
+        try write("---\ntitle: \"a [b\"\nx: don't [ stop {\ny: 'c {d'\nz: [\"[\", \"{\"]\n---\n", to: dir.appending(path: "DT-961-quotes.md"))
+        var lines = "---\ntitle: Many\n"
+        for i in 0..<300 { lines += "k\(i): a [b\n" }
+        try write(lines + "---\n", to: dir.appending(path: "DT-962-many.md"))
+        let store1 = try store()
+        for stem in ["DT-960-block", "DT-961-quotes", "DT-962-many"] {
+            let loaded = try page(store1, stem)
+            #expect(loaded.problems.isEmpty, "\(stem) \(loaded.problems)")
+        }
+        #expect(try page(store1, "DT-961-quotes").title == "a [b")
+    }
+}

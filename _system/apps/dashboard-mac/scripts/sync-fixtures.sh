@@ -37,6 +37,7 @@ build search search-wiki ""
 build arc42 arc42/wiki ""
 build arc42-views arc42-views/wiki ""
 build domain-model domain-model/wiki domain-model
+mkdir -p "$out/hostile/_system"
 rm -rf "$out/hostile/_system/metamodel" "$out/hostile/_system/anchors"
 cp -R "$repo/_system/metamodel" "$out/hostile/_system/metamodel"
 cp -R "$repo/_system/anchors" "$out/hostile/_system/anchors"

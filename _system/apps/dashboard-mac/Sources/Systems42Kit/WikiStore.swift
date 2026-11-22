@@ -1,4 +1,5 @@
 import Foundation
+import Yams
 
 /// What a wikilink points at.
 public enum LinkTarget: Equatable, Sendable {
@@ -33,7 +34,8 @@ public struct PageRelations: Equatable, Sendable {
 ///
 /// It reads a snapshot of the folder the first time a question needs one and keeps
 /// it until `reload`. Parsed pages are kept by file modification time and size,
-/// so a rebuild after `reload` parses only the files that changed.
+/// so a rebuild after `reload` parses only the files that changed. A rebuild scans
+/// the disk while it holds the lock, so call the store off the main thread.
 ///
 /// A link resolves by full stem, then by id, then by alias. A link follows the
 /// dashboard in what it counts: the wikilinks of every frontmatter field at any
@@ -46,7 +48,8 @@ public final class WikiStore: @unchecked Sendable {
 
     private let lock = NSLock()
     // `lock` guards `cache` and `snapshot`. A build holds it from start to end, so two
-    // threads asking at once build once. A snapshot is immutable and shared freely.
+    // threads asking at once build once, and a thread asking meanwhile waits for the scan.
+    // A snapshot is immutable and shared freely.
     private var cache: [String: CachedPage] = [:]
     private var snapshot: Snapshot?
 
@@ -96,22 +99,21 @@ public final class WikiStore: @unchecked Sendable {
     public func relations(of ref: PageRef) -> PageRelations {
         let snapshot = current()
         guard ref.isSafe, snapshot.pagesByRef[ref] != nil else { return PageRelations(linksTo: [], linkedFrom: [], traced: []) }
-        let shown = snapshot.traceTargets(of: ref)
+        let shown = snapshot.trace[ref] ?? []
         let out = Set((snapshot.outgoing[ref] ?? [:]).values.joined()).subtracting(shown)
         let into = Set((snapshot.incoming[ref] ?? [:]).values.joined())
             .subtracting(shown).subtracting(out).subtracting([ref])
         return PageRelations(linksTo: Snapshot.sorted(out), linkedFrom: Snapshot.sorted(into), traced: Snapshot.sorted(shown))
     }
 
-    /// The open issues (status neither `resolved` nor `wontfix`) whose frontmatter or body
-    /// link to `ref`, in id order.
+    /// The open issues (status not in `RelationRules.closedIssueStatuses`) whose frontmatter or
+    /// body link to `ref`, in id order.
     public func openIssues(for ref: PageRef) -> [Page] {
         let snapshot = current()
-        guard ref.isSafe else { return [] }
-        return (snapshot.pagesByFolder["issues"] ?? [])
+        guard ref.isSafe, let folder = snapshot.issueFolder else { return [] }
+        return (snapshot.pagesByFolder[folder] ?? [])
             .filter { issue in
-                let status = issue.status.lowercased()
-                return status != "resolved" && status != "wontfix"
+                !RelationRules.closedIssueStatuses.contains(issue.status.lowercased())
                     && (snapshot.outgoing[issue.ref] ?? [:]).values.contains { $0.contains(ref) }
             }
             .sorted { $0.id < $1.id }
@@ -157,10 +159,12 @@ struct Names: Sendable {
     var sources: [String: String] = [:]
     var anchors: [String: String] = [:]
     var metamodel: [String: String] = [:]
+    /// The start of a source id, such as `SRC-`.
+    var sourceIdStart: String?
 
     func resolve(_ link: Wikilink) -> LinkTarget {
         let name = link.name
-        if link.target.hasPrefix("raw/") || name.hasPrefix("SRC-") {
+        if link.target.hasPrefix("raw/") || sourceIdStart.map(name.hasPrefix) == true {
             if let source = sources[name] { return .source(source) }
         } else if let found = byStem[name] ?? byId[name] ?? byAlias[name] {
             return .page(found)
@@ -180,32 +184,52 @@ final class Snapshot: Sendable {
     let names: Names
     let outgoing: [PageRef: [String: [PageRef]]]
     let incoming: [PageRef: [String: [PageRef]]]
+    /// Per page, the pages the dashboard's trace panel lists for it (see `PageRelations`).
+    let trace: [PageRef: Set<PageRef>]
+    let issueFolder: String?
 
     private init(
         folders: [String], pagesByFolder: [String: [Page]], names: Names,
-        outgoing: [PageRef: [String: [PageRef]]], incoming: [PageRef: [String: [PageRef]]]
+        outgoing: [PageRef: [String: [PageRef]]], incoming: [PageRef: [String: [PageRef]]],
+        trace: [PageRef: Set<PageRef>], issueFolder: String?
     ) {
         self.folders = folders
         self.pagesByFolder = pagesByFolder
-        self.pagesByRef = Dictionary(uniqueKeysWithValues: pagesByFolder.values.joined().map { ($0.ref, $0) })
+        // Two names that differ only in Unicode normalization are one key. The first stays.
+        self.pagesByRef = Dictionary(pagesByFolder.values.joined().map { ($0.ref, $0) }, uniquingKeysWith: { first, _ in first })
         self.names = names
         self.outgoing = outgoing
         self.incoming = incoming
+        self.trace = trace
+        self.issueFolder = issueFolder
     }
 
     static func sorted(_ refs: some Sequence<PageRef>) -> [PageRef] {
         refs.sorted { ($0.stem, $0.folder) < ($1.stem, $1.folder) }
     }
 
-    static func build(root: URL, cache: inout [String: CachedPage]) -> Snapshot {
+    /// The relations the dashboard's trace panel shows, and the directions it shows them in:
+    /// `forward` lists what a page names in the field, `inverse` lists the pages that name it.
+    /// Which relations and directions the panel shows is not in the metamodel. Open debt.
+    /// The folders each relation joins come from the metamodel (`RelationRules`).
+    private static let tracePanel: [String: (forward: Bool, inverse: Bool)] = [
+        "drivers": (true, true), "realizes": (true, true), "shaped-by": (true, false),
+        "superseded-by": (true, true), "applies-to": (true, true), "hosts": (true, true),
+        "uses": (false, true), "steps": (false, true),
+    ]
+
+    /// `folderNames` replaces the listing of `wiki/`, so a test can offer names a file system refuses to hold.
+    static func build(root: URL, cache: inout [String: CachedPage], folderNames: [String]? = nil) -> Snapshot {
         var seen: [String: CachedPage] = [:]
         defer { cache = seen }
+        let rules = RelationRules.read(root: root)
+        let rootReal = Files.realPath(root)
 
         var folders: [String] = []
         var pagesByFolder: [String: [Page]] = [:]
         let wiki = root.appending(path: "wiki")
-        if let wikiReal = Files.realPath(wiki) {
-            for name in Files.names(in: wiki) where !name.hasPrefix(".") {
+        if let wikiReal = Files.realPath(wiki), let rootReal, Files.isInside(wikiReal, rootReal) {
+            for name in folderNames ?? Files.names(in: wiki) where !name.hasPrefix(".") && pagesByFolder[name] == nil {
                 let url = wiki.appending(path: name)
                 guard Files.isFolder(url, inside: wikiReal) else { continue }
                 folders.append(name)
@@ -215,13 +239,14 @@ final class Snapshot: Sendable {
         let all = folders.flatMap { pagesByFolder[$0] ?? [] }
 
         var names = Names()
+        names.sourceIdStart = rules.sourceIdStart
         for page in all {
             if names.byStem[page.ref.stem] == nil { names.byStem[page.ref.stem] = page.ref }
             if names.byId[page.id] == nil { names.byId[page.id] = page.ref }
             for alias in page.aliases where names.byAlias[alias] == nil { names.byAlias[alias] = page.ref }
         }
         let sourcesDir = root.appending(path: "raw/sources")
-        if let sourcesReal = Files.realPath(sourcesDir) {
+        if let sourcesReal = Files.realPath(sourcesDir), let rootReal, Files.isInside(sourcesReal, rootReal) {
             for source in Files.pages(in: sourcesDir, folder: "sources", inside: sourcesReal, cache: cache, seen: &seen) {
                 if names.sources[source.ref.stem] == nil { names.sources[source.ref.stem] = source.ref.stem }
                 if names.sources[source.id] == nil { names.sources[source.id] = source.ref.stem }
@@ -234,10 +259,11 @@ final class Snapshot: Sendable {
         var incoming: [PageRef: [String: [PageRef]]] = [:]
         for page in all {
             var perField: [String: [PageRef]] = [:]
+            var listed: [String: Set<PageRef>] = [:]
             func add(_ links: [Wikilink], field: String) {
                 for link in links {
                     guard case .page(let target) = names.resolve(link), target != page.ref,
-                          !(perField[field] ?? []).contains(target) else { continue }
+                          listed[field, default: []].insert(target).inserted else { continue }
                     perField[field, default: []].append(target)
                 }
             }
@@ -249,58 +275,30 @@ final class Snapshot: Sendable {
             }
         }
         incoming = incoming.mapValues { $0.mapValues { sorted($0) } }
-        return Snapshot(folders: folders, pagesByFolder: pagesByFolder, names: names, outgoing: outgoing, incoming: incoming)
-    }
 
-    private static let architecture: Set<String> = [
-        "solution-strategy", "building-blocks", "crosscutting-concepts", "runtime-scenarios", "deployment-nodes",
-    ]
-    private static let driverFolders = ["decisions", "solution-strategy", "building-blocks", "crosscutting-concepts", "deployment-nodes"]
-    private static let addressable: Set<String> = [
-        "goals", "functional-requirements", "quality-requirements", "constraints", "activity-models",
-    ]
-    private static let realizable: Set<String> = ["functional-requirements", "activity-models"]
-
-    /// The pages the dashboard lists in the trace panel of `ref` (see `PageRelations`).
-    func traceTargets(of ref: PageRef) -> Set<PageRef> {
-        guard let me = pagesByRef[ref] else { return [] }
-        let folder = ref.folder
-        var shown = Set<PageRef>()
-
-        func targets(_ page: Page, _ field: String) -> [PageRef] {
-            (page.references[field] ?? []).compactMap { names.byStem[$0] }
-        }
-        func pointing(from folders: [String], _ field: String) {
-            for page in folders.flatMap({ pagesByFolder[$0] ?? [] }) where targets(page, field).contains(ref) {
-                shown.insert(page.ref)
+        var trace: [PageRef: Set<PageRef>] = [:]
+        for (name, direction) in tracePanel {
+            guard let relation = rules.relations[name] else { continue }
+            let from = Set(relation.edges.map(\.from))
+            for page in all where from.contains(page.ref.folder) {
+                for target in (page.references[relation.field] ?? []).compactMap({ names.byStem[$0] }) {
+                    if direction.forward { trace[page.ref, default: []].insert(target) }
+                    if direction.inverse, relation.edges.contains(RelationRules.Edge(from: page.ref.folder, to: target.folder)) {
+                        trace[target, default: []].insert(page.ref)
+                    }
+                }
             }
         }
-
-        let isArchitecture = Self.architecture.contains(folder)
-        if isArchitecture || folder == "decisions" {
-            shown.formUnion(targets(me, folder == "runtime-scenarios" ? "realizes" : "drivers"))
-            shown.formUnion(targets(me, "superseded-by"))
-            pointing(from: [folder], "superseded-by")
-        }
-        if isArchitecture { shown.formUnion(targets(me, "decisions")) }
-        if folder == "building-blocks" {
-            pointing(from: [folder], "uses")
-            pointing(from: ["deployment-nodes"], "hosts")
-        }
-        if folder == "building-blocks" || folder == "deployment-nodes" { pointing(from: ["crosscutting-concepts"], "applies-to") }
-        if ["building-blocks", "deployment-nodes", "external-interfaces", "stakeholders"].contains(folder) {
-            pointing(from: ["runtime-scenarios"], "steps")
-        }
-        if folder == "crosscutting-concepts" { shown.formUnion(targets(me, "applies-to")) }
-        if folder == "deployment-nodes" { shown.formUnion(targets(me, "hosts")) }
-        if Self.addressable.contains(folder) { pointing(from: Self.driverFolders, "drivers") }
-        if Self.realizable.contains(folder) { pointing(from: ["runtime-scenarios"], "realizes") }
-        return shown
+        return Snapshot(
+            folders: folders, pagesByFolder: pagesByFolder, names: names, outgoing: outgoing,
+            incoming: incoming, trace: trace, issueFolder: rules.issueFolder
+        )
     }
 }
 
 /// File system access. Every file is checked first: it must resolve to a regular file
-/// inside the folder it is read for, so a symlink cannot lead out of the wiki.
+/// inside `wiki/` (or `raw/sources/`, `_system/`), and those inside the root, so a symlink
+/// cannot lead out of the wiki.
 enum Files {
     /// The path with every symlink resolved, nil when it does not exist, loops or cannot be read.
     static func realPath(_ url: URL) -> String? { realPath(path: url.path) }
@@ -356,14 +354,21 @@ enum Files {
     /// modification time and size are the same.
     static func pages(
         in folder: URL, folder name: String, inside root: String,
-        cache: [String: CachedPage], seen: inout [String: CachedPage]
+        cache: [String: CachedPage], seen: inout [String: CachedPage], fileNames: [String]? = nil
     ) -> [Page] {
         var pages: [Page] = []
-        for file in names(in: folder) where file.hasSuffix(".md") && !file.hasPrefix(".") {
+        var position: [PageRef: Int] = [:]
+        for file in fileNames ?? names(in: folder) where file.hasSuffix(".md") && !file.hasPrefix(".") {
             let ref = PageRef(folder: name, stem: String(file.dropLast(3)))
             let url = folder.appending(path: file)
             guard ref.isSafe, let real = realPath(url), isInside(real, root), let info = regularFile(real) else { continue }
+            // Names that differ only in Unicode normalization are one page. The first stays.
+            if let kept = position[ref] {
+                pages[kept].problems.append("another file, \(file), has the same name after Unicode normalization and was left out")
+                continue
+            }
             let key = url.path
+            position[ref] = pages.count
             if let hit = cache[key], hit.size == info.size, hit.modified == info.modified {
                 seen[key] = hit
                 pages.append(hit.page)
@@ -420,5 +425,22 @@ enum Files {
             for key in keys where !key.isEmpty && index[key.lowercased()] == nil { index[key.lowercased()] = canonical }
         }
         return index
+    }
+
+    /// The frontmatter of the `.md` files in one folder below the root whose names start
+    /// with `prefix`, in file name order. Files that lead out of the root, are not regular,
+    /// are too large or have no readable mapping are left out.
+    static func frontmatter(root: URL, folder: String, prefix: String) -> [RelationRules.Entry] {
+        let dir = root.appending(path: folder)
+        guard let rootReal = realPath(root), let dirReal = realPath(dir), isInside(dirReal, rootReal) else { return [] }
+        var entries: [RelationRules.Entry] = []
+        for file in names(in: dir) where file.hasPrefix(prefix) && file.hasSuffix(".md") {
+            guard let real = realPath(dir.appending(path: file)), isInside(real, rootReal), regularFile(real) != nil,
+                  case .text(let text, _) = read(real, limit: 1024 * 1024),
+                  let yaml = Frontmatter.split(text).yaml, Frontmatter.nestingDepth(of: yaml) <= Frontmatter.deepestInput,
+                  let node = try? compose(yaml: yaml), case .mapping(let mapping) = node else { continue }
+            entries.append(RelationRules.Entry(mapping: mapping))
+        }
+        return entries
     }
 }

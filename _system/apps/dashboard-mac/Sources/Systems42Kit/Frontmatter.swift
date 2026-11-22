@@ -19,7 +19,8 @@ struct FrontmatterFields {
     /// Wikilinks inside a scalar, at any depth, per top-level field.
     var links: [String: [Wikilink]] = [:]
     /// Page names a field refers to as the dashboard's trace panel reads them:
-    /// the items of a list, bare or linked, and `from`/`to` of a list of mappings.
+    /// the items of a list, bare or linked, and the values of a list of mappings
+    /// (the `from` and `to` of a step). A value that names no page is dropped later.
     var references: [String: [String]] = [:]
     var problems: [String] = []
 }
@@ -60,7 +61,7 @@ enum Frontmatter {
     /// Most YAML nodes read. A page with aliases that fan out stops here.
     private static let mostNodes = 5_000
     /// Nesting the YAML parser is trusted with, counted before it runs.
-    private static let deepestInput = 100
+    static let deepestInput = 100
 
     static func read(_ yaml: String) -> FrontmatterFields {
         var result = FrontmatterFields()
@@ -90,33 +91,75 @@ enum Frontmatter {
             if !references.isEmpty { result.references[name] = references }
             budget = reader.budget
             if reader.exhausted {
-                result.problems.append("the frontmatter is too large, \(name) and later fields are cut off")
+                result.problems.append("the frontmatter is too large: \(name) and later fields are cut off")
                 break
             }
         }
         return result
     }
 
-    /// Flow brackets open at once, or leading spaces and `- ` markers on a line.
-    /// A rough count: it only has to catch input built to exhaust the stack.
+    /// How deep the YAML nests: indentation levels, `- ` markers and open flow brackets
+    /// (`[` and `{`). Quoted text, comments and a `[` inside a plain word are not counted,
+    /// and a key at column 0 closes any flow brackets left open. A rough count: it only has
+    /// to catch input built to exhaust the stack. Indentation counts levels, not spaces,
+    /// so a deeply indented block scalar is one level.
     static func nestingDepth(of yaml: String) -> Int {
         var deepest = 0
         var flow = 0
+        var indents: [Int] = []
         for line in yaml.split(separator: "\n", omittingEmptySubsequences: false) {
-            var lead = 0
             var rest = line[...]
-            while true {
-                if rest.hasPrefix(" ") { lead += 1; rest = rest.dropFirst() }
-                else if rest.hasPrefix("- ") { lead += 1; rest = rest.dropFirst(2) }
-                else { break }
+            var spaces = 0
+            while rest.hasPrefix(" ") { spaces += 1; rest = rest.dropFirst() }
+            if rest.isEmpty || rest.hasPrefix("#") { continue }
+            while let last = indents.last, last > spaces { indents.removeLast() }
+            if indents.last != spaces { indents.append(spaces) }
+            var dashes = 0
+            while rest.hasPrefix("- ") {
+                dashes += 1
+                rest = rest.dropFirst(2)
+                while rest.hasPrefix(" ") { rest = rest.dropFirst() }
             }
-            deepest = max(deepest, lead + flow)
-            for ch in rest.utf8 {
-                if ch == UInt8(ascii: "[") || ch == UInt8(ascii: "{") { flow += 1; deepest = max(deepest, lead + flow) }
-                else if (ch == UInt8(ascii: "]") || ch == UInt8(ascii: "}")), flow > 0 { flow -= 1 }
+            if spaces == 0, flow > 0, startsWithKey(rest) { flow = 0 }
+            deepest = max(deepest, indents.count + dashes + flow)
+            var quote: UInt8?
+            var previous: UInt8?
+            var escaped = false
+            var wasSpace = false
+            scan: for byte in rest.utf8 {
+                if let open = quote {
+                    if escaped { escaped = false }
+                    else if byte == UInt8(ascii: "\\"), open == UInt8(ascii: "\"") { escaped = true }
+                    else if byte == open { quote = nil; previous = byte }
+                    continue
+                }
+                let startsValue = previous == nil || ":-,[{".utf8.contains(previous!)
+                switch byte {
+                case UInt8(ascii: "#") where wasSpace:
+                    break scan
+                case UInt8(ascii: "\""), UInt8(ascii: "'"):
+                    if startsValue { quote = byte } else { previous = byte }
+                case UInt8(ascii: "["), UInt8(ascii: "{"):
+                    if startsValue { flow += 1; deepest = max(deepest, indents.count + dashes + flow) }
+                    previous = byte
+                case UInt8(ascii: "]"), UInt8(ascii: "}"):
+                    if flow > 0 { flow -= 1 }
+                    previous = byte
+                case UInt8(ascii: " "):
+                    break
+                default:
+                    previous = byte
+                }
+                wasSpace = byte == UInt8(ascii: " ")
             }
         }
         return deepest
+    }
+
+    /// A line such as `title: x` or `parent:`, the start of a new top-level field.
+    private static func startsWithKey(_ line: Substring) -> Bool {
+        guard let colon = line.firstIndex(of: ":") else { return false }
+        return colon != line.startIndex && line[..<colon].allSatisfy { $0.isLetter || $0.isNumber || $0 == "_" || $0 == "-" }
     }
 
     /// Reads one top-level value within a shared node budget.
@@ -173,7 +216,7 @@ enum Frontmatter {
             return !exhausted
         }
 
-        /// The names a field points at. Reads lists and, in them, `from` and `to`.
+        /// The names a field points at. Reads lists and the values of mappings in them.
         mutating func references(of node: Node) -> [String] {
             var names: [String] = []
             walkReferences(node, depth: 0, into: &names)
@@ -189,9 +232,7 @@ enum Frontmatter {
             case .sequence(let sequence):
                 for item in sequence {
                     if case .mapping(let mapping) = item {
-                        for (key, value) in mapping where key.scalar?.string == "from" || key.scalar?.string == "to" {
-                            walkReferences(value, depth: depth + 1, into: &names)
-                        }
+                        for (_, value) in mapping { walkReferences(value, depth: depth + 1, into: &names) }
                     } else {
                         walkReferences(item, depth: depth + 1, into: &names)
                     }

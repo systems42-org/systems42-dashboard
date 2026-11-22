@@ -37,7 +37,7 @@ public struct Page: Identifiable, Sendable {
     /// Markdown without the frontmatter.
     public let body: String
     /// What could not be read, in plain words. Empty for a sound page.
-    public let problems: [String]
+    public internal(set) var problems: [String]
     /// The wikilinks inside each top-level field, at any depth.
     public let fieldLinks: [String: [Wikilink]]
     /// The wikilinks in the body.
