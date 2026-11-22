@@ -71,7 +71,10 @@
       <div class="card">
         <h3>macOS Desktop App (<code>.dmg</code>)</h3>
         <p>Open <code>Systems42-Dashboard-{{ version }}-universal.dmg</code>, drag <strong>Systems42 Dashboard.app</strong> into <strong>Applications</strong>, and launch it. Pick any Systems42 wiki folder from the menu bar or drop a folder onto the app icon.</p>
-        <p>Recent wikis are saved in <code>~/Library/Application Support/Systems42 Dashboard/</code>, never inside your wiki. Until Apple Developer ID notarisation is configured on releases, open the app on first launch via <strong>Right-click → Open</strong> (or <em>System Settings → Privacy &amp; Security → Open Anyway</em>).</p>
+        <p>The app is ad-hoc signed (not Apple-notarised). After downloading via a browser, approve it once in <em>System Settings → Privacy &amp; Security → Open Anyway</em>, or clear the browser quarantine flag in a terminal:</p>
+        <pre><code>xattr -dr com.apple.quarantine "/Applications/Systems42 Dashboard.app"</code></pre>
+        <p>Downloading with <code>curl</code> avoids the browser quarantine flag altogether:</p>
+        <pre><code>curl -fsSLO https://github.com/systems42-org/systems42-dashboard/releases/download/v{{ version }}/Systems42-Dashboard-{{ version }}-universal.dmg</code></pre>
       </div>
       <div class="card">
         <h3>Standalone Go binary (Linux &amp; Windows)</h3>
