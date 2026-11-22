@@ -13,3 +13,15 @@ public enum Fixture {
         .deletingLastPathComponent()
         .deletingLastPathComponent()
 }
+
+extension Fixture {
+    /// A copy of one fixture in a new temp folder, for tests that edit files or
+    /// add hostile ones. Never edit a fixture in place.
+    public static func tempCopy(_ name: String) throws -> URL {
+        let folder = FileManager.default.temporaryDirectory.appending(path: "s42-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let copy = folder.appending(path: "wiki-copy")
+        try FileManager.default.copyItem(at: url(name), to: copy)
+        return copy
+    }
+}
