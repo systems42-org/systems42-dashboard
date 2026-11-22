@@ -29,8 +29,19 @@ public struct Wikilink: Hashable, Sendable {
     /// Every link in `text`, in order. Same rules as the dashboard: the target
     /// holds no `]`, `|` or `#`, the heading no `]` or `|`, the label no `]`.
     public static func all(in text: String) -> [Wikilink] {
+        matches(in: text).map(\.link)
+    }
+
+    /// A link and where it stands: the UTF-8 offsets of `[[` up to and including `]]`.
+    public struct Match: Sendable {
+        public let link: Wikilink
+        public let utf8Range: Range<Int>
+    }
+
+    /// Like `all(in:)`, with the position of each link.
+    public static func matches(in text: String) -> [Match] {
         let bytes = Array(text.utf8)
-        var links: [Wikilink] = []
+        var links: [Match] = []
         var i = 0
         var nextClose = -1
         while i + 1 < bytes.count {
@@ -41,7 +52,7 @@ public struct Wikilink: Hashable, Sendable {
             guard nextClose + 1 < bytes.count else { break }  // no `]]` left anywhere
             if bytes[nextClose + 1] == close, nextClose - i - 2 <= longestLink,
                let link = parse(bytes[(i + 2)..<nextClose]) {
-                links.append(link)
+                links.append(Match(link: link, utf8Range: i..<(nextClose + 2)))
                 i = nextClose + 2
             } else {
                 i += 1
