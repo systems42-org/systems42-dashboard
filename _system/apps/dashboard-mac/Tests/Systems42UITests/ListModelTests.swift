@@ -147,6 +147,58 @@ private let requirements = "functional-requirements"
         #expect(other.issueRestriction == nil)
     }
 
+    @Test func agreedOnlyNeverHidesIssues() async throws {
+        let (s, m, row) = try await restricted()
+        let all = ids(m)
+        s.agreedOnly = true
+        #expect(ids(m) == all)
+        s.showIssues(of: row.section.id)
+        #expect(m.rows.count == row.openIssues)
+        let content = try #require(s.metamodel.sections.first { $0.folders.contains(requirements) })
+        #expect(ListModel(session: s, section: content).rows.allSatisfy { $0.status == "accepted" })
+    }
+
+    @Test func sidebarCountsAndListsAgreeUnderAgreedOnly() async throws {
+        for fixture in ["basic", "search", "arc42"] {
+            let s = try await session(fixture)
+            for agreedOnly in [false, true] {
+                s.agreedOnly = agreedOnly
+                for row in s.sidebar.flatMap(\.rows) {
+                    #expect(ListModel(session: s, section: row.section).rows.count == row.count, "\(fixture) \(row.section.id) \(agreedOnly)")
+                }
+            }
+        }
+    }
+
+    @Test func theIssueRestrictionIsPartOfTheHistory() async throws {
+        let (s, m, row) = try await restricted()
+        s.select(section: row.section.id)
+        s.showIssues(of: row.section.id)
+        #expect(s.issueFilter == row.section.id)
+        s.select(page: PageRef(folder: "issues", stem: try #require(m.rows.first).ref.stem))
+        #expect(s.issueFilter == row.section.id)
+        s.back()
+        #expect(s.issueFilter == row.section.id)
+        s.back()
+        #expect(s.issueFilter == nil)
+        #expect(s.selectedSection == row.section.id)
+        s.forward()
+        #expect(s.issueFilter == row.section.id)
+        // Leave and come back: restricted again.
+        s.select(section: row.section.id)
+        #expect(s.issueFilter == nil)
+        s.back()
+        #expect(s.issueFilter == row.section.id)
+        #expect(m.rows.count == 1)
+        // "Show all" records a place without it.
+        s.clearIssueFilter()
+        #expect(m.rows.count > 1)
+        s.back()
+        #expect(s.issueFilter == row.section.id)
+        s.forward()
+        #expect(s.issueFilter == nil)
+    }
+
     @Test func stateSurvivesEncoding() async throws {
         let (s, m) = try await model("basic", folder: requirements)
         m.state.sort = [SortKey(field: "release", ascending: false), SortKey(field: "priority", ascending: true)]

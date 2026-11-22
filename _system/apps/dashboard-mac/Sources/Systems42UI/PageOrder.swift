@@ -38,12 +38,12 @@ struct PageOrder: Sendable {
         values(of: field, in: page).joined(separator: ", ")
     }
 
-    /// Keeps the pages that pass `agreedOnly` and all `filters`, then orders them by `sort`.
+    /// `exemptFolders` hold pages that "agreed only" never hides. Keeps the pages that pass `agreedOnly` and all `filters`, then orders them by `sort`.
     /// Pages that tie end in id order, `FR-2` before `FR-10`.
-    func arrange(_ pages: [Page], sort: [SortKey], filters: [String: Set<String>], agreedOnly: Bool) -> [Page] {
+    func arrange(_ pages: [Page], sort: [SortKey], filters: [String: Set<String>], agreedOnly: Bool, exemptFolders: Set<String> = []) -> [Page] {
         let wanted = filters.compactMapValues { $0.isEmpty ? nil : Set($0.map { $0.lowercased() }) }
         let kept = pages.filter { page in
-            if agreedOnly, page.status.lowercased() != agreedStatus { return false }
+            if agreedOnly, !exemptFolders.contains(page.ref.folder), page.status.lowercased() != agreedStatus { return false }
             return wanted.allSatisfy { field, accepted in
                 Self.values(of: field, in: page).contains { accepted.contains($0.lowercased()) }
             }

@@ -25,6 +25,8 @@ import Systems42Kit
         let enums: [(field: String, values: [String])]
         let lifecycle: [String]?
         let order: PageOrder
+        /// Folders of types whose lifecycle has no agreed status: "agreed only" keeps all their pages.
+        let exemptFolders: Set<String>
     }
 
     @ObservationIgnored private var setupCache: (revision: Int, setup: Setup)?
@@ -70,7 +72,10 @@ import Systems42Kit
             columns: columns,
             enums: enumNames.filter { $0 != PageKey.status }.map { (field: $0, values: declared[$0] ?? []) },
             lifecycle: lifecycle,
-            order: PageOrder(enums: declared, statuses: lifecycle)
+            order: PageOrder(enums: declared, statuses: lifecycle),
+            exemptFolders: Set(section.folders.filter { folder in
+                !hasAgreedStatus(metamodel.type(forFolder: folder).flatMap { metamodel.lifecycles[$0.lifecycle] })
+            })
         )
         setupCache = (session.revision, setup)
         return setup
@@ -125,7 +130,7 @@ import Systems42Kit
             let counted = session.openIssueIDs(of: about)
             candidates = candidates.filter { counted.contains($0.id) }
         }
-        let rows = setup.order.arrange(candidates, sort: state.sort, filters: state.filters, agreedOnly: key.agreedOnly)
+        let rows = setup.order.arrange(candidates, sort: state.sort, filters: state.filters, agreedOnly: key.agreedOnly, exemptFolders: setup.exemptFolders)
         rowCache = (key, rows)
         return rows
     }
