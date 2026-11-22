@@ -38,7 +38,7 @@ ROOT = Path(__file__).resolve().parent.parent
 def test_loader_reads_every_construct():
     mm = metamodel.load()
     assert mm["present"]
-    assert len(mm["types"]) == 18, [t["name"] for t in mm["types"]]
+    assert len(mm["types"]) == 17, [t["name"] for t in mm["types"]]
     assert mm["relations"] and mm["projections"] and mm["rules"]
     assert "altitude" not in mm                  # removed by DR-038
     assert isinstance(mm["notations"], list)
@@ -73,9 +73,9 @@ def test_graph_is_a_projection_of_types_and_relations():
         if d["source"] == d["target"]:
             assert d["loop_dir"]
     assert {u["field"] for u in g["universal"]} == {"related", "sources", "ingested-pages"}
-    # the two loops on data-model (parent, relationships) fan out differently
+    # the two loops on domain-term (parent, relationships) fan out differently
     dm_loops = [e["data"]["loop_dir"] for e in g["edges"]
-                if e["data"]["source"] == "data-model" == e["data"]["target"]]
+                if e["data"]["source"] == "domain-term" == e["data"]["target"]]
     assert len(dm_loops) == len(set(dm_loops)) >= 2, dm_loops
 
 
@@ -94,7 +94,7 @@ def test_page_renders_tables_graph_and_examples():
     assert 'id="rel-parent"' in body and 'id="proj-story-map"' in body
     # live examples come from the fixture vault and link to the page views
     assert "/functional-requirements/FR-001" in body
-    assert "/page/glossary/GLO-" in body
+    assert "/page/goals/GOAL-" in body
     # a type with no page in this vault says so instead of inventing one
     assert "none yet" in body
     # metamodel wikilinks resolve to in-page anchors, decision records to

@@ -10,32 +10,42 @@ label: Functional requirement
 label_de: Funktionale Anforderung
 block: R3
 lifecycle: content
-stereotypes: [epic, feature, story]
-naming: "epic/feature: noun phrase naming an outcome; story: verb + object (convention A)"
+stereotypes: []
+naming: "Defined by notation; Agile defaults to epic/feature nouns and story verbs; Cockburn use cases express actor goals"
 fields:
-  - {name: stereotype, kind: enum, values: [epic, feature, story], required: true, doc: "level in the Epic → Feature → Story hierarchy"}
-  - {name: parent, kind: link-list, relation: parent, doc: "coarser item(s): FR, or a use case for a feature/story; several allowed, so the hierarchy is a graph"}
+  - {name: notation, kind: scalar, required: true, doc: "writing form and level vocabulary: an explicit choice, else default_notation in wiki.yaml, else agile"}
+  - {name: level, kind: scalar, required: true, doc: "one of the selected notation's levels; independent of graph depth"}
+  - {name: parent, kind: link-list, relation: parent, doc: "coarser item(s); several allowed, so the hierarchy is a graph"}
+  - {name: building-blocks, kind: link-list, relation: concerns, doc: "building blocks this requirement concerns; assignment, set at capture (FR-005)"}
   - {name: priority, kind: enum, values: [Must, Should, Could, "Won't"], doc: "MoSCoW"}
-  - {name: release, kind: scalar, doc: "release/milestone tag, story-map swim-lane; `unscheduled` = not planned"}
+  - {name: release, kind: scalar, doc: "release/milestone tag; `unscheduled` = not planned"}
   - {name: lane, kind: enum, values: [backbone, platform, display], doc: "story-map lane"}
   - {name: order, kind: int, doc: "narrative order within the lane"}
   - {name: goal, kind: link-list, relation: goal, doc: "goals served; [] = explicit enabler"}
-anchors: [user-story-format, acceptance-criteria, INVEST, MoSCoW, story-mapping, req42]
+  - {name: delivery, kind: enum, values: [partial, implemented, outdated, removed], doc: "optional implementation state on directly implementable levels; absent means no delivery record"}
+  - {name: delivery-checked, kind: timestamp, doc: "optional ISO 8601 check timestamp; Git derives the implementation baseline from the commit that changes either delivery field"}
+anchors: [MoSCoW, req42]
 projections: [story-map, backlog-ranking, goal-coverage]
 ---
 
 # Type: functional requirement
 
-req42 block 04, **one type with three stereotypes** instead of three types: the
-hierarchy is the `parent` relation, and everything else (story map, ranked backlog,
-goal coverage) is a [[proj-story-map|projection]] over it. Renamed from "Product
-Backlog item" (the 2026 edition of req42).
+req42 block 04, **one functional-requirement type** with notation-specific
+`level:` values. The hierarchy is the `parent` relation, independent of level;
+the story map, ranked backlog and goal coverage are projections. Notation and
+level vocabularies are defined by the selected notation. Renamed from "Product
+Backlog item" in the 2026 edition of req42.
 
-- Stories carry the story sentence and Gherkin acceptance criteria; epics and
-  features carry problem/goal, success metric and scope — same page order for all.
+- Each notation defines its writing form, levels, optional fields, anchors and
+  body sections; the Agile default carries the existing epic/feature/story form.
+- Direct delivery fields are optional and may appear only on levels declared
+  implementable by their notation. Git history derives the latest baseline from
+  a committed `implemented` or `partial` record; an `outdated` state preserves
+  that prior baseline.
 - `goal: []` is a statement, not an omission: the item is an enabler
-  ([[proj-goal-coverage]]) — unless its parent is a use case, whose goals it
-  then serves.
-- A feature or story may refine a use case instead of an epic: `parent:` names
-  the use case ([[rel-parent]], DR-011).
-- Granularity relative to use cases: see [[altitude]] — **open**.
+  ([[proj-goal-coverage]]).
+- `parent:` may cross notations in one case: an Agile feature or story may
+  refine a use case at level `sea` or `fish` (a slice of its flows). An epic
+  never names a use case, and a kite-level use case takes no Agile children.
+  The use case's page shows what realizes it; it is projected, never stored
+  (DR-038 amendment).

@@ -8,7 +8,8 @@ updated: 2026-11-18
 sources: ["[[SRC-019-the-dashboard-as-a-product]]", "[[SRC-020-grilling-session-on-the-dashboard-as-a-product]]", "[[SRC-029-grilling-session-on-the-published-image]]"]
 related: ["[[DR-004-releases-are-container-images-pinned-per-wiki]]", "[[STK-012-maintainers]]"]
 tags: ["functional-requirement", "product"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-029-the-dashboard-as-a-product]]"]
 priority: Must
 release: unscheduled

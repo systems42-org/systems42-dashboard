@@ -2,8 +2,7 @@
 whose metamodel renames one section (C6) and adds one (A6, with a type of its
 own), the dashboard shows both without a code change: home page, header, area
 page, section route, page breadcrumb, issue filter, View dialog. An edit to a
-framework file shows on the next request, and wiki/use-cases/ belongs to R3
-because R3 lists the use-case type. No pytest.
+framework file shows on the next request. No pytest.
 
 Run from the dashboard dir:
     .venv/bin/python tests/test_sections_from_metamodel.py
@@ -22,7 +21,7 @@ RENAMED = "Open Points"
 ADDED = "Risks and Technical Debt"
 
 _repo = Path(tempfile.mkdtemp())
-for _f in ("issues", "risks", "goals", "use-cases", "functional-requirements"):
+for _f in ("issues", "risks", "goals", "functional-requirements"):
     (_repo / "wiki" / _f).mkdir(parents=True)
 (_repo / "raw" / "sources").mkdir(parents=True)
 (_repo / "_system").mkdir()
@@ -51,10 +50,6 @@ for _n, _title in ((1, "Vendor lock-in"), (2, "No load tests")):
     (_repo / "wiki" / "risks" / f"RSK-00{_n}-r{_n}.md").write_text(
         f"---\nid: RSK-00{_n}\ntype: risk\ntitle: {_title}\nstatus: draft\n---\n\n# {_title}\n",
         encoding="utf-8")
-# a use case in its own folder, as this repository's metamodel still declares (DR-011)
-(_repo / "wiki" / "use-cases" / "UC-001-check-in.md").write_text(
-    "---\nid: UC-001\ntype: use-case\ntitle: Check in\nstatus: draft\n---\n\n# Check in\n",
-    encoding="utf-8")
 (_repo / "wiki" / "issues" / "ISS-001-load.md").write_text(
     "---\nid: ISS-001\ntype: issue\ntitle: Who runs the load test\nstatus: open\n"
     'severity: major\nrelated: ["[[RSK-002-r2]]"]\n---\n\n# Who runs the load test\n',
@@ -170,16 +165,6 @@ def test_an_edit_shows_on_the_next_request():
         _arc.write_text(text, encoding="utf-8")
     assert ADDED in _get("/arc42")
 
-
-def test_use_cases_belong_to_r3():
-    # R3 lists functional-requirement and use-case, so wiki/use-cases/ is R3
-    assert app.catalog.section_for_folder("use-cases")["id"] == "R3"
-    with app.app.test_request_context("/req42"):
-        tile = app.build_section_tile(app.catalog.SECTION_BY_ID["R3"])
-    assert tile["count"] == 1, tile          # the one use case counts (FR-019: count only)
-    assert 'href="/page/use-cases/UC-001-check-in"' in _get("/req42/functional-requirements")
-    body = _get("/page/use-cases/UC-001-check-in")
-    assert '<a href="/req42/functional-requirements">Functional Requirements</a>' in body, body
 
 
 def test_every_page_still_renders():

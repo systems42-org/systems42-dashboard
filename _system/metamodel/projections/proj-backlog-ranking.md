@@ -4,7 +4,7 @@ construct: projection
 name: backlog-ranking
 aliases: [proj-backlog-ranking, backlog]
 reads:
-  - {type: functional-requirement, fields: [stereotype, priority, release, order, parent]}
+  - {type: functional-requirement, fields: [notation, level, priority, release, order, parent]}
 output: nested-list
 stored: false
 implemented: none

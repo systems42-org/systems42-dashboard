@@ -1,39 +1,30 @@
 ---
 id: DN-NNN
 type: deployment-node
-title: <Name des Knotens>
+title: <the node's name>
 status: draft         # draft | review | accepted | deprecated
 created: {{date}}
 updated: {{date}}
 sources: []
-related: []           # [[GLO-...]], [[ISS-...]]
+related: []
 tags: [deployment-node]
 stereotype:           # environment | host | container | service
 parent:               # [[DN-...]] the enclosing node; empty = level 1
-hosts: []             # [[BB-...]] deployed on this node
-connects: []          # - {to: "[[DN-...]]", protocol: "LDAPS", note: "optional"} (also [[EIF-...]])
-technology:           # optional: product, version, size (e.g. Keycloak 26, Hetzner CX32)
-drivers: []           # [[GOAL-...]], [[UC-...]], [[FR-...]], [[QR-...]], [[CON-...]] this node answers
+hosts: []             # [[BB-...]] deployed here
+connects: []          # - {to: "[[DN-...]]", protocol: "HTTPS", note: "optional"} (also [[EIF-...]])
+technology:           # optional: product, version, size
+drivers: []           # [[QR-...]], [[CON-...]], … this node answers
 decisions: []         # [[DR-...]] behind this node
-state: target         # outdated (historical) | current (in use today) | planned (decided, not built) | target (end state); empty = target
-superseded-by:        # [[DN-...]] on a replaced current-state page: its successor
+state: target         # outdated | current | planned | target; empty = target
+superseded-by:        # [[DN-...]] on a replaced page: its successor
 ---
 
 # {{title}}
 
-> follows [[arc42]] (section 7, deployment view)
+> follows [[arc42]] (section 7)
 
-<!-- The deployment diagram is projected from `parent:`, `hosts:` and
-     `connects:` — never draw it here. -->
+<!-- The deployment diagram is projected from `parent:`, `hosts:` and `connects:` — never draw it here. -->
 
-## Zweck
+## Purpose
 
-<Wofür es diesen Knoten gibt.>
-
-## Betrieb
-
-<Optional. Größe, Standort, Verantwortliche, Besonderheiten.>
-
-## Offene Punkte
-
-<Optional. [[ISS-...]] links.>
+<What this node is and why it exists, in one or two sentences.>

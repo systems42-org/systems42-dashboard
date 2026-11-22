@@ -8,7 +8,8 @@ updated: 2026-11-20
 sources: ["[[SRC-013-browse-by-area-and-section]]", "[[SRC-014-grilling-session-on-browsing]]"]
 related: ["[[FR-022-lists-keep-sort-and-filter-in-their-address]]", "[[STK-001-readers]]", "[[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]]"]
 tags: ["functional-requirement", "navigation"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-017-browse-by-area-and-section]]"]
 priority: Must
 release: unscheduled

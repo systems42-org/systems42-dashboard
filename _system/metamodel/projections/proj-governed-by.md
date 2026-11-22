@@ -4,7 +4,7 @@ construct: projection
 name: governed-by
 aliases: [proj-governed-by]
 reads:
-  - {type: concept, fields: [applies-to]}
+  - {type: crosscutting-concept, fields: [applies-to]}
 output: list
 stored: false
 implemented: "block and node detail pages (Governed by)"

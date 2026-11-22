@@ -8,7 +8,8 @@ updated: 2026-11-19
 sources: ["[[SRC-007-show-the-method]]", "[[SRC-008-grilling-session-on-showing-the-method]]"]
 related: ["[[STK-013-people-learning-or-presenting-systems42]]", "[[STK-008-workshop-participants-and-facilitators]]"]
 tags: ["functional-requirement", "method"]
-stereotype: epic
+notation: agile
+level: epic
 parent: []
 priority: Should
 release: unscheduled

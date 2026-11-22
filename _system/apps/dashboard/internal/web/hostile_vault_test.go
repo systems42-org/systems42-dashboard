@@ -434,24 +434,14 @@ func TestHostileEveryType(t *testing.T) {
 	})
 
 	typeFolders := map[string]string{
-		"glossary-term": "glossary", "goal": "goals", "stakeholder": "stakeholders",
+		"domain-term": "domain-terms", "goal": "goals", "stakeholder": "stakeholders",
 		"context": "context", "external-interface": "external-interfaces",
-		"data-model": "data-models", "activity-model": "activity-models",
-		"use-case": "use-cases", "functional-requirement": "functional-requirements",
+		"activity-model": "activity-models", "functional-requirement": "functional-requirements",
 		"quality-requirement": "quality-requirements", "constraint": "constraints",
 		"building-block": "building-blocks", "deployment-node": "deployment-nodes",
-		"runtime-scenario": "runtime-scenarios", "decision-record": "decisions", "issue": "issues",
-	}
-	// This repository's _templates/ follow meta's metamodel (DR-040) once
-	// synced (issue #103): until then the crosscutting concept template is
-	// concept.md and there is no solution-strategy template.
-	if _, err := os.Stat(filepath.Join(root, "_templates", "crosscutting-concept.md")); err == nil {
-		typeFolders["crosscutting-concept"] = "crosscutting-concepts"
-	} else {
-		typeFolders["concept"] = "crosscutting-concepts"
-	}
-	if _, err := os.Stat(filepath.Join(root, "_templates", "solution-strategy.md")); err == nil {
-		typeFolders["solution-strategy"] = "solution-strategy"
+		"runtime-scenario": "runtime-scenarios", "crosscutting-concept": "crosscutting-concepts",
+		"solution-strategy": "solution-strategy",
+		"decision-record":   "decisions", "issue": "issues",
 	}
 	structural := map[string]bool{
 		"id": true, "type": true, "status": true, "stereotype": true,

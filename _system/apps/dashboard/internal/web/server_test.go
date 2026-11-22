@@ -446,6 +446,9 @@ func TestPhase2AreasListsMetamodelAndCustomSection(t *testing.T) {
 	if strings.Contains(rMM.Body.String(), `href="//evil.example/x"`) {
 		t.Error("/metamodel linked protocol-relative projection route //evil.example/x")
 	}
+	if !strings.Contains(rMM.Body.String(), `href="/arc42/deployment"`) || strings.Contains(rMM.Body.String(), `href="/arc42/deployment,"`) {
+		t.Error("/metamodel did not strip trailing comma from projection route /arc42/deployment")
+	}
 }
 
 func TestPhase3ProjectionRoutesAndFilters(t *testing.T) {

@@ -8,7 +8,8 @@ updated: 2026-11-11
 sources: ["[[SRC-006-grilling-session-on-search]]"]
 related: ["[[FR-006-tags-and-fields-are-searched]]", "[[STK-001-readers]]"]
 tags: ["functional-requirement", "search"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-001-search-the-wiki]]"]
 priority: Could
 release: unscheduled

@@ -18,7 +18,5 @@ edges:
 
 # Relation: steps
 
-The ordered interactions of a runtime scenario. Each entry carries attributes of
-its own (both ends, the message), like [[rel-relationships]]. Read by
-[[proj-sequence-diagram]]; the inverse, *takes part in*, is listed on the
-participants' pages.
+The ordered interactions of a runtime scenario. Each entry carries both ends and
+the message, like [[rel-relationships]]. Read by [[proj-sequence-diagram]].

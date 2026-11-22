@@ -54,22 +54,20 @@ def test_sections_are_the_metamodel_blocks():
         b = want[sid]
         assert (s["title"], s["folders"], s["scope"], s["area"]) == \
             (b["title"], b["folders"], b["scope"], b["area"]), sid
-    # use cases live in R3 (DR-011) and come with it
-    assert catalog.SECTION_BY_ID["R3"]["folders"] == ["functional-requirements", "use-cases"]
+    # use cases are functional requirements in use-case notation (meta DR-038)
+    assert catalog.SECTION_BY_ID["R3"]["folders"] == ["functional-requirements"]
 
 
-def test_architecture_a2_to_a5_live_and_a1_planned():
-    live = {"A2": (["building-blocks"], "/arc42/building-blocks"),
+def test_architecture_a1_to_a5_live():
+    live = {"A1": (["solution-strategy"], "/arc42/strategy"),
+            "A2": (["building-blocks"], "/arc42/building-blocks"),
             "A3": (["deployment-nodes"], "/arc42/deployment"),
             "A4": (["runtime-scenarios"], "/arc42/runtime"),
-            "A5": (["concepts"], "/arc42/concepts")}
+            "A5": (["crosscutting-concepts"], "/arc42/concepts")}
     for s in catalog.sections_of("architecture"):
-        if s["id"] in live:
-            folders, href = live[s["id"]]
-            assert s["scope"] == "in" and s["folders"] == folders, s
-            assert s["href"] == href, s
-        else:
-            assert s["scope"] == "planned" and s["folders"] == [] and s["href"] is None, s["id"]
+        folders, href = live[s["id"]]
+        assert s["scope"] == "in" and s["folders"] == folders, s
+        assert s["href"] == href, s
 
 
 def test_out_of_scope_sections_have_no_folders_or_route():
@@ -95,11 +93,8 @@ def test_routes_are_unchanged():
 
 def test_lookups():
     assert catalog.section_for_folder("stakeholders")["id"] == "C4"
-    assert catalog.section_for_folder("glossary")["id"] == "C5"
-    assert catalog.section_for_folder("data-models")["id"] == "R4"
-    assert catalog.section_for_folder("use-cases")["id"] == "R3"
-    # DR-039 renamed the folder; both names find the section
     assert catalog.section_for_folder("domain-terms")["id"] == "C5"
+    assert catalog.section_for_folder("activity-models")["id"] == "R4"
     assert catalog.area_for_folder("external-interfaces")["key"] == "commons"
     assert catalog.area_for_folder("nope") is None
     assert catalog.area_for_path("/req42/functional-requirements")["key"] == "requirements"
@@ -107,7 +102,7 @@ def test_lookups():
     assert catalog.area_for_path("/req42")["key"] == "requirements"
     assert catalog.area_for_path("/arc42")["key"] == "architecture"
     assert catalog.area_for_path("/commons")["key"] == "commons"
-    assert catalog.area_for_path("/page/glossary/GLO-001-x")["key"] == "commons"
+    assert catalog.area_for_path("/page/domain-terms/DT-001-x")["key"] == "commons"
     assert catalog.area_for_path("/functional-requirements/FR-001-x")["key"] == "requirements"
     assert catalog.area_for_path("/graph/domain-terms")["key"] == "commons"
     assert catalog.area_for_path("/entity-diagram")["key"] == "requirements"
@@ -121,7 +116,7 @@ if __name__ == "__main__":
     test_eighteen_sections_with_diagram_ids()
     test_every_wiki_folder_belongs_to_exactly_one_section()
     test_sections_are_the_metamodel_blocks()
-    test_architecture_a2_to_a5_live_and_a1_planned()
+    test_architecture_a1_to_a5_live()
     test_out_of_scope_sections_have_no_folders_or_route()
     test_routes_are_unchanged()
     test_lookups()

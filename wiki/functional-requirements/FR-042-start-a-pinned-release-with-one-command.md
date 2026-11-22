@@ -8,7 +8,8 @@ updated: 2026-11-20
 sources: ["[[SRC-027-dashboard-distribution-and-metamodel-contract]]", "[[SRC-028-grilling-session-on-dashboard-distribution]]", "[[SRC-036-grilling-session-on-running-without-a-container-engine]]"]
 related: ["[[DR-004-releases-are-container-images-pinned-per-wiki]]", "[[FR-030-numbered-releases]]", "[[CON-005-the-dashboard-works-on-systems42-derivatives-only]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[CON-003-docker-is-the-supported-way-to-run-it]]", "[[FR-054-a-start-without-a-container-engine]]"]
 tags: ["functional-requirement", "product"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-029-the-dashboard-as-a-product]]"]
 priority: Should
 release: unscheduled

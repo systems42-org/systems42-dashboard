@@ -8,7 +8,8 @@ updated: 2026-11-21
 sources: ["[[SRC-037-a-public-website-for-the-dashboard]]", "[[SRC-038-grilling-session-on-the-public-website]]"]
 related: ["[[FR-031-branding-is-configuration]]", "[[FR-045-a-prompt-template-for-a-brand]]", "[[FR-046-shared-session-in-a-workshop]]", "[[CON-005-the-dashboard-works-on-systems42-derivatives-only]]", "[[CON-001-proof-of-concept-not-production-ready]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]"]
 tags: ["functional-requirement", "website"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-056-a-public-website-for-the-dashboard]]"]
 priority: Should
 release: unscheduled

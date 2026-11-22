@@ -68,7 +68,7 @@ client = app.app.test_client()
 # route -> the type its list is declared as
 ROUTES = {
     "/goals": "goal",
-    "/domain-terms": "glossary-term",
+    "/domain-terms": "domain-term",
     "/stakeholders": "stakeholder",
     "/decisions": "decision-record",
     "/issues": "issue",

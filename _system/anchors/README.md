@@ -2,9 +2,9 @@
 
 **Semantic anchors** — reusable methodological standards the wiki applies across
 content types: goal frames (SMART, PAM), the user-story format, story quality
-(INVEST), prioritization (MoSCoW), quality scenarios ([Q42](https://quality.arc42.org)), shaping the functional-requirements hierarchy (story mapping). They are *method*,
+(INVEST), prioritization (MoSCoW), shaping the functional-requirements hierarchy (story mapping). They are *method*,
 not domain knowledge: authored and stable, never ingested from sources. They differ from `_templates/` (which
-define a page's *shape*) and from `wiki/glossary/` (project-specific *vocabulary*).
+define a page's *shape*) and from `wiki/domain-terms/` (project-specific *vocabulary*).
 
 **[[req42]]** is the **umbrella** among them: the requirements framework (Hruschka &
 Meuten, CC BY-SA 4.0) whose 12 sections our content types implement, and

@@ -10,10 +10,10 @@ inverse: referenced-by
 inverse_stored: false
 reciprocity: none
 edges:
-  - {from: data-model, to: data-model, cardinality: "0..*", note: "structured entries {verb, target, cardinality, kind ∈ association|aggregation|composition|inheritance, mandatory}; a dangling target is dropped from the diagram (DR-027)"}
+  - {from: domain-term, to: domain-term, cardinality: "0..*", note: "both terms carry a stereotype"}
 ---
 
 # Relation: relationships
 
-The only relation whose entries carry attributes of their own (verb, kind,
-cardinality at the target end). Read by [[proj-data-model-diagram]].
+Each entry has a target (`to`), a `kind`, an optional `label` and an optional
+target-end `multiplicity`. Generalization omits multiplicity. See [[proj-entity-diagram]].

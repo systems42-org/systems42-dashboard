@@ -11,7 +11,7 @@ inverse_stored: true
 inverse_field: related
 reciprocity: enforced
 edges:
-  - {from: any, to: any, cardinality: "0..*", note: "same-slug pages of different types (GLO ⇄ DM) are the same concept and must be reciprocally linked — relations tier 1"}
+  - {from: any, to: any, cardinality: "0..*", note: "same-slug pages of different types may represent the same concept across views"}
 ---
 
 # Relation: related

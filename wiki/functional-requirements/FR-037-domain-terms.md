@@ -8,7 +8,8 @@ updated: 2026-11-14
 sources: ["[[SRC-025-domain-terms-and-their-two-views]]", "[[SRC-026-grilling-session-on-domain-terms]]"]
 related: ["[[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]]", "[[FR-003-related-words-from-aliases-and-glossary]]", "[[FR-017-browse-by-area-and-section]]", "[[STK-001-readers]]"]
 tags: ["functional-requirement", "domain-terms"]
-stereotype: epic
+notation: agile
+level: epic
 parent: []
 priority: Must
 release: unscheduled

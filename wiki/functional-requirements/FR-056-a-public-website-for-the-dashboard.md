@@ -8,7 +8,8 @@ updated: 2026-11-21
 sources: ["[[SRC-037-a-public-website-for-the-dashboard]]", "[[SRC-038-grilling-session-on-the-public-website]]"]
 related: ["[[STK-013-people-learning-or-presenting-systems42]]", "[[STK-010-operators]]", "[[STK-012-maintainers]]", "[[CON-001-proof-of-concept-not-production-ready]]", "[[QR-001-usable-on-phone-and-tablet]]", "[[FR-010-show-the-method]]", "[[FR-029-the-dashboard-as-a-product]]"]
 tags: ["functional-requirement", "website"]
-stereotype: epic
+notation: agile
+level: epic
 parent: []
 priority: Should
 release: unscheduled

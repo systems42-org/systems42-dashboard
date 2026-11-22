@@ -5,7 +5,7 @@ name: hosts
 aliases: [rel-hosts]
 field: hosts
 direction: directed
-semantics: deployment
+semantics: structure
 inverse: deployed-on
 inverse_stored: false
 reciprocity: none
@@ -15,5 +15,4 @@ edges:
 
 # Relation: hosts
 
-Maps building blocks onto infrastructure: "this block runs on that node". The
-inverse, *deployed on*, is projected onto block pages.
+The mapping of software to infrastructure: the building blocks deployed on a node.

@@ -8,7 +8,8 @@ updated: 2026-11-19
 sources: ["[[SRC-010-header-and-footer-on-every-page]]", "[[SRC-011-grilling-session-on-header-and-footer]]"]
 related: ["[[STK-001-readers]]", "[[FR-001-search-the-wiki]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]"]
 tags: ["functional-requirement", "page-frame"]
-stereotype: feature
+notation: agile
+level: feature
 parent: []
 priority: Must
 release: unscheduled

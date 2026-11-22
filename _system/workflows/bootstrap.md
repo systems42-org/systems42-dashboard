@@ -17,10 +17,9 @@ Grilling resumes as normal from the first real `capture.md` run onward.
    Ask the group for a working name for *their* system and a one-line tagline,
    then **replace** `system_name:` and fill in `tagline:` in `_system/wiki.yaml`.
    The dashboard reads this file live — the group sees the re-brand on its next
-   refresh, no restart needed. (The mark comes from `brand:` in the same file,
-   `systems42` by default. When the group has its own, put it in a folder of
-   this repository and name that folder in `brand:`, see
-   `_system/apps/dashboard/brands/README.md`.)
+   refresh, no restart needed. (The shipped mark is Systems42's own and stays;
+   only the wordmark changes. When the group has its own mark, put it in a
+   brand folder and name it in `brand:` in `_system/wiki.yaml`.)
 2. **Confirm the ubiquitous language.** Ask whether the group will work in
    English. If they want to capture requirements in their own domain language
    instead, record their language as a Constraint (`CON-NNN`, organizational)
@@ -32,9 +31,9 @@ Grilling resumes as normal from the first real `capture.md` run onward.
    goal page with no `parent:`; every objective captured later points at it.
    Also fill `tile_claim:` — one short line the dashboard shows on its Vision
    tile; leave it empty and the tile's claim line stays blank.
-4. **Capture the first glossary terms.** Ask the group: "what's a word you've
+4. **Capture the first domain terms.** Ask the group: "what's a word you've
    already disagreed about?" Write a `GLO-NNN` page per term from
-   `_templates/glossary-term.md`, even if `agreed: false` for now — a contested
+   `_templates/domain-term.md`, even if `agreed: false` for now — a contested
    definition captured is worth more than a polished one deferred.
 5. **Capture the first stakeholder.** At least one `STK-NNN` from
    `_templates/stakeholder.md` — whoever is in the room, or whoever they most
@@ -53,6 +52,6 @@ Grilling resumes as normal from the first real `capture.md` run onward.
 Bootstrap is complete when `_system/wiki.yaml` names the group's own system
 (not the shipped `Systems42`), `GOAL-001` exists
 and reads as a vision (not yet as a SMART objective — that comes later),
-at least one glossary term and one stakeholder exist, and `_system/index.md` /
+at least one domain term and one stakeholder exist, and `_system/index.md` /
 `_system/log.md` reflect all of it. If any of those five are still empty, the
 group is not ready to capture.

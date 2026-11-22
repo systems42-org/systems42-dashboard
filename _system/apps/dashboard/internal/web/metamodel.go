@@ -33,7 +33,7 @@ func mmRouteHref(impl string) string {
 	if len(impl) > 1 && (impl[1] == '/' || impl[1] == '\\') {
 		return ""
 	}
-	end := strings.IndexAny(impl, " \t\r\n")
+	end := strings.IndexAny(impl, " \t\r\n\f\v,;)")
 	if end >= 0 {
 		return impl[:end]
 	}

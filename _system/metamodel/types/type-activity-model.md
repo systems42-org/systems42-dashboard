@@ -21,5 +21,6 @@ projections: []
 
 # Type: activity model
 
-req42 block 05: an actor-driven process, trigger → steps → outcome. Granularity
-relative to use cases and epics is part of the open [[altitude]] question.
+req42 block 05: an actor-driven process, trigger → steps → outcome. How
+Activity Models relate to use-case FRs remains open on
+[[ISS-019-use-cases-folder-redundant]].

@@ -8,7 +8,8 @@ updated: 2026-11-19
 sources: ["[[SRC-013-browse-by-area-and-section]]", "[[SRC-014-grilling-session-on-browsing]]"]
 related: ["[[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]]", "[[FR-012-guided-path-through-the-wiki]]", "[[STK-010-operators]]", "[[FR-044-sections-come-from-the-repositorys-metamodel]]", "[[FR-046-shared-session-in-a-workshop]]"]
 tags: ["functional-requirement", "navigation"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-017-browse-by-area-and-section]]"]
 priority: Should
 release: unscheduled

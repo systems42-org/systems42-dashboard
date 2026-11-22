@@ -8,7 +8,8 @@ updated: 2026-11-17
 sources: ["[[SRC-027-dashboard-distribution-and-metamodel-contract]]", "[[SRC-028-grilling-session-on-dashboard-distribution]]"]
 related: ["[[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]]", "[[FR-030-numbered-releases]]", "[[ISS-004-where-the-metamodel-declares-its-version]]", "[[CON-001-proof-of-concept-not-production-ready]]"]
 tags: ["functional-requirement", "product"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-029-the-dashboard-as-a-product]]"]
 priority: Should
 release: unscheduled

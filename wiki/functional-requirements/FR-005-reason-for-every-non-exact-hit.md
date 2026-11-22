@@ -8,7 +8,8 @@ updated: 2026-11-11
 sources: ["[[SRC-006-grilling-session-on-search]]"]
 related: ["[[FR-002-typos-and-word-forms]]", "[[FR-003-related-words-from-aliases-and-glossary]]", "[[FR-004-question-style-queries]]", "[[FR-008-related-pages-group]]", "[[GOAL-001-trusted-answers]]"]
 tags: ["functional-requirement", "search"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-001-search-the-wiki]]"]
 priority: Must
 release: unscheduled

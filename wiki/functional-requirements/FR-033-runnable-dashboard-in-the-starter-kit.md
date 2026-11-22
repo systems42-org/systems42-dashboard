@@ -8,7 +8,8 @@ updated: 2026-11-20
 sources: ["[[SRC-019-the-dashboard-as-a-product]]"]
 related: ["[[CON-003-docker-is-the-supported-way-to-run-it]]", "[[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]]", "[[FR-042-start-a-pinned-release-with-one-command]]", "[[STK-008-workshop-participants-and-facilitators]]"]
 tags: ["functional-requirement", "product"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-029-the-dashboard-as-a-product]]"]
 priority: Should
 release: unscheduled

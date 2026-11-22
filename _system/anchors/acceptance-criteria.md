@@ -3,7 +3,7 @@ type: anchor
 title: Acceptance Criteria (Given/When/Then)
 aliases: [acceptance-criteria, gherkin, given-when-then]
 tags: [anchor, testability]
-applies-to: [functional-requirement (story stereotype), use-case special requirements]
+applies-to: ["functional-requirement (per notation: Agile story, use-case sea/fish, prose requirement)"]
 ---
 
 # Acceptance Criteria (Given/When/Then)

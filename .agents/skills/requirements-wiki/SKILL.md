@@ -9,13 +9,11 @@ description: >
   bootstrap a new requirements vault. Triggers: "capture this into the wiki", "ingest this",
   "inspect the wiki", "audit the requirements", "what open issues do we have", "requirements
   coverage", mentions of glossary/ubiquitous language, stakeholders/personas, use
-  cases, epics/features/stories, quality requirements, constraints, building blocks, deployment, runtime scenarios, crosscutting concepts, current vs. target architecture, traceability from requirements to architecture. Content types:
-  glossary term, goal, stakeholder, context, external interface, data model,
-  activity model, use case, functional requirement (stereotype epic | feature |
-  story), quality requirement, constraint, decision record, building block (arc42
-  section 5; `drivers:` traces it to requirements), deployment node, runtime scenario,
-  crosscutting concept (arc42 sections 7, 6, 8; `state: outdated | current | planned | target`), and issue
-  (a first-class meta-type).
+  cases, epics/features/stories, quality requirements, constraints, building blocks, traceability from requirements to architecture. Content types:
+  domain term, goal, stakeholder, context, external interface,
+  activity model, functional requirement (notation-specific levels; Agile and
+  Cockburn use-case forms), quality requirement, constraint, decision record, building block (arc42
+  section 5; `drivers:` traces it to requirements), solution strategy, runtime scenario, deployment node, crosscutting concept (arc42 sections 4, 6, 7, 8), and issue (a first-class meta-type).
 ---
 
 # Requirements Wiki
@@ -36,7 +34,7 @@ rather than re-deriving from raw sources on every query.
 If no vault exists and the user wants one, scaffold it: create the layer folders and
 copy the canonical `_templates/` and `_system/anchors/` from an existing vault (or
 recreate them from `AGENTS.md`'s schema), then write `AGENTS.md`, a `CLAUDE.md`
-import, and `_system/`.
+that only imports it (`@AGENTS.md`), and `_system/`.
 
 ## Core discipline (applies to every operation)
 
@@ -61,18 +59,25 @@ import, and `_system/`.
   capture is gated on this pass (see `_system/workflows/capture.md`). Then record
   provenance (`SRC-NNN` + sha256), read, discuss takeaways, extend-don't-duplicate,
   write pages, flag issues, update index, append log. Expect 8–15 pages touched.
-- **Inspect** (formerly audit) — health-check: contradictions, stale claims, orphans, broken links,
+- **Inspect** (formerly audit) — health-check: contradictions, stale claims, requirement delivery drift, orphans, broken links,
   untestable quality requirements, unsourced claims, source drift, coverage gaps.
   Auto-fix only mechanical issues; queue judgment calls as Issues.
+- **Clarify** — resolve an open Issue with the human; warn before changing a
+  requirement with an active delivery record and inspect for drift afterwards.
+- **Implement** — use `.agents/skills/implement/SKILL.md` and
+  `_system/workflows/implement.md` for the approved-plan, evidence-based delivery
+  loop and human-reviewed PR.
 - **Report** — derive a view (open issues, coverage, stakeholder matrix, quality
   scenarios, glossary, traceability). File lasting reports back as wiki pages.
 
 ## Domain conventions
 
-- **Language** (this project): wiki pages are English throughout; converse/ask in
-  any language that suits the human. `_system/anchors/` and machinery are English too.
-- Glossary = DDD ubiquitous language; one canonical meaning per bounded context.
-- Quality requirements use ISO 25010 attributes + a Q42 quality scenario
+- **The ubiquitous language is English**.
+  Write every requirement page in English; converse/ask in any language that suits
+  the human, but capture content in English. `_system/anchors/` and machinery stay
+  English too.
+- Domain terms record the DDD ubiquitous language; one canonical meaning per bounded context.
+- Quality requirements use ISO 25010 attributes + an ATAM scenario
   (source/stimulus/environment/response/**measure**). No measure ⇒ `testable: false`
   ⇒ Issue.
 - Constraints follow arc42 categories (technical/organizational/legal/...).

@@ -8,7 +8,8 @@ updated: 2026-11-11
 sources: ["[[SRC-006-grilling-session-on-search]]"]
 related: ["[[FR-005-reason-for-every-non-exact-hit]]", "[[STK-023-keyholder]]"]
 tags: ["functional-requirement", "search"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-001-search-the-wiki]]"]
 priority: Must
 release: unscheduled

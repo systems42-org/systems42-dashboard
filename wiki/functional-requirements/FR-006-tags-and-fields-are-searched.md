@@ -8,7 +8,8 @@ updated: 2026-11-12
 sources: ["[[SRC-005-search-the-wiki]]", "[[SRC-006-grilling-session-on-search]]"]
 related: ["[[FR-009-more-filters-on-the-full-results-page]]"]
 tags: ["functional-requirement", "search"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-001-search-the-wiki]]"]
 priority: Should
 release: unscheduled

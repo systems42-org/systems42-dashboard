@@ -6,15 +6,15 @@ status: draft         # draft | review | accepted | deprecated
 created: {{date}}
 updated: {{date}}
 sources: []
-related: []           # [[GLO-...]] the domain terms this block implements, [[ISS-...]]
+related: []           # [[DT-...]] the domain terms this block implements, [[ISS-...]]
 tags: [building-block]
 parent:               # [[BB-...]] the enclosing block; empty or [[CTX-...]] = level 1
-drivers: []           # [[GOAL-...]], [[UC-...]], [[FR-...]], [[QR-...]], [[CON-...]] this block answers
+drivers: []           # [[GOAL-...]], [[FR-...]], [[QR-...]], [[CON-...]] this block answers
 decisions: []         # [[DR-...]] that shaped this block
 uses: []              # [[BB-...]] / [[EIF-...]] it depends on (arrows of the white box)
 location:             # optional: directory / module / package in the code
-state: target         # outdated (historical) | current (in use today) | planned (decided, not built) | target (end state); empty = target
-superseded-by:        # [[BB-...]] on a replaced current-state page: its successor
+state: target         # outdated | current | planned | target; empty = target
+superseded-by:        # [[BB-...]] on a replaced page: its successor
 ---
 
 # {{title}}

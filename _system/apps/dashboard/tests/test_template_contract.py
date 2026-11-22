@@ -59,13 +59,8 @@ NON_WIKI_PREFIXES = {"SRC"}
 # this repository's own `_templates/` declare only once they are migrated:
 # `_templates/functional-requirement.md` still carries `stereotype:`. Remove
 # the entry with the migration; the test fails once a template declares it.
-KNOWN_UNTIL_MIGRATION = {"notation"}
+KNOWN_UNTIL_MIGRATION: set[str] = set()
 
-# ID prefixes the dashboard maps for meta's metamodel (DR-040) that this
-# repository's own `_templates/` emit only once they are synced from meta
-# (issue #103). Remove the entry with the sync; the test fails once a template
-# emits it.
-PREFIXES_UNTIL_SYNC = {"SOL"}
 
 
 def _templates() -> list[Path]:
@@ -123,42 +118,15 @@ def test_no_type_map_entry_is_dead():
     for name, keys in (("_TYPE_FOLDER", set(app._TYPE_FOLDER)),
                        ("_TYPE_LABEL", set(app._TYPE_LABEL)),
                        ("_REL_TYPE_ORDER", set(app._REL_TYPE_ORDER))):
-        # This repository's wiki still emits GLO/DM. The app also serves migrated DT vaults.
-        dead = sorted(keys - emitted - {"DT"} - PREFIXES_UNTIL_SYNC)
+        # GLO, DM and UC: prefixes of wikis not yet migrated (meta DR-038, DR-039),
+        # which the app still reads
+        dead = sorted(keys - emitted - {"GLO", "DM", "UC"})
         assert not dead, f"{name} maps prefixes no template emits: {dead}"
-    gone = PREFIXES_UNTIL_SYNC & emitted
-    assert not gone, f"now emitted, remove from PREFIXES_UNTIL_SYNC: {gone}"
-    codes = {m["code"] for m in app.SUPPORTING_MODEL_TYPES}
+    # DM labels the entity-diagram row; its pages are structured domain terms
+    codes = {m["code"] for m in app.SUPPORTING_MODEL_TYPES} - {"DM"}
     assert codes <= emitted, \
         f"SUPPORTING_MODEL_TYPES uses codes no template emits: {sorted(codes - emitted)}"
 
-
-def test_data_model_attribute_bullets_are_extractable():
-    """`/entity-diagram`'s "Entity types at a glance" reads attribute names off the
-    `**Attributes.**` bullets. The template's own bullet shape must match."""
-    tpl = (TEMPLATES / "data-model.md").read_text(encoding="utf-8")
-    bullet = re.search(r"^- .*<name>.*$", tpl, re.MULTILINE)
-    assert bullet, "data-model.md no longer prescribes an attribute bullet"
-    line = (bullet.group(0)
-            .replace("<name>", "entity_key")
-            .replace("<type>", "string")
-            .replace("<mandatory?>", "mandatory")
-            .replace("<note>", "the key"))
-    page = tpl.replace(bullet.group(0), line)
-    page = (page.replace("DM-NNN", "DM-001")
-                .replace("<Entity / value-object / sum-type name>", "Entity A")
-                .replace("{{date}}", "2026-09-06")
-                .replace("{{title}}", "Entity A"))
-    target = _wiki / "data-models" / "DM-001-entity-a.md"
-    target.write_text(page, encoding="utf-8")
-    try:
-        with app.app.app_context():
-            dm = app.load_folder("data-models")[0]
-            names = app._extract_dm_attribute_names(dm)
-        assert names == ["entity_key"], \
-            f"the template's own attribute bullet does not parse: {names}"
-    finally:
-        target.unlink()
 
 
 def test_goal_template_body_markers_are_extractable():
@@ -210,6 +178,5 @@ if __name__ == "__main__":
     test_every_key_app_reads_is_declared_by_some_template()
     test_every_template_id_prefix_is_known_to_the_type_maps()
     test_no_type_map_entry_is_dead()
-    test_data_model_attribute_bullets_are_extractable()
     test_goal_template_body_markers_are_extractable()
     print(f"OK: {len(_templates())} templates match the parser contract")

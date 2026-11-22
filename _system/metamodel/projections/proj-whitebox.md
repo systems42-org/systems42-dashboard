@@ -15,5 +15,4 @@ anchor: arc42
 # Projection: white box
 
 A block's inner structure: its children as boxes, their [[rel-uses]] dependencies
-as arrows, external interfaces they use as neighbour boxes, all states in one
-picture with the marks of [[proj-deployment-diagram]]. Never stored.
+as arrows, external interfaces they use as neighbour boxes. Never stored.

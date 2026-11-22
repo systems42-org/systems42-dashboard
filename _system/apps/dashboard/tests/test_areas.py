@@ -63,11 +63,11 @@ def test_requirements_area_lists_its_sections_in_order():
     assert "req42-block" not in body and "twelve building blocks" not in body
 
 
-def test_architecture_area_has_a2_to_a5_live_and_a1_planned():
+def test_architecture_area_has_a1_to_a5_live():
     code, body = _get("/arc42")
     assert code == 200
     assert _tiles(body) == ["a1", "a2", "a3", "a4", "a5"]
-    assert body.count("Not captured yet") == 1      # A1 planned; A2-A5 live
+    assert body.count("Not captured yet") == 0      # A1-A5 live (meta DR-040)
     for href in ("/arc42/building-blocks", "/arc42/deployment", "/arc42/runtime", "/arc42/concepts"):
         assert f'href="{href}"' in body, href
 
@@ -120,7 +120,7 @@ def test_unknown_area_404s():
 
 if __name__ == "__main__":
     test_requirements_area_lists_its_sections_in_order()
-    test_architecture_area_has_a2_to_a5_live_and_a1_planned()
+    test_architecture_area_has_a1_to_a5_live()
     test_commons_area_lists_c1_to_c7()
     test_hidden_section_drops_tile_but_route_stays()
     test_hidden_area_page_still_renders_by_url()

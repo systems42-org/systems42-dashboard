@@ -62,8 +62,8 @@ Each section answers a question; you fill the ones your product needs, when it n
    state models, data/domain models, UI prototypes & wireframes. Used when they help
    (e.g. loops/conditional logic), linked bidirectionally to functional requirements — not for
    their own sake.
-6. **Qualitätsanforderungen** (Quality Requirements) — *How well?* Measurable
-   quality scenarios (the *-ilities*): performance, usability, security, etc.
+6. **Qualitätsanforderungen** (Quality Requirements) — *How well?* Quality goals and
+   measurable scenarios (the *-ilities*): performance, usability, security, etc.
 7. **Randbedingungen** (Constraints) — *What limits the solution space?* Technical,
    organisational and legal constraints imposed from outside.
 8. **Domänenbegriffe** (Domain Terminology) — *Do we share one language?* The glossary /
@@ -87,11 +87,11 @@ content units, and uses req42's recommended standards as semantic anchors. It do
 | 01 Business Goals (Visionen & Ziele) | `wiki/goals/`, framed via `[[PAM]]` / `[[SMART]]` |
 | 02 Stakeholder | `wiki/stakeholders/` |
 | 03 Scope (Scope & Abgrenzung) | `wiki/context/` + `wiki/external-interfaces/` |
-| 04 Functional Requirements (Funktionale Anforderungen) | `wiki/functional-requirements/` — one type, `stereotype: epic\|feature\|story`; hierarchy via `parent:`, story-mapped + `[[user-story-format]]`, `[[acceptance-criteria]]`, `[[INVEST]]`, `[[MoSCoW]]`; plus `wiki/use-cases/` (use cases are functional requirements, DR-011) |
-| 05 Supporting Models (Modelle zur Unterstützung) | `wiki/activity-models/`, `wiki/data-models/` |
-| 06 Quality Requirements (Qualitätsanforderungen) | `wiki/quality-requirements/` (Q42 dimensions + quality scenarios, [quality.arc42.org](https://quality.arc42.org)) |
+| 04 Functional Requirements (Funktionale Anforderungen) | `wiki/functional-requirements/` — one type, `notation:` plus notation-specific `level:`; Agile defaults to Epic → Feature → Story, Cockburn use cases are FRs too; hierarchy via `parent:` |
+| 05 Supporting Models (Modelle zur Unterstützung) | `wiki/activity-models/` and the entity diagram |
+| 06 Quality Requirements (Qualitätsanforderungen) | `wiki/quality-requirements/` (ISO 25010 + ATAM) |
 | 07 Constraints (Randbedingungen) | `wiki/constraints/` (arc42 categories) |
-| 08 Domain Terminology (Domänenbegriffe) | `wiki/glossary/` |
+| 08 Domain Terminology (Domänenbegriffe) | `wiki/domain-terms/` |
 | 09 Assets (Betriebsmittel & Personal) | *out of scope* |
 | 10 Teams (Teamstruktur) | *out of scope* |
 | 11 Roadmaps | *out of scope* |

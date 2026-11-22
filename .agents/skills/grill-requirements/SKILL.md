@@ -4,7 +4,7 @@ description: >
   A grilling session that stress-tests a requirements plan, draft, or idea against
   the existing requirements wiki — sharpening the ubiquitous language, exposing
   contradictions and gaps, and updating wiki pages, Issues, and decision records inline as
-  decisions crystallise. Claude MUST invoke this skill on its own before writing any
+  decisions crystallise. The agent MUST invoke this skill on its own before writing any
   wiki page from a new or changed source — every capture is grill-gated (AGENTS.md,
   `_system/workflows/capture.md`) — and SHOULD invoke it whenever requirements are being
   captured, refined, or pressure-tested. Also use when the user asks to pressure-test
@@ -31,8 +31,10 @@ Ask the questions **one at a time**, waiting for feedback on each before continu
 If a question can be answered by exploring the wiki or the `raw/` sources, explore
 them instead of asking.
 
-**Language (this project):** You may grill and ask in **any language**. Wiki
-pages (terms, requirements, Issues, decision records) are English throughout.
+**Language (the **Language** convention in `AGENTS.md`):** The ubiquitous
+language is English. You may grill and ask in **any language** — whatever flows
+best with the human — but anything you write into the wiki (terms, requirements,
+Issues, decision records) is captured **in English.**
 
 ## Orient first
 
@@ -45,10 +47,11 @@ Create or update pages lazily — only when a decision has actually crystallised
 
 ## During the session
 
-### Challenge against the glossary
-When the user uses a term that conflicts with `wiki/glossary/`, call it out
+### Challenge against the domain terminology
+When the user uses a term that conflicts with `wiki/domain-terms/`, call it out
 immediately. "Your glossary defines *cancellation* as X, but you seem to mean Y —
-which is it?" If a needed term has no glossary entry yet, propose one.
+which is it?" If a needed term has no definition yet, propose one. Extend an existing term with a
+stereotype and attributes when the domain needs that structure.
 
 ### Sharpen fuzzy language
 When the user is vague or overloaded, propose a precise canonical term. "You say
@@ -80,6 +83,11 @@ When a term, requirement, or decision resolves, capture it right then in the pro
 typed page (per its template and anchors) — don't batch. Append the session's
 touches to `_system/log.md`. Keep pages free of implementation detail; record only what is
 meaningful at the requirements level.
+
+Before editing a functional requirement with `delivery: implemented` or
+`partial`, tell the human the edit will trigger an implementation drift warning.
+Do not restore the old delivery state after a typo-only edit unless the human has
+reviewed the diff and explicitly confirmed that the meaning is unchanged.
 
 ### Offer a decision record sparingly
 Only offer a decision record (`wiki/decisions/`, `DR-NNN`, follows [[MADR]]) when

@@ -8,7 +8,8 @@ updated: 2026-11-17
 sources: ["[[SRC-027-dashboard-distribution-and-metamodel-contract]]", "[[SRC-028-grilling-session-on-dashboard-distribution]]"]
 related: ["[[FR-031-branding-is-configuration]]", "[[FR-032-example-brands-to-try]]"]
 tags: ["functional-requirement", "product"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-029-the-dashboard-as-a-product]]"]
 priority: Could
 release: unscheduled

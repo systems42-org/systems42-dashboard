@@ -1,7 +1,7 @@
 ---
 id: GOAL-NNN
 type: goal
-title: <Name>           # Noun phrase, outcome-oriented (e.g. "Real-time transparency for families")
+title: <Name>           # Noun phrase, outcome-oriented (e.g. "Real-time transparency for families"), EN
 status: draft           # draft | review | accepted | deprecated
 created: {{date}}
 updated: {{date}}
@@ -24,10 +24,10 @@ tile_claim:             # vision only: ONE short line (≤ ~90 chars) for the da
 
 # {{title}}
 
-<!-- One type, two stereotypes — mirrors the functional requirement (one type, stereotype epic|feature|story).
+<!-- One type, two stereotypes — mirrors the functional requirement (one type, notation-specific levels).
      Vision = the roof (exactly one GOAL per system); Objectives = sub-goals under
      the vision. Hierarchy via `parent:` wikilinks. Title grammar: noun phrase with
-     a clear outcome. -->
+     a clear outcome. English ubiquitous language. -->
 
 ## Vision  — when `stereotype: vision`   > follows the Geoffrey Moore format (contrast clause optional)
 

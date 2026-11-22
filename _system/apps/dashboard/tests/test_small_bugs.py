@@ -127,6 +127,13 @@ def test_metamodel_route_link_stays_on_the_site():
     for good in ("/goals", "/req42/quality", "/"):
         m = app._MM_ROUTE_RE.match(good)
         assert m and m.group(1) == good, good
+    for raw, want in (
+        ("/arc42/deployment, /page/deployment-nodes/<DN> (subtree)", "/arc42/deployment"),
+        ("/goals (covering-epic counts)", "/goals"),
+        ("/goals; /other", "/goals"),
+    ):
+        m = app._MM_ROUTE_RE.match(raw)
+        assert m and m.group(1) == want, (raw, m.group(1) if m else None)
     for bad in ("//evil.example/x", "/\\evil.example/x", "https://evil.example/", "none"):
         assert not app._MM_ROUTE_RE.match(bad), bad
 

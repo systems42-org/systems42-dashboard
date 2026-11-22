@@ -8,7 +8,8 @@ updated: 2026-11-12
 sources: ["[[SRC-015-see-what-is-still-open]]", "[[SRC-016-grilling-session-on-open-issues]]"]
 related: ["[[FR-025-issue-list-with-filters]]", "[[STK-001-readers]]"]
 tags: ["functional-requirement", "issues"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-024-see-what-is-still-open]]"]
 priority: Must
 release: unscheduled

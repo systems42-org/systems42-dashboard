@@ -8,7 +8,8 @@ updated: 2026-11-20
 sources: ["[[SRC-019-the-dashboard-as-a-product]]", "[[SRC-020-grilling-session-on-the-dashboard-as-a-product]]", "[[SRC-027-dashboard-distribution-and-metamodel-contract]]", "[[SRC-028-grilling-session-on-dashboard-distribution]]", "[[SRC-036-grilling-session-on-running-without-a-container-engine]]"]
 related: ["[[CON-003-docker-is-the-supported-way-to-run-it]]", "[[QR-002-runs-alike-on-linux-and-macos]]", "[[DR-004-releases-are-container-images-pinned-per-wiki]]", "[[CON-001-proof-of-concept-not-production-ready]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[STK-012-maintainers]]", "[[DR-005-the-dashboard-lives-in-its-own-repository]]", "[[CON-005-the-dashboard-works-on-systems42-derivatives-only]]", "[[DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go]]"]
 tags: ["functional-requirement", "product"]
-stereotype: epic
+notation: agile
+level: epic
 parent: []
 priority: Should
 release: unscheduled

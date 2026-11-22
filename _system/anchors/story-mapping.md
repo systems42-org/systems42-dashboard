@@ -13,8 +13,8 @@ instead of a flat, context-free backlog list — so you can explain the whole sy
 releases. It is the way req42 recommends *maintaining* the functional-requirements
 hierarchy (Hruschka cites Patton).
 
-- **Backbone** (top row, left→right in **narrative / time order**): **epics only** in
-  this vault (`stereotype: epic`). "The order you'd explain the system" is the correct order.
+- **Backbone** (top row, left→right in **narrative / time order**): Agile FRs with
+  `level: epic`. "The order you'd explain the system" is the correct order.
 - **Ribs** (down each column, ordered by **priority**): the finer items — **features and
   stories** under each epic.
 - **Swim-lanes** = releases. The top row across the whole map is the **walking skeleton /
@@ -54,7 +54,7 @@ examples: `docs/methods/story-mapping.md`.
       (`goal: []` with `lane: platform`/`display`). Goal-Coverage projects from
       this field; missing goals on a backbone/feature item ⇒ flag as
       `[[ISS-...]]`.
-- [ ] Naming grammar — epics/features noun phrases, stories/use-cases verb+object (convention A)?
+- [ ] Naming grammar — epics/features noun phrases, stories verb+object (convention A)?
 
 A set of functional requirements that is a flat list with no backbone → suggest mapping it; raise an `ISS-NNN`
 if scope-completeness is in doubt.

@@ -1,68 +1,33 @@
 ---
 id: FR-NNN
 type: functional-requirement
-title: <Name>         # epic/feature: noun phrase w/ clear outcome; story: verb + object (naming convention A)
-status: draft         # draft | review | accepted | deprecated
+title: <Name>
+status: draft
 created: {{date}}
 updated: {{date}}
 sources: []
-related: []           # [[UC-...]], [[QR-...]], [[CON-...]], [[GLO-...]], [[STK-...]]
+related: []
 tags: [functional-requirement]
-stereotype: story     # epic | feature | story  (req42 block 04 "Functional Requirements" level)
-parent: []            # [[FR-...]] coarser item(s): story→feature→epic; a feature/story may name a [[UC-...]] (DR-011). Multiple allowed ⇒ graph, not just tree.
-priority: Should      # Must | Should | Could | Won't  ([[MoSCoW]])
-release: unscheduled  # release/milestone tag — story-map swim-lane; `unscheduled` = not yet planned
-lane: backbone        # backbone | platform | display  (story-map lane; default backbone)
-order:                # integer: narrative order WITHIN the lane (left→right within backbone; sequence within platform/display)
-goal: []              # [[GOAL-...]] one or more goals this item serves; [] = explicit Enabler (e.g. the platform lane). Projection source for the Goal-Coverage matrix.
+notation: agile       # explicit choice, else `default_notation` in wiki.yaml, else agile
+level: story          # one of the notation's ordered levels
+parent: []            # [[FR-...]]; graph edge independent of notation level
+building-blocks: []   # [[BB-...]] the blocks this requirement concerns (assignment, FR-005)
+priority: Should      # Must | Should | Could | Won't ([[MoSCoW]])
+release: unscheduled
+lane: backbone
+order:
+goal: []
+delivery:             # optional; partial | implemented | outdated | removed
+delivery-checked:     # optional ISO 8601 timestamp with timezone
 ---
 
-# {{title}}
-
-<!-- One type, three stereotypes. Page order is fixed for ALL stereotypes:
-     Story first (the punchy formulation), then the body, then Hierarchy, Open points,
-     and finally History at the very end. The Epic→Feature→Story hierarchy is wikilinks
-     (`parent`), and a story map is just a projection over it ([[story-mapping]]) — hence
-     order + priority + release. Title grammar (convention A): epic/feature =
-     noun phrase naming an outcome (e.g. "Season Preparation"); story = verb + object
-     (active goal, e.g. "Cancel Entity"). Title language: see the Language
-     convention in AGENTS.md. -->
-
-## Story
-<!-- HEADING is stereotype-specific: for `stereotype: epic` rename it to
-     "## Epic: Summary"; feature/story keep "## Story". -->
-
-<!-- The concise formulation of this item — every stereotype gets one, up top.
-     story: full user-story sentence (> follows [[user-story-format]], [[INVEST]]).
-     epic/feature: the same shape at coarser altitude — who wants what, and why. -->
-As a [[STK-...]] **&lt;role&gt;** I want **&lt;goal&gt;**, so that **&lt;benefit&gt;**.
-
-**Acceptance criteria.**  — only when `stereotype: story`  <!-- follows [[acceptance-criteria]] -->
-
-- **Given** &lt;context&gt; **when** &lt;action&gt; **then** &lt;observable outcome&gt;.
-
-**PROBLEM / GOAL**  — only when `stereotype: epic | feature`
-
-<the user + business problem this addresses>
-
-**Success metric(s).**
-
-<how we'll know it worked — frame via [[PAM]] / [[SMART]]>
-
-**Scope.** in: <…> · out: <…>
-
-## Hierarchy
-
-- **Parent:** see `parent:` (none for an epic).
-- **Children:** <coarser items list finer ones here, or rely on `parent:` backlinks>
-
-> [!note] Open points
-> <ambiguities, missing children, untestable criteria → raise as [[ISS-...]]>
-
-## History
-
-<!-- Optional, always LAST: provenance / reframing notes as blockquotes, so the active
-     content stays at the top. Omit the heading if there is nothing to record. -->
-
-<!-- Estimate/owner are intentionally NOT modelled here — that's the tracker's (JIRA) job.
-     The wiki keeps requirement-level facts: priority, release, order, hierarchy. -->
+<!-- The body comes from the notation, not from this file: the shared
+     frontmatter above plus the body of `_system/metamodel/notations/notation-<notation>.md`
+     (or `_system/notations/<notation>.md` for a project notation). Copy that
+     file's body from `# {{title}}` on, keep only the blocks whose `levels:`
+     marker comment names this page's level, and drop the markers.
+     The notation also adds its own frontmatter fields (e.g. `primary-actor`
+     and `scope-building-block` for use-case). `parent:` is a graph and may
+     skip levels. Title language: the wiki's ubiquitous language (AGENTS.md).
+     Leave `delivery` and `delivery-checked` blank: only an Implement run sets
+     them, and only on levels the notation lists in `implementable_levels`. -->

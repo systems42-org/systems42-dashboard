@@ -8,7 +8,8 @@ updated: 2026-11-20
 sources: ["[[SRC-036-grilling-session-on-running-without-a-container-engine]]"]
 related: ["[[FR-054-a-start-without-a-container-engine]]", "[[DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go]]", "[[FR-043-the-dashboard-checks-the-metamodel-version]]", "[[CON-003-docker-is-the-supported-way-to-run-it]]", "[[CON-005-the-dashboard-works-on-systems42-derivatives-only]]"]
 tags: ["functional-requirement", "product"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-029-the-dashboard-as-a-product]]"]
 priority: Should
 release: unscheduled

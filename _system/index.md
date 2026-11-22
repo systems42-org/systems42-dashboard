@@ -3,7 +3,9 @@
 Content catalog, one line per page, grouped by type. The agent updates this on
 every capture (`_system/workflows/capture.md`, step 7).
 
-## Glossary
+## Domain terms
+
+
 
 ## Goals
 
@@ -30,11 +32,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 
 ## External interfaces
 
-## Data models
-
 ## Activity models
-
-## Use cases
 
 ## Functional requirements
 

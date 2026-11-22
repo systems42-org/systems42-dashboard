@@ -8,7 +8,8 @@ updated: 2026-11-19
 sources: ["[[SRC-019-the-dashboard-as-a-product]]", "[[SRC-020-grilling-session-on-the-dashboard-as-a-product]]", "[[SRC-027-dashboard-distribution-and-metamodel-contract]]", "[[SRC-028-grilling-session-on-dashboard-distribution]]", "[[SRC-030-default-brand-and-instance-brands]]", "[[SRC-031-grilling-session-on-the-default-brand]]"]
 related: ["[[FR-032-example-brands-to-try]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[CON-001-proof-of-concept-not-production-ready]]", "[[FR-045-a-prompt-template-for-a-brand]]"]
 tags: ["functional-requirement", "product"]
-stereotype: feature
+notation: agile
+level: feature
 parent: ["[[FR-029-the-dashboard-as-a-product]]"]
 priority: Must
 release: unscheduled
