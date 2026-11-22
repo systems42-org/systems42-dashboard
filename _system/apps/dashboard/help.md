@@ -65,9 +65,7 @@ Requirements and Supporting Models are captured here; Resources, Team and
 Roadmap are deliberately left to the organisation.
 
 **arc42** (A1–A5) holds the architecture side: Solution Strategy, Building
-Block, Deployment and Runtime views and Crosscutting Concepts. The content
-types are a planned extension; the cabinet is shown so the shape is already
-visible.
+Block, Deployment and Runtime views and Crosscutting Concepts.
 
 **Commons** (C1–C7) are the sections both sides depend on: Quality
 Requirements, Constraints, Scope & Context, Stakeholders, Domain Terms,
@@ -94,15 +92,18 @@ Decision records and building blocks name the requirements they rest on in
 `drivers:`. A building block page lists them under **Drivers**, together with
 the decisions that shaped it and the blocks that use it; a goal, use case,
 functional or quality requirement or constraint shows under **Addressed by**
-which decisions and blocks answer it. **[Building Block View](/arc42/building-blocks)**
+which decisions and architecture pages answer it. **[Building Block View](/arc42/building-blocks)**
 shows the levels; a block with parts shows its white box, drawn live from the
 parts and their `uses:`.
 
-The other architecture views work the same way. **[Deployment View](/arc42/deployment)**
+The other architecture views work the same way. **[Solution Strategy](/arc42/strategy)**
+lists the strategy pages, each with its drivers and the decisions it summarises.
+**[Deployment View](/arc42/deployment)**
 draws where blocks run, from each node's `parent:`, `hosts:` and `connects:`.
 **[Runtime View](/arc42/runtime)** lists the scenarios; each scenario page draws
 its sequence diagram from `steps:` and warns when a step between two blocks has
-no `uses:` edge. **[Crosscutting Concepts](/arc42/concepts)** groups the rules
+no `uses:` edge. A scenario names the functional requirement or activity model it
+carries out in `realizes:`; that page lists it under **Realized by**. **[Crosscutting Concepts](/arc42/concepts)** groups the rules
 that several blocks or nodes follow.
 
 Every architecture page carries a `state`: **outdated** (historical, no longer
