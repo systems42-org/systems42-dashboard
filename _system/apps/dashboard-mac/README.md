@@ -52,6 +52,14 @@ there, and writes the last commit that changed them to `Tests/Fixtures/SOURCE`.
 Running it twice leaves `git status` unchanged. CI never runs it. After a
 refresh, update the counts in `FixtureTests` if they changed.
 
+## Search
+
+`Sources/Systems42Kit/Search/` ports the dashboard's search: `SearchIndex` builds what the Go
+dashboard serves as `/search.json` (`internal/search/search.go`), and `search(_:in:filter:withPassages:)`
+ranks it like `static/search-rank.js`. Each Swift function names the JavaScript function it ports, so
+a change in the JavaScript can be followed. Tests compare the index and the ranking with the
+golden data, see `Tests/Golden/README.md`.
+
 ## CI
 
 `.github/workflows/mac.yml` runs `swift build` and `swift test` on a macOS runner.
