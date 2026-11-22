@@ -1,0 +1,146 @@
+{
+  "A1": {
+    "area": "arc42",
+    "folders": [
+      "solution-strategy"
+    ],
+    "pages": [],
+    "title": "Solution Strategy"
+  },
+  "A2": {
+    "area": "arc42",
+    "folders": [
+      "building-blocks"
+    ],
+    "pages": [],
+    "title": "Building Block View"
+  },
+  "A3": {
+    "area": "arc42",
+    "folders": [
+      "deployment-nodes"
+    ],
+    "pages": [],
+    "title": "Deployment View"
+  },
+  "A4": {
+    "area": "arc42",
+    "folders": [
+      "runtime-scenarios"
+    ],
+    "pages": [],
+    "title": "Runtime View"
+  },
+  "A5": {
+    "area": "arc42",
+    "folders": [
+      "crosscutting-concepts"
+    ],
+    "pages": [],
+    "title": "Crosscutting Concepts"
+  },
+  "C1": {
+    "area": "commons",
+    "folders": [
+      "quality-requirements"
+    ],
+    "pages": [],
+    "title": "Quality Requirements"
+  },
+  "C2": {
+    "area": "commons",
+    "folders": [
+      "constraints"
+    ],
+    "pages": [],
+    "title": "Constraints"
+  },
+  "C3": {
+    "area": "commons",
+    "folders": [
+      "context",
+      "external-interfaces"
+    ],
+    "pages": [],
+    "title": "Scope & Context"
+  },
+  "C4": {
+    "area": "commons",
+    "folders": [
+      "stakeholders"
+    ],
+    "pages": [],
+    "title": "Stakeholders"
+  },
+  "C5": {
+    "area": "commons",
+    "folders": [
+      "domain-terms"
+    ],
+    "pages": [
+      "DT-001",
+      "DT-002",
+      "DT-003",
+      "DT-004"
+    ],
+    "title": "Domain Terms"
+  },
+  "C6": {
+    "area": "commons",
+    "folders": [
+      "issues"
+    ],
+    "pages": [],
+    "title": "Issues"
+  },
+  "C7": {
+    "area": "commons",
+    "folders": [
+      "decisions"
+    ],
+    "pages": [],
+    "title": "Decisions"
+  },
+  "R1": {
+    "area": "req42",
+    "folders": [
+      "goals"
+    ],
+    "pages": [],
+    "title": "Vision & Goals"
+  },
+  "R2": {
+    "area": "req42",
+    "folders": [],
+    "pages": [],
+    "title": "Resources & Staff"
+  },
+  "R3": {
+    "area": "req42",
+    "folders": [
+      "functional-requirements"
+    ],
+    "pages": [],
+    "title": "Functional Requirements"
+  },
+  "R4": {
+    "area": "req42",
+    "folders": [
+      "activity-models"
+    ],
+    "pages": [],
+    "title": "Supporting Models"
+  },
+  "R5": {
+    "area": "req42",
+    "folders": [],
+    "pages": [],
+    "title": "Team Structure"
+  },
+  "R6": {
+    "area": "req42",
+    "folders": [],
+    "pages": [],
+    "title": "Roadmap"
+  }
+}

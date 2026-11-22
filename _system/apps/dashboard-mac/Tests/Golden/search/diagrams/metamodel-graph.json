@@ -1,0 +1,1042 @@
+{
+  "edges": [
+    {
+      "data": {
+        "cardinality": "1..*",
+        "id": "e0",
+        "label": "actors",
+        "note": "",
+        "semantics": "actor",
+        "source": "activity-model",
+        "symmetric": false,
+        "target": "stakeholder"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e1",
+        "label": "amends",
+        "loop_dir": "-45deg",
+        "note": "this record changes some points of the target, which stays in force",
+        "semantics": "revision",
+        "source": "decision-record",
+        "symmetric": false,
+        "target": "decision-record"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e2",
+        "label": "applies-to",
+        "note": "",
+        "semantics": "association",
+        "source": "crosscutting-concept",
+        "symmetric": false,
+        "target": "building-block"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e3",
+        "label": "applies-to",
+        "note": "",
+        "semantics": "association",
+        "source": "crosscutting-concept",
+        "symmetric": false,
+        "target": "deployment-node"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e4",
+        "label": "beneficiary",
+        "note": "PAM Advantage: who gets the benefit",
+        "semantics": "beneficiary",
+        "source": "goal",
+        "symmetric": false,
+        "target": "stakeholder"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e5",
+        "label": "building-blocks",
+        "note": "set at capture; structures the requirements (FR-005)",
+        "semantics": "assignment",
+        "source": "functional-requirement",
+        "symmetric": false,
+        "target": "building-block"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e6",
+        "label": "connects",
+        "loop_dir": "-45deg",
+        "note": "structured entries {to, protocol?, note?}, stored on the initiating side",
+        "semantics": "association",
+        "source": "deployment-node",
+        "symmetric": false,
+        "target": "deployment-node"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e7",
+        "label": "connects",
+        "note": "",
+        "semantics": "association",
+        "source": "deployment-node",
+        "symmetric": false,
+        "target": "external-interface"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e8",
+        "label": "drivers",
+        "note": "",
+        "semantics": "rationale",
+        "source": "decision-record",
+        "symmetric": false,
+        "target": "goal"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e9",
+        "label": "drivers",
+        "note": "",
+        "semantics": "rationale",
+        "source": "decision-record",
+        "symmetric": false,
+        "target": "functional-requirement"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e10",
+        "label": "drivers",
+        "note": "",
+        "semantics": "rationale",
+        "source": "decision-record",
+        "symmetric": false,
+        "target": "quality-requirement"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e11",
+        "label": "drivers",
+        "note": "",
+        "semantics": "rationale",
+        "source": "decision-record",
+        "symmetric": false,
+        "target": "constraint"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e12",
+        "label": "drivers",
+        "note": "",
+        "semantics": "rationale",
+        "source": "building-block",
+        "symmetric": false,
+        "target": "goal"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e13",
+        "label": "drivers",
+        "note": "",
+        "semantics": "rationale",
+        "source": "building-block",
+        "symmetric": false,
+        "target": "functional-requirement"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e14",
+        "label": "drivers",
+        "note": "",
+        "semantics": "rationale",
+        "source": "building-block",
+        "symmetric": false,
+        "target": "quality-requirement"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e15",
+        "label": "drivers",
+        "note": "",
+        "semantics": "rationale",
+        "source": "building-block",
+        "symmetric": false,
+        "target": "constraint"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e16",
+        "label": "drivers",
+        "note": "",
+        "semantics": "rationale",
+        "source": "solution-strategy",
+        "symmetric": false,
+        "target": "goal"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e17",
+        "label": "drivers",
+        "note": "",
+        "semantics": "rationale",
+        "source": "solution-strategy",
+        "symmetric": false,
+        "target": "quality-requirement"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e18",
+        "label": "drivers",
+        "note": "",
+        "semantics": "rationale",
+        "source": "solution-strategy",
+        "symmetric": false,
+        "target": "constraint"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e19",
+        "label": "drivers",
+        "note": "",
+        "semantics": "rationale",
+        "source": "crosscutting-concept",
+        "symmetric": false,
+        "target": "quality-requirement"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e20",
+        "label": "drivers",
+        "note": "",
+        "semantics": "rationale",
+        "source": "crosscutting-concept",
+        "symmetric": false,
+        "target": "constraint"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e21",
+        "label": "drivers",
+        "note": "",
+        "semantics": "rationale",
+        "source": "deployment-node",
+        "symmetric": false,
+        "target": "quality-requirement"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e22",
+        "label": "drivers",
+        "note": "",
+        "semantics": "rationale",
+        "source": "deployment-node",
+        "symmetric": false,
+        "target": "constraint"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e23",
+        "label": "goal",
+        "note": "[] is an explicit enabler (lane platform/display), not a gap — unless the item is backbone",
+        "semantics": "serves",
+        "source": "functional-requirement",
+        "symmetric": false,
+        "target": "goal"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e24",
+        "label": "hosts",
+        "note": "",
+        "semantics": "structure",
+        "source": "deployment-node",
+        "symmetric": false,
+        "target": "building-block"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..1",
+        "id": "e25",
+        "label": "owner",
+        "note": "a stakeholder link only, no literal; empty means not yet clear who can answer",
+        "semantics": "actor",
+        "source": "issue",
+        "symmetric": false,
+        "target": "stakeholder"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e26",
+        "label": "parent",
+        "loop_dir": "-45deg",
+        "note": "story → feature → epic; a feature or story may also name a sea- or fish-level use case (DR-038 amendment); several parents make it a graph, the dashboard draws the first (DR-012)",
+        "semantics": "hierarchy",
+        "source": "functional-requirement",
+        "symmetric": false,
+        "target": "functional-requirement"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..1",
+        "id": "e27",
+        "label": "parent",
+        "loop_dir": "-45deg",
+        "note": "objective → vision (DR-016)",
+        "semantics": "hierarchy",
+        "source": "goal",
+        "symmetric": false,
+        "target": "goal"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..1",
+        "id": "e28",
+        "label": "parent",
+        "loop_dir": "-45deg",
+        "note": "sum-type variant → sum-type (DR-019)",
+        "semantics": "hierarchy",
+        "source": "domain-term",
+        "symmetric": false,
+        "target": "domain-term"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..1",
+        "id": "e29",
+        "label": "parent",
+        "loop_dir": "-45deg",
+        "note": "block → enclosing block (arc42 levels)",
+        "semantics": "hierarchy",
+        "source": "building-block",
+        "symmetric": false,
+        "target": "building-block"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..1",
+        "id": "e30",
+        "label": "parent",
+        "note": "level-1 block → the system's context page",
+        "semantics": "hierarchy",
+        "source": "building-block",
+        "symmetric": false,
+        "target": "context"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..1",
+        "id": "e31",
+        "label": "parent",
+        "loop_dir": "45deg",
+        "note": "node → enclosing node (infrastructure levels)",
+        "semantics": "hierarchy",
+        "source": "deployment-node",
+        "symmetric": false,
+        "target": "deployment-node"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "1",
+        "id": "e32",
+        "label": "primary-actor",
+        "note": "for notation: use-case",
+        "semantics": "actor",
+        "source": "functional-requirement",
+        "symmetric": false,
+        "target": "stakeholder"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..1",
+        "id": "e33",
+        "label": "raised-by",
+        "note": "or the literal `agent` — the one field that is link-or-literal",
+        "semantics": "origin",
+        "source": "issue",
+        "symmetric": false,
+        "target": "stakeholder"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e34",
+        "label": "realizes",
+        "note": "",
+        "semantics": "serves",
+        "source": "runtime-scenario",
+        "symmetric": false,
+        "target": "functional-requirement"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e35",
+        "label": "realizes",
+        "note": "",
+        "semantics": "serves",
+        "source": "runtime-scenario",
+        "symmetric": false,
+        "target": "activity-model"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e36",
+        "label": "relationships",
+        "loop_dir": "45deg",
+        "note": "both terms carry a stereotype",
+        "semantics": "structure",
+        "source": "domain-term",
+        "symmetric": false,
+        "target": "domain-term"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..1",
+        "id": "e37",
+        "label": "scope-building-block",
+        "note": "for notation: use-case; alternative to context, exactly one scope target in total",
+        "semantics": "scope",
+        "source": "functional-requirement",
+        "symmetric": false,
+        "target": "building-block"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..1",
+        "id": "e38",
+        "label": "scope-building-block",
+        "note": "for notation: use-case; the whole system, alternative to building-block",
+        "semantics": "scope",
+        "source": "functional-requirement",
+        "symmetric": false,
+        "target": "context"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e39",
+        "label": "decisions",
+        "note": "",
+        "semantics": "rationale",
+        "source": "building-block",
+        "symmetric": false,
+        "target": "decision-record"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e40",
+        "label": "decisions",
+        "note": "",
+        "semantics": "rationale",
+        "source": "solution-strategy",
+        "symmetric": false,
+        "target": "decision-record"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e41",
+        "label": "decisions",
+        "note": "",
+        "semantics": "rationale",
+        "source": "crosscutting-concept",
+        "symmetric": false,
+        "target": "decision-record"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e42",
+        "label": "decisions",
+        "note": "",
+        "semantics": "rationale",
+        "source": "runtime-scenario",
+        "symmetric": false,
+        "target": "decision-record"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e43",
+        "label": "decisions",
+        "note": "",
+        "semantics": "rationale",
+        "source": "deployment-node",
+        "symmetric": false,
+        "target": "decision-record"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e44",
+        "label": "steps",
+        "note": "structured entries {from, to, message, note?}, in order",
+        "semantics": "interaction",
+        "source": "runtime-scenario",
+        "symmetric": false,
+        "target": "building-block"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e45",
+        "label": "steps",
+        "note": "",
+        "semantics": "interaction",
+        "source": "runtime-scenario",
+        "symmetric": false,
+        "target": "external-interface"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e46",
+        "label": "steps",
+        "note": "",
+        "semantics": "interaction",
+        "source": "runtime-scenario",
+        "symmetric": false,
+        "target": "deployment-node"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e47",
+        "label": "steps",
+        "note": "drawn as an actor",
+        "semantics": "interaction",
+        "source": "runtime-scenario",
+        "symmetric": false,
+        "target": "stakeholder"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..1",
+        "id": "e48",
+        "label": "superseded-by",
+        "loop_dir": "45deg",
+        "note": "set on the old record together with status: deprecated",
+        "semantics": "revision",
+        "source": "decision-record",
+        "symmetric": false,
+        "target": "decision-record"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..1",
+        "id": "e49",
+        "label": "superseded-by",
+        "loop_dir": "45deg",
+        "note": "replaced by its successor; status unchanged, state outdated once gone",
+        "semantics": "revision",
+        "source": "building-block",
+        "symmetric": false,
+        "target": "building-block"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..1",
+        "id": "e50",
+        "label": "superseded-by",
+        "loop_dir": "-45deg",
+        "note": "replaced by its successor; status unchanged, state outdated once gone",
+        "semantics": "revision",
+        "source": "solution-strategy",
+        "symmetric": false,
+        "target": "solution-strategy"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..1",
+        "id": "e51",
+        "label": "superseded-by",
+        "loop_dir": "-45deg",
+        "note": "replaced by its successor; status unchanged, state outdated once gone",
+        "semantics": "revision",
+        "source": "runtime-scenario",
+        "symmetric": false,
+        "target": "runtime-scenario"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..1",
+        "id": "e52",
+        "label": "superseded-by",
+        "loop_dir": "135deg",
+        "note": "replaced by its successor; status unchanged, state outdated once gone",
+        "semantics": "revision",
+        "source": "deployment-node",
+        "symmetric": false,
+        "target": "deployment-node"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..1",
+        "id": "e53",
+        "label": "superseded-by",
+        "loop_dir": "-45deg",
+        "note": "replaced by its successor; status unchanged, state outdated once gone",
+        "semantics": "revision",
+        "source": "crosscutting-concept",
+        "symmetric": false,
+        "target": "crosscutting-concept"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e54",
+        "label": "uses",
+        "loop_dir": "135deg",
+        "note": "",
+        "semantics": "dependency",
+        "source": "building-block",
+        "symmetric": false,
+        "target": "building-block"
+      }
+    },
+    {
+      "data": {
+        "cardinality": "0..*",
+        "id": "e55",
+        "label": "uses",
+        "note": "a neighbour system, drawn outside the white box",
+        "semantics": "dependency",
+        "source": "building-block",
+        "symmetric": false,
+        "target": "external-interface"
+      }
+    }
+  ],
+  "nodes": [
+    {
+      "data": {
+        "area": "requirements",
+        "id": "block:R1",
+        "is_block": true,
+        "label": "R1 · Vision & Goals"
+      }
+    },
+    {
+      "data": {
+        "area": "requirements",
+        "id": "block:R3",
+        "is_block": true,
+        "label": "R3 · Functional Requirements"
+      }
+    },
+    {
+      "data": {
+        "area": "requirements",
+        "id": "block:R4",
+        "is_block": true,
+        "label": "R4 · Supporting Models"
+      }
+    },
+    {
+      "data": {
+        "area": "commons",
+        "id": "block:C1",
+        "is_block": true,
+        "label": "C1 · Quality Requirements"
+      }
+    },
+    {
+      "data": {
+        "area": "commons",
+        "id": "block:C2",
+        "is_block": true,
+        "label": "C2 · Constraints"
+      }
+    },
+    {
+      "data": {
+        "area": "commons",
+        "id": "block:C3",
+        "is_block": true,
+        "label": "C3 · Scope & Context"
+      }
+    },
+    {
+      "data": {
+        "area": "commons",
+        "id": "block:C4",
+        "is_block": true,
+        "label": "C4 · Stakeholders"
+      }
+    },
+    {
+      "data": {
+        "area": "commons",
+        "id": "block:C5",
+        "is_block": true,
+        "label": "C5 · Domain Terms"
+      }
+    },
+    {
+      "data": {
+        "area": "commons",
+        "id": "block:C6",
+        "is_block": true,
+        "label": "C6 · Issues"
+      }
+    },
+    {
+      "data": {
+        "area": "commons",
+        "id": "block:C7",
+        "is_block": true,
+        "label": "C7 · Decisions"
+      }
+    },
+    {
+      "data": {
+        "area": "architecture",
+        "id": "block:A1",
+        "is_block": true,
+        "label": "A1 · Solution Strategy"
+      }
+    },
+    {
+      "data": {
+        "area": "architecture",
+        "id": "block:A2",
+        "is_block": true,
+        "label": "A2 · Building Block View"
+      }
+    },
+    {
+      "data": {
+        "area": "architecture",
+        "id": "block:A3",
+        "is_block": true,
+        "label": "A3 · Deployment View"
+      }
+    },
+    {
+      "data": {
+        "area": "architecture",
+        "id": "block:A4",
+        "is_block": true,
+        "label": "A4 · Runtime View"
+      }
+    },
+    {
+      "data": {
+        "area": "architecture",
+        "id": "block:A5",
+        "is_block": true,
+        "label": "A5 · Crosscutting Concepts"
+      }
+    },
+    {
+      "data": {
+        "block_id": "R1",
+        "id": "goal",
+        "label": "Goal",
+        "label_de": "Ziel",
+        "parent": "block:R1",
+        "prefix": "GOAL",
+        "stereotypes": "vision, objective",
+        "url": "#type-goal"
+      }
+    },
+    {
+      "data": {
+        "block_id": "R3",
+        "id": "functional-requirement",
+        "label": "Functional requirement",
+        "label_de": "Funktionale Anforderung",
+        "parent": "block:R3",
+        "prefix": "FR",
+        "stereotypes": "",
+        "url": "#type-functional-requirement"
+      }
+    },
+    {
+      "data": {
+        "block_id": "R4",
+        "id": "activity-model",
+        "label": "Activity model",
+        "label_de": "Aktivitätsmodell",
+        "parent": "block:R4",
+        "prefix": "ACT",
+        "stereotypes": "",
+        "url": "#type-activity-model"
+      }
+    },
+    {
+      "data": {
+        "block_id": "C1",
+        "id": "quality-requirement",
+        "label": "Quality requirement",
+        "label_de": "Qualitätsanforderung",
+        "parent": "block:C1",
+        "prefix": "QR",
+        "stereotypes": "",
+        "url": "#type-quality-requirement"
+      }
+    },
+    {
+      "data": {
+        "block_id": "C2",
+        "id": "constraint",
+        "label": "Constraint",
+        "label_de": "Randbedingung",
+        "parent": "block:C2",
+        "prefix": "CON",
+        "stereotypes": "",
+        "url": "#type-constraint"
+      }
+    },
+    {
+      "data": {
+        "block_id": "C3",
+        "id": "context",
+        "label": "Context",
+        "label_de": "Kontext",
+        "parent": "block:C3",
+        "prefix": "CTX",
+        "stereotypes": "",
+        "url": "#type-context"
+      }
+    },
+    {
+      "data": {
+        "block_id": "C3",
+        "id": "external-interface",
+        "label": "External interface",
+        "label_de": "Externe Schnittstelle",
+        "parent": "block:C3",
+        "prefix": "EIF",
+        "stereotypes": "",
+        "url": "#type-external-interface"
+      }
+    },
+    {
+      "data": {
+        "block_id": "C4",
+        "id": "stakeholder",
+        "label": "Stakeholder",
+        "label_de": "Stakeholder",
+        "parent": "block:C4",
+        "prefix": "STK",
+        "stereotypes": "",
+        "url": "#type-stakeholder"
+      }
+    },
+    {
+      "data": {
+        "block_id": "C5",
+        "id": "domain-term",
+        "label": "Domain term",
+        "label_de": "Domänenbegriff",
+        "parent": "block:C5",
+        "prefix": "DT",
+        "stereotypes": "entity, value-object, sum-type",
+        "url": "#type-domain-term"
+      }
+    },
+    {
+      "data": {
+        "block_id": "C6",
+        "id": "issue",
+        "label": "Issue",
+        "label_de": "Offener Punkt",
+        "parent": "block:C6",
+        "prefix": "ISS",
+        "stereotypes": "",
+        "url": "#type-issue"
+      }
+    },
+    {
+      "data": {
+        "block_id": "C7",
+        "id": "decision-record",
+        "label": "Decision record",
+        "label_de": "Entscheidung",
+        "parent": "block:C7",
+        "prefix": "DR",
+        "stereotypes": "",
+        "url": "#type-decision-record"
+      }
+    },
+    {
+      "data": {
+        "block_id": "A1",
+        "id": "solution-strategy",
+        "label": "Solution strategy",
+        "label_de": "Lösungsstrategie",
+        "parent": "block:A1",
+        "prefix": "SOL",
+        "stereotypes": "",
+        "url": "#type-solution-strategy"
+      }
+    },
+    {
+      "data": {
+        "block_id": "A2",
+        "id": "building-block",
+        "label": "Building block",
+        "label_de": "Baustein",
+        "parent": "block:A2",
+        "prefix": "BB",
+        "stereotypes": "",
+        "url": "#type-building-block"
+      }
+    },
+    {
+      "data": {
+        "block_id": "A3",
+        "id": "deployment-node",
+        "label": "Deployment node",
+        "label_de": "Infrastrukturelement",
+        "parent": "block:A3",
+        "prefix": "DN",
+        "stereotypes": "environment, host, container, service",
+        "url": "#type-deployment-node"
+      }
+    },
+    {
+      "data": {
+        "block_id": "A4",
+        "id": "runtime-scenario",
+        "label": "Runtime scenario",
+        "label_de": "Laufzeitszenario",
+        "parent": "block:A4",
+        "prefix": "RS",
+        "stereotypes": "",
+        "url": "#type-runtime-scenario"
+      }
+    },
+    {
+      "data": {
+        "block_id": "A5",
+        "id": "crosscutting-concept",
+        "label": "Crosscutting concept",
+        "label_de": "Querschnittliches Konzept",
+        "parent": "block:A5",
+        "prefix": "CC",
+        "stereotypes": "",
+        "url": "#type-crosscutting-concept"
+      }
+    },
+    {
+      "data": {
+        "block_id": "",
+        "id": "source",
+        "label": "Source",
+        "label_de": "Quelle",
+        "prefix": "SRC",
+        "stereotypes": "",
+        "url": "#type-source"
+      }
+    }
+  ],
+  "universal": [
+    {
+      "cardinality": "0..*",
+      "direction": "directed",
+      "field": "ingested-pages",
+      "from": "source",
+      "note": "",
+      "to": "any"
+    },
+    {
+      "cardinality": "0..*",
+      "direction": "symmetric",
+      "field": "related",
+      "from": "any",
+      "note": "same-slug pages of different types may represent the same concept across views",
+      "to": "any"
+    },
+    {
+      "cardinality": "0..*",
+      "direction": "directed",
+      "field": "sources",
+      "from": "any",
+      "note": "empty sources and no [!assumption] ⇒ inspect raises an Issue",
+      "to": "source"
+    }
+  ]
+}

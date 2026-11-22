@@ -1,0 +1,2602 @@
+{
+  "anchors": [
+    {
+      "aliases": [
+        "acceptance-criteria",
+        "gherkin",
+        "given-when-then"
+      ],
+      "applies_other": "functional-requirement (per notation: Agile story, use-case sea/fish, prose requirement)",
+      "applies_to": [],
+      "definition": "Testable conditions of satisfaction for a functional requirement (story) — the check that says \"done and correct.\" Written in Gherkin form so they're unambiguous and verifiable:",
+      "id": "acceptance-criteria",
+      "name": "Acceptance Criteria (Given/When/Then)"
+    },
+    {
+      "aliases": [
+        "arc42-template"
+      ],
+      "applies_other": "architecture area · building blocks · decision records",
+      "applies_to": [
+        "solution-strategy",
+        "building-block",
+        "deployment-node",
+        "runtime-scenario",
+        "crosscutting-concept"
+      ],
+      "definition": "The template for communicating and documenting software architecture, by Dr. Peter Hruschka & Dr. Gernot Starke (template V9, July 2025; https://arc42.org, docs at https://docs.arc42.org). Twelve sections; this wiki shares sections 1–3 and 9–12 with req42 (the commons area) and implements the architecture-only sections 4–8 as one content type each.",
+      "id": "arc42",
+      "name": "arc42"
+    },
+    {
+      "aliases": [],
+      "applies_other": "user-story",
+      "applies_to": [],
+      "definition": "Quality criteria for a user story (complements the User-Story Format shape).",
+      "id": "invest",
+      "name": "INVEST"
+    },
+    {
+      "aliases": [],
+      "applies_other": "",
+      "applies_to": [
+        "decision-record"
+      ],
+      "definition": "Markdown Any Decision Records — the record format for a decision record (DR-NNN). MADR started as \"Markdown Architectural Decision Records\" and extends Michael Nygard's Context / Decision / Consequences with an explicit comparison of options. Reference: https://adr.github.io/madr/ (MADR 4.x).",
+      "id": "madr",
+      "name": "MADR"
+    },
+    {
+      "aliases": [],
+      "applies_other": "feature · use-case · user-story",
+      "applies_to": [
+        "functional-requirement",
+        "quality-requirement"
+      ],
+      "definition": "The shared meaning of the priority field used across features, use cases, stories, and quality requirements. One definition, cited everywhere.",
+      "id": "moscow",
+      "name": "MoSCoW"
+    },
+    {
+      "aliases": [
+        "pam-goals"
+      ],
+      "applies_other": "goals in stakeholder · feature rationale",
+      "applies_to": [
+        "goal"
+      ],
+      "definition": "A lightweight goal frame — the minimal viable alternative to SMART when full rigor is unwarranted or premature. Three parts:",
+      "id": "pam",
+      "name": "PAM"
+    },
+    {
+      "aliases": [
+        "q42-quality-scenario"
+      ],
+      "applies_other": "",
+      "applies_to": [
+        "quality-requirement"
+      ],
+      "definition": "The shape of the scenario on every quality requirement, after the arc42 quality model Q42 (quality.arc42.org): a quality need, tagged with its Q42 dimensions and made concrete and testable by one scenario. Q42 is the pragmatic choice here; the wiki never calls these \"ATAM scenarios\".",
+      "id": "q42",
+      "name": "Q42"
+    },
+    {
+      "aliases": [
+        "req42-framework"
+      ],
+      "applies_other": "whole-vault taxonomy · requirements coverage",
+      "applies_to": [
+        "goal",
+        "functional-requirement",
+        "activity-model",
+        "quality-requirement",
+        "constraint",
+        "context",
+        "external-interface",
+        "stakeholder",
+        "domain-term",
+        "issue"
+      ],
+      "definition": "The pragmatic, agile, just-in-time framework for requirements documentation and communication, by Dr. Peter Hruschka & Markus Meuten (CC BY-SA 4.0). It is the umbrella methodical reference for this vault: our content types are essentially req42's sections, and the smaller anchors (SMART, PAM, INVEST, MoSCoW, User-Story Format) are standards req42 uses inside those sections. Fuller reading copy: docs/req42/. Canonical source: https://github.com/Hruschka/req42-framework.",
+      "id": "req42",
+      "name": "req42"
+    },
+    {
+      "aliases": [
+        "smart-goals"
+      ],
+      "applies_other": "goals in stakeholder · feature rationale",
+      "applies_to": [
+        "goal",
+        "quality-requirement"
+      ],
+      "definition": "A goal-framing standard. Use when a goal warrants full rigor; for a lighter frame use PAM.",
+      "id": "smart",
+      "name": "SMART"
+    },
+    {
+      "aliases": [
+        "story-mapping",
+        "story-map",
+        "user-story-map"
+      ],
+      "applies_other": "functional requirements (req42 section 04) · epics · features · user-stories",
+      "applies_to": [],
+      "definition": "A technique (Jeff Patton) for arranging the functional requirements (req42 block 04) as a 2-D map instead of a flat, context-free backlog list — so you can explain the whole system, find gaps, and slice releases. It is the way req42 recommends maintaining the functional-requirements hierarchy (Hruschka cites Patton).",
+      "id": "story-mapping",
+      "name": "Story Mapping"
+    },
+    {
+      "aliases": [
+        "user-story-format",
+        "story-format"
+      ],
+      "applies_other": "user-story",
+      "applies_to": [],
+      "definition": "The canonical shape of a user story. Quality of a story is judged separately by INVEST; priority by MoSCoW.",
+      "id": "user-story-format",
+      "name": "User-Story Format"
+    }
+  ],
+  "blocks_in_folders": 15,
+  "blocks_total": 18,
+  "frameworks": [
+    {
+      "blocks": 6,
+      "name": "req42"
+    },
+    {
+      "blocks": 7,
+      "name": "commons"
+    },
+    {
+      "blocks": 5,
+      "name": "arc42"
+    }
+  ],
+  "language": {
+    "constructs": [
+      "type",
+      "relation",
+      "framework",
+      "projection",
+      "anchor",
+      "notation",
+      "rule"
+    ],
+    "field_kinds": [
+      "scalar",
+      "enum",
+      "bool",
+      "int",
+      "date",
+      "timestamp",
+      "list",
+      "link",
+      "link-list",
+      "structured-list"
+    ],
+    "lifecycles": {
+      "content": [
+        "draft",
+        "review",
+        "accepted",
+        "deprecated"
+      ],
+      "issue": [
+        "open",
+        "in-progress",
+        "resolved",
+        "wontfix"
+      ],
+      "source": [
+        "ingested"
+      ]
+    },
+    "universal_fields": [
+      {
+        "description": "TYPE-NNN, stable, never reused",
+        "kind": "scalar",
+        "name": "id",
+        "relation": "",
+        "required": false,
+        "values": []
+      },
+      {
+        "description": "the type page's name",
+        "kind": "scalar",
+        "name": "type",
+        "relation": "",
+        "required": false,
+        "values": []
+      },
+      {
+        "description": "the page title, in the wiki's ubiquitous language",
+        "kind": "scalar",
+        "name": "title",
+        "relation": "",
+        "required": false,
+        "values": []
+      },
+      {
+        "description": "per the type's lifecycle",
+        "kind": "enum",
+        "name": "status",
+        "relation": "",
+        "required": false,
+        "values": []
+      },
+      {
+        "description": "",
+        "kind": "date",
+        "name": "created",
+        "relation": "",
+        "required": false,
+        "values": []
+      },
+      {
+        "description": "",
+        "kind": "date",
+        "name": "updated",
+        "relation": "",
+        "required": false,
+        "values": []
+      },
+      {
+        "description": "",
+        "kind": "link-list",
+        "name": "sources",
+        "relation": "sources",
+        "required": false,
+        "values": []
+      },
+      {
+        "description": "",
+        "kind": "link-list",
+        "name": "related",
+        "relation": "related",
+        "required": false,
+        "values": []
+      },
+      {
+        "description": "",
+        "kind": "list",
+        "name": "tags",
+        "relation": "",
+        "required": false,
+        "values": []
+      },
+      {
+        "description": "other names for the page (Obsidian aliases); any page may carry it, a template need not",
+        "kind": "list",
+        "name": "aliases",
+        "relation": "",
+        "required": false,
+        "values": []
+      }
+    ]
+  },
+  "projections": [
+    {
+      "name": "addressed-by",
+      "output": "list",
+      "reads": [
+        {
+          "fields": [
+            "drivers"
+          ],
+          "type": "decision-record"
+        },
+        {
+          "fields": [
+            "drivers"
+          ],
+          "type": "building-block"
+        },
+        {
+          "fields": [
+            "drivers"
+          ],
+          "type": "solution-strategy"
+        },
+        {
+          "fields": [
+            "drivers"
+          ],
+          "type": "deployment-node"
+        },
+        {
+          "fields": [
+            "drivers"
+          ],
+          "type": "crosscutting-concept"
+        }
+      ],
+      "summary": "The inverse of rel-drivers on a goal, use case, functional requirement, quality requirement or constraint: which decisions, building blocks, solution strategies, deployment nodes and crosscutting concepts answer it.",
+      "where": "not rendered yet"
+    },
+    {
+      "name": "backlog-ranking",
+      "output": "nested-list",
+      "reads": [
+        {
+          "fields": [
+            "notation",
+            "level",
+            "priority",
+            "release",
+            "order",
+            "parent"
+          ],
+          "type": "functional-requirement"
+        }
+      ],
+      "summary": "What req42 still calls the Product Backlog: the ranked, linear reading of the hierarchy — by release, then priority, then order. Declared here so that the word \"backlog\" has exactly one meaning in this wiki: a view, never a drawer.",
+      "where": "not rendered yet"
+    },
+    {
+      "name": "bb-tree",
+      "output": "tree + diagram",
+      "reads": [
+        {
+          "fields": [
+            "parent",
+            "uses"
+          ],
+          "type": "building-block"
+        }
+      ],
+      "summary": "The levels of the Building Block View from rel-parent: level 1 under the system, then each block's children. A block whose parent is empty, a context page or missing counts as level 1, so nothing drops out of the view.",
+      "where": "/arc42/building-blocks"
+    },
+    {
+      "name": "context-diagram",
+      "output": "mermaid",
+      "reads": [
+        {
+          "fields": [
+            "partner",
+            "short_title",
+            "tier",
+            "flows",
+            "status"
+          ],
+          "type": "external-interface"
+        },
+        {
+          "fields": [
+            "provides",
+            "receives",
+            "nature",
+            "context_role"
+          ],
+          "type": "stakeholder"
+        },
+        {
+          "fields": [
+            "kind"
+          ],
+          "type": "context"
+        }
+      ],
+      "summary": "Projected from edges, never stored: EIF flows for systems, STK provides / receives for human roles. Deprecated interfaces are drawn nowhere. \"No drift by construction\" — inspect only checks that the edges are consistent.",
+      "where": "/req42/scope"
+    },
+    {
+      "name": "deployment-diagram",
+      "output": "mermaid",
+      "reads": [
+        {
+          "fields": [
+            "parent",
+            "hosts",
+            "connects",
+            "state",
+            "superseded-by"
+          ],
+          "type": "deployment-node"
+        },
+        {
+          "fields": [],
+          "type": "building-block"
+        },
+        {
+          "fields": [],
+          "type": "external-interface"
+        }
+      ],
+      "summary": "Nodes nested by rel-parent, the blocks they host inside them, rel-connects as edges labelled with the protocol. One diagram of all states: current plain, planned and target dashed, outdated grey, a dotted edge to the successor. Never stored.",
+      "where": "/arc42/deployment, /page/deployment-nodes/<DN> (subtree)"
+    },
+    {
+      "name": "entity-diagram",
+      "output": "mermaid",
+      "reads": [
+        {
+          "fields": [
+            "stereotype",
+            "parent",
+            "attributes",
+            "relationships",
+            "bounded-context"
+          ],
+          "type": "domain-term"
+        }
+      ],
+      "summary": "Classes are the stereotyped domain terms. Edges come from rel-relationships and sum-type parents.",
+      "where": "/entity-diagram"
+    },
+    {
+      "name": "goal-coverage",
+      "output": "matrix",
+      "reads": [
+        {
+          "fields": [
+            "notation",
+            "level",
+            "goal",
+            "lane"
+          ],
+          "type": "functional-requirement"
+        },
+        {
+          "fields": [
+            "stereotype"
+          ],
+          "type": "goal"
+        }
+      ],
+      "summary": "Objectives × epics, from rel-goal. An objective no epic serves is a gap; a backbone epic with goal: [] is a rule violation (rule-fr-traces-to-goal).",
+      "where": "/goals (covering-epic counts)"
+    },
+    {
+      "name": "goal-tree",
+      "output": "mermaid",
+      "reads": [
+        {
+          "fields": [
+            "stereotype",
+            "parent",
+            "short_title",
+            "tile_claim"
+          ],
+          "type": "goal"
+        },
+        {
+          "fields": [
+            "notation",
+            "level",
+            "goal"
+          ],
+          "type": "functional-requirement"
+        }
+      ],
+      "summary": "Vision → objectives from rel-parent; the goal/epic map on the functional- requirements page extends it one level down through rel-goal.",
+      "where": "/goals and /req42/functional-requirements"
+    },
+    {
+      "name": "governed-by",
+      "output": "list",
+      "reads": [
+        {
+          "fields": [
+            "applies-to"
+          ],
+          "type": "crosscutting-concept"
+        }
+      ],
+      "summary": "The inverse of rel-applies-to: which crosscutting concepts a block or node follows. Concepts with an empty applies-to govern the whole system and are listed on the concepts view, not on every page.",
+      "where": "not rendered yet"
+    },
+    {
+      "name": "sequence-diagram",
+      "output": "mermaid",
+      "reads": [
+        {
+          "fields": [
+            "steps"
+          ],
+          "type": "runtime-scenario"
+        },
+        {
+          "fields": [
+            "uses",
+            "parent"
+          ],
+          "type": "building-block"
+        }
+      ],
+      "summary": "One participant per distinct from / to, in order of first appearance (stakeholders as actors), one arrow per step. Never stored. Steps between blocks are checked against rel-uses (rule-runtime-matches-uses).",
+      "where": "/page/runtime-scenarios/<RS>"
+    },
+    {
+      "name": "story-map",
+      "output": "table",
+      "reads": [
+        {
+          "fields": [
+            "notation",
+            "level",
+            "parent",
+            "order",
+            "priority",
+            "release",
+            "lane"
+          ],
+          "type": "functional-requirement"
+        }
+      ],
+      "summary": "Patton's 2-D map over Agile FRs: backbone = epics in order, ribs = features and stories by priority, swim-lanes = release. Fully derivable from the fields above, so it is never hand-authored (Story Mapping). Other notations remain in the unified FR list and are not forced into this projection. One exception: a sea- or fish-level use case that Agile features or stories name as parent: appears as a root beside the epics, with those children under it (DR-038 amendment).",
+      "where": "not rendered yet"
+    },
+    {
+      "name": "terminology-graph",
+      "output": "graph",
+      "reads": [
+        {
+          "fields": [
+            "related",
+            "relationships",
+            "parent",
+            "stereotype",
+            "agreed",
+            "status",
+            "aliases"
+          ],
+          "type": "domain-term"
+        }
+      ],
+      "summary": "All domain terms are core nodes. Filter the graph by edge kind to inspect links or model structure.",
+      "where": "/graph/domain-terms"
+    },
+    {
+      "name": "whitebox",
+      "output": "diagram",
+      "reads": [
+        {
+          "fields": [
+            "parent",
+            "uses"
+          ],
+          "type": "building-block"
+        },
+        {
+          "fields": [],
+          "type": "external-interface"
+        }
+      ],
+      "summary": "A block's inner structure: its children as boxes, their rel-uses dependencies as arrows, external interfaces they use as neighbour boxes. Never stored.",
+      "where": "/page/building-blocks/<BB> (white box)"
+    }
+  ],
+  "relations": [
+    {
+      "direction": "directed",
+      "edges": [
+        {
+          "cardinality": "1..*",
+          "from": "activity-model",
+          "note": "",
+          "to": "stakeholder"
+        }
+      ],
+      "field": "actors",
+      "inverse": "activities",
+      "inverse_storage": "projected, not stored",
+      "meaning": "The roles that take part in a process.",
+      "semantics": "actor"
+    },
+    {
+      "direction": "directed",
+      "edges": [
+        {
+          "cardinality": "0..*",
+          "from": "decision-record",
+          "note": "this record changes some points of the target, which stays in force",
+          "to": "decision-record"
+        }
+      ],
+      "field": "amends",
+      "inverse": "amended-by",
+      "inverse_storage": "projected, not stored",
+      "meaning": "A later decision that changes part of an earlier one. The earlier record stays accepted; its readers follow the inverse, which the dashboard projects.",
+      "semantics": "revision"
+    },
+    {
+      "direction": "directed",
+      "edges": [
+        {
+          "cardinality": "0..*",
+          "from": "crosscutting-concept",
+          "note": "",
+          "to": "building-block"
+        },
+        {
+          "cardinality": "0..*",
+          "from": "crosscutting-concept",
+          "note": "",
+          "to": "deployment-node"
+        }
+      ],
+      "field": "applies-to",
+      "inverse": "governed-by",
+      "inverse_storage": "projected, not stored",
+      "meaning": "The blocks and nodes a crosscutting concept governs. Empty means the whole system. The inverse is projected onto their pages (proj-governed-by).",
+      "semantics": "association"
+    },
+    {
+      "direction": "directed",
+      "edges": [
+        {
+          "cardinality": "0..*",
+          "from": "goal",
+          "note": "PAM Advantage: who gets the benefit",
+          "to": "stakeholder"
+        }
+      ],
+      "field": "beneficiary",
+      "inverse": "benefits-from",
+      "inverse_storage": "projected, not stored",
+      "meaning": "Who a goal is for. Feeds the stakeholder matrix report; not drawn anywhere yet.",
+      "semantics": "beneficiary"
+    },
+    {
+      "direction": "directed",
+      "edges": [
+        {
+          "cardinality": "0..*",
+          "from": "functional-requirement",
+          "note": "set at capture; structures the requirements (FR-005)",
+          "to": "building-block"
+        }
+      ],
+      "field": "building-blocks",
+      "inverse": "concerned-by",
+      "inverse_storage": "projected, not stored",
+      "meaning": "\"This requirement concerns that building block.\" Assignment, not ownership and not traceability: it structures the requirements by the parts of the system they apply to, and is set when the requirement is captured. The traceability statement runs the other way, as the building block's drivers; both may connect the same pair, because they say different things (FR-005, DR-038).",
+      "semantics": "assignment"
+    },
+    {
+      "direction": "directed",
+      "edges": [
+        {
+          "cardinality": "0..*",
+          "from": "deployment-node",
+          "note": "structured entries {to, protocol?, note?}, stored on the initiating side",
+          "to": "deployment-node"
+        },
+        {
+          "cardinality": "0..*",
+          "from": "deployment-node",
+          "note": "",
+          "to": "external-interface"
+        }
+      ],
+      "field": "connects",
+      "inverse": "connected-from",
+      "inverse_storage": "projected, not stored",
+      "meaning": "A channel between nodes, or to an external system, labelled with its protocol in the proj-deployment-diagram.",
+      "semantics": "association"
+    },
+    {
+      "direction": "directed",
+      "edges": [
+        {
+          "cardinality": "0..*",
+          "from": "decision-record",
+          "note": "",
+          "to": "goal"
+        },
+        {
+          "cardinality": "0..*",
+          "from": "decision-record",
+          "note": "",
+          "to": "functional-requirement"
+        },
+        {
+          "cardinality": "0..*",
+          "from": "decision-record",
+          "note": "",
+          "to": "quality-requirement"
+        },
+        {
+          "cardinality": "0..*",
+          "from": "decision-record",
+          "note": "",
+          "to": "constraint"
+        },
+        {
+          "cardinality": "0..*",
+          "from": "building-block",
+          "note": "",
+          "to": "goal"
+        },
+        {
+          "cardinality": "0..*",
+          "from": "building-block",
+          "note": "",
+          "to": "functional-requirement"
+        },
+        {
+          "cardinality": "0..*",
+          "from": "building-block",
+          "note": "",
+          "to": "quality-requirement"
+        },
+        {
+          "cardinality": "0..*",
+          "from": "building-block",
+          "note": "",
+          "to": "constraint"
+        },
+        {
+          "cardinality": "0..*",
+          "from": "solution-strategy",
+          "note": "",
+          "to": "goal"
+        },
+        {
+          "cardinality": "0..*",
+          "from": "solution-strategy",
+          "note": "",
+          "to": "quality-requirement"
+        },
+        {
+          "cardinality": "0..*",
+          "from": "solution-strategy",
+          "note": "",
+          "to": "constraint"
+        },
+        {
+          "cardinality": "0..*",
+          "from": "crosscutting-concept",
+          "note": "",
+          "to": "quality-requirement"
+        },
+        {
+          "cardinality": "0..*",
+          "from": "crosscutting-concept",
+          "note": "",
+          "to": "constraint"
+        },
+        {
+          "cardinality": "0..*",
+          "from": "deployment-node",
+          "note": "",
+          "to": "quality-requirement"
+        },
+        {
+          "cardinality": "0..*",
+          "from": "deployment-node",
+          "note": "",
+          "to": "constraint"
+        }
+      ],
+      "field": "drivers",
+      "inverse": "addressed-by",
+      "inverse_storage": "projected, not stored",
+      "meaning": "\"This decision or building block rests on that requirement.\" The bridge from architecture to requirements, deliberately lightweight: optional, no coverage rule. The inverse, addressed by, is projected onto the requirement pages (proj-addressed-by). On a decision record it is the linked form of MADR's \"Decision Drivers\"; the body section keeps the prose.",
+      "semantics": "rationale"
+    },
+    {
+      "direction": "directed",
+      "edges": [
+        {
+          "cardinality": "0..*",
+          "from": "functional-requirement",
+          "note": "[] is an explicit enabler (lane platform/display), not a gap — unless the item is backbone",
+          "to": "goal"
+        }
+      ],
+      "field": "goal",
+      "inverse": "covered-by",
+      "inverse_storage": "projected, not stored",
+      "meaning": "\"This requirement serves that goal.\" Source of the proj-goal-coverage matrix (DR-018). A backbone epic or feature with goal: [] is a rule violation; a platform item with goal: [] is an enabler.",
+      "semantics": "serves"
+    },
+    {
+      "direction": "directed",
+      "edges": [
+        {
+          "cardinality": "0..*",
+          "from": "deployment-node",
+          "note": "",
+          "to": "building-block"
+        }
+      ],
+      "field": "hosts",
+      "inverse": "deployed-on",
+      "inverse_storage": "projected, not stored",
+      "meaning": "The mapping of software to infrastructure: the building blocks deployed on a node.",
+      "semantics": "structure"
+    },
+    {
+      "direction": "directed",
+      "edges": [
+        {
+          "cardinality": "0..*",
+          "from": "source",
+          "note": "",
+          "to": "any page"
+        }
+      ],
+      "field": "ingested-pages",
+      "inverse": "sources",
+      "inverse_storage": "stored as sources",
+      "meaning": "The reverse of rel-sources, maintained by capture. Keeps the historical name \"ingested\" on purpose (the workflow was renamed to capture, the field was not).",
+      "semantics": "provenance"
+    },
+    {
+      "direction": "directed",
+      "edges": [
+        {
+          "cardinality": "0..1",
+          "from": "issue",
+          "note": "a stakeholder link only, no literal; empty means not yet clear who can answer",
+          "to": "stakeholder"
+        }
+      ],
+      "field": "owner",
+      "inverse": "owns",
+      "inverse_storage": "projected, not stored",
+      "meaning": "The stakeholder an Issue's question is addressed to: the one whose answer resolves it. Usually a stakeholder group, not a person. There is no due date: the wiki is not a project management tool. Counterpart of rel-raised-by, which says who put the question on the table.",
+      "semantics": "actor"
+    },
+    {
+      "direction": "directed",
+      "edges": [
+        {
+          "cardinality": "0..*",
+          "from": "functional-requirement",
+          "note": "story → feature → epic; a feature or story may also name a sea- or fish-level use case (DR-038 amendment); several parents make it a graph, the dashboard draws the first (DR-012)",
+          "to": "functional-requirement"
+        },
+        {
+          "cardinality": "0..1",
+          "from": "goal",
+          "note": "objective → vision (DR-016)",
+          "to": "goal"
+        },
+        {
+          "cardinality": "0..1",
+          "from": "domain-term",
+          "note": "sum-type variant → sum-type (DR-019)",
+          "to": "domain-term"
+        },
+        {
+          "cardinality": "0..1",
+          "from": "building-block",
+          "note": "block → enclosing block (arc42 levels)",
+          "to": "building-block"
+        },
+        {
+          "cardinality": "0..1",
+          "from": "building-block",
+          "note": "level-1 block → the system's context page",
+          "to": "context"
+        },
+        {
+          "cardinality": "0..1",
+          "from": "deployment-node",
+          "note": "node → enclosing node (infrastructure levels)",
+          "to": "deployment-node"
+        }
+      ],
+      "field": "parent",
+      "inverse": "children",
+      "inverse_storage": "projected, not stored",
+      "meaning": "The hierarchy edge, reused by three types with the same meaning: coarser item. \"Children\" is never stored; the proj-goal-tree, the FR breakdown and the proj-story-map project it.",
+      "semantics": "hierarchy"
+    },
+    {
+      "direction": "directed",
+      "edges": [
+        {
+          "cardinality": "1",
+          "from": "functional-requirement",
+          "note": "for notation: use-case",
+          "to": "stakeholder"
+        }
+      ],
+      "field": "primary-actor",
+      "inverse": "functional-requirements",
+      "inverse_storage": "projected, not stored",
+      "meaning": "The one stakeholder whose goal a Cockburn use-case requirement is. Supporting actors stay prose links. A stakeholder with no inbound primary-actor and no FR mention is a coverage gap (inspect).",
+      "semantics": "actor"
+    },
+    {
+      "direction": "directed",
+      "edges": [
+        {
+          "cardinality": "0..1",
+          "from": "issue",
+          "note": "or the literal agent — the one field that is link-or-literal",
+          "to": "stakeholder"
+        }
+      ],
+      "field": "raised-by",
+      "inverse": "raised",
+      "inverse_storage": "projected, not stored",
+      "meaning": "Who put the question on the table. The literal agent is allowed because most Issues come out of capture, not from a stakeholder.",
+      "semantics": "origin"
+    },
+    {
+      "direction": "directed",
+      "edges": [
+        {
+          "cardinality": "0..*",
+          "from": "runtime-scenario",
+          "note": "",
+          "to": "functional-requirement"
+        },
+        {
+          "cardinality": "0..*",
+          "from": "runtime-scenario",
+          "note": "",
+          "to": "activity-model"
+        }
+      ],
+      "field": "realizes",
+      "inverse": "realized-by",
+      "inverse_storage": "projected, not stored",
+      "meaning": "The requirement or process a runtime scenario carries out; the bridge from the runtime view back to the requirements, so the flow is not written twice.",
+      "semantics": "serves"
+    },
+    {
+      "direction": "symmetric",
+      "edges": [
+        {
+          "cardinality": "0..*",
+          "from": "any page",
+          "note": "same-slug pages of different types may represent the same concept across views",
+          "to": "any page"
+        }
+      ],
+      "field": "related",
+      "inverse": "related",
+      "inverse_storage": "stored as related · reciprocity enforced",
+      "meaning": "The one symmetric relation. Because it is symmetric, the relations linter may repair a missing back-link on its own (tiers 1–2 of relations.md); every other relation is directed and its reverse is projected or capture-maintained.",
+      "semantics": "association"
+    },
+    {
+      "direction": "directed",
+      "edges": [
+        {
+          "cardinality": "0..*",
+          "from": "domain-term",
+          "note": "both terms carry a stereotype",
+          "to": "domain-term"
+        }
+      ],
+      "field": "relationships",
+      "inverse": "referenced-by",
+      "inverse_storage": "projected, not stored",
+      "meaning": "Each entry has a target (to), a kind, an optional label and an optional target-end multiplicity. Generalization omits multiplicity. See proj-entity-diagram.",
+      "semantics": "structure"
+    },
+    {
+      "direction": "directed",
+      "edges": [
+        {
+          "cardinality": "0..1",
+          "from": "functional-requirement",
+          "note": "for notation: use-case; alternative to context, exactly one scope target in total",
+          "to": "building-block"
+        },
+        {
+          "cardinality": "0..1",
+          "from": "functional-requirement",
+          "note": "for notation: use-case; the whole system, alternative to building-block",
+          "to": "context"
+        }
+      ],
+      "field": "scope-building-block",
+      "inverse": "use-cases-scoped",
+      "inverse_storage": "projected, not stored",
+      "meaning": "The one system under discussion of a Cockburn use-case requirement: either a building block at any level, or the context when the use case covers the whole system. The field is required and carries exactly one link in total; the two target types are alternatives, not two separate scopes. No whole-system building-block page is needed merely to provide a scope target.",
+      "semantics": "scope"
+    },
+    {
+      "direction": "directed",
+      "edges": [
+        {
+          "cardinality": "0..*",
+          "from": "building-block",
+          "note": "",
+          "to": "decision-record"
+        },
+        {
+          "cardinality": "0..*",
+          "from": "solution-strategy",
+          "note": "",
+          "to": "decision-record"
+        },
+        {
+          "cardinality": "0..*",
+          "from": "crosscutting-concept",
+          "note": "",
+          "to": "decision-record"
+        },
+        {
+          "cardinality": "0..*",
+          "from": "runtime-scenario",
+          "note": "",
+          "to": "decision-record"
+        },
+        {
+          "cardinality": "0..*",
+          "from": "deployment-node",
+          "note": "",
+          "to": "decision-record"
+        }
+      ],
+      "field": "decisions",
+      "inverse": "shapes",
+      "inverse_storage": "projected, not stored",
+      "meaning": "The decision records that shaped an architecture page (field decisions). Together with rel-drivers it answers \"why is this block like this?\".",
+      "semantics": "rationale"
+    },
+    {
+      "direction": "directed",
+      "edges": [
+        {
+          "cardinality": "0..*",
+          "from": "any page",
+          "note": "empty sources and no [!assumption] ⇒ inspect raises an Issue",
+          "to": "source"
+        }
+      ],
+      "field": "sources",
+      "inverse": "ingested-pages",
+      "inverse_storage": "stored as ingested-pages",
+      "meaning": "Provenance: every derived claim links the source it came from. The reverse list, rel-ingested-pages, is written by the capture workflow (step 5), not by the linter — a directed relation whose inverse happens to be stored.",
+      "semantics": "provenance"
+    },
+    {
+      "direction": "directed",
+      "edges": [
+        {
+          "cardinality": "0..*",
+          "from": "runtime-scenario",
+          "note": "structured entries {from, to, message, note?}, in order",
+          "to": "building-block"
+        },
+        {
+          "cardinality": "0..*",
+          "from": "runtime-scenario",
+          "note": "",
+          "to": "external-interface"
+        },
+        {
+          "cardinality": "0..*",
+          "from": "runtime-scenario",
+          "note": "",
+          "to": "deployment-node"
+        },
+        {
+          "cardinality": "0..*",
+          "from": "runtime-scenario",
+          "note": "drawn as an actor",
+          "to": "stakeholder"
+        }
+      ],
+      "field": "steps",
+      "inverse": "takes-part-in",
+      "inverse_storage": "projected, not stored",
+      "meaning": "The ordered interactions of a runtime scenario. Each entry carries both ends and the message, like rel-relationships. Read by proj-sequence-diagram.",
+      "semantics": "interaction"
+    },
+    {
+      "direction": "directed",
+      "edges": [
+        {
+          "cardinality": "0..1",
+          "from": "decision-record",
+          "note": "set on the old record together with status: deprecated",
+          "to": "decision-record"
+        },
+        {
+          "cardinality": "0..1",
+          "from": "building-block",
+          "note": "replaced by its successor; status unchanged, state outdated once gone",
+          "to": "building-block"
+        },
+        {
+          "cardinality": "0..1",
+          "from": "solution-strategy",
+          "note": "replaced by its successor; status unchanged, state outdated once gone",
+          "to": "solution-strategy"
+        },
+        {
+          "cardinality": "0..1",
+          "from": "runtime-scenario",
+          "note": "replaced by its successor; status unchanged, state outdated once gone",
+          "to": "runtime-scenario"
+        },
+        {
+          "cardinality": "0..1",
+          "from": "deployment-node",
+          "note": "replaced by its successor; status unchanged, state outdated once gone",
+          "to": "deployment-node"
+        },
+        {
+          "cardinality": "0..1",
+          "from": "crosscutting-concept",
+          "note": "replaced by its successor; status unchanged, state outdated once gone",
+          "to": "crosscutting-concept"
+        }
+      ],
+      "field": "superseded-by",
+      "inverse": "supersedes",
+      "inverse_storage": "projected, not stored",
+      "meaning": "Points from a replaced decision to its successor. Unlike rel-amends it is stored on the old record, which is deprecated at the same time. On an architecture page it links the page to the one that replaces it; the old page keeps its status, since a correct description of a past element stays correct, and its state becomes outdated once the element is gone.",
+      "semantics": "revision"
+    },
+    {
+      "direction": "directed",
+      "edges": [
+        {
+          "cardinality": "0..*",
+          "from": "building-block",
+          "note": "",
+          "to": "building-block"
+        },
+        {
+          "cardinality": "0..*",
+          "from": "building-block",
+          "note": "a neighbour system, drawn outside the white box",
+          "to": "external-interface"
+        }
+      ],
+      "field": "uses",
+      "inverse": "used-by",
+      "inverse_storage": "projected, not stored",
+      "meaning": "A static dependency: this block needs that block or that external system. The arrows of the proj-whitebox and of the level-1 overview.",
+      "semantics": "dependency"
+    }
+  ],
+  "rules": [
+    {
+      "action": "issue",
+      "applies_to": "functional-requirement",
+      "check": "goal is non-empty, or lane is platform | display (an explicit enabler), or the first parent is a use case with non-empty goal (the feature serves the use case's goals)",
+      "confidence": "medium",
+      "name": "fr-traces-to-goal",
+      "qualifier": "notation agile; level epic, feature",
+      "source": "_system/anchors/story-mapping.md checklist; DR-018",
+      "summary": "Advisory: raise an ISS-NNN, never fill goal in. Goal coverage (proj-goal-coverage) is only as good as this edge."
+    },
+    {
+      "action": "ask",
+      "applies_to": "domain-term",
+      "check": "Review terms that share a title or alias within one bounded context.",
+      "confidence": "medium",
+      "name": "one-term-per-meaning",
+      "qualifier": "",
+      "source": "DR-039-one-domain-term-type",
+      "summary": "Review terms that share a title or alias within one bounded context."
+    },
+    {
+      "action": "auto-fix",
+      "applies_to": "any page",
+      "check": "if A lists B in related, B lists A in related",
+      "confidence": "high",
+      "name": "related-reciprocal",
+      "qualifier": "",
+      "source": "_system/workflows/relations.md tier 2; concept-cluster-audit.py",
+      "summary": "Mechanical and safe: the relation is symmetric by declaration (rel-related), so the missing side is added without asking."
+    },
+    {
+      "action": "ask",
+      "applies_to": "runtime-scenario",
+      "check": "for each step whose from and to are both building blocks, from (or a parent: ancestor of it) lists to (or an ancestor of to) in uses:",
+      "confidence": "medium",
+      "name": "runtime-matches-uses",
+      "qualifier": "",
+      "source": "arc42 runtime and building-block view consistency",
+      "summary": "Advisory: capture and inspect ask the human whether the step or the uses: edge is wrong. Never edits either."
+    },
+    {
+      "action": "auto-fix",
+      "applies_to": "any page",
+      "check": "pages of different types with the same kebab slug-suffix or identical title link each other in related",
+      "confidence": "high",
+      "name": "same-slug-same-concept",
+      "qualifier": "",
+      "source": "_system/workflows/relations.md tier 1",
+      "summary": "A domain term and the building block that implements it can share a name. Capture links the two views of that concept."
+    },
+    {
+      "action": "ask",
+      "applies_to": "domain-term",
+      "check": "Terms with attributes, relationships or a parent carry a stereotype. Relationship targets are stereotyped. Only entities have a source of truth or identifier attributes.",
+      "confidence": "high",
+      "name": "structure-needs-stereotype",
+      "qualifier": "",
+      "source": "DR-039-one-domain-term-type",
+      "summary": "Terms with attributes, relationships or a parent carry a stereotype. Relationship targets are stereotyped. Only entities have a source of truth or identifier attributes."
+    }
+  ],
+  "types": [
+    {
+      "block": "R1",
+      "block_title": "Vision & Goals",
+      "definition": "req42 block 01. One type, two stereotypes: exactly one vision per wiki, any number of objectives hanging under it via rel-parent. Framed with PAM first; a filled horizon promotes the frame to SMART. \"Ziele sind Anforderungen\": goals are the requirements that should stay stable for their period.",
+      "example": null,
+      "fields": [
+        {
+          "description": "vision = the one roof; objective = a PAM sub-goal",
+          "kind": "enum",
+          "name": "stereotype",
+          "relation": "",
+          "required": true,
+          "values": [
+            "vision",
+            "objective"
+          ]
+        },
+        {
+          "description": "objectives point to the vision; the vision has none",
+          "kind": "link-list",
+          "name": "parent",
+          "relation": "parent",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "who gets the benefit (PAM Advantage)",
+          "kind": "link-list",
+          "name": "beneficiary",
+          "relation": "beneficiary",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "the single PAM indicator; empty for a vision",
+          "kind": "scalar",
+          "name": "metric",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "",
+          "kind": "scalar",
+          "name": "baseline",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "",
+          "kind": "scalar",
+          "name": "target",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "empty → PAM, filled → SMART-ready",
+          "kind": "scalar",
+          "name": "horizon",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "label for diagram nodes",
+          "kind": "scalar",
+          "name": "short_title",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "vision only: one line for the dashboard tile",
+          "kind": "scalar",
+          "name": "tile_claim",
+          "relation": "",
+          "required": false,
+          "values": []
+        }
+      ],
+      "folder": "wiki/goals/",
+      "german": "Ziel",
+      "id_pattern": "GOAL-NNN",
+      "label": "Goal",
+      "lifecycle": "content",
+      "name": "goal",
+      "naming": "Title: noun phrase, outcome-oriented",
+      "read_by": [
+        "goal-tree",
+        "goal-coverage"
+      ],
+      "standards": [
+        "PAM",
+        "SMART",
+        "req42"
+      ],
+      "stereotypes": [
+        "vision",
+        "objective"
+      ]
+    },
+    {
+      "block": "R3",
+      "block_title": "Functional Requirements",
+      "definition": "req42 block 04, one functional-requirement type with notation-specific level: values. The hierarchy is the parent relation, independent of level; the story map, ranked backlog and goal coverage are projections. Notation and level vocabularies are defined by the selected notation. Renamed from \"Product Backlog item\" in the 2026 edition of req42.",
+      "example": {
+        "id": "FR-001",
+        "summary": "agile · epic · draft · 2 pages"
+      },
+      "fields": [
+        {
+          "description": "writing form and level vocabulary: an explicit choice, else default_notation in wiki.yaml, else agile",
+          "kind": "scalar",
+          "name": "notation",
+          "relation": "",
+          "required": true,
+          "values": []
+        },
+        {
+          "description": "one of the selected notation's levels; independent of graph depth",
+          "kind": "scalar",
+          "name": "level",
+          "relation": "",
+          "required": true,
+          "values": []
+        },
+        {
+          "description": "coarser item(s); several allowed, so the hierarchy is a graph",
+          "kind": "link-list",
+          "name": "parent",
+          "relation": "parent",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "building blocks this requirement concerns; assignment, set at capture (FR-005)",
+          "kind": "link-list",
+          "name": "building-blocks",
+          "relation": "concerns",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "MoSCoW",
+          "kind": "enum",
+          "name": "priority",
+          "relation": "",
+          "required": false,
+          "values": [
+            "Must",
+            "Should",
+            "Could",
+            "Won't"
+          ]
+        },
+        {
+          "description": "release/milestone tag; unscheduled = not planned",
+          "kind": "scalar",
+          "name": "release",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "story-map lane",
+          "kind": "enum",
+          "name": "lane",
+          "relation": "",
+          "required": false,
+          "values": [
+            "backbone",
+            "platform",
+            "display"
+          ]
+        },
+        {
+          "description": "narrative order within the lane",
+          "kind": "int",
+          "name": "order",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "goals served; [] = explicit enabler",
+          "kind": "link-list",
+          "name": "goal",
+          "relation": "goal",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "optional implementation state on directly implementable levels; absent means no delivery record",
+          "kind": "enum",
+          "name": "delivery",
+          "relation": "",
+          "required": false,
+          "values": [
+            "partial",
+            "implemented",
+            "outdated",
+            "removed"
+          ]
+        },
+        {
+          "description": "optional ISO 8601 check timestamp; Git derives the implementation baseline from the commit that changes either delivery field",
+          "kind": "timestamp",
+          "name": "delivery-checked",
+          "relation": "",
+          "required": false,
+          "values": []
+        }
+      ],
+      "folder": "wiki/functional-requirements/",
+      "german": "Funktionale Anforderung",
+      "id_pattern": "FR-NNN",
+      "label": "Functional requirement",
+      "lifecycle": "content",
+      "name": "functional-requirement",
+      "naming": "Title: Defined by notation; Agile defaults to epic/feature nouns and story verbs; Cockburn use cases express actor goals",
+      "read_by": [
+        "story-map",
+        "backlog-ranking",
+        "goal-coverage"
+      ],
+      "standards": [
+        "MoSCoW",
+        "req42"
+      ],
+      "stereotypes": []
+    },
+    {
+      "block": "R4",
+      "block_title": "Supporting Models",
+      "definition": "req42 block 05: an actor-driven process, trigger → steps → outcome. How Activity Models relate to use-case FRs remains open on ISS-019-use-cases-folder-redundant.",
+      "example": null,
+      "fields": [
+        {
+          "description": "",
+          "kind": "link-list",
+          "name": "actors",
+          "relation": "actors",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "what starts the process",
+          "kind": "scalar",
+          "name": "trigger",
+          "relation": "",
+          "required": false,
+          "values": []
+        }
+      ],
+      "folder": "wiki/activity-models/",
+      "german": "Aktivitätsmodell",
+      "id_pattern": "ACT-NNN",
+      "label": "Activity model",
+      "lifecycle": "content",
+      "name": "activity-model",
+      "naming": "Title: process name",
+      "read_by": [],
+      "standards": [
+        "req42"
+      ],
+      "stereotypes": []
+    },
+    {
+      "block": "C1",
+      "block_title": "Quality Requirements",
+      "definition": "req42 block 06: one or more Q42 dimensions plus a Q42 quality scenario (quality.arc42.org) (stimulus, response, measure). Shared with arc42 (commons block C1).",
+      "example": {
+        "id": "QR-001",
+        "summary": "draft · 1 page"
+      },
+      "fields": [
+        {
+          "description": "Q42 dimensions, one or more (DR-003)",
+          "kind": "list",
+          "name": "dimensions",
+          "relation": "",
+          "required": false,
+          "values": [
+            "reliable",
+            "flexible",
+            "maintainable",
+            "efficient",
+            "usable",
+            "safe",
+            "secure",
+            "suitable",
+            "operable"
+          ]
+        },
+        {
+          "description": "MoSCoW",
+          "kind": "enum",
+          "name": "priority",
+          "relation": "",
+          "required": false,
+          "values": [
+            "must",
+            "should",
+            "could",
+            "wont"
+          ]
+        },
+        {
+          "description": "true once the measure is verifiable; false ⇒ inspect raises an Issue",
+          "kind": "bool",
+          "name": "testable",
+          "relation": "",
+          "required": false,
+          "values": []
+        }
+      ],
+      "folder": "wiki/quality-requirements/",
+      "german": "Qualitätsanforderung",
+      "id_pattern": "QR-NNN",
+      "label": "Quality requirement",
+      "lifecycle": "content",
+      "name": "quality-requirement",
+      "naming": "Title: the required quality, noun phrase",
+      "read_by": [],
+      "standards": [
+        "MoSCoW",
+        "req42",
+        "Q42"
+      ],
+      "stereotypes": []
+    },
+    {
+      "block": "C2",
+      "block_title": "Constraints",
+      "definition": "req42 block 07: a limit on the solution space imposed from outside. Shared with arc42 (commons block C2).",
+      "example": null,
+      "fields": [
+        {
+          "description": "",
+          "kind": "enum",
+          "name": "category",
+          "relation": "",
+          "required": false,
+          "values": [
+            "technical",
+            "organizational",
+            "legal",
+            "political",
+            "economic"
+          ]
+        }
+      ],
+      "folder": "wiki/constraints/",
+      "german": "Randbedingung",
+      "id_pattern": "CON-NNN",
+      "label": "Constraint",
+      "lifecycle": "content",
+      "name": "constraint",
+      "naming": "Title: constraint summary",
+      "read_by": [],
+      "standards": [
+        "req42"
+      ],
+      "stereotypes": []
+    },
+    {
+      "block": "C3",
+      "block_title": "Scope & Context",
+      "definition": "req42 block 03, the scope node: boundary, in / out of scope, user roles, external interfaces. The context diagram is a projection; this page owns the prose and the non-goals, not the picture.",
+      "example": null,
+      "fields": [
+        {
+          "description": "",
+          "kind": "enum",
+          "name": "kind",
+          "relation": "",
+          "required": false,
+          "values": [
+            "business",
+            "technical"
+          ]
+        },
+        {
+          "description": "always generated: the diagram is projected from EIF.flows and STK.provides/receives, never stored (DR-013)",
+          "kind": "scalar",
+          "name": "diagram",
+          "relation": "",
+          "required": false,
+          "values": []
+        }
+      ],
+      "folder": "wiki/context/",
+      "german": "Kontext",
+      "id_pattern": "CTX-NNN",
+      "label": "Context",
+      "lifecycle": "content",
+      "name": "context",
+      "naming": "Title: system context name",
+      "read_by": [
+        "context-diagram"
+      ],
+      "standards": [
+        "req42"
+      ],
+      "stereotypes": []
+    },
+    {
+      "block": "C3",
+      "block_title": "Scope & Context",
+      "definition": "One neighbour system per node; its flows are the edges of the proj-context-diagram. Both directions of a neighbour draw one line (DR-026).",
+      "example": {
+        "id": "EIF-001",
+        "summary": "draft · 1 page"
+      },
+      "fields": [
+        {
+          "description": "the neighbouring SYSTEM; human roles are stakeholders, not EIFs (DR-013)",
+          "kind": "scalar",
+          "name": "partner",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "band of the diagram (DR-026)",
+          "kind": "enum",
+          "name": "tier",
+          "relation": "",
+          "required": false,
+          "values": [
+            "supply",
+            "support",
+            "demand",
+            "core-operations"
+          ]
+        },
+        {
+          "description": "short node label",
+          "kind": "scalar",
+          "name": "short_title",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "{data, direction, format, trigger, label} — one per data flow; the context-diagram edges",
+          "kind": "structured-list",
+          "name": "flows",
+          "relation": "",
+          "required": false,
+          "values": []
+        }
+      ],
+      "folder": "wiki/external-interfaces/",
+      "german": "Externe Schnittstelle",
+      "id_pattern": "EIF-NNN",
+      "label": "External interface",
+      "lifecycle": "content",
+      "name": "external-interface",
+      "naming": "Title: interface / neighbour name",
+      "read_by": [
+        "context-diagram"
+      ],
+      "standards": [
+        "req42"
+      ],
+      "stereotypes": []
+    },
+    {
+      "block": "C4",
+      "block_title": "Stakeholders",
+      "definition": "A simplified persona: goals, concerns, influence × interest. Stakeholders are also the human actors of the context diagram: their provides / receives lists are edges the proj-context-diagram reads, which is why human channels are not external interfaces (DR-013). Target of rel-primary-actor, rel-actors and rel-beneficiary.",
+      "example": null,
+      "fields": [
+        {
+          "description": "other names, incl. former titles",
+          "kind": "list",
+          "name": "aliases",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "",
+          "kind": "scalar",
+          "name": "role",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "",
+          "kind": "enum",
+          "name": "influence",
+          "relation": "",
+          "required": false,
+          "values": [
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        {
+          "description": "",
+          "kind": "enum",
+          "name": "interest",
+          "relation": "",
+          "required": false,
+          "values": [
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        {
+          "description": "data this role supplies into the system — inbound context edges (DR-013)",
+          "kind": "list",
+          "name": "provides",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "data this role gets from the system — outbound context edges",
+          "kind": "list",
+          "name": "receives",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "context-diagram shape",
+          "kind": "enum",
+          "name": "nature",
+          "relation": "",
+          "required": false,
+          "values": [
+            "person",
+            "organization"
+          ]
+        },
+        {
+          "description": "diagram label / merge key; none hides the node",
+          "kind": "scalar",
+          "name": "context_role",
+          "relation": "",
+          "required": false,
+          "values": []
+        }
+      ],
+      "folder": "wiki/stakeholders/",
+      "german": "Stakeholder",
+      "id_pattern": "STK-NNN",
+      "label": "Stakeholder",
+      "lifecycle": "content",
+      "name": "stakeholder",
+      "naming": "Title: role or persona name",
+      "read_by": [
+        "context-diagram"
+      ],
+      "standards": [
+        "req42"
+      ],
+      "stereotypes": []
+    },
+    {
+      "block": "C5",
+      "block_title": "Domain Terms",
+      "definition": "A definition records a meaning in the domain. An optional stereotype allows the same page to carry attributes and typed relationships. rel-related applies to all terms. See DR-039.",
+      "example": {
+        "id": "DT-001",
+        "summary": "draft · 1 page"
+      },
+      "fields": [
+        {
+          "description": "",
+          "kind": "scalar",
+          "name": "bounded-context",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "",
+          "kind": "bool",
+          "name": "agreed",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "",
+          "kind": "enum",
+          "name": "stereotype",
+          "relation": "",
+          "required": false,
+          "values": [
+            "entity",
+            "value-object",
+            "sum-type"
+          ]
+        },
+        {
+          "description": "sum-type variant to sum type",
+          "kind": "link-list",
+          "name": "parent",
+          "relation": "parent",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "entity only",
+          "kind": "scalar",
+          "name": "source-of-truth",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "{name, type, multiplicity, identifier}",
+          "kind": "structured-list",
+          "name": "attributes",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "{to, label, kind, multiplicity}",
+          "kind": "structured-list",
+          "name": "relationships",
+          "relation": "relationships",
+          "required": false,
+          "values": []
+        }
+      ],
+      "folder": "wiki/domain-terms/",
+      "german": "Domänenbegriff",
+      "id_pattern": "DT-NNN",
+      "label": "Domain term",
+      "lifecycle": "content",
+      "name": "domain-term",
+      "naming": "Title: One canonical term per meaning and bounded context.",
+      "read_by": [
+        "terminology-graph",
+        "entity-diagram"
+      ],
+      "standards": [
+        "req42"
+      ],
+      "stereotypes": [
+        "entity",
+        "value-object",
+        "sum-type"
+      ]
+    },
+    {
+      "block": "C6",
+      "block_title": "Issues",
+      "definition": "The one meta type (DR-003): it cross-cuts every other type through rel-related. kind: risk is how req42 block 12 is captured. An Issue is where a question goes after the human was asked and did not answer (grilling first).",
+      "example": null,
+      "fields": [
+        {
+          "description": "",
+          "kind": "enum",
+          "name": "severity",
+          "relation": "",
+          "required": false,
+          "values": [
+            "blocker",
+            "major",
+            "minor"
+          ]
+        },
+        {
+          "description": "",
+          "kind": "enum",
+          "name": "kind",
+          "relation": "",
+          "required": false,
+          "values": [
+            "question",
+            "contradiction",
+            "gap",
+            "ambiguity",
+            "risk"
+          ]
+        },
+        {
+          "description": "which part of the work it touches; optional, at most one",
+          "kind": "enum",
+          "name": "category",
+          "relation": "",
+          "required": false,
+          "values": [
+            "requirements",
+            "architecture",
+            "commons",
+            "content",
+            "orga",
+            "method"
+          ]
+        },
+        {
+          "description": "agent or a stakeholder link",
+          "kind": "link",
+          "name": "raised-by",
+          "relation": "raised-by",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "the stakeholder the question is addressed to; a stakeholder link only, empty means not yet clear",
+          "kind": "link",
+          "name": "owner",
+          "relation": "owner",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "when status became resolved / wontfix",
+          "kind": "date",
+          "name": "resolved",
+          "relation": "",
+          "required": false,
+          "values": []
+        }
+      ],
+      "folder": "wiki/issues/",
+      "german": "Offener Punkt",
+      "id_pattern": "ISS-NNN",
+      "label": "Issue",
+      "lifecycle": "issue",
+      "name": "issue",
+      "naming": "Title: the open question in one line",
+      "read_by": [],
+      "standards": [
+        "req42"
+      ],
+      "stereotypes": []
+    },
+    {
+      "block": "C7",
+      "block_title": "Decisions",
+      "definition": "A choice among named alternatives that is cross-cutting, expensive to reverse and a real choice — all three tests from MADR. A standing rule or wanted capability is a requirement (FR, QR, CON) instead; a field addition, rename or naming convention is a CHANGELOG.md entry. kind: architecture records are the arc42 section 9 slice; both kinds live in commons block C7.",
+      "example": {
+        "id": "DR-001",
+        "summary": "draft · 1 page"
+      },
+      "fields": [
+        {
+          "description": "former IDs, e.g. ADR-0012",
+          "kind": "list",
+          "name": "aliases",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "undefined only when genuinely unclear",
+          "kind": "enum",
+          "name": "kind",
+          "relation": "",
+          "required": false,
+          "values": [
+            "architecture",
+            "business",
+            "undefined"
+          ]
+        },
+        {
+          "description": "when the decision was taken, not when the page was written",
+          "kind": "date",
+          "name": "decided",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "optional: who decided",
+          "kind": "list",
+          "name": "decision-makers",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "optional: whose advice was sought",
+          "kind": "list",
+          "name": "consulted",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "optional: who was told",
+          "kind": "list",
+          "name": "informed",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "the requirements this decision rests on (MADR Decision Drivers, linked)",
+          "kind": "link-list",
+          "name": "drivers",
+          "relation": "drivers",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "",
+          "kind": "link-list",
+          "name": "amends",
+          "relation": "amends",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "set together with status: deprecated",
+          "kind": "link-list",
+          "name": "superseded-by",
+          "relation": "superseded-by",
+          "required": false,
+          "values": []
+        }
+      ],
+      "folder": "wiki/decisions/",
+      "german": "Entscheidung",
+      "id_pattern": "DR-NNN",
+      "label": "Decision record",
+      "lifecycle": "content",
+      "name": "decision-record",
+      "naming": "Title: the decision, as an active statement",
+      "read_by": [],
+      "standards": [
+        "MADR"
+      ],
+      "stereotypes": []
+    },
+    {
+      "block": "A1",
+      "block_title": "Solution Strategy",
+      "definition": "arc42 section 4: a short, motivated summary of the fundamental decisions — technology, top-level decomposition, how key quality goals are met, relevant organisational choices. One page per state: a current and a target strategy are two pages, the old one superseded-by: the new. The decisions live in type-decision-record pages; this page links them in rel-shaped-by and explains why they fit together, it never restates them.",
+      "example": null,
+      "fields": [
+        {
+          "description": "the quality goals, goals and constraints the strategy answers",
+          "kind": "link-list",
+          "name": "drivers",
+          "relation": "drivers",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "the decision records it summarises — linked, never restated",
+          "kind": "link-list",
+          "name": "decisions",
+          "relation": "shaped-by",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "outdated = historical, no longer in use; current = in use today; planned = decided, not built yet; target = the intended end state; empty = target",
+          "kind": "enum",
+          "name": "state",
+          "relation": "",
+          "required": false,
+          "values": [
+            "outdated",
+            "current",
+            "planned",
+            "target"
+          ]
+        },
+        {
+          "description": "on a replaced page: its successor",
+          "kind": "link",
+          "name": "superseded-by",
+          "relation": "superseded-by",
+          "required": false,
+          "values": []
+        }
+      ],
+      "folder": "wiki/solution-strategy/",
+      "german": "Lösungsstrategie",
+      "id_pattern": "SOL-NNN",
+      "label": "Solution strategy",
+      "lifecycle": "content",
+      "name": "solution-strategy",
+      "naming": "Title: the system's name",
+      "read_by": [],
+      "standards": [
+        "arc42"
+      ],
+      "stereotypes": []
+    },
+    {
+      "block": "A2",
+      "block_title": "Building Block View",
+      "definition": "arc42 section 5, the Building Block View: one page per block, described as a black box (purpose, interfaces, quality, open issues). Levels come from rel-parent; a block's white box — its children and their rel-uses arrows — is a projection, never drawn by hand. A block names the glossary terms it implements in related:; the requirements it answers in rel-drivers.",
+      "example": {
+        "id": "BB-001",
+        "summary": "draft · 7 pages"
+      },
+      "fields": [
+        {
+          "description": "the enclosing block; empty or a context page = level 1",
+          "kind": "link",
+          "name": "parent",
+          "relation": "parent",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "the requirements this block answers (arc42 black box: fulfilled requirements, quality characteristics)",
+          "kind": "link-list",
+          "name": "drivers",
+          "relation": "drivers",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "the decision records that shaped this block",
+          "kind": "link-list",
+          "name": "decisions",
+          "relation": "shaped-by",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "static dependencies on other blocks or external interfaces — the arrows of the white box",
+          "kind": "link-list",
+          "name": "uses",
+          "relation": "uses",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "optional: directory / module / package in the code",
+          "kind": "scalar",
+          "name": "location",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "outdated = historical, no longer in use; current = in use today; planned = decided, not built yet; target = the intended end state; empty = target",
+          "kind": "enum",
+          "name": "state",
+          "relation": "",
+          "required": false,
+          "values": [
+            "outdated",
+            "current",
+            "planned",
+            "target"
+          ]
+        },
+        {
+          "description": "on a replaced page: its successor",
+          "kind": "link",
+          "name": "superseded-by",
+          "relation": "superseded-by",
+          "required": false,
+          "values": []
+        }
+      ],
+      "folder": "wiki/building-blocks/",
+      "german": "Baustein",
+      "id_pattern": "BB-NNN",
+      "label": "Building block",
+      "lifecycle": "content",
+      "name": "building-block",
+      "naming": "Title: the block's name",
+      "read_by": [
+        "bb-tree",
+        "whitebox",
+        "governed-by"
+      ],
+      "standards": [
+        "arc42"
+      ],
+      "stereotypes": []
+    },
+    {
+      "block": "A3",
+      "block_title": "Deployment View",
+      "definition": "arc42 section 7: one element of the technical infrastructure — environment, host, container or service. Levels via rel-parent, the mapping of software to infrastructure via rel-hosts, channels via rel-connects. The deployment diagram is a projection: one picture of all states, each marked. Neighbour systems stay type-external-interface pages.",
+      "example": null,
+      "fields": [
+        {
+          "description": "environment = cloud account, data centre, network zone or stage (production, test); host = server or VM; container = runtime or execution environment; service = third-party or managed service",
+          "kind": "enum",
+          "name": "stereotype",
+          "relation": "",
+          "required": false,
+          "values": [
+            "environment",
+            "host",
+            "container",
+            "service"
+          ]
+        },
+        {
+          "description": "the enclosing node; empty = infrastructure level 1",
+          "kind": "link",
+          "name": "parent",
+          "relation": "parent",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "the building blocks deployed on this node",
+          "kind": "link-list",
+          "name": "hosts",
+          "relation": "hosts",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "{to, protocol?, note?}: channels to other nodes or external interfaces",
+          "kind": "structured-list",
+          "name": "connects",
+          "relation": "connects",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "optional: product, version, size",
+          "kind": "scalar",
+          "name": "technology",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "the requirements this node answers",
+          "kind": "link-list",
+          "name": "drivers",
+          "relation": "drivers",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "the decision records behind this node",
+          "kind": "link-list",
+          "name": "decisions",
+          "relation": "shaped-by",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "outdated = historical, no longer in use; current = in use today; planned = decided, not built yet; target = the intended end state; empty = target",
+          "kind": "enum",
+          "name": "state",
+          "relation": "",
+          "required": false,
+          "values": [
+            "outdated",
+            "current",
+            "planned",
+            "target"
+          ]
+        },
+        {
+          "description": "on a replaced page: its successor",
+          "kind": "link",
+          "name": "superseded-by",
+          "relation": "superseded-by",
+          "required": false,
+          "values": []
+        }
+      ],
+      "folder": "wiki/deployment-nodes/",
+      "german": "Infrastrukturelement",
+      "id_pattern": "DN-NNN",
+      "label": "Deployment node",
+      "lifecycle": "content",
+      "name": "deployment-node",
+      "naming": "Title: the node's name as the operators say it",
+      "read_by": [
+        "deployment-diagram",
+        "governed-by"
+      ],
+      "standards": [
+        "arc42"
+      ],
+      "stereotypes": [
+        "environment",
+        "host",
+        "container",
+        "service"
+      ]
+    },
+    {
+      "block": "A4",
+      "block_title": "Runtime View",
+      "definition": "arc42 section 6: how the parts interact in one architecturally relevant scenario — an important use case, a critical external interface, start-up, an error case. A representative selection, not completeness. The steps are the model; the sequence diagram is a projection, never drawn. The requirements view of the same flow is the type-activity-model or the FR; rel-realizes links it instead of repeating it. A step between blocks without a rel-uses edge is flagged by rule-runtime-matches-uses.",
+      "example": null,
+      "fields": [
+        {
+          "description": "ordered interactions {from, to, message, note?}; from/to link a building block, external interface, deployment node or stakeholder",
+          "kind": "structured-list",
+          "name": "steps",
+          "relation": "steps",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "the functional requirement or activity model this scenario carries out",
+          "kind": "link-list",
+          "name": "realizes",
+          "relation": "realizes",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "the decision records behind this flow",
+          "kind": "link-list",
+          "name": "decisions",
+          "relation": "shaped-by",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "outdated = historical, no longer in use; current = in use today; planned = decided, not built yet; target = the intended end state; empty = target",
+          "kind": "enum",
+          "name": "state",
+          "relation": "",
+          "required": false,
+          "values": [
+            "outdated",
+            "current",
+            "planned",
+            "target"
+          ]
+        },
+        {
+          "description": "on a replaced page: its successor",
+          "kind": "link",
+          "name": "superseded-by",
+          "relation": "superseded-by",
+          "required": false,
+          "values": []
+        }
+      ],
+      "folder": "wiki/runtime-scenarios/",
+      "german": "Laufzeitszenario",
+      "id_pattern": "RS-NNN",
+      "label": "Runtime scenario",
+      "lifecycle": "content",
+      "name": "runtime-scenario",
+      "naming": "Title: what happens, as a verb phrase",
+      "read_by": [
+        "sequence-diagram"
+      ],
+      "standards": [
+        "arc42"
+      ],
+      "stereotypes": []
+    },
+    {
+      "block": "A5",
+      "block_title": "Crosscutting Concepts",
+      "definition": "arc42 section 8: a practice, pattern, rule or solution idea that several building blocks or nodes follow — the basis of conceptual integrity. Always called crosscutting concept, never concept: a glossary concept is a type-domain-term. A choice among alternatives is a type-decision-record, a limit is a type-constraint; this page holds the practice and links them. Pick only the topics the system needs.",
+      "example": null,
+      "fields": [
+        {
+          "description": "optional: arc42's concept topics",
+          "kind": "enum",
+          "name": "category",
+          "relation": "",
+          "required": false,
+          "values": [
+            "domain",
+            "user-experience",
+            "safety-security",
+            "patterns",
+            "under-the-hood",
+            "development",
+            "operations"
+          ]
+        },
+        {
+          "description": "the building blocks and deployment nodes that follow it; empty = the whole system",
+          "kind": "link-list",
+          "name": "applies-to",
+          "relation": "applies-to",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "the requirements this concept answers",
+          "kind": "link-list",
+          "name": "drivers",
+          "relation": "drivers",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "the decision records that chose it",
+          "kind": "link-list",
+          "name": "decisions",
+          "relation": "shaped-by",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "outdated = historical, no longer in use; current = in use today; planned = decided, not built yet; target = the intended end state; empty = target",
+          "kind": "enum",
+          "name": "state",
+          "relation": "",
+          "required": false,
+          "values": [
+            "outdated",
+            "current",
+            "planned",
+            "target"
+          ]
+        },
+        {
+          "description": "on a replaced page: its successor",
+          "kind": "link",
+          "name": "superseded-by",
+          "relation": "superseded-by",
+          "required": false,
+          "values": []
+        }
+      ],
+      "folder": "wiki/crosscutting-concepts/",
+      "german": "Querschnittliches Konzept",
+      "id_pattern": "CC-NNN",
+      "label": "Crosscutting concept",
+      "lifecycle": "content",
+      "name": "crosscutting-concept",
+      "naming": "Title: the topic, e.g. Logging, Error handling",
+      "read_by": [
+        "governed-by"
+      ],
+      "standards": [
+        "arc42"
+      ],
+      "stereotypes": []
+    },
+    {
+      "block": null,
+      "block_title": null,
+      "definition": "The provenance layer, not a wiki type: lives in raw/sources/, belongs to no block, has its own lifecycle and no sources / related fields. Every wiki claim points at one through rel-sources; the source lists the pages it touched in rel-ingested-pages.",
+      "example": null,
+      "fields": [
+        {
+          "description": "",
+          "kind": "scalar",
+          "name": "id",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "",
+          "kind": "scalar",
+          "name": "type",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "",
+          "kind": "scalar",
+          "name": "title",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "",
+          "kind": "enum",
+          "name": "status",
+          "relation": "",
+          "required": false,
+          "values": [
+            "ingested"
+          ]
+        },
+        {
+          "description": "",
+          "kind": "date",
+          "name": "created",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "",
+          "kind": "date",
+          "name": "updated",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "",
+          "kind": "list",
+          "name": "tags",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "",
+          "kind": "enum",
+          "name": "source-type",
+          "relation": "",
+          "required": false,
+          "values": [
+            "interview",
+            "transcript",
+            "document",
+            "spec",
+            "email",
+            "ticket",
+            "diagram",
+            "observation"
+          ]
+        },
+        {
+          "description": "raw/ingested/ after archiving (DR-008), or author / URL",
+          "kind": "scalar",
+          "name": "origin",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "",
+          "kind": "date",
+          "name": "captured",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "body hash of the original; inspect checks for drift",
+          "kind": "scalar",
+          "name": "sha256",
+          "relation": "",
+          "required": false,
+          "values": []
+        },
+        {
+          "description": "",
+          "kind": "link-list",
+          "name": "ingested-pages",
+          "relation": "ingested-pages",
+          "required": false,
+          "values": []
+        }
+      ],
+      "folder": "raw/sources/",
+      "german": "Quelle",
+      "id_pattern": "SRC-NNN",
+      "label": "Source",
+      "lifecycle": "source",
+      "name": "source",
+      "naming": "Title: source title",
+      "read_by": [],
+      "standards": [],
+      "stereotypes": []
+    }
+  ],
+  "version": {
+    "file": "meta-metamodel.md",
+    "state": "supported",
+    "supported": [
+      "0.1"
+    ],
+    "wiki": "0.1"
+  }
+}

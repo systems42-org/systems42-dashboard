@@ -1,0 +1,408 @@
+{
+  "records": [
+    {
+      "aliases": [
+        "ADR-0001"
+      ],
+      "fields": {
+        "kind": [
+          "business"
+        ],
+        "status": [
+          "accepted"
+        ],
+        "tags": [
+          "decision-record"
+        ]
+      },
+      "id": "DR-001",
+      "links": [],
+      "plain": "Abandoned carts hold stock.\nOne hour\nOne day\nChosen option: one day, because shoppers return the next morning.\nBad: stock is held longer.",
+      "status": "accepted",
+      "title": "Carts expire after **one day**",
+      "type": "Decision record",
+      "url": "/page/decisions/DR-001-carts-expire-after-a-day"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "status": [
+          "accepted"
+        ],
+        "tags": [
+          "domain-term"
+        ]
+      },
+      "id": "DT-001",
+      "links": [
+        "DT-002",
+        "DT-004",
+        "FR-003",
+        "STK-002"
+      ],
+      "plain": "A physical item held by the library that a member may borrow.\nEvery book is shelved on exactly one shelf and may be the subject of at most one active loan at a time.\nNot to be confused with a catalog record; this term refers to the physical copy.\nMultiple physical copies of the same title are each a separate Book.",
+      "status": "accepted",
+      "title": "Book",
+      "type": "Domain term",
+      "url": "/page/domain-terms/DT-001-book"
+    },
+    {
+      "aliases": [
+        "Checkout"
+      ],
+      "fields": {
+        "status": [
+          "accepted"
+        ],
+        "tags": [
+          "domain-term"
+        ]
+      },
+      "id": "DT-002",
+      "links": [
+        "DT-001",
+        "DT-003",
+        "FR-004",
+        "STK-001"
+      ],
+      "plain": "The period during which a member holds a book outside the library.\nA loan starts when a book is checked out and ends when it is returned.\nA reservation, which precedes a loan and does not yet remove the book from the shelf.\nNone.",
+      "status": "accepted",
+      "title": "Loan",
+      "type": "Domain term",
+      "url": "/page/domain-terms/DT-002-loan"
+    },
+    {
+      "aliases": [
+        "Borrower"
+      ],
+      "fields": {
+        "status": [
+          "accepted"
+        ],
+        "tags": [
+          "domain-term"
+        ]
+      },
+      "id": "DT-003",
+      "links": [
+        "DT-002",
+        "STK-001"
+      ],
+      "plain": "A person registered with the library who is entitled to take out a loan.\nMembership is administered by the librarian.\nA visitor who has not registered and may not borrow books.\nNone.",
+      "status": "accepted",
+      "title": "Member",
+      "type": "Domain term",
+      "url": "/page/domain-terms/DT-003-member"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "domain-term"
+        ]
+      },
+      "id": "DT-004",
+      "links": [
+        "DT-001"
+      ],
+      "plain": "A fixed storage location that holds one or more books.\nEach book is assigned to exactly one shelf when it is not on loan.\nA reservation shelf used to hold books awaiting pickup, which is out of scope for this vault.\nDraft: shelf numbering scheme not yet agreed.",
+      "status": "draft",
+      "title": "Shelf",
+      "type": "Domain term",
+      "url": "/page/domain-terms/DT-004-shelf"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "level": [
+          "epic"
+        ],
+        "notation": [
+          "agile"
+        ],
+        "priority": [
+          "must"
+        ],
+        "status": [
+          "accepted"
+        ],
+        "tags": [
+          "functional-requirement"
+        ]
+      },
+      "id": "FR-001",
+      "links": [
+        "FR-002",
+        "FR-005",
+        "GOAL-002",
+        "STK-001"
+      ],
+      "plain": "As the librarian, I want the whole lending process — from checkout to return — to be fast and error-free, so that members spend less time at the front desk.\nChecking a book out or in today relies on manual bookkeeping, which is slow and prone to mistakes.\nAverage checkout time drops and lending errors approach zero (see Faster Lending).\nin: checkout, confirmation, and return of a book · out: reservations, fines\nnone (this is an epic).\nCheckout (feature), Return a Book (story)\nNone.",
+      "status": "accepted",
+      "title": "Book Lending",
+      "type": "Functional requirement",
+      "url": "/functional-requirements/FR-001-lending"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "level": [
+          "feature"
+        ],
+        "notation": [
+          "agile"
+        ],
+        "priority": [
+          "must"
+        ],
+        "status": [
+          "accepted"
+        ],
+        "tags": [
+          "functional-requirement"
+        ]
+      },
+      "id": "FR-002",
+      "links": [
+        "FR-001",
+        "FR-003",
+        "FR-004"
+      ],
+      "plain": "As a reader, I want to check a book out in one short interaction, so that I can take it home without delay.\nCheckout today is a multi-step manual process.\nA checkout completes in under one minute.\nin: scanning and confirming a single book · out: multi-book batch checkout\nBook Lending\nScan a Book, Confirm Loan\nNone.",
+      "status": "accepted",
+      "title": "Checkout",
+      "type": "Functional requirement",
+      "url": "/functional-requirements/FR-002-checkout"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "level": [
+          "story"
+        ],
+        "notation": [
+          "agile"
+        ],
+        "priority": [
+          "must"
+        ],
+        "status": [
+          "accepted"
+        ],
+        "tags": [
+          "functional-requirement"
+        ]
+      },
+      "id": "FR-003",
+      "links": [
+        "DT-001",
+        "FR-002"
+      ],
+      "plain": "As a librarian, I want to scan a book's barcode, so that its identity is captured without typing.\nGiven a book with a valid barcode, when it is scanned, then the\nbook's record is identified within the checkout flow.\nCheckout\nnone (this is a story).\nNone.",
+      "status": "accepted",
+      "title": "Scan a Book",
+      "type": "Functional requirement",
+      "url": "/functional-requirements/FR-003-scan-a-book"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "level": [
+          "story"
+        ],
+        "notation": [
+          "agile"
+        ],
+        "priority": [
+          "should"
+        ],
+        "status": [
+          "accepted"
+        ],
+        "tags": [
+          "functional-requirement"
+        ]
+      },
+      "id": "FR-004",
+      "links": [
+        "DT-002",
+        "FR-002"
+      ],
+      "plain": "As a reader, I want to confirm the loan after scanning, so that I know the book is officially checked out to me.\nGiven a scanned book, when I confirm the checkout, then a loan\nis recorded for the current member.\nCheckout\nnone (this is a story).\nNone.",
+      "status": "accepted",
+      "title": "Confirm Loan",
+      "type": "Functional requirement",
+      "url": "/functional-requirements/FR-004-confirm-loan"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "level": [
+          "story"
+        ],
+        "notation": [
+          "agile"
+        ],
+        "priority": [
+          "must"
+        ],
+        "status": [
+          "accepted"
+        ],
+        "tags": [
+          "functional-requirement"
+        ]
+      },
+      "id": "FR-005",
+      "links": [
+        "FR-001"
+      ],
+      "plain": "As a reader, I want to return a book at the front desk, so that my loan is closed and the book becomes available again.\nGiven an open loan, when the book is returned, then the loan is\nclosed and the book's shelf record is updated.\nBook Lending\nnone (this is a story).\nNone.",
+      "status": "accepted",
+      "title": "Return a Book",
+      "type": "Functional requirement",
+      "url": "/functional-requirements/FR-005-return-a-book"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "level": [
+          "epic"
+        ],
+        "notation": [
+          "agile"
+        ],
+        "priority": [
+          "could"
+        ],
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "functional-requirement"
+        ]
+      },
+      "id": "FR-006",
+      "links": [],
+      "plain": "Platform-level upkeep of the book catalog (data quality, deduplication), with no direct member-facing goal — an explicit Enabler (DR-018).\nCatalog data drifts over time without regular maintenance.\nNot yet defined; this epic has not been broken down into features or stories.\nin: catalog data hygiene · out: not yet defined\nnone (this is an epic).\nnone yet.\nNot yet broken down into features or stories.",
+      "status": "draft",
+      "title": "Catalog Maintenance",
+      "type": "Functional requirement",
+      "url": "/functional-requirements/FR-006-catalog-maintenance"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "status": [
+          "accepted"
+        ],
+        "stereotype": [
+          "vision"
+        ],
+        "tags": [
+          "goal"
+        ]
+      },
+      "id": "GOAL-001",
+      "links": [
+        "GOAL-002"
+      ],
+      "plain": "For library members, who need to borrow and return books quickly, the library system is a lending platform that makes every checkout and return effortless.\nsee parent: backlinks (objectives pointing at this vision).\nNone.",
+      "status": "accepted",
+      "title": "A Library That Lends Effortlessly",
+      "type": "Goal",
+      "url": "/page/goals/GOAL-001-library"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "status": [
+          "accepted"
+        ],
+        "stereotype": [
+          "objective"
+        ],
+        "tags": [
+          "goal"
+        ]
+      },
+      "id": "GOAL-002",
+      "links": [
+        "FR-001",
+        "GOAL-001",
+        "STK-002"
+      ],
+      "plain": "Shorten the time a checkout takes, end to end.\nReaders spend less time waiting at the front desk.\nAverage checkout time (see metric: / baseline: / target:).\nsee parent: (the vision).\nsee beneficiary: (plus any further under related:).\nprojected from the FR backlinks (dashboard coverage matrix).\nEvery FR-... that carries this goal in its goal: field appears here\nautomatically — not maintained by hand (projection principle, DR-018).\nNo horizon set yet, so this objective is still PAM, not SMART.",
+      "status": "accepted",
+      "title": "Faster Lending",
+      "type": "Goal",
+      "url": "/page/goals/GOAL-002-faster-lending"
+    },
+    {
+      "aliases": [
+        "Front desk"
+      ],
+      "fields": {
+        "status": [
+          "accepted"
+        ],
+        "tags": [
+          "stakeholder"
+        ]
+      },
+      "id": "STK-001",
+      "links": [
+        "DT-002",
+        "DT-003",
+        "FR-001"
+      ],
+      "plain": "Staffs the front desk and administers day-to-day lending operations.\nProcess loans and returns quickly and without errors.\nManual bookkeeping is slow and error-prone.\nHandles book lending end to end, from checkout through return.",
+      "status": "accepted",
+      "title": "Librarian",
+      "type": "Stakeholder",
+      "url": "/page/stakeholders/STK-001-librarian"
+    },
+    {
+      "aliases": [
+        "Member"
+      ],
+      "fields": {
+        "status": [
+          "accepted"
+        ],
+        "tags": [
+          "stakeholder"
+        ]
+      },
+      "id": "STK-002",
+      "links": [
+        "DT-001",
+        "GOAL-002"
+      ],
+      "plain": "A registered library member who borrows and returns books.\nFind and borrow a book with minimal friction.\nLong queues at the front desk during busy hours.\nBenefits from checkout and return being fast and reliable.",
+      "status": "accepted",
+      "title": "Reader",
+      "type": "Stakeholder",
+      "url": "/page/stakeholders/STK-002-reader"
+    }
+  ],
+  "synonyms": [
+    [
+      "book"
+    ],
+    [
+      "loan",
+      "checkout"
+    ],
+    [
+      "member",
+      "borrower"
+    ],
+    [
+      "shelf"
+    ]
+  ]
+}

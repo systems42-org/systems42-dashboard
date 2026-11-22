@@ -1,0 +1,15 @@
+classDiagram
+  class Customer {
+      +customer_id
+      +email
+  }
+  class Order {
+      +order_id
+  }
+  class OrderLine["Order line"] {
+      +line_id
+      +product_code
+      +quantity
+  }
+  Customer --> "0..*" Order : places
+  Order *-- "1..*" OrderLine : contains

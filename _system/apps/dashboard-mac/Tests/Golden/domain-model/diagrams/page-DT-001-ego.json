@@ -1,0 +1,44 @@
+{
+  "edges": [
+    {
+      "data": {
+        "cross": false,
+        "id": "e1",
+        "kind": "association",
+        "label": "places",
+        "source": "DT-001-customer",
+        "target": "DT-002-order"
+      }
+    }
+  ],
+  "layer_counts": {},
+  "nodes": [
+    {
+      "data": {
+        "aliases": "",
+        "assumption": false,
+        "core": true,
+        "degree": 1,
+        "focus": true,
+        "id": "DT-001-customer",
+        "label": "Customer",
+        "state": "draft",
+        "type": "DT",
+        "url": "/page/domain-terms/DT-001-customer"
+      }
+    },
+    {
+      "data": {
+        "aliases": "",
+        "assumption": false,
+        "core": true,
+        "degree": 3,
+        "id": "DT-002-order",
+        "label": "Order",
+        "state": "draft",
+        "type": "DT",
+        "url": "/page/domain-terms/DT-002-order"
+      }
+    }
+  ]
+}

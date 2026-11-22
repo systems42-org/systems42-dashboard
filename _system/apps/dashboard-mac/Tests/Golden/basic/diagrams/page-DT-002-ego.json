@@ -1,0 +1,65 @@
+{
+  "edges": [
+    {
+      "data": {
+        "cross": false,
+        "id": "e0",
+        "kind": "related",
+        "source": "DT-001-book",
+        "target": "DT-002-loan"
+      }
+    },
+    {
+      "data": {
+        "cross": false,
+        "id": "e2",
+        "kind": "related",
+        "source": "DT-002-loan",
+        "target": "DT-003-member"
+      }
+    }
+  ],
+  "layer_counts": {},
+  "nodes": [
+    {
+      "data": {
+        "aliases": "",
+        "assumption": false,
+        "core": true,
+        "degree": 2,
+        "id": "DT-001-book",
+        "label": "Book",
+        "state": "agreed",
+        "type": "DT",
+        "url": "/page/domain-terms/DT-001-book"
+      }
+    },
+    {
+      "data": {
+        "aliases": "Checkout",
+        "assumption": false,
+        "core": true,
+        "degree": 2,
+        "focus": true,
+        "id": "DT-002-loan",
+        "label": "Loan",
+        "state": "agreed",
+        "type": "DT",
+        "url": "/page/domain-terms/DT-002-loan"
+      }
+    },
+    {
+      "data": {
+        "aliases": "Borrower",
+        "assumption": false,
+        "core": true,
+        "degree": 1,
+        "id": "DT-003-member",
+        "label": "Member",
+        "state": "agreed",
+        "type": "DT",
+        "url": "/page/domain-terms/DT-003-member"
+      }
+    }
+  ]
+}

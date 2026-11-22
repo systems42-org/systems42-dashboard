@@ -1,0 +1,27 @@
+{
+  "columns": [
+    {
+      "enabler": false,
+      "id": "FR-001",
+      "no_goal": false,
+      "status": "accepted"
+    },
+    {
+      "enabler": true,
+      "id": "FR-006",
+      "no_goal": false,
+      "status": "draft"
+    }
+  ],
+  "rows": {
+    "GOAL-002": {
+      "gap": false,
+      "gap_accepted": false,
+      "served_by": [],
+      "serves": [
+        "FR-001"
+      ],
+      "status": "accepted"
+    }
+  }
+}

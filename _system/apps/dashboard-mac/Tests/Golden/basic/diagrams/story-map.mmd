@@ -1,0 +1,13 @@
+graph TD
+  GOAL002["GOAL-002<br/>Faster Lending"]:::goal
+  click GOAL002 "/goals#GOAL-002"
+  GOAL002 --> FR001["FR-001<br/>Book Lending"]:::epic
+  click FR001 "/functional-requirements/FR-001-lending"
+  ENABLER["Platform / Enabler"]:::enabler
+  ENABLER --> FR006["FR-006<br/>Catalog Maintenance"]:::epic
+  click FR006 "/functional-requirements/FR-006-catalog-maintenance"
+  classDef goal fill:#2f6fb3,stroke:#7fc0ff,color:#ffffff,stroke-width:2px,font-weight:bold;
+  classDef enabler fill:#3a3f4b,stroke:#7a8497,color:#ffffff,font-weight:bold;
+  classDef epic fill:#d7dbe3,stroke:#9aa3b2,color:#15202e;
+  classDef usecase fill:#eef1f6,stroke:#9aa3b2,color:#15202e,stroke-dasharray:4 3;
+  classDef nogoal fill:#5a3d0c,stroke:#ffb454,color:#ffffff,stroke-width:2px,font-weight:bold;

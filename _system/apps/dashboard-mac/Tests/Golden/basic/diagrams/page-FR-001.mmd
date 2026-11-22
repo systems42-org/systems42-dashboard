@@ -1,0 +1,14 @@
+graph TD
+  FR001["FR-001<br/>Book Lending"]:::root
+  FR001 --> FR002["FR-002<br/>Checkout"]:::feature
+  click FR002 "/functional-requirements/FR-002-checkout"
+  FR002 --> FR003["FR-003<br/>Scan a Book"]:::story
+  click FR003 "/functional-requirements/FR-003-scan-a-book"
+  FR002 --> FR004["FR-004<br/>Confirm Loan"]:::story
+  click FR004 "/functional-requirements/FR-004-confirm-loan"
+  FR001 --> FR005["FR-005<br/>Return a Book"]:::story
+  click FR005 "/functional-requirements/FR-005-return-a-book"
+  classDef root fill:#2f6fb3,stroke:#7fc0ff,color:#ffffff,stroke-width:2px,font-weight:bold;
+  classDef feature fill:#d7dbe3,stroke:#9aa3b2,color:#15202e;
+  classDef story fill:#f3f6fb,stroke:#c4ccd9,color:#15202e;
+  classDef block fill:#e3efe6,stroke:#6f9b7c,color:#15202e;
