@@ -36,6 +36,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - Dashboard: on a functional requirement page the sources row no longer overlaps the row of pills above it.
 
 ### Added
+- Docs: `docs/INSTALL.md` says the app is supported on macOS and the programs for Linux and Windows come without support.
 - Dashboard: `/arc42/strategy` shows arc42 section 4 (A1): the pages in `wiki/solution-strategy/` (type `solution-strategy`, prefix `SOL`), each with its state, its successor, its `drivers:` and the decisions it summarises. A1 links there once the metamodel captures the section. Strategy pages count under *Addressed by* like the other architecture pages (DR-040, issue #101).
 - Docs: `docs/INSTALL.md` says step by step how to install, start, stop, update and remove the dashboard in its three forms (Docker, uv, app). The website shows it at `/docs/install/`.
 - Docs: `site/README.md` says how the website is built.

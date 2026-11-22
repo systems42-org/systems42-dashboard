@@ -4,9 +4,9 @@ type: stakeholder
 title: Data protection and security officers
 status: draft
 created: 2026-11-10
-updated: 2026-11-10
+updated: 2026-11-22
 sources: ["[[SRC-001-stakeholders-of-the-systems42-dashboard]]", "[[SRC-002-grilling-session-on-stakeholders]]"]
-related: ["[[CON-001-proof-of-concept-not-production-ready]]"]
+related: ["[[CON-001-proof-of-concept-not-production-ready]]", "[[QR-004-the-wikis-content-stays-on-the-machine]]"]
 tags: ["stakeholder"]
 aliases: []
 role: Data protection or security officer

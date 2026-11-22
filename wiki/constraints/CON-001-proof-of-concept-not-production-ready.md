@@ -4,9 +4,9 @@ type: constraint
 title: The dashboard is a proof of concept, not production-ready for every environment
 status: draft
 created: 2026-11-10
-updated: 2026-11-21
+updated: 2026-11-22
 sources: ["[[SRC-001-stakeholders-of-the-systems42-dashboard]]", "[[SRC-002-grilling-session-on-stakeholders]]", "[[SRC-037-a-public-website-for-the-dashboard]]", "[[SRC-038-grilling-session-on-the-public-website]]"]
-related: ["[[STK-001-readers]]", "[[STK-020-data-protection-and-security-officers]]", "[[STK-012-maintainers]]", "[[STK-023-keyholder]]", "[[FR-058-a-demo-to-try-without-installing]]"]
+related: ["[[STK-001-readers]]", "[[STK-020-data-protection-and-security-officers]]", "[[STK-012-maintainers]]", "[[STK-023-keyholder]]", "[[FR-058-a-demo-to-try-without-installing]]", "[[QR-004-the-wikis-content-stays-on-the-machine]]"]
 tags: [constraint]
 category: organizational
 ---
