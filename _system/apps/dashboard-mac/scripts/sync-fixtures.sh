@@ -29,13 +29,17 @@ build() {
   cp -R "$repo/_system/anchors" "$dest/_system/anchors"
 }
 
-rm -rf "$out"
+# hostile is hand-written: only its copy of _system/ is refreshed.
 mkdir -p "$out"
+find "$out" -mindepth 1 -maxdepth 1 ! -name hostile -exec rm -rf {} +
 build basic wiki ""
 build search search-wiki ""
 build arc42 arc42/wiki ""
 build arc42-views arc42-views/wiki ""
 build domain-model domain-model/wiki domain-model
+rm -rf "$out/hostile/_system/metamodel" "$out/hostile/_system/anchors"
+cp -R "$repo/_system/metamodel" "$out/hostile/_system/metamodel"
+cp -R "$repo/_system/anchors" "$out/hostile/_system/anchors"
 
 find "$out" -name .DS_Store -delete
 # Last commit that changed a source, so later unrelated commits leave SOURCE alone.
