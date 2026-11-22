@@ -44,9 +44,17 @@ TYPE_FOLDERS = {
     "use-case": "use-cases", "functional-requirement": "functional-requirements",
     "quality-requirement": "quality-requirements", "constraint": "constraints",
     "building-block": "building-blocks", "deployment-node": "deployment-nodes",
-    "runtime-scenario": "runtime-scenarios", "concept": "concepts",
-    "decision-record": "decisions", "issue": "issues",
+    "runtime-scenario": "runtime-scenarios", "decision-record": "decisions", "issue": "issues",
 }
+# This repository's `_templates/` follow meta's metamodel (DR-040) once synced
+# (issue #103): until then the crosscutting concept template is `concept.md`
+# and there is no solution-strategy template. The folders are the new ones.
+if (ROOT / "_templates" / "crosscutting-concept.md").exists():
+    TYPE_FOLDERS["crosscutting-concept"] = "crosscutting-concepts"
+else:
+    TYPE_FOLDERS["concept"] = "crosscutting-concepts"
+if (ROOT / "_templates" / "solution-strategy.md").exists():
+    TYPE_FOLDERS["solution-strategy"] = "solution-strategy"
 # fields that steer which projection a page lands in: kept as the template has
 # them in one variant, so the hostile page actually shows up in that projection
 STRUCTURAL = {"id", "type", "status", "stereotype", "level", "kind", "parent", "state", "lane"}

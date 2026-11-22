@@ -24,7 +24,7 @@ steps:
   - "BB-001 ruft BB-002"
   - {from: "", to: Box, message: leer}
   - {from: TCP/IP Gateway, to: "[[BB-003-console]]", message: Weiterleitung}
-drivers: []
+realizes: []
 decisions: []
 state: target
 superseded-by:

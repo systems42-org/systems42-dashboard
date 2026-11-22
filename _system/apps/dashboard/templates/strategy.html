@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "_maturity.html" import maturity_bar %}
+{% from "_list.html" import arch_table %}
+{% block title %}{{ block.title }} · arc42{% endblock %}
+{% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}{{ block.title }}</nav>{% endblock %}
+{% macro links(groups) %}{% for g in groups %}{% for l in g.links %}<a class="wl" href="{{ l.url }}"><code>{{ l.id }}</code> {{ l.label }}</a>{% endfor %}{% endfor %}{% endmacro %}
+{% block content %}
+<h1 class="page-h1"><span class="req42-num">{{ block.id }}</span> {{ block.title }} <span class="count-pill">{{ total }}</span></h1>
+{{ maturity_bar(maturity) }}
+<p class="lead">The fundamental decisions and why they fit together (arc42 section 4). A current and a target strategy are two pages; the replaced one names its successor.</p>
+{% if rows %}
+<ul class="arc-list">
+  {% for r in rows %}
+  <li><a class="wl" href="{{ r.url }}"><code>{{ r.id }}</code> {{ r.title }}</a>{% if r.status %} <span class="status status-{{ r.status }}">{{ r.status }}</span>{% endif %} <span class="state-badge state-{{ r.state }}">{{ r.state }}</span>{% if r.replaced_by %}
+    <span class="arc-sub">Replaced by: {{ links(r.replaced_by) }}</span>{% endif %}{% if r.drivers %}
+    <span class="arc-sub">Drivers: {{ links(r.drivers) }}</span>{% endif %}{% if r.decisions %}
+    <span class="arc-sub">Shaped by: {{ links(r.decisions) }}</span>{% endif %}</li>
+  {% endfor %}
+</ul>
+<h2 class="mm-h2">All strategy pages</h2>
+{{ arch_table(list_spec("solution-strategy"), rows, [("Drivers", "drivers", "links"), ("Shaped by", "decisions", "links")]) }}
+{% else %}
+<p class="muted">No solution strategy yet. Add a page under <code>wiki/solution-strategy/</code> from <code>_templates/solution-strategy.md</code>.</p>
+{% endif %}
+{% endblock %}

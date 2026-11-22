@@ -8,7 +8,7 @@
 {{ maturity_bar(maturity) }}
 <p class="lead">Concrete flows through the system (arc42 section 6). Each scenario's sequence diagram is projected from its <code>steps:</code> on its own page.</p>
 {% if rows %}
-{{ arch_table(list_spec("runtime-scenario"), rows, [("Steps", "steps", "numeric"), ("Realises", "drivers", "links")]) }}
+{{ arch_table(list_spec("runtime-scenario"), rows, [("Steps", "steps", "numeric"), ("Realizes", "realizes", "links")]) }}
 {% else %}
 <p class="muted">No runtime scenarios yet. Add pages under <code>wiki/runtime-scenarios/</code> from <code>_templates/runtime-scenario.md</code>.</p>
 {% endif %}

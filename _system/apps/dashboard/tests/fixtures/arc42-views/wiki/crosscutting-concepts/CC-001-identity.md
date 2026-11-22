@@ -1,13 +1,13 @@
 ---
 id: CC-001
-type: concept
+type: crosscutting-concept
 title: "Identität und Zugriff"
 status: draft
 created: 2026-10-19
 updated: 2026-10-19
 sources: []
 related: []
-tags: [concept]
+tags: [crosscutting-concept]
 category: safety-security
 applies-to: ["[[BB-004-account]]", "[[DN-002-app-server]]"]
 drivers: ["[[QR-001-secure-login]]"]

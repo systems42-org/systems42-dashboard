@@ -1,5 +1,6 @@
-"""arc42 Deployment View (A3), Runtime View (A4), Crosscutting Concepts (A5) and
-the `state: current | target` field on architecture pages — no pytest dependency.
+"""arc42 Solution Strategy (A1), Deployment View (A3), Runtime View (A4),
+Crosscutting Concepts (A5) and the `state:` field on architecture pages — no
+pytest dependency.
 
 Run from the dashboard dir:
     .venv/bin/python tests/test_arc42_views.py
@@ -7,7 +8,7 @@ Run from the dashboard dir:
 WIKI_DIR points at tests/fixtures/arc42-views/wiki, a vault of its own: the
 iSAQB-like "lost credentials" landscape with current and target nodes, a
 parent cycle among nodes, a dangling runtime participant and a step that
-contradicts `uses:`.
+contradicts `uses:`, a current solution strategy replaced by a target one.
 """
 import os
 import re
@@ -61,18 +62,91 @@ def test_inverses_on_block():
 
 
 def test_forward_panels_on_concept_and_node():
-    assert _ids(app.build_trace("CC-001-identity", "concepts")["applies_to"]) == {
+    assert _ids(app.build_trace("CC-001-identity", "crosscutting-concepts")["applies_to"]) == {
         "BB": ["BB-004"], "DN": ["DN-002"]}
     assert _ids(app.build_trace("DN-002-app-server", "deployment-nodes")["hosts"]) == {
         "BB": ["BB-003", "BB-004"]}
     assert _ids(app.build_trace("DN-002-app-server", "deployment-nodes")["governed_by"]) == {"CC": ["CC-001"]}
-    assert _ids(app.build_trace("CC-001-identity", "concepts")["shaped_by"]) == {"DR": ["DR-001"]}
+    assert _ids(app.build_trace("CC-001-identity", "crosscutting-concepts")["shaped_by"]) == {"DR": ["DR-001"]}
 
 
 def test_addressed_by_includes_arch():
-    assert _ids(app.build_addressed_by("QR-001-secure-login")) == {"CC": ["CC-001"], "DN": ["DN-003"]}
-    assert _ids(app.build_addressed_by("UC-001-reset-credentials")) == {"RS": ["RS-001", "RS-002"]}
-    assert _ids(app.build_trace("ACT-001-self-service", "activity-models")["addressed_by"]) == {"RS": ["RS-001"]}
+    assert _ids(app.build_addressed_by("QR-001-secure-login")) == {
+        "SOL": ["SOL-001", "SOL-002"], "CC": ["CC-001"], "DN": ["DN-003"]}
+    # a runtime scenario realizes requirements, it does not address them
+    assert app.build_addressed_by("UC-001-reset-credentials") == []
+    assert app.build_trace("ACT-001-self-service", "activity-models")["addressed_by"] == []
+
+
+# --- realizes / realized by (A4 -> requirements) ------------------------------
+
+def test_realizes_on_scenario():
+    t = app.build_trace("RS-001-reset-credentials", "runtime-scenarios")
+    assert _ids(t["realizes"]) == {"UC": ["UC-001"], "ACT": ["ACT-001"]}, t["realizes"]
+    assert t["drivers"] == [], t["drivers"]
+    assert app.build_trace("RS-003-edge-cases", "runtime-scenarios")["realizes"] == []
+
+
+def test_realized_by_on_requirement_and_activity_model():
+    fr = app.build_trace("UC-001-reset-credentials", "functional-requirements")
+    assert _ids(fr["realized_by"]) == {"RS": ["RS-001", "RS-002"]}, fr["realized_by"]
+    act = app.build_trace("ACT-001-self-service", "activity-models")
+    assert _ids(act["realized_by"]) == {"RS": ["RS-001"]}, act["realized_by"]
+    assert app.build_trace("QR-001-secure-login", "quality-requirements")["realized_by"] == []
+
+
+def test_realizes_panels_render():
+    code, body = _get("/page/runtime-scenarios/RS-001-reset-credentials")
+    assert code == 200 and ">Realizes</h2>" in body and "UC-001" in body and "ACT-001" in body
+    assert ">Drivers</h2>" not in body
+    code, body = _get("/functional-requirements/UC-001-reset-credentials")
+    assert code == 200 and ">Realized by</h2>" in body, body
+    trace = body[body.index('aria-label="Traceability"'):]
+    assert "RS-001" in trace and "RS-002" in trace
+    code, body = _get("/page/activity-models/ACT-001-self-service")
+    assert code == 200 and ">Realized by</h2>" in body and "RS-001" in body
+
+
+# --- solution strategy (A1) ---------------------------------------------------
+
+def test_strategy_trace():
+    old = app.build_trace("SOL-001-strategy-today", "solution-strategy")
+    new = app.build_trace("SOL-002-strategy-target", "solution-strategy")
+    assert _ids(old["replaced_by"]) == {"SOL": ["SOL-002"]}, old["replaced_by"]
+    assert _ids(new["replaces"]) == {"SOL": ["SOL-001"]}, new["replaces"]
+    assert _ids(old["drivers"]) == {"QR": ["QR-001"]}, old["drivers"]
+    assert _ids(old["shaped_by"]) == {"DR": ["DR-002"]}, old["shaped_by"]
+    assert _ids(new["shaped_by"]) == {"DR": ["DR-001"]}, new["shaped_by"]
+
+
+def test_strategy_view():
+    code, body = _get("/arc42/strategy")
+    assert code == 200, code
+    assert "SOL-001" in body and "SOL-002" in body
+    assert body.index("SOL-001") < body.index("SOL-002")
+    assert 'state-badge state-current' in body and 'state-badge state-target' in body
+    row = body[body.index("<code>SOL-001</code>"):]
+    row = row[:row.index("</li>")]
+    assert "Replaced by" in row and "SOL-002" in row and "QR-001" in row and "DR-002" in row, row
+    assert 'data-list="solution-strategy"' in body
+
+
+def test_strategy_detail():
+    code, body = _get("/page/solution-strategy/SOL-001-strategy-today")
+    assert code == 200 and 'class="state-badge state-current"' in body
+    for heading in ("Replaced by", "Drivers", "Shaped by"):
+        assert f">{heading}</h2>" in body, heading
+    code, body = _get("/page/solution-strategy/SOL-002-strategy-target")
+    assert code == 200 and ">Replaces</h2>" in body and 'state-badge state-target' in body
+
+
+def test_strategy_section_links_a1():
+    """A1 opens /arc42/strategy once the metamodel captures it."""
+    s = app.catalog.build([{"id": "A1", "area": "architecture", "title": "Solution Strategy",
+                            "folders": ["solution-strategy"], "scope": "in"}])
+    assert s[0]["href"] == "/arc42/strategy" and s[0]["slug"] == "strategy", s
+    assert app.FOLDER_LABELS["solution-strategy"] == "Solution strategy"
+    assert app._TYPE_FOLDER["SOL"] == "solution-strategy"
 
 
 # --- runtime scenarios (A4) ---------------------------------------------------
@@ -356,7 +430,7 @@ def test_detail_panels_and_state_badge():
     assert "Addressed by" in body and "CC-001" in body
     code, body = _get("/functional-requirements/UC-001-reset-credentials")
     assert code == 200 and "state-badge" not in body    # requirements carry no state
-    assert "Addressed by" in body and "RS-001" in body  # a use case is an FR (DR-038)
+    assert "Realized by" in body and "RS-001" in body   # a use case is an FR (DR-038)
     # a former /page/use-cases/ link lands on the requirement that kept its name
     code, _ = _get("/page/use-cases/UC-001-reset-credentials")
     assert code == 301, code
@@ -365,6 +439,8 @@ def test_detail_panels_and_state_badge():
 def test_concepts_view():
     code, body = _get("/arc42/concepts")
     assert code == 200
+    assert 'data-list="crosscutting-concept"' in body
+    assert "/page/crosscutting-concepts/CC-001-identity" in body
     sec = body[body.index("Safety &amp; security"):]
     assert "CC-001" in sec and "BB-004" in sec and "DN-002" in sec, sec[:400]
     ops = body[body.index("Operations"):]
@@ -377,6 +453,7 @@ def test_runtime_view():
     code, body = _get("/arc42/runtime")
     assert code == 200
     assert "RS-001" in body and "RS-002" in body and "UC-001" in body
+    assert ">Realizes</th>" in body
     assert body.index("RS-001") < body.index("RS-002")
     assert 'state-badge state-current' in body and 'state-badge state-target' in body
 
@@ -409,6 +486,13 @@ if __name__ == "__main__":
     test_inverses_on_block()
     test_forward_panels_on_concept_and_node()
     test_addressed_by_includes_arch()
+    test_realizes_on_scenario()
+    test_realized_by_on_requirement_and_activity_model()
+    test_realizes_panels_render()
+    test_strategy_trace()
+    test_strategy_view()
+    test_strategy_detail()
+    test_strategy_section_links_a1()
     test_detail_panels_and_state_badge()
     test_sequence_participants_in_order()
     test_sequence_messages()

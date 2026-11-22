@@ -79,6 +79,7 @@ FIXED_ROUTES = (
     "/graph/domain-terms?edges=related",
     "/graph/domain-terms?edges=structured",
     "/graph/glossary",
+    "/arc42/strategy",
     "/arc42/building-blocks",
     "/arc42/deployment",
     "/arc42/runtime",

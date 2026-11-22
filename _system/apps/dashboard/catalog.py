@@ -47,7 +47,7 @@ _KNOWN: dict[str, dict] = {
     "R4": {"href": "/req42/models", "slug": "models", "colors": ["req"]},
     "R5": {"colors": ["org"], "note": "Organisation / team setup — " + _OUT.lower()},
     "R6": {"colors": ["org"], "note": "Release planning — " + _OUT.lower()},
-    "A1": {"colors": ["arc"]},
+    "A1": {"href": "/arc42/strategy", "slug": "strategy", "colors": ["arc"]},
     "A2": {"href": "/arc42/building-blocks", "slug": "building-blocks", "colors": ["arc"]},
     "A3": {"href": "/arc42/deployment", "slug": "deployment", "colors": ["arc"]},
     "A4": {"href": "/arc42/runtime", "slug": "runtime", "colors": ["arc"]},
