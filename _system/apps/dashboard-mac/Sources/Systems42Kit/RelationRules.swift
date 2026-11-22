@@ -2,10 +2,9 @@ import Foundation
 import Yams
 
 /// The facts the store takes from the wiki's own metamodel, so no folder, prefix
-/// or field name of a content type stands in the code (CON-006). It reads frontmatter
-/// of `_system/metamodel/types/type-*.md` (`name`, `prefix`, `folder`) and
-/// `_system/metamodel/relations/rel-*.md` (`field`, `edges`). It never throws:
-/// what it cannot read is missing. The full metamodel reader comes later and may absorb this.
+/// or field name of a content type stands in the code (CON-006). `Metamodel` builds it
+/// from the pages it has read, so the metamodel is parsed once. It never fails:
+/// what it cannot read is missing.
 ///
 /// Two type names stay in the code because the app treats these types specially:
 /// `issue` (open issues of a page) and `source` (provenance links).
@@ -20,6 +19,8 @@ struct RelationRules: Sendable {
         /// The frontmatter field that holds the links.
         let field: String
         let edges: [Edge]
+        /// For a field that holds a list of mappings, the keys of a mapping that name pages.
+        let linkKeys: Set<String>
     }
 
     static let issueType = "issue"
@@ -30,59 +31,54 @@ struct RelationRules: Sendable {
     /// read the closed states once the metamodel marks them.
     static let closedIssueStatuses: Set<String> = ["resolved", "wontfix"]
 
+    /// The metamodel does not say which keys of a step name pages. A relation page may
+    /// declare them as `link_keys`. Without that, the ends of an edge are meant:
+    /// `from` and `to`, as in the edges of a relation page. Open debt.
+    static let defaultLinkKeys: Set<String> = ["from", "to"]
+
     /// Relation name to relation.
     private(set) var relations: [String: Relation] = [:]
-    /// Type name to the folder inside `wiki/`.
-    private(set) var wikiFolders: [String: String] = [:]
-    /// Type name to its id prefix, such as `SRC`.
+    /// Type name to its folder as the type page writes it, such as `wiki/goals`.
+    private(set) var folders: [String: String] = [:]
+    /// Type name to its id prefix.
     private(set) var prefixes: [String: String] = [:]
+
+    init() {}
+
+    init(types: [MetaPage], relations pages: [MetaPage]) {
+        for page in types {
+            guard let name = page.entry.scalar("name") else { continue }
+            if let prefix = page.entry.scalar("prefix") { prefixes[name] = prefix }
+            if let folder = page.entry.scalar("folder") { folders[name] = folder }
+        }
+        let wikiFolders = self.wikiFolders
+        for page in pages {
+            guard let name = page.entry.scalar("name"), let field = page.entry.scalar("field") else { continue }
+            let edges: [Edge] = page.entry.entries("edges").compactMap { edge in
+                guard let from = edge.scalar("from").flatMap({ wikiFolders[$0] }),
+                      let to = edge.scalar("to").flatMap({ wikiFolders[$0] }) else { return nil }
+                return Edge(from: from, to: to)
+            }
+            let declared = page.entry.strings("link_keys")
+            relations[name] = Relation(
+                field: field, edges: edges, linkKeys: declared.isEmpty ? Self.defaultLinkKeys : Set(declared))
+        }
+    }
+
+    /// Type name to the folder inside `wiki/`. Types that live elsewhere are left out.
+    var wikiFolders: [String: String] {
+        folders.compactMapValues { $0.hasPrefix("wiki/") ? String($0.dropFirst("wiki/".count)) : nil }
+    }
 
     var issueFolder: String? { wikiFolders[Self.issueType] }
 
+    /// The folder of the source records below the root, such as `raw/sources`, and its last part.
+    var sourceFolder: (path: String, name: String)? {
+        guard let path = folders[Self.sourceType],
+              let name = path.split(separator: "/").last.map(String.init) else { return nil }
+        return (path, name)
+    }
+
     /// The start of a source id, such as `SRC-`.
     var sourceIdStart: String? { prefixes[Self.sourceType].map { $0 + "-" } }
-
-    private static let mostEdges = 2_000
-
-    static func read(root: URL) -> RelationRules {
-        var rules = RelationRules()
-        var typeFolders: [String: String] = [:]
-        for entry in Files.frontmatter(root: root, folder: "_system/metamodel/types", prefix: "type-") {
-            guard let name = entry.scalar("name") else { continue }
-            if let prefix = entry.scalar("prefix") { rules.prefixes[name] = prefix }
-            if let folder = entry.scalar("folder"), folder.hasPrefix("wiki/") {
-                typeFolders[name] = String(folder.dropFirst("wiki/".count))
-            }
-        }
-        rules.wikiFolders = typeFolders
-        for entry in Files.frontmatter(root: root, folder: "_system/metamodel/relations", prefix: "rel-") {
-            guard let name = entry.scalar("name"), let field = entry.scalar("field") else { continue }
-            var edges: [Edge] = []
-            if case .sequence(let items)? = entry.node("edges") {
-                for item in items.prefix(mostEdges) {
-                    guard case .mapping(let mapping) = item,
-                          let from = Entry(mapping: mapping).scalar("from").flatMap({ typeFolders[$0] }),
-                          let to = Entry(mapping: mapping).scalar("to").flatMap({ typeFolders[$0] }) else { continue }
-                    edges.append(Edge(from: from, to: to))
-                }
-            }
-            rules.relations[name] = Relation(field: field, edges: edges)
-        }
-        return rules
-    }
-
-    /// The top-level keys of one frontmatter block.
-    struct Entry {
-        let mapping: Node.Mapping
-
-        func node(_ key: String) -> Node? {
-            mapping.first { $0.key.scalar?.string == key }?.value
-        }
-
-        func scalar(_ key: String) -> String? {
-            guard let scalar = node(key)?.scalar else { return nil }
-            let text = Frontmatter.text(scalar)
-            return text.isEmpty ? nil : text
-        }
-    }
 }
