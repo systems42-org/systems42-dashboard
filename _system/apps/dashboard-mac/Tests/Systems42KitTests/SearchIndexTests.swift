@@ -108,6 +108,18 @@ import Systems42TestSupport
         return try #require(built.entries.first { $0.id == "ISS-900" })
     }
 
+    /// The dashboard escapes the passage for HTML. The Swift passage is text: the characters stay as written.
+    /// (A real tag such as `<script>` never reaches the index, `Plain` removes it, as in the dashboard.)
+    @Test func passageIsPlainText() throws {
+        let page = try entry(ofBody: "Say \"hi\" & 5 < 6, facilitator.\n")
+        let found = hits("facilitator", [page])
+        let passage = try #require(found.first?.passage)
+        #expect(passage.text == "Say \"hi\" & 5 < 6, facilitator.")
+        #expect(passage.marked == ["facilitator"])
+        let withTag = try entry(ofBody: "Use <script>alert(1)</script> and the facilitator.")
+        #expect(withTag.plain == "Use alert(1) and the facilitator.")
+    }
+
     @Test func hostileBodiesBuildInBoundedTime() throws {
         let bodies = [
             String(repeating: "[[a", count: 150_000), String(repeating: "<", count: 400_000),

@@ -265,7 +265,7 @@ import Systems42TestSupport
         #expect(try passages("search the wiki")["FR-007"]?.text == "Readers look from any page (SRC-006).")
     }
 
-    @Test func fr007PassageIsPlainText() throws {
+    @Test func fr007PassageIsEscaped() throws {
         let page = entry("X-1", title: "X", plain: "Use <script> & a facilitator.")
         let found = search("facilitator", in: SearchIndex(entries: [page], synonyms: []), filter: SearchFilter(), withPassages: true)
         let passage = try #require(found.first?.passage)
