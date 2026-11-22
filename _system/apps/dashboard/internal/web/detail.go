@@ -3,12 +3,9 @@ package web
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"path"
-	"path/filepath"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/metamodel"
@@ -19,7 +16,6 @@ import (
 
 var (
 	leadingH1RE = regexp.MustCompile(`^\s*#\s+.*(?:\n|$)`)
-	adrStemRE   = regexp.MustCompile(`^(\d{4})-(.+)$`)
 )
 
 var addressableFolders = map[string]bool{
@@ -541,20 +537,6 @@ func (s *Server) handlePageDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	folder, stem := parts[0], parts[1]
-
-	if folder == "adr" {
-		if m := adrStemRE.FindStringSubmatch(stem); m != nil {
-			n, _ := strconv.Atoi(m[1])
-			newStem := fmt.Sprintf("DR-%03d-%s", n, m[2])
-			candidate := filepath.Join(s.Paths.WikiDir, "decisions", newStem+".md")
-			if st, err := os.Stat(candidate); err == nil && st.Mode().IsRegular() && wiki.ResolvesInside(s.Paths.WikiDir, candidate) {
-				s.redirect(w, r, wiki.PageURL("decisions", newStem), http.StatusMovedPermanently)
-				return
-			}
-		}
-		s.redirect(w, r, "/decisions", http.StatusMovedPermanently)
-		return
-	}
 
 	if folder == "functional-requirements" {
 		s.redirect(w, r, "/functional-requirements/"+stem, http.StatusFound)

@@ -3640,12 +3640,6 @@ def decisions_view():
                            maturity=maturity(d["status"] for d in items))
 
 
-@app.route("/adrs")
-def adrs_redirect():
-    """The former method-ADR list; decisions now live in wiki/decisions/."""
-    return redirect("/decisions", code=301)
-
-
 def _is_wiki_folder(folder: str) -> bool:
     """True when `folder` is a direct, non-hidden subfolder of WIKI_DIR that,
     symlinks resolved, stays inside it."""
@@ -3660,16 +3654,6 @@ def page_detail(folder, stem):
     """Detail page for a single content unit (any wiki page). Search results
     link here."""
     titles = title_index()
-    if folder == "adr":
-        # Former ADR URLs (/page/adr/0012-…) land on the decision record that
-        # kept their number (DR-012-…), or on the list if it was re-filed.
-        m = re.match(r"(\d{4})-(.+)$", stem)
-        if m:
-            new_stem = f"DR-{int(m.group(1)):03d}-{m.group(2)}"
-            if (WIKI_DIR / "decisions" / f"{new_stem}.md").is_file():
-                return redirect(_page_url("decisions", new_stem), code=301)
-        return redirect("/decisions", code=301)
-
     # FRs have their own rich page (full text + hierarchy breakdown) under the
     # functional-requirements/ path; send any /page link there so the whole
     # hierarchy stays on one route.
@@ -4341,12 +4325,6 @@ def functional_requirements_view():
         block=block, needs_mermaid=bool(diagram), rows=rows,
     )
 
-
-@app.route("/req42/backlog")
-def backlog_redirect():
-    """The block's pre-2026 name. Permanent redirect so old links and
-    bookmarks keep working; the block itself is /req42/functional-requirements."""
-    return redirect("/req42/functional-requirements", code=301)
 
 @app.route("/functional-requirements/<stem>")
 def fr_view(stem):

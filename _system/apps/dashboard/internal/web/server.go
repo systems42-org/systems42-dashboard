@@ -278,8 +278,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.handleArea(w, r, "commons")
 	case p == "/req42/functional-requirements":
 		s.handleFunctionalRequirements(w, r)
-	case p == "/req42/backlog":
-		s.redirect(w, r, "/req42/functional-requirements", http.StatusMovedPermanently)
 	case strings.HasPrefix(p, "/req42/"):
 		s.handleReq42Block(w, r)
 	case strings.HasPrefix(p, "/functional-requirements/"):
@@ -314,8 +312,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.handleStakeholders(w, r)
 	case p == "/decisions":
 		s.handleDecisions(w, r)
-	case p == "/adrs":
-		s.redirect(w, r, "/decisions", http.StatusMovedPermanently)
 	case p == "/issues":
 		s.handleIssues(w, r)
 	case strings.HasPrefix(p, "/page/"):

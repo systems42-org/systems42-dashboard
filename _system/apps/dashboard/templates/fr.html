@@ -37,7 +37,7 @@
 
 {% if fr.features or fr.direct_stories or fr.stories %}
 <section class="fr-breakdown">
-  <h2 class="fr-breakdown-head">{{ 'Realized by' if fr.notation == 'use-case' else 'Breakdown' }}</h2>
+  <h2 class="fr-breakdown-head">{{ 'Refined by' if fr.notation == 'use-case' else 'Breakdown' }}</h2>
 
   {% if fr.features or fr.direct_stories %}
   {# epic: feature blocks, each with its stories, plus any epic-direct stories #}

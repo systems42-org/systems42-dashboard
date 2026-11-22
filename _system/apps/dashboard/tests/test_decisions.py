@@ -91,15 +91,10 @@ def test_decisions_page_lists_records_with_kind_filter():
     assert 'data-aliases="ADR-0001"' in body
 
 
-def test_old_adr_urls_redirect():
+def test_old_adr_urls_are_gone():
     c = app.app.test_client()
-    r = c.get("/adrs")
-    assert r.status_code == 301 and r.headers["Location"].endswith("/decisions")
-    r = c.get("/page/adr/0001-carts-expire-after-a-day")
-    assert r.status_code == 301
-    assert r.headers["Location"].endswith(f"/page/decisions/{FIXTURE_STEM}")
-    r = c.get("/page/adr/0010-stakeholder-aliases-field")   # re-filed, no DR
-    assert r.status_code == 301 and r.headers["Location"].endswith("/decisions")
+    assert c.get("/adrs").status_code == 404
+    assert c.get("/page/adr/0001-carts-expire-after-a-day").status_code == 404
 
 
 def test_decision_detail_page_renders():
@@ -114,7 +109,7 @@ if __name__ == "__main__":
     test_a_former_adr_alias_matches_the_decision_number()
     test_fixture_title_is_plain_text()
     test_decisions_page_lists_records_with_kind_filter()
-    test_old_adr_urls_redirect()
+    test_old_adr_urls_are_gone()
     test_decision_detail_page_renders()
     print(f"OK: {len(_project_decisions())} project decision records check out; "
-          "fixture pages render and redirect")
+          "fixture pages render, old ADR URLs are gone")

@@ -122,7 +122,7 @@ for n, kept in enumerate((True, False), start=1):
     _write(_wiki / "domain-terms" / f"DT-00{n}-hostile.md", meta)
 # requirement notations (DR-038): one page per place the FR views put it —
 # Agile epic → feature, a sea-level use case refined by an Agile story (a root
-# with "Realized by"), another notation, and a notation and level that are
+# with "Refined by"), another notation, and a notation and level that are
 # the payload themselves (listed outside the Agile hierarchy)
 _fr = {k: _hostile(v, k in STRUCTURAL) for k, v in _template_fields("functional-requirement").items()}
 _fr.pop("stereotype", None)
@@ -329,7 +329,7 @@ def test_the_payload_was_actually_rendered():
     assert [e["id"] for e in h["epics"]] == ["FR-011"], h["epics"]
     assert [u["id"] for u in h["use_cases"]] == ["UC-011"], h["use_cases"]
     assert {"FR-014", "FR-015"} <= {o["id"] for o in h["other_notations"]}, h["other_notations"]
-    assert "Realized by" in client.get("/functional-requirements/UC-011-use-case").get_data(as_text=True)
+    assert "Refined by" in client.get("/functional-requirements/UC-011-use-case").get_data(as_text=True)
     body = client.get("/metamodel").get_data(as_text=True)
     assert body.count('class="mm-row"') and 'id="notation-agile"' in body
 

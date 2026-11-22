@@ -288,12 +288,9 @@ func TestHostileVault(t *testing.T) {
 		t.Errorf("inside dir symlink failed: status=%d", rec.Code)
 	}
 
-	// 7. Redirects: /page/adr/* and /page/functional-requirements/*
-	if rec := doGet(srv, "/page/adr/0001-scalars"); rec.Code != http.StatusMovedPermanently || rec.Header().Get("Location") != "/page/decisions/DR-001-scalars" {
-		t.Errorf("ADR redirect = %d -> %q", rec.Code, rec.Header().Get("Location"))
-	}
-	if rec := doGet(srv, "/page/adr/9999-missing"); rec.Code != http.StatusMovedPermanently || rec.Header().Get("Location") != "/decisions" {
-		t.Errorf("missing ADR redirect = %d -> %q", rec.Code, rec.Header().Get("Location"))
+	// 7. Redirects: /page/functional-requirements/* (the old /page/adr/* URLs are gone)
+	if rec := doGet(srv, "/page/adr/0001-scalars"); rec.Code != http.StatusNotFound {
+		t.Errorf("GET /page/adr/... = %d, want 404", rec.Code)
 	}
 	if rec := doGet(srv, "/page/functional-requirements/FR-001-scalar-parent"); rec.Code != http.StatusFound || rec.Header().Get("Location") != "/functional-requirements/FR-001-scalar-parent" {
 		t.Errorf("FR redirect = %d -> %q", rec.Code, rec.Header().Get("Location"))
