@@ -6,11 +6,11 @@ status: draft
 created: 2026-11-22
 updated: 2026-11-22
 sources: ["[[SRC-044-building-blocks-of-the-systems42-dashboard]]", "[[SRC-045-grilling-session-on-context-and-building-blocks]]"]
-related: ["[[SOL-001-systems42-dashboard]]", "[[STK-012-maintainers]]", "[[STK-013-people-learning-or-presenting-systems42]]"]
+related: ["[[STK-012-maintainers]]", "[[STK-013-people-learning-or-presenting-systems42]]"]
 tags: [building-block]
 parent: "[[CTX-001-systems42-dashboard-context]]"
 drivers: ["[[GOAL-002-show-what-systems42-can-do]]", "[[FR-056-a-public-website-for-the-dashboard]]", "[[FR-057-overview-of-the-dashboard-on-the-website]]", "[[FR-058-a-demo-to-try-without-installing]]", "[[FR-059-downloads-on-the-website]]", "[[FR-060-documentation-on-the-website]]", "[[FR-061-legal-and-project-information-on-the-website]]", "[[FR-062-the-website-is-built-and-published-from-the-repository]]", "[[QR-001-usable-on-phone-and-tablet]]"]
-decisions: ["[[DR-005-the-dashboard-lives-in-its-own-repository]]"]
+decisions: ["[[DR-005-the-dashboard-lives-in-its-own-repository]]", "[[DR-008-public-website-is-built-by-a-custom-python-script-for-github-pages]]", "[[DR-009-pages-are-rendered-on-the-server-from-html-templates]]"]
 uses: ["[[BB-001-python-dashboard]]", "[[EIF-001-systems42-wiki]]"]
 location: site/
 state: current

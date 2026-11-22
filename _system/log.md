@@ -410,3 +410,11 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Updated: [[CC-001-tests-of-the-python-dashboard-are-plain-scripts]] (`applies-to` now names [[BB-001-python-dashboard]]), `_system/index.md`.
 - Decided by Gernot Starke in grilling: keep all three interacting user roles (Reader, Operator, Keyholder) on the context diagram. Model the macOS native app as `state: current` for the shipped AppKit menu-bar shell wrapping Go. Group `dashboard.sh` with the user-facing `Makefile` targets as one Level 1 block (repo-only development targets are already captured in [[FR-063-manage-development-with-make]]). Include the public website builder (`site/`) at Level 1.
 - Issues: none raised. Every question was answered in grilling.
+
+## [2026-11-22] inspect | Solution strategy modularized into focused pages and decision records
+- Source: [[SRC-046-grilling-session-on-modularizing-the-solution-strategy]] (item-by-item review of all eight points of the former SOL-001).
+- Retired: `SOL-001` (`SOL-001-systems42-dashboard.md`, draft). ID retired and not reused.
+- Created strategy pages (`state: current`, `status: draft`): [[SOL-002-three-ways-to-run-the-dashboard]], [[SOL-003-read-only-projections-over-markdown-files]] (combining no-database read-only storage and on-the-fly projections), [[SOL-004-the-metamodel-drives-the-dashboard]], [[SOL-005-local-and-offline-execution]].
+- Created decision records (`kind: architecture`, `status: draft`): [[DR-008-public-website-is-built-by-a-custom-python-script-for-github-pages]], [[DR-009-pages-are-rendered-on-the-server-from-html-templates]] (recorded as a normal DR rather than a strategy pillar because upcoming implementations may change UI rendering).
+- Kept in existing decision record only: repository separation from Systems42 stays in [[DR-005-the-dashboard-lives-in-its-own-repository]] and [[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]], removed from solution strategy.
+- Updated: links from BB-001 to BB-006, CON-003, CON-007, CC-001, QR-004 and `_system/index.md`. Older provenance records (SRC-039, SRC-040) and older log entries keep their historical reference to SOL-001.

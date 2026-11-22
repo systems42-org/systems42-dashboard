@@ -123,7 +123,10 @@ every capture (`_system/workflows/capture.md`, step 7).
 
 ## Solution strategy
 
-- [[SOL-001-systems42-dashboard]] Systems42 Dashboard (current, draft)
+- [[SOL-002-three-ways-to-run-the-dashboard]] Three ways to run the dashboard (current, draft)
+- [[SOL-003-read-only-projections-over-markdown-files]] Read-only projections over Markdown files (current, draft)
+- [[SOL-004-the-metamodel-drives-the-dashboard]] The metamodel drives the dashboard (current, draft)
+- [[SOL-005-local-and-offline-execution]] Local and offline execution (current, draft)
 
 ## Building blocks
 
@@ -147,6 +150,8 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[DR-005-the-dashboard-lives-in-its-own-repository]] The dashboard lives in its own repository, with its requirements and its code (review)
 - [[DR-006-interactive-diagrams-are-projected-on-the-server-and-laid-out-in-the-browser]] Interactive diagrams are projected on the server and laid out in the browser (draft)
 - [[DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go]] The dashboard gets a uv start and a second implementation in Go (draft)
+- [[DR-008-public-website-is-built-by-a-custom-python-script-for-github-pages]] The public website is built by a custom Python script for GitHub Pages (draft)
+- [[DR-009-pages-are-rendered-on-the-server-from-html-templates]] Pages are rendered on the server from HTML templates (draft)
 
 ## Issues
 
@@ -206,3 +211,4 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-043-context-of-the-systems42-dashboard]] Context of the Systems42 dashboard (document)
 - [[SRC-044-building-blocks-of-the-systems42-dashboard]] Building blocks of the Systems42 dashboard (document)
 - [[SRC-045-grilling-session-on-context-and-building-blocks]] Grilling session on context and building blocks (interview)
+- [[SRC-046-grilling-session-on-modularizing-the-solution-strategy]] Grilling session on modularizing the solution strategy (interview)

@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-22
 updated: 2026-11-22
 sources: ["[[SRC-039-solution-strategy-of-the-dashboard]]", "[[SRC-040-grilling-session-on-the-solution-strategy]]"]
-related: ["[[DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go]]", "[[FR-055-an-installable-dashboard-app]]", "[[CON-003-docker-is-the-supported-way-to-run-it]]", "[[SOL-001-systems42-dashboard]]"]
+related: ["[[DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go]]", "[[FR-055-an-installable-dashboard-app]]", "[[CON-003-docker-is-the-supported-way-to-run-it]]", "[[SOL-002-three-ways-to-run-the-dashboard]]"]
 tags: [constraint]
 category: organizational
 ---

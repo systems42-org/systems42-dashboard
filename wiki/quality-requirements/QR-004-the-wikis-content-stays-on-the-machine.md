@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-22
 updated: 2026-11-22
 sources: ["[[SRC-039-solution-strategy-of-the-dashboard]]", "[[SRC-040-grilling-session-on-the-solution-strategy]]"]
-related: ["[[STK-020-data-protection-and-security-officers]]", "[[STK-008-workshop-participants-and-facilitators]]", "[[FR-029-the-dashboard-as-a-product]]", "[[CON-001-proof-of-concept-not-production-ready]]", "[[FR-061-legal-and-project-information-on-the-website]]", "[[SOL-001-systems42-dashboard]]"]
+related: ["[[STK-020-data-protection-and-security-officers]]", "[[STK-008-workshop-participants-and-facilitators]]", "[[FR-029-the-dashboard-as-a-product]]", "[[CON-001-proof-of-concept-not-production-ready]]", "[[FR-061-legal-and-project-information-on-the-website]]", "[[SOL-005-local-and-offline-execution]]"]
 tags: [quality-requirement]
 dimensions: [secure, reliable]
 priority: must

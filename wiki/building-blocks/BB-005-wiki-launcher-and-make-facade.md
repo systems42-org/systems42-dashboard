@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-22
 updated: 2026-11-22
 sources: ["[[SRC-044-building-blocks-of-the-systems42-dashboard]]", "[[SRC-045-grilling-session-on-context-and-building-blocks]]"]
-related: ["[[SOL-001-systems42-dashboard]]", "[[STK-010-operators]]"]
+related: ["[[SOL-002-three-ways-to-run-the-dashboard]]", "[[STK-010-operators]]"]
 tags: [building-block]
 parent: "[[CTX-001-systems42-dashboard-context]]"
 drivers: ["[[GOAL-008-one-way-into-every-systems42-wiki]]", "[[FR-042-start-a-pinned-release-with-one-command]]", "[[FR-054-a-start-without-a-container-engine]]", "[[FR-063-manage-development-with-make]]", "[[QR-002-runs-alike-on-linux-and-macos]]", "[[CON-002-dashboard-never-writes-to-the-wiki]]", "[[CON-003-docker-is-the-supported-way-to-run-it]]"]
