@@ -93,7 +93,15 @@ Nothing is installed in your wiki. uv keeps what it fetched in its cache. `uv ca
 
 1. Download `Systems42-Dashboard-<release>-universal.dmg` from the downloads page. It runs on Apple Silicon and Intel, macOS 14 or later.
 2. Open the file and drag **Systems42 Dashboard** to **Applications**.
-3. Open the app. macOS may refuse the first time, because the app is not yet registered with Apple. In that case open **System Settings → Privacy & Security**, scroll to the message about Systems42 Dashboard and choose **Open Anyway**.
+3. Open the app. macOS may refuse the first time, because the app is ad-hoc signed and not notarised with Apple. In that case open **System Settings → Privacy & Security**, scroll to the message about Systems42 Dashboard and choose **Open Anyway**. From a terminal you can clear the browser quarantine flag directly instead, or download with `curl` (which does not set it):
+
+```sh
+# Clear the quarantine flag once after dragging to Applications
+xattr -dr com.apple.quarantine "/Applications/Systems42 Dashboard.app"
+
+# Or download without a browser quarantine flag
+curl -fsSLO https://github.com/systems42-org/systems42-dashboard/releases/download/v<release>/Systems42-Dashboard-<release>-universal.dmg
+```
 
 ### Start and stop on macOS
 
