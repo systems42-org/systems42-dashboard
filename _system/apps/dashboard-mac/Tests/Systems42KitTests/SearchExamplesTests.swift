@@ -347,6 +347,16 @@ import Systems42TestSupport
         #expect(options.priorities.map(\.value).prefix(3) == ["must", "should", "could"])
     }
 
+    @Test func fr009TypeFilterNarrowsHitsNotRelatedPages() throws {
+        let all = search("keyholder", in: try index())
+        #expect(all.contains { $0.group == .related })
+        let only = search("keyholder", in: try index(), filter: SearchFilter(types: ["stakeholder"]))
+        #expect(only.filter { $0.group == .hit }.allSatisfy { $0.type == "Stakeholder" })
+        #expect(only.filter { $0.group == .hit }.count < all.filter { $0.group == .hit }.count)
+        // the results page applies the type facet to the hits only, so the related pages stay
+        #expect(only.filter { $0.group == .related }.map(\.id) == all.filter { $0.group == .related }.map(\.id))
+    }
+
     @Test func fr009NoFilterSyntaxInTheBox() throws {
         #expect(try ids("status:draft") == ids("status draft"))   // the colon is only a word break
     }

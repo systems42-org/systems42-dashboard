@@ -58,7 +58,8 @@ refresh, update the counts in `FixtureTests` if they changed.
 dashboard serves as `/search.json` (`internal/search/search.go`), and `search(_:in:filter:withPassages:)`
 ranks it like `static/search-rank.js`. Each Swift function names the JavaScript function it ports, so
 a change in the JavaScript can be followed. Tests compare the index and the ranking with the
-golden data, see `Tests/Golden/README.md`.
+golden data, see `Tests/Golden/README.md`. Running the tests needs neither Go nor Node. Regenerating
+the golden data (`scripts/export-golden.sh`) needs both, and Python 3.
 
 ## CI
 

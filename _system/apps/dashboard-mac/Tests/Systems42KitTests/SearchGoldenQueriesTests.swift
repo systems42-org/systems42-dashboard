@@ -43,9 +43,10 @@ import Systems42TestSupport
         }
     }
 
-    @Test func passagesMatch() throws {
-        let index = try index("search")
-        for expected in try queries("search") {
+    @Test(arguments: ["search", "basic"])
+    func passagesMatch(fixture: String) throws {
+        let index = try index(fixture)
+        for expected in try queries(fixture) {
             let query = try #require(expected["q"] as? String)
             let hits = search(query, in: index, filter: SearchFilter(), withPassages: true, withRelated: false)
             let want = try #require(expected["hits"] as? [[String: Any]])
@@ -69,8 +70,13 @@ import Systems42TestSupport
             let filter = SearchFilter(
                 statuses: f["status"].map { [$0] } ?? [], priorities: f["priority"].map { [$0] } ?? [], tags: f["tag"].map { [$0] } ?? []
             )
-            let hits = search(query, in: index, filter: filter, withPassages: false, withRelated: false)
-            #expect(hits.map(\.id) == expected["ids"] as? [String], "\(query) \(f)")
+            let hits = search(query, in: index, filter: filter, withPassages: false)
+            let want = try #require(expected["hits"] as? [[String: Any]])
+            #expect(hits.filter { $0.group == .hit }.map { "\($0.id) \($0.note ?? "-")" }
+                == want.map { "\($0["id"] as! String) \($0["note"] as? String ?? "-")" }, "\(query) \(f)")
+            let related = try #require(expected["related"] as? [[String: Any]])
+            #expect(hits.filter { $0.group == .related }.map { "\($0.id) \($0.note ?? "-")" }
+                == related.map { "\($0["id"] as! String) \($0["note"] as! String)" }, "\(query) \(f)")
         }
     }
 }

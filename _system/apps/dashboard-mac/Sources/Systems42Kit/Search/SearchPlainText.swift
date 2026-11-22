@@ -77,6 +77,25 @@ enum PlainText {
         return Bytes(String(decoding: b, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines).utf8)
     }
 
+    /// `trimSpace(b).isEmpty` without a copy: stops at the first character that is no white space.
+    private static func isBlank(_ b: Bytes) -> Bool {
+        var i = 0
+        while i < b.count {
+            let c = b[i]
+            if c < 0x80 {
+                if !(c == 0x20 || (c >= 0x09 && c <= 0x0D)) { return false }
+                i += 1
+            } else {
+                let length = c >= 0xF0 ? 4 : c >= 0xE0 ? 3 : 2
+                let end = Swift.min(b.count, i + length)
+                let scalar = String(decoding: b[i..<end], as: UTF8.self).unicodeScalars.first
+                guard let scalar, scalar.properties.isWhitespace else { return false }
+                i = end
+            }
+        }
+        return true
+    }
+
     private static func collapseSpace(_ b: Bytes) -> Bytes {
         var out = Bytes()
         out.reserveCapacity(b.count)
@@ -343,12 +362,13 @@ enum PlainText {
 
     struct WikilinkMatch {
         let range: Range<Int>
-        let target: Bytes
-        let alias: Bytes?
+        let target: Range<Int>
+        let alias: Range<Int>?
     }
 
     /// `wikilinkRE`: `\[\[([^\]\|#]+)(?:#[^\]\|]+)?(?:\|([^\]]+))?\]\]`.
-    /// The next-delimiter tables keep the scan linear on input such as `[[[[[[`.
+    /// The next-delimiter tables keep the scan linear on input such as `[[[[[[`. A match holds index
+    /// ranges, so nothing is copied before the closing `]]` has matched.
     static func wikilinks(in b: Bytes) -> [WikilinkMatch] {
         let n = b.count
         guard n >= 5 else { return [] }
@@ -362,17 +382,17 @@ enum PlainText {
             let t0 = i + 2
             var p = Int(nextTargetEnd[t0])
             guard p > t0 else { i += 1; continue }
-            let target = Array(b[t0..<p])
+            let target = t0..<p
             if p < n, b[p] == hash {
                 let h = Int(nextBar[p + 1])
                 guard h > p + 1 else { i += 1; continue }
                 p = h
             }
-            var alias: Bytes?
+            var alias: Range<Int>?
             if p < n, b[p] == pipe {
                 let c = Int(nextClose[p + 1])
                 guard c > p + 1 else { i += 1; continue }
-                alias = Array(b[(p + 1)..<c])
+                alias = (p + 1)..<c
                 p = c
             }
             guard p + 1 < n, b[p] == close, b[p + 1] == close else { i += 1; continue }
@@ -390,8 +410,8 @@ enum PlainText {
         var last = 0
         for m in found {
             out.append(contentsOf: b[last..<m.range.lowerBound])
-            let target = trimSpace(m.target)
-            let alias = trimSpace(m.alias ?? [])
+            let target = trimSpace(Array(b[m.target]))
+            let alias = trimSpace(m.alias.map { Array(b[$0]) } ?? [])
             out.append(contentsOf: linkText(target: target, alias: alias, context))
             last = m.range.upperBound
         }
@@ -534,7 +554,7 @@ enum PlainText {
             if i > 0, lines[i - 1].contains(pipe) { tableLines.insert(i - 1) }
             var j = i + 1
             // A line already marked belongs to an earlier table run that ends where this one does.
-            while j < lines.count, !tableLines.contains(j), !trimSpace(lines[j]).isEmpty, lines[j].contains(pipe) {
+            while j < lines.count, !tableLines.contains(j), !isBlank(lines[j]), lines[j].contains(pipe) {
                 tableLines.insert(j)
                 j += 1
             }
@@ -544,13 +564,12 @@ enum PlainText {
         var out: [Bytes] = []
         var inList = false
         for (idx, line) in lines.enumerated() {
-            let stripped = trimSpace(line)
             if fenced[idx] {
                 inList = false
                 out.append(line)
                 continue
             }
-            if stripped.isEmpty {
+            if isBlank(line) {
                 inList = false
                 out.append(line)
                 continue
@@ -562,19 +581,21 @@ enum PlainText {
                 out.append(Array(line.drop { isSpaceOrTab($0) }))
                 continue
             }
-            let prev = out.last ?? []
-            let prevIsProse = !trimSpace(prev).isEmpty && !isBlockStart(prev)
-                && !tableLines.contains(idx - 1) && !inList
+            // `prev` is not kept: a second reference would make the append below copy the paragraph
+            let (prevIsProse, prevEndsInTwoSpaces) = out.last.map { prev in
+                (!isBlank(prev) && !isBlockStart(prev) && !tableLines.contains(idx - 1) && !inList,
+                 prev.count >= 2 && prev[prev.count - 1] == space && prev[prev.count - 2] == space)
+            } ?? (false, false)
             if blockStart {
                 if prevIsProse && listStart { out.append([]) }
                 out.append(line)
                 inList = listStart
                 continue
             }
-            if prevIsProse && !(prev.count >= 2 && prev[prev.count - 1] == space && prev[prev.count - 2] == space) {
+            if prevIsProse && !prevEndsInTwoSpaces {
                 while let last = out[out.count - 1].last, isSpaceOrTab(last) { out[out.count - 1].removeLast() }
                 out[out.count - 1].append(space)
-                out[out.count - 1].append(contentsOf: stripped)
+                out[out.count - 1].append(contentsOf: trimSpace(line))
             } else {
                 out.append(line)
             }

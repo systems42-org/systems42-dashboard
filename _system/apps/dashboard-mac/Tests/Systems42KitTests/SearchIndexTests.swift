@@ -20,17 +20,18 @@ import Systems42TestSupport
         let mineRecords = try #require(mine["records"] as? [[String: Any]])
         let goldenRecords = try #require(golden["records"] as? [[String: Any]])
         #expect(mineRecords.count == goldenRecords.count)
+        // `url` is left out: it is the route of the page in the web dashboard, the app opens pages by `ref`
         for (a, b) in zip(mineRecords, goldenRecords) {
-            #expect(NSDictionary(dictionary: a) == NSDictionary(dictionary: b), "\(b["id"] ?? "?")")
+            #expect(NSDictionary(dictionary: a) == NSDictionary(dictionary: b.filter { $0.key != "url" }), "\(b["id"] ?? "?")")
         }
-        #expect(NSDictionary(dictionary: mine) == NSDictionary(dictionary: golden))
+        #expect(golden["synonyms"] as? NSArray == mine["synonyms"] as? NSArray)
     }
 
     @Test func indexHoldsPlainTextOfEveryPage() throws {
         for fixture in Fixture.names {
             let entries = try index(fixture).entries
             #expect(entries.contains { !$0.plain.isEmpty }, "\(fixture)")
-            #expect(entries.allSatisfy { $0.ref != nil && !$0.url.isEmpty })
+            #expect(entries.allSatisfy { $0.ref != nil })
         }
     }
 
@@ -120,20 +121,23 @@ import Systems42TestSupport
         #expect(withTag.plain == "Use alert(1) and the facilitator.")
     }
 
-    @Test func hostileBodiesBuildInBoundedTime() throws {
-        let bodies = [
-            String(repeating: "[[a", count: 150_000), String(repeating: "<", count: 400_000),
-            String(repeating: "[", count: 300_000) + "](" + String(repeating: "x", count: 1000),
-            String(repeating: "|---|---\n", count: 60_000), String(repeating: " ", count: 400_000) + "x",
-            String(repeating: "> ", count: 100_000), String(repeating: "[[a#b|", count: 100_000),
-            String(repeating: "word\n", count: 200_000), String(repeating: "**", count: 200_000),
-            String(repeating: "- ", count: 100_000) + "x", String(repeating: "```\n", count: 50_000),
-        ]
+    /// Bodies of 2 MB or more, each in a shape that makes a careless scanner copy or rescan the rest
+    /// of the page for every opening mark.
+    @Test(arguments: [
+        ("[[", 1_000_000), ("[[a", 700_000), ("[[a|b", 450_000), ("[[a#b|", 350_000), ("[", 2_000_000), ("![", 1_000_000),
+        ("<", 2_000_000), ("`", 2_000_000), ("**", 1_000_000), ("> ", 1_000_000), ("- ", 1_000_000), ("|---|---\n", 250_000),
+        ("word\n", 450_000), ("```\n", 500_000), (" ", 2_000_000), ("[](", 700_000), ("> follows [[a\n", 150_000),
+        ("é\n", 1_000_000), ("é ", 1_000_000),
+    ])
+    func hostileBodiesBuildInBoundedTime(piece: String, count: Int) throws {
+        let body = String(repeating: piece, count: count) + "x"
+        #expect(body.utf8.count >= 1_000_000)
         let clock = ContinuousClock()
-        let took = try clock.measure {
-            for body in bodies { _ = try entry(ofBody: body) }
-        }
-        #expect(took < .seconds(20), "\(took)")
+        var built: SearchEntry?
+        let took = try clock.measure { built = try entry(ofBody: body) }
+        #expect(built != nil)
+        // the slowest body takes about 5 s in a debug build, so 30 s leaves a factor of 6
+        #expect(took < .seconds(30), "\(piece.debugDescription): \(took)")
     }
 
     // MARK: ranking, string rules
@@ -263,6 +267,7 @@ import Systems42TestSupport
             for q in queries { total += search(q, in: index, filter: SearchFilter(), withPassages: true).count }
         }
         #expect(total > 0)
-        #expect(took < .seconds(2), "\(took)")
+        // about 1.2 s in a debug build on a development machine, so 8 s leaves a factor of 6
+        #expect(took < .seconds(8), "\(took)")
     }
 }

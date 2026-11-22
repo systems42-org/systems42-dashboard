@@ -1,15 +1,14 @@
 import Foundation
 
 /// One entry of the search index: the fields of one record of the dashboard's `/search.json`
-/// (`BuildRecords` in `_system/apps/dashboard/internal/search/search.go`).
+/// (`BuildRecords` in `_system/apps/dashboard/internal/search/search.go`), without its `url`: the
+/// route of the page in the web dashboard. The Mac app opens pages by `ref`.
 public struct SearchEntry: Codable, Sendable, Equatable {
     public var id: String
     /// The label of the page type, as the metamodel names it.
     public var type: String
     public var title: String
     public var status: String
-    /// The route of the page in the web dashboard. The Mac app opens pages by `ref`.
-    public var url: String
     public var aliases: [String]
     /// The reader-visible text of the page body, one paragraph or list item per line.
     public var plain: String
@@ -21,14 +20,13 @@ public struct SearchEntry: Codable, Sendable, Equatable {
     public var ref: PageRef?
 
     public init(
-        id: String, type: String, title: String, status: String = "", url: String = "", aliases: [String] = [],
+        id: String, type: String, title: String, status: String = "", aliases: [String] = [],
         plain: String = "", fields: [String: [String]] = [:], links: [String] = [], ref: PageRef? = nil
     ) {
         self.id = id
         self.type = type
         self.title = title
         self.status = status
-        self.url = url
         self.aliases = aliases
         self.plain = plain
         self.fields = fields
@@ -36,7 +34,7 @@ public struct SearchEntry: Codable, Sendable, Equatable {
         self.ref = ref
     }
 
-    private enum CodingKeys: String, CodingKey { case id, type, title, status, url, aliases, plain, fields, links }
+    private enum CodingKeys: String, CodingKey { case id, type, title, status, aliases, plain, fields, links }
 
     /// Like the ranker in JavaScript, a missing `aliases`, `fields` or `links` is empty.
     public init(from decoder: Decoder) throws {
@@ -46,7 +44,6 @@ public struct SearchEntry: Codable, Sendable, Equatable {
             type: try c.decode(String.self, forKey: .type),
             title: try c.decode(String.self, forKey: .title),
             status: try c.decodeIfPresent(String.self, forKey: .status) ?? "",
-            url: try c.decodeIfPresent(String.self, forKey: .url) ?? "",
             aliases: try c.decodeIfPresent([String].self, forKey: .aliases) ?? [],
             plain: try c.decodeIfPresent(String.self, forKey: .plain) ?? "",
             fields: try c.decodeIfPresent([String: [String]].self, forKey: .fields) ?? [:],
@@ -78,8 +75,6 @@ enum SearchFields {
     /// The type whose pages are the glossary: their titles and aliases are the synonym groups (FR-003).
     /// Like `issue` and `source` in `RelationRules`, a type the code treats specially.
     static let glossaryType = "domain-term"
-    /// The type whose pages the dashboard serves below their own route, not below `/page/<folder>`.
-    static let requirementType = "functional-requirement"
 }
 
 /// The search index of a wiki: what the dashboard serves as `/search.json`, built from the pages
@@ -127,18 +122,12 @@ public struct SearchIndex: Sendable, Codable {
         let context = PlainText.Context(titles: titles, names: names)
         let neighbours = Self.neighbourLinks(pages, names: names)
 
-        var typeInfo: [String: (label: String, url: String)] = [:]
-        for folder in folders {
-            let type = metamodel.type(forFolder: folder)
-            let route = type?.name == SearchFields.requirementType ? type.map { Self.lastComponent($0.folder) } : nil
-            typeInfo[folder] = (type?.label ?? folder, route ?? "page/" + folder)
-        }
-        let entries = pages.map { page -> SearchEntry in
-            let info = typeInfo[page.ref.folder] ?? (page.ref.folder, "page/" + page.ref.folder)
-            return SearchEntry(
-                id: page.id, type: info.label, title: page.title, status: page.status,
-                url: "/" + info.url + "/" + page.ref.stem, aliases: page.aliases,
-                plain: PlainText.plain(body: page.body, context: context),
+        var labels: [String: String] = [:]
+        for folder in folders { labels[folder] = metamodel.type(forFolder: folder)?.label ?? folder }
+        let entries = pages.map { page in
+            SearchEntry(
+                id: page.id, type: labels[page.ref.folder] ?? page.ref.folder, title: page.title, status: page.status,
+                aliases: page.aliases, plain: PlainText.plain(body: page.body, context: context),
                 fields: Self.fields(of: page), links: neighbours[page.id] ?? [], ref: page.ref
             )
         }

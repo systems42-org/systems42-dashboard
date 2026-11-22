@@ -4,15 +4,24 @@
 # search.json of each fixture. The Swift ranker must give the same hits, scores,
 # notes, passages and related pages. Needs Node. Tests never start it.
 #
-# export-golden.sh runs this script last, because it replaces Tests/Golden.
+# Usage: export-search-queries.sh [golden-folder]. The folder holds one folder per
+# fixture with its search.json, and gets the queries.json next to it. It defaults
+# to Tests/Golden. export-golden.sh runs this on its temp folder before it
+# replaces Tests/Golden, so one move replaces everything or nothing.
 # Two runs give the same bytes: the queries are fixed or derived from the
 # fixture's own titles, ids and aliases, and the output is written in one order.
+#
+# The Swift ranker looks at the first 200 characters of a query and its first 16
+# words. The JavaScript has no such limit, so a query is first cut the same way,
+# and queries.json holds the JavaScript's answer for the cut query.
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 repo="$(git -C "$here" rev-parse --show-toplevel)"
+golden="${1:-$here/Tests/Golden}"
+command -v node >/dev/null || { echo "export-search-queries.sh needs Node" >&2; exit 1; }
 
-node - "$repo/_system/apps/dashboard/static/search-rank.js" "$here/Tests/Golden" <<'JS'
+node - "$repo/_system/apps/dashboard/static/search-rank.js" "$golden" <<'JS'
 const fs = require("fs");
 const path = require("path");
 const [rankerPath, goldenDir] = process.argv.slice(2);
@@ -35,7 +44,17 @@ const fixed = [
   "person", "start", "session", "ask", "SRC-006", "export board", "run checks", "main menu", "bread crumbs",
   "reach", "text tools", "!!!", "---", "a-1", "x y z", "keyholder keyholder", "decision", "stakeholder",
   "building block", "quality", "goal", "vision", "Stakeholder", "domain term",
+  "😀 workshop", "keyholder 😀", "cafe\u0301", "caf\u00e9", "straße", "strasse", "ß", "STRASSE", "İstanbul", "ΟΔΟΣ",
+  "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen keyholder workshop",
+  "keyholder keyholder keyholder keyholder keyholder keyholder keyholder keyholder keyholder keyholder keyholder " +
+    "keyholder keyholder keyholder keyholder keyholder workshop test",
 ];
+
+// The Swift ranker's limits: 200 characters, 16 words.
+function cut(q) {
+  const words = Array.from(q).slice(0, 200).join("").normalize("NFC").match(/\p{L}+-\d+|[\p{L}\p{N}]+/gu) || [];
+  return words.length > 16 ? words.slice(0, 16).join(" ") : Array.from(q).slice(0, 200).join("");
+}
 
 function derived(records) {
   const out = [];
@@ -82,7 +101,8 @@ fs.readdirSync(goldenDir).sort().forEach(function (fixture) {
   const file = path.join(goldenDir, fixture, "search.json");
   if (!fs.existsSync(file)) { return; }
   const index = JSON.parse(fs.readFileSync(file, "utf8"));
-  const withPassages = fixture === "search";
+  const withPassages = fixture === "search" || fixture === "basic";
+  const withFilters = fixture === "search";
   const seen = new Set();
   const queries = fixed.concat(derived(index.records)).filter(function (q) {
     if (seen.has(q)) { return false; }
@@ -90,7 +110,7 @@ fs.readdirSync(goldenDir).sort().forEach(function (fixture) {
     return true;
   });
   const lines = queries.map(function (q) {
-    const hits = S.rank(index.records, q, index.synonyms);
+    const hits = S.rank(index.records, cut(q), index.synonyms);
     const entry = {
       q: q,
       hits: hits.map(function (h) {
@@ -102,13 +122,15 @@ fs.readdirSync(goldenDir).sort().forEach(function (fixture) {
     };
     return " " + JSON.stringify(entry);
   });
-  const filtered = withPassages ? filters.map(function (pair) {
-    const ids = S.filter(S.rank(index.records, pair[0], index.synonyms), pair[1]).map(function (h) { return h.rec.id; });
-    return " " + JSON.stringify({q: pair[0], filter: pair[1], ids: ids});
+  const filtered = withFilters ? filters.map(function (pair) {
+    const hits = S.filter(S.rank(index.records, pair[0], index.synonyms), pair[1]);
+    return " " + JSON.stringify({q: pair[0], filter: pair[1],
+      hits: hits.map(function (h) { return {id: h.rec.id, note: h.note === undefined ? null : h.note}; }),
+      related: S.filter(S.related(hits, index.records), pair[1]).map(function (r) { return {id: r.rec.id, note: r.note}; })});
   }) : [];
   const body = '{"queries": [\n' + lines.join(",\n") + "\n]" +
-    (withPassages ? ',\n"filtered": [\n' + filtered.join(",\n") + "\n]" : "") + "}\n";
+    (withFilters ? ',\n"filtered": [\n' + filtered.join(",\n") + "\n]" : "") + "}\n";
   fs.writeFileSync(path.join(goldenDir, fixture, "queries.json"), body);
 });
 JS
-echo "Search queries written to $here/Tests/Golden"
+echo "Search queries written to $golden"

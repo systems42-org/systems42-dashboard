@@ -66,38 +66,12 @@ public struct SearchHit: Identifiable, Sendable {
     public let title, type, status: String
     /// Why this page is a hit when it does not contain the words as typed (FR-005). Nil for an exact hit.
     public let note: String?
+    /// The sentence where the query matched (FR-007). Nil unless the search was asked for
+    /// passages, for related pages, and for a page without text.
+    public let passage: Passage?
     public let group: Group
     /// The relevance, 0 to 100 (`Math.round(raw)`). 0 for a related page.
     public let score: Int
-    private let source: PassageSource?
-
-    /// What the passage is cut from: the page text and the words that matched in it.
-    fileprivate struct PassageSource: Sendable {
-        let plain: String
-        let marks: Set<String>
-    }
-
-    fileprivate init(
-        id: String, ref: PageRef?, title: String, type: String, status: String, note: String?, group: Group, score: Int,
-        source: PassageSource?
-    ) {
-        self.id = id
-        self.ref = ref
-        self.title = title
-        self.type = type
-        self.status = status
-        self.note = note
-        self.group = group
-        self.score = score
-        self.source = source
-    }
-
-    /// The sentence where the query matched (FR-007). Nil unless the search was asked for passages,
-    /// for related pages, and for a page without text. It is cut from the page text on each read, so
-    /// a long result list costs nothing until a row asks for its passage.
-    public var passage: Passage? {
-        source.flatMap { Passage(in: $0.plain, marks: $0.marks) }
-    }
 }
 
 // MARK: prepared index
@@ -620,7 +594,7 @@ extension Search {
 /// Ranks the pages of `index` against `query`: first the pages that hold every word, then pages
 /// that hold some, then (with `withRelated`) pages one link away from the strong hits (FR-008).
 /// `withPassages` adds the sentence where the query matched to each hit (FR-007). The filter
-/// narrows both groups (FR-009). Ports `rank`, `filter`, `related` and `passage` of
+/// narrows both groups (FR-009), except the type, which narrows the hits only. Ports `rank`, `filter`, `related` and `passage` of
 /// `search-rank.js`, in the order `search.html` calls them.
 public func search(
     _ query: String, in index: SearchIndex, filter: SearchFilter = SearchFilter(), withPassages: Bool = false,
@@ -632,15 +606,18 @@ public func search(
         let entry = entries[r.index]
         return SearchHit(
             id: entry.id, ref: entry.ref, title: entry.title, type: entry.type, status: entry.status, note: r.note,
-            group: .hit, score: r.score,
-            source: withPassages ? .init(plain: entry.plain, marks: index.prepared.passageMarks(r.matches)) : nil
+            passage: withPassages ? Passage(in: entry.plain, marks: index.prepared.passageMarks(r.matches)) : nil,
+            group: .hit, score: r.score
         )
     }
     if withRelated {
-        for entry in related(ranked, index).filter({ passes($0.entry, filter) }) {
+        // the type facet of the results page narrows the hits only (search.html `activeType`)
+        var relatedFilter = filter
+        relatedFilter.types = []
+        for entry in related(ranked, index).filter({ passes($0.entry, relatedFilter) }) {
             out.append(SearchHit(
                 id: entry.entry.id, ref: entry.entry.ref, title: entry.entry.title, type: entry.entry.type,
-                status: entry.entry.status, note: entry.note, group: .related, score: 0, source: nil
+                status: entry.entry.status, note: entry.note, passage: nil, group: .related, score: 0
             ))
         }
     }
