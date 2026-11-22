@@ -153,6 +153,12 @@ struct LoadedWiki: Sendable {
         go(to: Place(section: id, page: nil))
     }
 
+    /// Selects a page of the wiki and records the place. A page that does not exist does nothing.
+    public func select(page ref: PageRef) {
+        guard store.page(ref) != nil else { return }
+        go(to: Place(section: section(of: ref)?.id, page: ref))
+    }
+
     public func back() {
         guard position > 0 else { return }
         position -= 1
