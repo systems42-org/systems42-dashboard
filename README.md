@@ -37,6 +37,7 @@ define the content types and conventions.
 4. To turn a file in `raw/` into wiki pages, ask for a capture
    (`_system/workflows/capture.md`).
 
+Every step to install, start and update each of the three: [`docs/INSTALL.md`](docs/INSTALL.md).
 For the full walkthrough, see [`docs/GETTING-STARTED.md`](docs/GETTING-STARTED.md).
 What changed in the method: [`CHANGELOG.md`](CHANGELOG.md).
 
