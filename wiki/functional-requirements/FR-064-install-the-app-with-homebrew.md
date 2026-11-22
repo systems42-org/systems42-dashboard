@@ -6,7 +6,7 @@ status: draft
 created: 2026-11-22
 updated: 2026-11-22
 sources: ["[[SRC-047-install-the-app-with-homebrew]]", "[[SRC-048-grilling-session-on-installing-with-homebrew]]"]
-related: ["[[STK-010-operators]]", "[[FR-030-numbered-releases]]", "[[FR-059-downloads-on-the-website]]", "[[BB-004-macos-native-app]]"]
+related: ["[[STK-010-operators]]", "[[FR-030-numbered-releases]]", "[[FR-059-downloads-on-the-website]]", "[[BB-004-macos-menu-bar-app]]"]
 tags: ["functional-requirement", "product"]
 notation: agile
 level: story

@@ -104,6 +104,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-062-the-website-is-built-and-published-from-the-repository]] The website is built and published from the repository (feature, Should, draft)
 - [[FR-063-manage-development-with-make]] Manage development with make (feature, Should, draft)
 - [[FR-064-install-the-app-with-homebrew]] Install the app with Homebrew (story, Could, draft)
+- [[FR-065-a-mac-native-dashboard-app]] A Mac-native dashboard app (feature, Should, draft)
 
 ## Quality requirements
 
@@ -120,7 +121,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]] The dashboard shows the metamodel, it does not define it (draft)
 - [[CON-005-the-dashboard-works-on-systems42-derivatives-only]] The dashboard works on Systems42 derivatives only (draft)
 - [[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]] The dashboard depends on the metamodel, never the reverse (draft)
-- [[CON-007-the-python-dashboard-is-the-reference-for-the-app]] The Python dashboard is the reference for the app (draft)
+- [[CON-007-the-python-dashboard-is-the-reference-for-the-other-implementations]] The Python dashboard is the reference for the other implementations (draft)
 
 ## Solution strategy
 
@@ -134,9 +135,10 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[BB-001-python-dashboard]] Python dashboard (level 1, current, draft)
 - [[BB-002-uv-cli-and-package-wrapper]] uv CLI and package wrapper (level 1, current, draft)
 - [[BB-003-go-dashboard]] Go dashboard (level 1, current, draft)
-- [[BB-004-macos-native-app]] macOS native app (level 1, current, draft)
+- [[BB-004-macos-menu-bar-app]] macOS menu-bar app (level 1, current, draft)
 - [[BB-005-wiki-launcher-and-make-facade]] Wiki launcher and Make facade (level 1, current, draft)
 - [[BB-006-public-website-builder]] Public website builder (level 1, current, draft)
+- [[BB-007-mac-native-dashboard-app]] Mac-native dashboard app (level 1, planned, draft)
 
 ## Crosscutting concepts
 
@@ -150,7 +152,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[DR-004-releases-are-container-images-pinned-per-wiki]] Releases are container images, pinned per wiki (accepted)
 - [[DR-005-the-dashboard-lives-in-its-own-repository]] The dashboard lives in its own repository, with its requirements and its code (review)
 - [[DR-006-interactive-diagrams-are-projected-on-the-server-and-laid-out-in-the-browser]] Interactive diagrams are projected on the server and laid out in the browser (draft)
-- [[DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go]] The dashboard gets a uv start and a second implementation in Go (draft)
+- [[DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go]] The dashboard gets a uv start and implementations in Go and Swift (draft)
 - [[DR-008-public-website-is-built-by-a-custom-python-script-for-github-pages]] The public website is built by a custom Python script for GitHub Pages (draft)
 - [[DR-009-pages-are-rendered-on-the-server-from-html-templates]] Pages are rendered on the server from HTML templates (draft)
 
@@ -215,3 +217,4 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-046-grilling-session-on-modularizing-the-solution-strategy]] Grilling session on modularizing the solution strategy (interview)
 - [[SRC-047-install-the-app-with-homebrew]] Install the app with Homebrew (document)
 - [[SRC-048-grilling-session-on-installing-with-homebrew]] Grilling session on installing with Homebrew (interview)
+- [[SRC-049-grilling-session-on-the-mac-native-app]] Grilling session on the Mac-native app (interview)

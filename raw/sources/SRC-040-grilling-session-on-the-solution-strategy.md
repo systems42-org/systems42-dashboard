@@ -10,7 +10,7 @@ source-type: interview
 origin: "Gernot Starke, chat session of 2026-11-22 (six questions)"
 captured: 2026-11-22
 sha256: n/a (no file, the answers were given in chat)
-ingested-pages: ["[[SOL-001-systems42-dashboard]]", "[[QR-004-the-wikis-content-stays-on-the-machine]]", "[[CON-007-the-python-dashboard-is-the-reference-for-the-app]]", "[[CC-001-tests-of-the-python-dashboard-are-plain-scripts]]", "[[CON-003-docker-is-the-supported-way-to-run-it]]", "[[CON-001-proof-of-concept-not-production-ready]]", "[[STK-020-data-protection-and-security-officers]]", "[[FR-055-an-installable-dashboard-app]]", "[[DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go]]"]
+ingested-pages: ["[[SOL-001-systems42-dashboard]]", "[[QR-004-the-wikis-content-stays-on-the-machine]]", "[[CON-007-the-python-dashboard-is-the-reference-for-the-other-implementations]]", "[[CC-001-tests-of-the-python-dashboard-are-plain-scripts]]", "[[CON-003-docker-is-the-supported-way-to-run-it]]", "[[CON-001-proof-of-concept-not-production-ready]]", "[[STK-020-data-protection-and-security-officers]]", "[[FR-055-an-installable-dashboard-app]]", "[[DR-007-the-dashboard-gets-a-uv-start-and-a-second-implementation-in-go]]"]
 ---
 
 # Grilling session on the solution strategy

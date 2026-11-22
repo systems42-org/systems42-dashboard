@@ -10,7 +10,7 @@ source-type: interview
 origin: "Gernot Starke, chat session of 2026-11-22 (two questions and a closing round)"
 captured: 2026-11-22
 sha256: n/a (no file, the answers were given in chat)
-ingested-pages: ["[[FR-064-install-the-app-with-homebrew]]", "[[BB-004-macos-native-app]]"]
+ingested-pages: ["[[FR-064-install-the-app-with-homebrew]]", "[[BB-004-macos-menu-bar-app]]"]
 ---
 
 # Grilling session on installing with Homebrew
