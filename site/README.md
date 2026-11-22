@@ -14,6 +14,8 @@ The site has its own build, `site/build.py`. It is a Python script, and it uses 
 
 The result is the folder `site/_site/`. The `site` workflow (`.github/workflows/site.yml`) runs the same `make site` and hands that folder to GitHub Pages as it is. GitHub does no build of its own.
 
+The workflow publishes the site on every push to `main` and once more after every release, when the downloads of the new release exist. On a pull request it builds the site and runs the checks, without publishing.
+
 To put a new guide on the site, add its Markdown file to `docs/`, add one `write_page(...)` call in `build_site()` and link it from `site/templates/docs.html`.
 
 ## Build and preview locally
