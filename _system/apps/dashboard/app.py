@@ -3436,7 +3436,7 @@ def glossary_graph_view():
     named_keys = {k for k, _ in NAMED}
     named_layers = [{"key": k, "label": l, "count": counts[k]}
                     for k, l in NAMED if counts.get(k)]
-    rest_keys = [k for k in counts if k not in named_keys]
+    rest_keys = sorted(k for k in counts if k not in named_keys)
     rest = {"types": rest_keys, "count": sum(counts[k] for k in rest_keys)}
     n_glo = sum(1 for n in graph["nodes"] if n["data"].get("type") == "DT")
     # every node as a text link under the canvas (QR-001): terms, then the
