@@ -8,6 +8,6 @@ public enum FolderChooser {
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
         panel.prompt = "Open"
-        return panel.runModal() == .OK ? panel.url : nil
+        return panel.runModal() == .OK ? panel.url.map(WikiFolders.standardized) : nil
     }
 }

@@ -21,8 +21,9 @@ public struct WelcomeView: View {
             if !recent.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Recent").font(.headline)
-                    ForEach(recent, id: \.self) { url in
-                        Button(url.lastPathComponent) { open(url) }.buttonStyle(.link).help(url.path)
+                    let labels = WikiFolders.labels(for: recent)
+                    ForEach(Array(recent.enumerated()), id: \.offset) { index, url in
+                        Button(labels[index]) { open(url) }.buttonStyle(.link).help(url.path)
                     }
                 }
             }
@@ -30,9 +31,9 @@ public struct WelcomeView: View {
         .padding(32)
         .frame(minWidth: 420, minHeight: 320)
         .dropDestination(for: URL.self) { urls, _ in
-            guard let folder = urls.first(where: \.hasDirectoryPath) else { return false }
-            open(folder)
-            return true
+            let folders = WikiFolders.fromOpened(urls)
+            folders.forEach(open)
+            return !folders.isEmpty
         }
     }
 }

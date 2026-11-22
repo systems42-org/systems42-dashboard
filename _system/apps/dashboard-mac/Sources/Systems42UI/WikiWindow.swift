@@ -24,7 +24,7 @@ public struct WikiWindow: View {
         .navigationSubtitle(session.subtitle ?? "")
         .onAppear {
             if session.selectedSection == nil, session.metamodel.sections.contains(where: { $0.id == storedSection }) {
-                session.selectedSection = storedSection
+                session.select(section: storedSection)
             }
         }
         .onChange(of: session.selectedSection) { _, id in storedSection = id ?? "" }

@@ -12,6 +12,8 @@ public struct MMField: Sendable {
 /// A content type as its page in `_system/metamodel/types/` declares it.
 public struct MMType: Sendable {
     public let name, prefix, folder, label, block, summary: String
+    /// The name of the lifecycle the type's `status` follows, "" when the page names none.
+    public let lifecycle: String
     public let fields: [MMField]
     public let anchors, projections, stereotypes: [String]
     public let body: String
@@ -39,6 +41,8 @@ public struct Metamodel: Sendable {
     public let relations, projections, rules: [MMConstruct]
     public let anchors: [Anchor]
     public let sections: [Section]
+    /// Lifecycle name to its statuses in order, from `meta-metamodel`.
+    public let lifecycles: [String: [String]]
     public let version: VersionState
 
     let relationRules: RelationRules
@@ -86,11 +90,20 @@ public struct Metamodel: Sendable {
             rules: pages(of: "rule").map { MMConstruct($0, construct: "rule") },
             anchors: anchors,
             sections: catalog.sections,
+            lifecycles: readLifecycles(pages(of: "meta-metamodel")),
             version: readVersion(root: url),
             relationRules: RelationRules(types: typePages, relations: pages(of: "relation")),
             typesByName: byName,
             anchorsByName: Anchor.index(anchors)
         )
+    }
+
+    /// The statuses, in order, of the lifecycle all types of the section follow.
+    /// Nil when the types differ, name none, or the lifecycle is not declared.
+    public func lifecycle(of section: Section) -> [String]? {
+        let names = Set(section.types.map { typesByName[$0]?.lifecycle ?? "" })
+        guard names.count == 1, let name = names.first else { return nil }
+        return lifecycles[name]
     }
 
     /// The type with this name or alias, such as `functional-requirement` or `FR`.
@@ -112,6 +125,18 @@ public struct Metamodel: Sendable {
     /// The anchor with this name, title or alias, ignoring case.
     public func anchor(_ nameOrAlias: String) -> Anchor? {
         anchorsByName[nameOrAlias.lowercased()]
+    }
+
+    private static func readLifecycles(_ pages: [MetaPage]) -> [String: [String]] {
+        var result: [String: [String]] = [:]
+        for page in pages {
+            guard case .mapping(let map)? = page.entry.node("lifecycles") else { continue }
+            for (key, value) in map {
+                guard let name = key.scalar?.string, result[name] == nil, case .sequence(let items) = value else { continue }
+                result[name] = items.compactMap { $0.scalar.map(Frontmatter.text)?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            }
+        }
+        return result
     }
 
     /// The version files, in the order they are looked at. The first one that exists decides.
@@ -144,6 +169,7 @@ extension MMType {
             label: entry.scalar("label") ?? "",
             block: entry.scalar("block") ?? "",
             summary: MetaText.summary(of: page.body),
+            lifecycle: entry.scalar("lifecycle") ?? "",
             fields: entry.entries("fields").compactMap(MMField.init),
             anchors: entry.strings("anchors"),
             projections: entry.strings("projections"),

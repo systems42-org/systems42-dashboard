@@ -101,6 +101,34 @@ private func row(_ session: WikiSession, folder: String) throws -> SidebarRow {
         #expect(Area.allCases.map(\.label) == ["Requirements", "Architecture", "Commons"])
     }
 
+    @Test func statusOrderFollowsTheMetamodelLifecycle() async throws {
+        let copy = try Fixture.tempCopy("basic")
+        let file = copy.appending(path: "_system/metamodel/meta-metamodel.md")
+        let text = try String(contentsOf: file, encoding: .utf8)
+        try text.replacingOccurrences(of: "content: [draft, review, accepted, deprecated]", with: "content: [accepted, draft]")
+            .write(to: file, atomically: true, encoding: .utf8)
+        let s = await WikiSession.open(try Preflight.open(copy))
+        #expect(try row(s, folder: "functional-requirements").byStatus.map(\.status) == ["accepted", "draft"])
+    }
+
+    @Test func unknownLifecycleKeepsTheOrderOfAppearance() async throws {
+        let copy = try Fixture.tempCopy("basic")
+        try FileManager.default.removeItem(at: copy.appending(path: "_system/metamodel/meta-metamodel.md"))
+        let s = await WikiSession.open(try Preflight.open(copy))
+        let r = try row(s, folder: "functional-requirements")
+        // FR-001 comes first in file order and is accepted.
+        #expect(r.byStatus.map(\.status).first == "accepted")
+        #expect(r.byStatus.count == 2)
+        #expect(!r.showsMaturity)
+    }
+
+    @Test func maturityBarOnlyForTheContentLifecycle() async throws {
+        let s = try await session("search")
+        #expect(try row(s, folder: "functional-requirements").showsMaturity)
+        #expect(try row(s, folder: "issues").showsMaturity == false)
+        #expect(try row(s, folder: "issues").byStatus.map(\.status) == ["open"])
+    }
+
     @Test func maturityShareIsAcceptedOverAll() async throws {
         let s = try await session("basic")
         #expect(try row(s, folder: "functional-requirements").agreedShare == 5.0 / 6.0)

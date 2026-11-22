@@ -21,7 +21,7 @@ struct LoadedWiki: Sendable {
             var issues = Set<String>()
             for folder in section.folders {
                 for page in store.pages(in: folder) {
-                    found.byStatus[page.status.lowercased(), default: 0] += 1
+                    found.add(status: page.status.lowercased())
                     issues.formUnion(store.openIssues(for: page.ref).map(\.id))
                 }
             }
@@ -32,13 +32,22 @@ struct LoadedWiki: Sendable {
         self.store = store
         self.metamodel = metamodel
         self.figures = figures
-        self.orientation = Self.vision(in: store)
+        self.orientation = Self.vision(in: store, metamodel: metamodel)
     }
 
-    /// The first page with `stereotype: vision`, with its first plain paragraph.
-    private static func vision(in store: WikiStore) -> Orientation? {
-        for folder in store.folders() {
-            for page in store.pages(in: folder) where page.fields["stereotype"] == .text("vision") {
+    /// The field that holds the stereotype of a page.
+    private static let stereotypeField = "stereotype"
+    /// The stereotype of the vision. The metamodel says "exactly one vision per wiki" in prose only.
+    private static let visionStereotype = "vision"
+
+    /// The first page with the vision stereotype, with its first plain paragraph.
+    /// Only types that list the stereotype are searched.
+    private static func vision(in store: WikiStore, metamodel: Metamodel) -> Orientation? {
+        func same(_ text: String) -> Bool { text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == visionStereotype }
+        for type in metamodel.types where type.stereotypes.contains(where: same) {
+            guard let folder = type.folder.split(separator: "/").last else { continue }
+            for page in store.pages(in: String(folder)) {
+                guard case .text(let value)? = page.fields[stereotypeField], same(value) else { continue }
                 let paragraph = page.body.components(separatedBy: "\n\n")
                     .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                     .first { !$0.isEmpty && !["#", ">", "-", "|", "<"].contains(String($0.first!)) } ?? ""
@@ -67,7 +76,9 @@ struct LoadedWiki: Sendable {
     private var history: [Place] = []
     private var position = -1
 
-    private struct Place {
+    private static let longestHistory = 100
+
+    private struct Place: Equatable {
         let section: WikiSection.ID?
         let page: PageRef?
     }
@@ -110,13 +121,16 @@ struct LoadedWiki: Sendable {
 
     private func row(_ section: WikiSection) -> SidebarRow {
         let all = figures[section.id] ?? SectionFigures()
-        let shown = agreedOnly ? all.byStatus.filter { $0.key == Lifecycle.agreed } : all.byStatus
+        let lifecycle = metamodel.lifecycle(of: section)
+        let ordered = all.ordered(by: lifecycle)
+        let shown = agreedOnly ? ordered.filter { $0.status == agreedStatus } : ordered
         return SidebarRow(
             section: section,
-            count: shown.values.reduce(0, +),
-            byStatus: Lifecycle.sorted(shown),
+            count: shown.reduce(0) { $0 + $1.count },
+            byStatus: shown,
             openIssues: all.openIssues,
-            agreedShare: all.count == 0 ? 0 : Double(all.agreed) / Double(all.count)
+            agreedShare: all.count == 0 ? 0 : Double(all.agreed) / Double(all.count),
+            showsMaturity: lifecycle?.contains(agreedStatus) == true
         )
     }
 
@@ -130,8 +144,13 @@ struct LoadedWiki: Sendable {
     public func showIssues(of section: WikiSection.ID) {
         guard let issues = metamodel.issueSection else { return }
         issueFilter = section
-        selectedSection = issues.id
-        selectedPage = nil
+        go(to: Place(section: issues.id, page: nil))
+    }
+
+    /// Shows a section with no page chosen, and records the place. The one way to change section.
+    public func select(section id: WikiSection.ID?) {
+        guard let id else { return }
+        go(to: Place(section: id, page: nil))
     }
 
     public func back() {
@@ -151,7 +170,9 @@ struct LoadedWiki: Sendable {
     }
 
     private func go(to place: Place) {
+        if position >= 0, history[position] == place { return }
         history = Array(history.prefix(position + 1)) + [place]
+        if history.count > Self.longestHistory { history.removeFirst(history.count - Self.longestHistory) }
         position = history.count - 1
         restore(place)
     }

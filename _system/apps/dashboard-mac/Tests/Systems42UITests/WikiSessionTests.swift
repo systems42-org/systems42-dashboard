@@ -68,6 +68,58 @@ private func session(_ fixture: String) async throws -> WikiSession {
         #expect(s.selectedPage == refs[0])
     }
 
+    @Test func selectingASectionClearsThePageAndIsInTheHistory() async throws {
+        let s = try await session("basic")
+        let page = existingRefs(s)[0]
+        s.open(.page(page))
+        let other = try #require(s.metamodel.sections.first { $0.folders.contains("domain-terms") })
+        s.select(section: other.id)
+        #expect(s.selectedSection == other.id)
+        #expect(s.selectedPage == nil)
+        s.back()
+        #expect(s.selectedSection == (try requirementsSection(s)).id)
+        #expect(s.selectedPage == page)
+        s.forward()
+        #expect(s.selectedSection == other.id)
+        #expect(s.selectedPage == nil)
+    }
+
+    @Test func selectingNothingOrTheSamePlaceAddsNoEntry() async throws {
+        let s = try await session("basic")
+        let a = try requirementsSection(s).id
+        s.select(section: nil)
+        #expect(s.selectedSection == nil)
+        s.select(section: a)
+        s.select(section: a)
+        s.open(.page(existingRefs(s)[0]))
+        s.open(.page(existingRefs(s)[0]))
+        s.back()
+        #expect(s.selectedSection == a && s.selectedPage == nil)
+        s.back()
+        #expect(s.selectedSection == a && s.selectedPage == nil)
+    }
+
+    @Test func historyKeepsTheLast100Places() async throws {
+        let s = try await session("basic")
+        let sections = s.metamodel.sections.map(\.id)
+        for i in 0..<150 { s.select(section: sections[i % sections.count]) }
+        var steps = 0
+        while steps < 99 { s.back(); steps += 1 }
+        #expect(steps == 99)
+        let oldest = s.selectedSection
+        s.back()
+        #expect(s.selectedSection == oldest)
+        #expect(oldest == sections[50 % sections.count])
+    }
+
+    @Test func metamodelAndSourceTargetsDoNothing() async throws {
+        let s = try await session("basic")
+        s.open(.metamodel("whatever"))
+        s.open(.source("SRC-001"))
+        s.open(.anchor("MADR"))
+        #expect(s.selectedSection == nil && s.selectedPage == nil)
+    }
+
     @Test func titleAndSubtitle() async throws {
         let copy = try Fixture.tempCopy("basic")
         try "system_name: Library\n".write(
@@ -99,6 +151,16 @@ private func session(_ fixture: String) async throws -> WikiSession {
         #expect(orientation.title == "A Library That Lends Effortlessly")
         #expect(orientation.text.hasPrefix("For library members"))
         #expect(!orientation.text.contains("\n"))
+    }
+
+    @Test func theVisionIsOnlySearchedInTypesThatListTheStereotype() async throws {
+        let copy = try Fixture.tempCopy("basic")
+        let file = copy.appending(path: "_system/metamodel/types/type-goal.md")
+        let text = try String(contentsOf: file, encoding: .utf8)
+        try text.replacingOccurrences(of: "stereotypes: [vision, objective]", with: "stereotypes: [objective]")
+            .write(to: file, atomically: true, encoding: .utf8)
+        let s = await WikiSession.open(try Preflight.open(copy))
+        #expect(s.orientation == nil)
     }
 
     @Test func readingLeavesTheWikiUnchanged() async throws {

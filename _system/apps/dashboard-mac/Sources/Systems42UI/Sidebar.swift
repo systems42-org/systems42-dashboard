@@ -6,14 +6,15 @@ struct Sidebar: View {
     @Bindable var session: WikiSession
 
     var body: some View {
-        List(selection: $session.selectedSection) {
+        // The rows are a `ForEach` over identifiable rows, so each row's id (a `String`) is its
+        // selection value and no `.tag` is needed. The binding is `String?`, as the list wants.
+        List(selection: Binding(get: { session.selectedSection }, set: { session.select(section: $0) })) {
             ForEach(session.sidebar) { group in
                 SwiftUI.Section {
                     ForEach(group.rows) { row in
                         SidebarRowView(row: row, color: group.area.color) {
                             session.showIssues(of: row.section.id)
                         }
-                        .tag(row.section.id)
                     }
                 } header: {
                     Text(group.area.label).font(.caption.smallCaps()).foregroundStyle(.secondary)
@@ -37,9 +38,9 @@ private struct SidebarRowView: View {
                 Spacer(minLength: 4)
                 Text("\(row.count)").foregroundStyle(.secondary).monospacedDigit()
             }
-            if row.count > 0 || row.openIssues > 0 {
+            if (row.showsMaturity && row.count > 0) || row.openIssues > 0 {
                 HStack(spacing: 6) {
-                    MaturityBar(share: row.agreedShare)
+                    if row.showsMaturity { MaturityBar(share: row.agreedShare) }
                     if row.openIssues > 0 {
                         Button(action: showIssues) {
                             Text("\(row.openIssues) open").font(.caption2)

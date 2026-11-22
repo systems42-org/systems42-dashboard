@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import Systems42Kit
+import Systems42UI
 
 /// The recent wikis, kept under Application Support and never inside a wiki.
 @MainActor @Observable final class RecentFolders {
@@ -10,11 +11,11 @@ import Systems42Kit
     init() {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         store = RecentWikis(storage: support.appending(path: "Systems42 Dashboard Native"))
-        urls = store.list()
+        urls = store.list().map(WikiFolders.standardized)
     }
 
     func note(_ url: URL) {
-        store.note(url)
-        urls = store.list()
+        store.note(WikiFolders.standardized(url))
+        urls = store.list().map(WikiFolders.standardized)
     }
 }

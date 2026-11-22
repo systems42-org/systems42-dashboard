@@ -23,11 +23,12 @@ public struct WikiWindowRoot: View {
             case .failed(let failure)?:
                 PreflightFailureView(failure: failure) {
                     guard let other = FolderChooser.choose() else { return }
-                    openWindow(value: other)
+                    openWindow.openWiki(other)
                     dismiss()
                 }
             }
         }
+        .opensDroppedFolders()
         .task {
             let loaded = await OpenedWiki.open(folder)
             if case .session = loaded { opened(folder) }
