@@ -12,7 +12,9 @@ trap 'rm -rf "$tmp"' EXIT
 
 (cd "$repo/_system/apps/dashboard" && go build -o "$tmp/systems42-dashboard" ./cmd/systems42-dashboard)
 
+python3 -I "$here/scripts/export_golden.py" "$tmp/systems42-dashboard" "$here/Tests/Fixtures" "$tmp/golden"
+# Replace the old files only now that every fixture exported.
 rm -rf "$here/Tests/Golden/"*/
-python3 -I "$here/scripts/export_golden.py" "$tmp/systems42-dashboard" "$here/Tests/Fixtures" "$here/Tests/Golden"
+mv "$tmp/golden/"* "$here/Tests/Golden/"
 find "$here/Tests/Golden" -name .DS_Store -delete
 echo "Golden data written to $here/Tests/Golden"

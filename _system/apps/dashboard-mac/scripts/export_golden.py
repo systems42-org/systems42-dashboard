@@ -103,14 +103,19 @@ def parse(html: str) -> Node:
 class Dashboard:
     def __init__(self, binary: str, wiki: Path) -> None:
         env = dict(os.environ, DASH_NO_SHUTDOWN="1")
+        self.wiki = wiki
         self.proc = subprocess.Popen(
             [binary, "--port", "0", "--host", "127.0.0.1", "--ready-json", str(wiki)],
             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, env=env,
         )
-        line = self.proc.stdout.readline()
-        if not line.startswith("READY "):
-            raise SystemExit(f"dashboard did not start on {wiki}: {line!r}")
-        self.base = json.loads(line[len("READY "):])["url"]
+        try:
+            line = self.proc.stdout.readline()
+            if not line.startswith("READY "):
+                raise SystemExit(f"dashboard did not start on {wiki}: {line!r}")
+            self.base = json.loads(line[len("READY "):])["url"]
+        except BaseException:
+            self.stop()
+            raise
 
     def get(self, path: str) -> str:
         with urllib.request.urlopen(self.base + path, timeout=30) as r:
@@ -120,8 +125,14 @@ class Dashboard:
         return parse(self.get(path))
 
     def stop(self) -> None:
+        if self.proc.poll() is not None:
+            return
         self.proc.send_signal(signal.SIGTERM)
-        self.proc.wait(timeout=10)
+        try:
+            self.proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            self.proc.kill()
+            self.proc.wait()
 
 
 # ------------------------------------------------------------------ output
@@ -155,10 +166,14 @@ def ids_in(section: Node) -> list[str]:
     return sorted({c.text() for c in section.find_all("code")})
 
 
-def extract_page(dash: Dashboard, url: str, type_label: str) -> tuple[dict, Node]:
+def extract_page(dash: Dashboard, url: str, type_label: str, status_label: str) -> tuple[dict, Node]:
     main = dash.tree(url)
     head = main.find(cls="detail-head")
-    status = head.find(cls="status") if head else None
+    if head is None or head.find(cls="detail-id") is None or main.find(cls="page-h1") is None:
+        raise SystemExit(f"{dash.wiki.name} {url}: detail head, id or title not found, the page structure changed")
+    status = head.find(cls="status")
+    if status is None and status_label:
+        raise SystemExit(f"{dash.wiki.name} {url}: status badge not found, search.json says {status_label!r}")
     links_to: list[str] = []
     linked_from: list[str] = []
     for block in main.find_all(cls="rel-block"):
@@ -508,7 +523,7 @@ def export_fixture(binary: str, fixture: Path, out: Path) -> None:
         search = json.loads(dash.get("/search.json"))
         dump(out / "search.json", search)
         index = page_index(search)
-        types_by_id = {r["id"]: r["type"] for r in search["records"]}
+        recs = {r["id"]: r for r in search["records"]}
 
         metamodel_root = dash.tree("/metamodel")
         metamodel = extract_metamodel(metamodel_root)
@@ -522,7 +537,7 @@ def export_fixture(binary: str, fixture: Path, out: Path) -> None:
 
         pages = {}
         for pid in sorted(index):
-            page, main = extract_page(dash, index[pid]["url"], types_by_id[pid])
+            page, main = extract_page(dash, index[pid]["url"], recs[pid]["type"], recs[pid].get("status", ""))
             if page["id"] != pid:
                 raise SystemExit(f"{index[pid]['url']} shows {page['id']}, search.json says {pid}")
             pages[pid] = page
@@ -531,6 +546,8 @@ def export_fixture(binary: str, fixture: Path, out: Path) -> None:
                 dump_text(out / "diagrams" / f"page-{pid}{'' if i == 0 else f'-{i + 1}'}.mmd", text)
             for key in sorted(data):
                 dump(out / "diagrams" / f"page-{pid}-{key.removesuffix('-data')}.json", json.loads(data[key]))
+        if not any(p["links_to"] or p["linked_from"] for p in pages.values()):
+            raise SystemExit(f"{fixture.name}: no page shows any link, the relations panel structure changed")
         dump(out / "pages.json", pages)
 
         for route, name in DIAGRAM_ROUTES:

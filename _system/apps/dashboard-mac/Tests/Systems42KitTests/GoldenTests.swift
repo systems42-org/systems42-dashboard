@@ -26,6 +26,14 @@ import Systems42TestSupport
         }
     }
 
+    @Test func goldenPagesPinOneLinkValue() throws {
+        let pages = try #require(Golden.json("basic", "pages.json") as? [String: [String: Any]])
+        let page = try #require(pages["DT-001"])
+        #expect(page["links_to"] as? [String] == ["DT-002", "DT-004"])
+        #expect(page["linked_from"] as? [String] == ["FR-003", "STK-002"])
+        #expect(page["status"] as? String == "accepted")
+    }
+
     @Test func goldenMetamodelHasSeventeenTypes() throws {
         let model = try #require(Golden.json("basic", "metamodel.json") as? [String: Any])
         let types = try #require(model["types"] as? [[String: Any]])
@@ -100,6 +108,9 @@ import Systems42TestSupport
             #expect(!text.contains("127.0.0.1"), "\(name)/\(file)")
             #expect(!text.contains("/Users/"), "\(name)/\(file)")
             #expect(!text.contains("nonce"), "\(name)/\(file)")
+            for marker in ["/private/", "/tmp/", "localhost"] {
+                #expect(!text.contains(marker), "\(name)/\(file) holds \(marker)")
+            }
         }
     }
 }

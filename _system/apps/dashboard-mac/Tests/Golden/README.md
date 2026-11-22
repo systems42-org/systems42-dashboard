@@ -36,8 +36,12 @@ Example `pages.json` entry:
 The dashboard offers HTML for most of this. The script parses it and reads:
 
 - `pages.json`: title from `h1.page-h1`, status from the status badge of
-  `.detail-head`, ids from the `<code>` of each `.rel-block` list item. The
-  type label comes from `search.json`, because a requirement page shows
+  `.detail-head`, ids from the `<code>` of each `.rel-block` list item.
+  `linked_from` leaves out the pages that `links_to` already shows, as the
+  dashboard does (a page that links both ways appears under "Links to" only).
+  The export fails when a page lacks its head or status badge, or when a
+  whole fixture shows no link.
+  The type label comes from `search.json`, because a requirement page shows
   its notation and level in that place.
 - `sections.json`: a tile is `.tile` with id `tile-<id>`. Its list page is the
   tile's link. A page belongs to the section whose folders hold its folder,
