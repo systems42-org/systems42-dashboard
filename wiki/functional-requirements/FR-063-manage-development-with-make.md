@@ -15,7 +15,7 @@ priority: Should
 release: unscheduled
 lane: backbone
 order: 63
-goal: []
+goal: ["[[GOAL-008-one-way-into-every-systems42-wiki]]"]
 ---
 
 # Manage development with make
@@ -47,4 +47,4 @@ As a [[STK-012-maintainers|maintainer]] I want **a short `make` target for each 
 
 ## History
 
-> Raised by Gernot Starke on 2026-11-21 ([[SRC-041-managing-development-with-make]]). One feature that does not restate each target, and four task areas instead of every command: questions 1 and 2 of [[SRC-042-grilling-session-on-development-with-make]]. The source does not name `app-bundle`, which the `Makefile` has.
+> Raised by Gernot Starke on 2026-11-21 ([[SRC-041-managing-development-with-make]]). One feature that does not restate each target, and four task areas instead of every command: questions 1 and 2 of [[SRC-042-grilling-session-on-development-with-make]]. Priority Should confirmed in the closing round. The source does not name `app-bundle`, which the `Makefile` has.

@@ -402,4 +402,4 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Created: [[FR-063-manage-development-with-make]], a feature under FR-029 for the maintainers.
 - Updated: [[FR-029-the-dashboard-as-a-product]] (children).
 - Decided by Gernot Starke: one feature that states the rules and names the targets per task area, without restating what each does. It covers four task areas (run, test and clean, website, releases), not every command of the launcher.
-- Claude's choices, to be checked: priority Should, no goal linked, `app-bundle` listed under releases although the source does not name it.
+- Closing round: Gernot Starke confirmed priority Should. Claude's choices, to be checked: the goal [[GOAL-008-one-way-into-every-systems42-wiki]], and `app-bundle` listed under releases although the source does not name it.
