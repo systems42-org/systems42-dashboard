@@ -548,6 +548,17 @@ def build_site(repo_dir: Path, demo_wiki: Path, out_dir: Path) -> None:
             body_html=render_markdown(prompt_path.read_text(encoding="utf-8")),
         )
 
+    go_summary_path = repo_dir / "docs" / "go-dashboard-requirements-summary.md"
+    if go_summary_path.is_file():
+        write_page(
+            "doc_page.html",
+            "docs/go-dashboard/index.html",
+            active_nav="docs",
+            doc_title="Go Dashboard: Requirements Summary",
+            doc_lead="Why the Go desktop app exists: Docker independence, OS portability and full route parity.",
+            body_html=render_markdown(go_summary_path.read_text(encoding="utf-8")),
+        )
+
     verify_output(out_dir)
     print(
         f"✓ Built dashboard.systems42.org into {out_dir} "

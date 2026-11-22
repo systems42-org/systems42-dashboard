@@ -1,8 +1,9 @@
 # Publishes a dashboard release (DR-004, FR-030, FR-054, FR-055, DR-007):
 # a git tag vX.Y.Z runs Python tests, Go tests and route parity checks, builds
 # the multi-arch container image (ghcr.io/systems42-org/dashboard:X.Y.Z), the
-# Python wheel for `./dashboard.sh uv`, and the universal macOS `.app`/`.dmg`,
-# then publishes all release assets on one GitHub release.
+# Python wheel for `./dashboard.sh uv`, standalone Go binaries for Linux and
+# Windows, and the universal branded macOS `.app`/`.dmg`, then publishes all
+# release assets on one GitHub release.
 name: release
 
 on:
@@ -99,6 +100,36 @@ jobs:
           name: wheel
           path: dist/*.whl
 
+  cli-binaries:
+    needs: check-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: _system/apps/dashboard/go.mod
+          cache-dependency-path: _system/apps/dashboard/go.sum
+
+      - name: Cross-compile static Linux and Windows binaries
+        env:
+          VERSION: ${{ needs.check-and-test.outputs.version }}
+        run: |
+          mkdir -p dist stage
+          for arch in amd64 arm64; do
+            (cd _system/apps/dashboard && CGO_ENABLED=0 GOOS=linux GOARCH="$arch" go build -trimpath -ldflags="-s -w" -o "$GITHUB_WORKSPACE/stage/systems42-dashboard" ./cmd/systems42-dashboard)
+            tar -C stage -czf "dist/systems42-dashboard-${VERSION}-linux-${arch}.tar.gz" systems42-dashboard
+            rm -f stage/systems42-dashboard
+          done
+          (cd _system/apps/dashboard && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o "$GITHUB_WORKSPACE/stage/systems42-dashboard.exe" ./cmd/systems42-dashboard)
+          (cd stage && zip -q "$GITHUB_WORKSPACE/dist/systems42-dashboard-${VERSION}-windows-amd64.zip" systems42-dashboard.exe)
+          (cd dist && sha256sum systems42-dashboard-* > "systems42-dashboard-${VERSION}-cli.sha256")
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cli-binaries
+          path: dist/*
+
   macos-app:
     needs: check-and-test
     runs-on: macos-15
@@ -150,7 +181,7 @@ jobs:
             dist/*.dmg.sha256
 
   publish:
-    needs: [check-and-test, image-and-wheel, macos-app]
+    needs: [check-and-test, image-and-wheel, cli-binaries, macos-app]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
