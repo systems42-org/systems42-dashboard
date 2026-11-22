@@ -5,11 +5,11 @@ title: Tests of the Python dashboard are plain scripts
 status: draft
 created: 2026-11-22
 updated: 2026-11-22
-sources: ["[[SRC-039-solution-strategy-of-the-dashboard]]", "[[SRC-040-grilling-session-on-the-solution-strategy]]"]
+sources: ["[[SRC-039-solution-strategy-of-the-dashboard]]", "[[SRC-040-grilling-session-on-the-solution-strategy]]", "[[SRC-044-building-blocks-of-the-systems42-dashboard]]", "[[SRC-045-grilling-session-on-context-and-building-blocks]]"]
 related: ["[[SOL-001-systems42-dashboard]]", "[[CON-003-docker-is-the-supported-way-to-run-it]]"]
 tags: [crosscutting-concept]
 category: development
-applies-to: []
+applies-to: ["[[BB-001-python-dashboard]]"]
 drivers: []
 decisions: []
 state: current

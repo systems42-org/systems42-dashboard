@@ -403,3 +403,10 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Updated: [[FR-029-the-dashboard-as-a-product]] (children).
 - Decided by Gernot Starke: one feature that states the rules and names the targets per task area, without restating what each does. It covers four task areas (run, test and clean, website, releases), not every command of the launcher.
 - Closing round: Gernot Starke confirmed priority Should. Claude's choices, to be checked: the goal [[GOAL-008-one-way-into-every-systems42-wiki]], and `app-bundle` listed under releases although the source does not name it.
+
+## [2026-11-22] capture | Context and Level 1 building blocks of the dashboard
+- Sources: [[SRC-043-context-of-the-systems42-dashboard]] (`raw/ingested/context.md`), [[SRC-044-building-blocks-of-the-systems42-dashboard]] (`raw/ingested/building-blocks.md`), [[SRC-045-grilling-session-on-context-and-building-blocks]].
+- Created: [[CTX-001-systems42-dashboard-context]], [[EIF-001-systems42-wiki]], [[BB-001-python-dashboard]], [[BB-002-uv-cli-and-package-wrapper]], [[BB-003-go-dashboard]], [[BB-004-macos-native-app]], [[BB-005-wiki-launcher-and-make-facade]], [[BB-006-public-website-builder]].
+- Updated: [[CC-001-tests-of-the-python-dashboard-are-plain-scripts]] (`applies-to` now names [[BB-001-python-dashboard]]), `_system/index.md`.
+- Decided by Gernot Starke in grilling: keep all three interacting user roles (Reader, Operator, Keyholder) on the context diagram. Model the macOS native app as `state: current` for the shipped AppKit menu-bar shell wrapping Go. Group `dashboard.sh` with the user-facing `Makefile` targets as one Level 1 block (repo-only development targets are already captured in [[FR-063-manage-development-with-make]]). Include the public website builder (`site/`) at Level 1.
+- Issues: none raised. Every question was answered in grilling.

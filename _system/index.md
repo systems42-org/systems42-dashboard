@@ -30,7 +30,11 @@ every capture (`_system/workflows/capture.md`, step 7).
 
 ## Context
 
+- [[CTX-001-systems42-dashboard-context]] Systems42 Dashboard Context (business, draft)
+
 ## External interfaces
+
+- [[EIF-001-systems42-wiki]] Systems42 wiki (inbound, draft)
 
 ## Activity models
 
@@ -121,6 +125,15 @@ every capture (`_system/workflows/capture.md`, step 7).
 
 - [[SOL-001-systems42-dashboard]] Systems42 Dashboard (current, draft)
 
+## Building blocks
+
+- [[BB-001-python-dashboard]] Python dashboard (level 1, current, draft)
+- [[BB-002-uv-cli-and-package-wrapper]] uv CLI and package wrapper (level 1, current, draft)
+- [[BB-003-go-dashboard]] Go dashboard (level 1, current, draft)
+- [[BB-004-macos-native-app]] macOS native app (level 1, current, draft)
+- [[BB-005-wiki-launcher-and-make-facade]] Wiki launcher and Make facade (level 1, current, draft)
+- [[BB-006-public-website-builder]] Public website builder (level 1, current, draft)
+
 ## Crosscutting concepts
 
 - [[CC-001-tests-of-the-python-dashboard-are-plain-scripts]] Tests of the Python dashboard are plain scripts (development, current, draft)
@@ -190,3 +203,6 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-040-grilling-session-on-the-solution-strategy]] Grilling session on the solution strategy (interview)
 - [[SRC-041-managing-development-with-make]] Managing development with make (document)
 - [[SRC-042-grilling-session-on-development-with-make]] Grilling session on development with make (interview)
+- [[SRC-043-context-of-the-systems42-dashboard]] Context of the Systems42 dashboard (document)
+- [[SRC-044-building-blocks-of-the-systems42-dashboard]] Building blocks of the Systems42 dashboard (document)
+- [[SRC-045-grilling-session-on-context-and-building-blocks]] Grilling session on context and building blocks (interview)
