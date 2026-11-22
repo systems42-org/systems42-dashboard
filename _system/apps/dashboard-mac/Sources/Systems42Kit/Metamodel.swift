@@ -11,7 +11,7 @@ public struct MMField: Sendable {
 
 /// A content type as its page in `_system/metamodel/types/` declares it.
 public struct MMType: Sendable {
-    public let name, prefix, folder, label, block, summary: String
+    public let name, prefix, folder, label, labelDe, block, summary: String
     /// The name of the lifecycle the type's `status` follows, "" when the page names none.
     public let lifecycle: String
     public let fields: [MMField]
@@ -23,6 +23,18 @@ public struct MMType: Sendable {
 public struct MMConstruct: Sendable {
     public let construct, name, summary, body: String
     public let frontmatter: [String: FieldValue]
+    /// The lists of mappings in the frontmatter, such as the `edges` of a relation, by field name.
+    /// Each mapping holds its scalar values as text. A value that is not a scalar is left out.
+    public let entries: [String: [[String: String]]]
+}
+
+/// One framework page of the metamodel: its name, area and the blocks it lists, in file order.
+public struct MMFramework: Sendable {
+    public struct Block: Sendable {
+        public let id, title: String
+    }
+    public let name, area: String
+    public let blocks: [Block]
 }
 
 /// What the wiki's metamodel declares about its own version.
@@ -38,6 +50,7 @@ public struct Metamodel: Sendable {
     public static let supportedVersions = ["0.1"]
 
     public let types: [MMType]
+    public let frameworks: [MMFramework]
     public let relations, projections, rules: [MMConstruct]
     public let anchors: [Anchor]
     public let sections: [Section]
@@ -87,6 +100,7 @@ public struct Metamodel: Sendable {
 
         return Metamodel(
             types: types,
+            frameworks: pages(of: "framework").map(MMFramework.init),
             relations: pages(of: "relation").map { MMConstruct($0, construct: "relation") },
             projections: pages(of: "projection").map { MMConstruct($0, construct: "projection") },
             rules: pages(of: "rule").map { MMConstruct($0, construct: "rule") },
@@ -175,6 +189,7 @@ extension MMType {
             prefix: entry.scalar("prefix") ?? "",
             folder: entry.scalar("folder") ?? "",
             label: entry.scalar("label") ?? "",
+            labelDe: entry.scalar("label_de") ?? "",
             block: entry.scalar("block") ?? "",
             summary: MetaText.summary(of: page.body),
             lifecycle: entry.scalar("lifecycle") ?? "",
@@ -208,7 +223,20 @@ extension MMConstruct {
             name: page.entry.scalar("name") ?? page.stem,
             summary: MetaText.summary(of: page.body),
             body: page.body,
-            frontmatter: page.fields
+            frontmatter: page.fields,
+            entries: page.entry.records
+        )
+    }
+}
+
+extension MMFramework {
+    init(_ page: MetaPage) {
+        self.init(
+            name: page.entry.scalar("name") ?? page.stem,
+            area: page.entry.scalar("area") ?? "",
+            blocks: page.entry.entries("blocks").compactMap { block in
+                block.scalar("id").map { MMFramework.Block(id: $0, title: block.scalar("title") ?? $0) }
+            }
         )
     }
 }

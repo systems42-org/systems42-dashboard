@@ -19,9 +19,20 @@ struct Reference: Equatable, Sendable {
     let name: String
 }
 
+/// One item of a list field that holds mappings, such as `flows`, `steps` or `connects`.
+/// An entry keeps the scalar values of its keys as text. A value that is a list gives its first
+/// scalar, and a mapping gives "".
+enum FieldItem: Equatable, Sendable {
+    case text(String)
+    case entry([String: String])
+    case other
+}
+
 /// What `Frontmatter.read` found in the YAML block of a page.
 struct FrontmatterFields {
     var fields: [String: FieldValue] = [:]
+    /// The items of each top-level list, and a top-level mapping as one entry.
+    var items: [String: [FieldItem]] = [:]
     /// Wikilinks inside a scalar, at any depth, per top-level field.
     var links: [String: [Wikilink]] = [:]
     /// Page names a field refers to as the dashboard's trace panel reads them:
@@ -110,10 +121,44 @@ enum Frontmatter {
             let references = reader.references(of: value)
             if !references.isEmpty { result.references[name] = references }
             budget = reader.budget
+            if let list = items(of: value) { result.items[name] = list }
             if reader.exhausted {
                 result.problems.append("the frontmatter is too large: \(name) and later fields are cut off")
                 break
             }
+        }
+        return result
+    }
+
+    /// The items of a list node, a mapping node as one entry, nil for a scalar.
+    private static func items(of node: Node) -> [FieldItem]? {
+        switch node {
+        case .sequence(let sequence):
+            return sequence.prefix(Entry.mostItems).map { item in
+                switch item {
+                case .scalar(let scalar): return .text(text(scalar))
+                case .mapping(let mapping): return .entry(entry(of: mapping))
+                default: return .other
+                }
+            }
+        case .mapping(let mapping):
+            return [.entry(entry(of: mapping))]
+        default:
+            return nil
+        }
+    }
+
+    private static func entry(of mapping: Node.Mapping) -> [String: String] {
+        var result: [String: String] = [:]
+        for (key, value) in mapping {
+            guard let name = key.scalar?.string else { continue }
+            var node = value
+            var depth = 0
+            while case .sequence(let sequence) = node, let first = sequence.first, depth < deepest {
+                node = first
+                depth += 1
+            }
+            if let scalar = node.scalar { result[name] = text(scalar) } else { result[name] = "" }
         }
         return result
     }

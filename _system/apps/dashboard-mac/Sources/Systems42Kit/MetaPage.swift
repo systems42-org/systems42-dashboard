@@ -36,6 +36,25 @@ struct Entry {
         }
     }
 
+    /// Every top-level list of mappings, by key, each mapping as its scalar values in text.
+    var records: [String: [[String: String]]] {
+        var result: [String: [[String: String]]] = [:]
+        for (key, value) in mapping {
+            guard let name = key.scalar?.string, case .sequence(let items) = value else { continue }
+            let list: [[String: String]] = items.prefix(Self.mostItems).compactMap { item in
+                guard case .mapping(let map) = item else { return nil }
+                var record: [String: String] = [:]
+                for (field, node) in map {
+                    guard let fieldName = field.scalar?.string, let scalar = node.scalar else { continue }
+                    record[fieldName] = Frontmatter.text(scalar).trimmingCharacters(in: .whitespacesAndNewlines)
+                }
+                return record
+            }
+            if !list.isEmpty { result[name] = list }
+        }
+        return result
+    }
+
     /// The mappings of a list. Items that are not mappings are left out.
     func entries(_ key: String) -> [Entry] {
         guard case .sequence(let items)? = node(key) else { return [] }
