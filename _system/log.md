@@ -418,3 +418,10 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Created decision records (`kind: architecture`, `status: draft`): [[DR-008-public-website-is-built-by-a-custom-python-script-for-github-pages]], [[DR-009-pages-are-rendered-on-the-server-from-html-templates]] (recorded as a normal DR rather than a strategy pillar because upcoming implementations may change UI rendering).
 - Kept in existing decision record only: repository separation from Systems42 stays in [[DR-005-the-dashboard-lives-in-its-own-repository]] and [[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]], removed from solution strategy.
 - Updated: links from BB-001 to BB-006, CON-003, CON-007, CC-001, QR-004 and `_system/index.md`. Older provenance records (SRC-039, SRC-040) and older log entries keep their historical reference to SOL-001.
+
+## [2026-11-22] capture | Install the app with Homebrew
+- Sources: [[SRC-047-install-the-app-with-homebrew]] (`raw/ingested/install-the-app-with-homebrew.md`), [[SRC-048-grilling-session-on-installing-with-homebrew]].
+- Created: [[FR-064-install-the-app-with-homebrew]], a story under FR-055 for the operators.
+- Updated: [[FR-055-an-installable-dashboard-app]] (children), `_system/index.md`.
+- Decided by Gernot Starke: the requirement is met when Homebrew installs, updates and removes the app. Opening without a security warning of macOS is out of scope and stays an open point. Priority Could.
+- Claude's choices, to be checked: a story under FR-055, the goal [[GOAL-008-one-way-into-every-systems42-wiki]].

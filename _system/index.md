@@ -103,6 +103,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-061-legal-and-project-information-on-the-website]] Legal and project information on the website (feature, Must, draft)
 - [[FR-062-the-website-is-built-and-published-from-the-repository]] The website is built and published from the repository (feature, Should, draft)
 - [[FR-063-manage-development-with-make]] Manage development with make (feature, Should, draft)
+- [[FR-064-install-the-app-with-homebrew]] Install the app with Homebrew (story, Could, draft)
 
 ## Quality requirements
 
@@ -212,3 +213,5 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-044-building-blocks-of-the-systems42-dashboard]] Building blocks of the Systems42 dashboard (document)
 - [[SRC-045-grilling-session-on-context-and-building-blocks]] Grilling session on context and building blocks (interview)
 - [[SRC-046-grilling-session-on-modularizing-the-solution-strategy]] Grilling session on modularizing the solution strategy (interview)
+- [[SRC-047-install-the-app-with-homebrew]] Install the app with Homebrew (document)
+- [[SRC-048-grilling-session-on-installing-with-homebrew]] Grilling session on installing with Homebrew (interview)
