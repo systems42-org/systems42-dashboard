@@ -1,0 +1,68 @@
+{
+  "edges": [
+    {
+      "data": {
+        "cross": false,
+        "id": "e0",
+        "kind": "related",
+        "source": "DT-002-order",
+        "target": "DT-004-review-policy"
+      }
+    }
+  ],
+  "layer_counts": {},
+  "nodes": [
+    {
+      "data": {
+        "aliases": "",
+        "assumption": false,
+        "core": true,
+        "degree": 0,
+        "id": "DT-001-customer",
+        "label": "Customer",
+        "state": "draft",
+        "type": "DT",
+        "url": "/page/domain-terms/DT-001-customer"
+      }
+    },
+    {
+      "data": {
+        "aliases": "",
+        "assumption": false,
+        "core": true,
+        "degree": 1,
+        "id": "DT-002-order",
+        "label": "Order",
+        "state": "draft",
+        "type": "DT",
+        "url": "/page/domain-terms/DT-002-order"
+      }
+    },
+    {
+      "data": {
+        "aliases": "",
+        "assumption": false,
+        "core": true,
+        "degree": 0,
+        "id": "DT-003-order-line",
+        "label": "Order line",
+        "state": "draft",
+        "type": "DT",
+        "url": "/page/domain-terms/DT-003-order-line"
+      }
+    },
+    {
+      "data": {
+        "aliases": "",
+        "assumption": false,
+        "core": true,
+        "degree": 1,
+        "id": "DT-004-review-policy",
+        "label": "Review policy",
+        "state": "draft",
+        "type": "DT",
+        "url": "/page/domain-terms/DT-004-review-policy"
+      }
+    }
+  ]
+}

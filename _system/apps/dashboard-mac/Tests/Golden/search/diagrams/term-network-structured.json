@@ -1,0 +1,45 @@
+{
+  "edges": [],
+  "layer_counts": {},
+  "nodes": [
+    {
+      "data": {
+        "aliases": "Moderator",
+        "assumption": false,
+        "core": true,
+        "degree": 0,
+        "id": "DT-001-facilitator",
+        "label": "Facilitator",
+        "state": "draft",
+        "type": "DT",
+        "url": "/page/domain-terms/DT-001-facilitator"
+      }
+    },
+    {
+      "data": {
+        "aliases": "",
+        "assumption": false,
+        "core": true,
+        "degree": 0,
+        "id": "DT-002-navigation",
+        "label": "Navigation",
+        "state": "draft",
+        "type": "DT",
+        "url": "/page/domain-terms/DT-002-navigation"
+      }
+    },
+    {
+      "data": {
+        "aliases": "DoD",
+        "assumption": false,
+        "core": true,
+        "degree": 0,
+        "id": "DT-003-definition-of-done",
+        "label": "Definition of Done",
+        "state": "draft",
+        "type": "DT",
+        "url": "/page/domain-terms/DT-003-definition-of-done"
+      }
+    }
+  ]
+}

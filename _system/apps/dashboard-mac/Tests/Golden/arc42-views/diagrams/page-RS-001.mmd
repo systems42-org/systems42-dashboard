@@ -1,0 +1,15 @@
+sequenceDiagram
+  actor L1 as Mitglied
+  participant L2 as BB-003 · Mitgliederkonsole
+  participant L3 as BB-004 · Kontodienst
+  participant L4 as Mailversand
+  participant L5 as BB-002 · Identität
+  participant L6 as BB-005 · Passwortspeicher
+  participant L7 as BB-999-ghost
+  L1->>L2: Passwort vergessen
+  L2->>L3: Reset anfordern
+  L3->>L4: Mail "Reset-Link"#59; senden
+  Note over L4: nach 5 Minuten ungültig
+  L5->>L3: Token prüfen
+  L2->>L6: Hash speichern
+  L3->>L7: Protokoll

@@ -1,0 +1,113 @@
+{
+  "records": [
+    {
+      "aliases": [],
+      "fields": {
+        "status": [
+          "draft"
+        ],
+        "stereotype": [
+          "entity"
+        ],
+        "tags": [
+          "domain-term",
+          "fixture"
+        ]
+      },
+      "id": "DT-001",
+      "links": [
+        "DT-002"
+      ],
+      "plain": "A person or organization that can place orders.\nA customer can exist before placing an order.\nThis definition belongs to the dashboard's illustrative test model.",
+      "status": "draft",
+      "title": "Customer",
+      "type": "Domain term",
+      "url": "/page/domain-terms/DT-001-customer"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "status": [
+          "draft"
+        ],
+        "stereotype": [
+          "entity"
+        ],
+        "tags": [
+          "domain-term",
+          "fixture"
+        ]
+      },
+      "id": "DT-002",
+      "links": [
+        "DT-001",
+        "DT-003",
+        "DT-004"
+      ],
+      "plain": "A customer's request to purchase one or more products.\nEach order contains at least one order line. Its lines belong to that order and share its lifecycle.\nThis definition belongs to the dashboard's illustrative test model.",
+      "status": "draft",
+      "title": "Order",
+      "type": "Domain term",
+      "url": "/page/domain-terms/DT-002-order"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "status": [
+          "draft"
+        ],
+        "stereotype": [
+          "entity"
+        ],
+        "tags": [
+          "domain-term",
+          "fixture"
+        ]
+      },
+      "id": "DT-003",
+      "links": [
+        "DT-002"
+      ],
+      "plain": "An identified item within an order that specifies a product and the quantity ordered.\nA line exists as part of its order.\nThis definition belongs to the dashboard's illustrative test model.",
+      "status": "draft",
+      "title": "Order line",
+      "type": "Domain term",
+      "url": "/page/domain-terms/DT-003-order-line"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "domain-term",
+          "fixture"
+        ]
+      },
+      "id": "DT-004",
+      "links": [
+        "DT-002"
+      ],
+      "plain": "The business rules used to decide whether an order needs human review.\nThis plain term links to Order in the terminology graph.\nThis definition belongs to the dashboard's illustrative test model.",
+      "status": "draft",
+      "title": "Review policy",
+      "type": "Domain term",
+      "url": "/page/domain-terms/DT-004-review-policy"
+    }
+  ],
+  "synonyms": [
+    [
+      "customer"
+    ],
+    [
+      "order"
+    ],
+    [
+      "order line"
+    ],
+    [
+      "review policy"
+    ]
+  ]
+}

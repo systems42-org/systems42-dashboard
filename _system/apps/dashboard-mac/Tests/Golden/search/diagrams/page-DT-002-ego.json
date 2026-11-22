@@ -1,0 +1,20 @@
+{
+  "edges": [],
+  "layer_counts": {},
+  "nodes": [
+    {
+      "data": {
+        "aliases": "",
+        "assumption": false,
+        "core": true,
+        "degree": 0,
+        "focus": true,
+        "id": "DT-002-navigation",
+        "label": "Navigation",
+        "state": "draft",
+        "type": "DT",
+        "url": "/page/domain-terms/DT-002-navigation"
+      }
+    }
+  ]
+}

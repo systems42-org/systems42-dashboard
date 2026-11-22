@@ -1,0 +1,9 @@
+flowchart TB
+  subgraph DN006["DN-006 · Schleife A · target"]
+    DN007["DN-007 · Schleife B · outdated"]:::infra
+  end
+  style DN006 stroke-dasharray:5 4
+  style DN007 fill:#eceef2,stroke:#9aa3b2,color:#6b7280
+  classDef infra fill:#e3ecf7,stroke:#2f6fb3,color:#15202e;
+  classDef block fill:#2f6fb3,stroke:#7fc0ff,color:#ffffff;
+  classDef system fill:#d7dbe3,stroke:#9aa3b2,color:#15202e;

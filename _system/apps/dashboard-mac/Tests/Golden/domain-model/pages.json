@@ -1,0 +1,45 @@
+{
+  "DT-001": {
+    "id": "DT-001",
+    "linked_from": [],
+    "links_to": [
+      "DT-002"
+    ],
+    "status": "draft",
+    "title": "Customer",
+    "type": "Domain term"
+  },
+  "DT-002": {
+    "id": "DT-002",
+    "linked_from": [
+      "DT-001"
+    ],
+    "links_to": [
+      "DT-003",
+      "DT-004"
+    ],
+    "status": "draft",
+    "title": "Order",
+    "type": "Domain term"
+  },
+  "DT-003": {
+    "id": "DT-003",
+    "linked_from": [
+      "DT-002"
+    ],
+    "links_to": [],
+    "status": "draft",
+    "title": "Order line",
+    "type": "Domain term"
+  },
+  "DT-004": {
+    "id": "DT-004",
+    "linked_from": [],
+    "links_to": [
+      "DT-002"
+    ],
+    "status": "draft",
+    "title": "Review policy",
+    "type": "Domain term"
+  }
+}

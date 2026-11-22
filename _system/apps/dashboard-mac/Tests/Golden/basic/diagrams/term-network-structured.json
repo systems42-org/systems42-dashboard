@@ -1,0 +1,58 @@
+{
+  "edges": [],
+  "layer_counts": {},
+  "nodes": [
+    {
+      "data": {
+        "aliases": "",
+        "assumption": false,
+        "core": true,
+        "degree": 0,
+        "id": "DT-001-book",
+        "label": "Book",
+        "state": "agreed",
+        "type": "DT",
+        "url": "/page/domain-terms/DT-001-book"
+      }
+    },
+    {
+      "data": {
+        "aliases": "Checkout",
+        "assumption": false,
+        "core": true,
+        "degree": 0,
+        "id": "DT-002-loan",
+        "label": "Loan",
+        "state": "agreed",
+        "type": "DT",
+        "url": "/page/domain-terms/DT-002-loan"
+      }
+    },
+    {
+      "data": {
+        "aliases": "Borrower",
+        "assumption": false,
+        "core": true,
+        "degree": 0,
+        "id": "DT-003-member",
+        "label": "Member",
+        "state": "agreed",
+        "type": "DT",
+        "url": "/page/domain-terms/DT-003-member"
+      }
+    },
+    {
+      "data": {
+        "aliases": "",
+        "assumption": false,
+        "core": true,
+        "degree": 0,
+        "id": "DT-004-shelf",
+        "label": "Shelf",
+        "state": "draft",
+        "type": "DT",
+        "url": "/page/domain-terms/DT-004-shelf"
+      }
+    }
+  ]
+}

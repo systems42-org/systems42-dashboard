@@ -1,0 +1,299 @@
+{
+  "records": [
+    {
+      "aliases": [],
+      "fields": {
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "building-block"
+        ]
+      },
+      "id": "BB-001",
+      "links": [
+        "BB-002",
+        "BB-003",
+        "DR-001",
+        "DT-001",
+        "FR-001",
+        "QR-001",
+        "UC-001"
+      ],
+      "plain": "Nimmt Buchungen an.",
+      "status": "draft",
+      "title": "Buchung",
+      "type": "Building block",
+      "url": "/page/building-blocks/BB-001-booking"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "building-block"
+        ]
+      },
+      "id": "BB-002",
+      "links": [
+        "BB-001",
+        "BB-003",
+        "EIF-001"
+      ],
+      "plain": "",
+      "status": "draft",
+      "title": "Katalog",
+      "type": "Building block",
+      "url": "/page/building-blocks/BB-002-catalog"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "building-block"
+        ]
+      },
+      "id": "BB-003",
+      "links": [
+        "BB-001",
+        "BB-002",
+        "BB-004"
+      ],
+      "plain": "",
+      "status": "draft",
+      "title": "Buchungsoberfläche",
+      "type": "Building block",
+      "url": "/page/building-blocks/BB-003-booking-ui"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "building-block"
+        ]
+      },
+      "id": "BB-004",
+      "links": [
+        "BB-003",
+        "EIF-001"
+      ],
+      "plain": "",
+      "status": "draft",
+      "title": "Buchungskern",
+      "type": "Building block",
+      "url": "/page/building-blocks/BB-004-booking-core"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "building-block"
+        ]
+      },
+      "id": "BB-005",
+      "links": [
+        "BB-006"
+      ],
+      "plain": "",
+      "status": "draft",
+      "title": "Schleife A",
+      "type": "Building block",
+      "url": "/page/building-blocks/BB-005-loop-a"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "building-block"
+        ]
+      },
+      "id": "BB-006",
+      "links": [
+        "BB-005"
+      ],
+      "plain": "",
+      "status": "draft",
+      "title": "Schleife B",
+      "type": "Building block",
+      "url": "/page/building-blocks/BB-006-loop-b"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "building-block"
+        ]
+      },
+      "id": "BB-007-noid",
+      "links": [
+        "QR-001"
+      ],
+      "plain": "",
+      "status": "draft",
+      "title": "Ohne ID",
+      "type": "Building block",
+      "url": "/page/building-blocks/BB-007-noid"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "kind": [
+          "architecture"
+        ],
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "decision-record"
+        ]
+      },
+      "id": "DR-001",
+      "links": [
+        "BB-001",
+        "QR-001"
+      ],
+      "plain": "Wenige Betreiber.",
+      "status": "draft",
+      "title": "Modularer Monolith",
+      "type": "Decision record",
+      "url": "/page/decisions/DR-001-modular-monolith"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "domain-term"
+        ]
+      },
+      "id": "DT-001",
+      "links": [
+        "BB-001"
+      ],
+      "plain": "",
+      "status": "draft",
+      "title": "Buchung",
+      "type": "Domain term",
+      "url": "/page/domain-terms/DT-001-booking"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "external-interface"
+        ]
+      },
+      "id": "EIF-001",
+      "links": [
+        "BB-002",
+        "BB-004"
+      ],
+      "plain": "",
+      "status": "draft",
+      "title": "Zahlungsdienst",
+      "type": "External interface",
+      "url": "/page/external-interfaces/EIF-001-payment"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "level": [
+          "epic"
+        ],
+        "notation": [
+          "agile"
+        ],
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "functional-requirement"
+        ]
+      },
+      "id": "FR-001",
+      "links": [
+        "BB-001"
+      ],
+      "plain": "",
+      "status": "draft",
+      "title": "Suche",
+      "type": "Functional requirement",
+      "url": "/functional-requirements/FR-001-search"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "level": [
+          "kite"
+        ],
+        "notation": [
+          "use-case"
+        ],
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "functional-requirement"
+        ]
+      },
+      "id": "UC-001",
+      "links": [
+        "BB-001"
+      ],
+      "plain": "",
+      "status": "draft",
+      "title": "Kurs finden",
+      "type": "Functional requirement",
+      "url": "/functional-requirements/UC-001-find-course"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "quality-requirement"
+        ]
+      },
+      "id": "QR-001",
+      "links": [
+        "BB-001",
+        "BB-007-noid",
+        "DR-001"
+      ],
+      "plain": "",
+      "status": "draft",
+      "title": "Schnelle Suche",
+      "type": "Quality requirement",
+      "url": "/page/quality-requirements/QR-001-fast-search"
+    }
+  ],
+  "synonyms": [
+    [
+      "buchung"
+    ]
+  ]
+}

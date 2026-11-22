@@ -1,0 +1,43 @@
+{
+  "edges": [
+    {
+      "data": {
+        "cross": false,
+        "id": "e0",
+        "kind": "related",
+        "source": "DT-002-order",
+        "target": "DT-004-review-policy"
+      }
+    }
+  ],
+  "layer_counts": {},
+  "nodes": [
+    {
+      "data": {
+        "aliases": "",
+        "assumption": false,
+        "core": true,
+        "degree": 3,
+        "id": "DT-002-order",
+        "label": "Order",
+        "state": "draft",
+        "type": "DT",
+        "url": "/page/domain-terms/DT-002-order"
+      }
+    },
+    {
+      "data": {
+        "aliases": "",
+        "assumption": false,
+        "core": true,
+        "degree": 1,
+        "focus": true,
+        "id": "DT-004-review-policy",
+        "label": "Review policy",
+        "state": "draft",
+        "type": "DT",
+        "url": "/page/domain-terms/DT-004-review-policy"
+      }
+    }
+  ]
+}

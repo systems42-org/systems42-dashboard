@@ -1,0 +1,19 @@
+flowchart TB
+  subgraph DN001["DN-001 · iSAQB-Cloud (Hetzner)"]
+    subgraph DN002["DN-002 · App-Server (Ubuntu 24.04)"]
+      DN002_BB003["BB-003 · Mitgliederkonsole"]:::block
+      DN002_BB004["BB-004 · Kontodienst"]:::block
+    end
+    subgraph DN003["DN-003 · LDAP (OpenLDAP 2.6) · being replaced"]
+      DN003_BB005["BB-005 · Passwortspeicher"]:::block
+    end
+    DN008["DN-008 · Keycloak-Host · planned"]:::infra
+  end
+  EIF001["Mailversand"]:::system
+  DN001 -- "HTTPS" --> DN003
+  DN002 -- "LDAPS · nur lesend" --> DN003
+  DN002 -- "SMTP" --> EIF001
+  style DN008 stroke-dasharray:5 4
+  classDef infra fill:#e3ecf7,stroke:#2f6fb3,color:#15202e;
+  classDef block fill:#2f6fb3,stroke:#7fc0ff,color:#ffffff;
+  classDef system fill:#d7dbe3,stroke:#9aa3b2,color:#15202e;

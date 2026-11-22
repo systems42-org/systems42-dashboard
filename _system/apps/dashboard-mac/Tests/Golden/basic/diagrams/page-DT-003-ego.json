@@ -1,0 +1,64 @@
+{
+  "edges": [
+    {
+      "data": {
+        "cross": false,
+        "id": "e2",
+        "kind": "related",
+        "source": "DT-002-loan",
+        "target": "DT-003-member"
+      }
+    },
+    {
+      "data": {
+        "cross": true,
+        "id": "e3",
+        "kind": "related",
+        "ntype": "STK",
+        "source": "DT-003-member",
+        "target": "STK-001-librarian"
+      }
+    }
+  ],
+  "layer_counts": {
+    "STK": 1
+  },
+  "nodes": [
+    {
+      "data": {
+        "aliases": "Checkout",
+        "assumption": false,
+        "core": true,
+        "degree": 2,
+        "id": "DT-002-loan",
+        "label": "Loan",
+        "state": "agreed",
+        "type": "DT",
+        "url": "/page/domain-terms/DT-002-loan"
+      }
+    },
+    {
+      "data": {
+        "aliases": "Borrower",
+        "assumption": false,
+        "core": true,
+        "degree": 1,
+        "focus": true,
+        "id": "DT-003-member",
+        "label": "Member",
+        "state": "agreed",
+        "type": "DT",
+        "url": "/page/domain-terms/DT-003-member"
+      }
+    },
+    {
+      "data": {
+        "core": false,
+        "id": "STK-001-librarian",
+        "label": "Librarian",
+        "type": "STK",
+        "url": "/page/stakeholders/STK-001-librarian"
+      }
+    }
+  ]
+}

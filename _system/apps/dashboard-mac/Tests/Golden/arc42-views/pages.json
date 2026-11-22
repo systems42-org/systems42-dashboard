@@ -1,0 +1,364 @@
+{
+  "ACT-001": {
+    "id": "ACT-001",
+    "linked_from": [
+      "RS-001"
+    ],
+    "links_to": [],
+    "status": "draft",
+    "title": "Selbstbedienung",
+    "type": "Activity model"
+  },
+  "BB-001": {
+    "id": "BB-001",
+    "linked_from": [
+      "BB-003",
+      "BB-004",
+      "BB-006"
+    ],
+    "links_to": [
+      "BB-002"
+    ],
+    "status": "draft",
+    "title": "Mitgliederportal",
+    "type": "Building block"
+  },
+  "BB-002": {
+    "id": "BB-002",
+    "linked_from": [
+      "BB-001",
+      "BB-005",
+      "BB-006",
+      "RS-001",
+      "UC-001"
+    ],
+    "links_to": [],
+    "status": "draft",
+    "title": "Identität",
+    "type": "Building block"
+  },
+  "BB-003": {
+    "id": "BB-003",
+    "linked_from": [
+      "DN-002",
+      "RS-001",
+      "RS-003"
+    ],
+    "links_to": [
+      "BB-001",
+      "BB-004"
+    ],
+    "status": "draft",
+    "title": "Mitgliederkonsole",
+    "type": "Building block"
+  },
+  "BB-004": {
+    "id": "BB-004",
+    "linked_from": [
+      "BB-003",
+      "CC-001",
+      "DN-002",
+      "RS-001"
+    ],
+    "links_to": [
+      "BB-001",
+      "EIF-001"
+    ],
+    "status": "draft",
+    "title": "Kontodienst",
+    "type": "Building block"
+  },
+  "BB-005": {
+    "id": "BB-005",
+    "linked_from": [
+      "DN-003",
+      "RS-001"
+    ],
+    "links_to": [
+      "BB-002"
+    ],
+    "status": "draft",
+    "title": "Passwortspeicher",
+    "type": "Building block"
+  },
+  "BB-006": {
+    "id": "BB-006",
+    "linked_from": [
+      "BB-001"
+    ],
+    "links_to": [
+      "BB-002"
+    ],
+    "status": "draft",
+    "title": "Altportal",
+    "type": "Building block"
+  },
+  "CC-001": {
+    "id": "CC-001",
+    "linked_from": [
+      "BB-004",
+      "DN-002",
+      "DR-001",
+      "QR-001"
+    ],
+    "links_to": [],
+    "status": "draft",
+    "title": "Identität und Zugriff",
+    "type": "Crosscutting concept"
+  },
+  "CC-002": {
+    "id": "CC-002",
+    "linked_from": [],
+    "links_to": [],
+    "status": "draft",
+    "title": "Protokollierung",
+    "type": "Crosscutting concept"
+  },
+  "CC-003": {
+    "id": "CC-003",
+    "linked_from": [],
+    "links_to": [],
+    "status": "draft",
+    "title": "Sonstiges",
+    "type": "Crosscutting concept"
+  },
+  "DN-001": {
+    "id": "DN-001",
+    "linked_from": [
+      "DN-002",
+      "DN-003",
+      "DN-008"
+    ],
+    "links_to": [],
+    "status": "draft",
+    "title": "iSAQB-Cloud",
+    "type": "Deployment node"
+  },
+  "DN-002": {
+    "id": "DN-002",
+    "linked_from": [
+      "BB-003",
+      "BB-004",
+      "CC-001"
+    ],
+    "links_to": [
+      "DN-001",
+      "DN-003",
+      "DN-004",
+      "EIF-001"
+    ],
+    "status": "draft",
+    "title": "App-Server",
+    "type": "Deployment node"
+  },
+  "DN-003": {
+    "id": "DN-003",
+    "linked_from": [
+      "BB-005",
+      "DN-002",
+      "DN-004",
+      "QR-001"
+    ],
+    "links_to": [
+      "DN-001"
+    ],
+    "status": "draft",
+    "title": "LDAP",
+    "type": "Deployment node"
+  },
+  "DN-004": {
+    "id": "DN-004",
+    "linked_from": [
+      "DN-002",
+      "DN-003",
+      "DR-001"
+    ],
+    "links_to": [
+      "DN-005",
+      "DN-006"
+    ],
+    "status": "draft",
+    "title": "Keycloak",
+    "type": "Deployment node"
+  },
+  "DN-005": {
+    "id": "DN-005",
+    "linked_from": [
+      "DN-004",
+      "STK-001"
+    ],
+    "links_to": [],
+    "status": "draft",
+    "title": "Neue Plattform",
+    "type": "Deployment node"
+  },
+  "DN-006": {
+    "id": "DN-006",
+    "linked_from": [
+      "DN-004"
+    ],
+    "links_to": [
+      "DN-007"
+    ],
+    "status": "draft",
+    "title": "Schleife A",
+    "type": "Deployment node"
+  },
+  "DN-007": {
+    "id": "DN-007",
+    "linked_from": [],
+    "links_to": [
+      "DN-006"
+    ],
+    "status": "draft",
+    "title": "Schleife B",
+    "type": "Deployment node"
+  },
+  "DN-008": {
+    "id": "DN-008",
+    "linked_from": [],
+    "links_to": [
+      "DN-001"
+    ],
+    "status": "draft",
+    "title": "Keycloak-Host",
+    "type": "Deployment node"
+  },
+  "DR-001": {
+    "id": "DR-001",
+    "linked_from": [
+      "CC-001",
+      "DN-004",
+      "DR-002",
+      "SOL-002"
+    ],
+    "links_to": [],
+    "status": "draft",
+    "title": "Single Sign-on mit Keycloak",
+    "type": "Decision record"
+  },
+  "DR-002": {
+    "id": "DR-002",
+    "linked_from": [
+      "DR-001",
+      "SOL-001"
+    ],
+    "links_to": [],
+    "status": "deprecated",
+    "title": "Anmeldung direkt gegen LDAP",
+    "type": "Decision record"
+  },
+  "EIF-001": {
+    "id": "EIF-001",
+    "linked_from": [
+      "BB-004",
+      "DN-002",
+      "RS-001"
+    ],
+    "links_to": [],
+    "status": "draft",
+    "title": "Mailversand",
+    "type": "External interface"
+  },
+  "QR-001": {
+    "id": "QR-001",
+    "linked_from": [
+      "CC-001",
+      "DN-003",
+      "SOL-001",
+      "SOL-002"
+    ],
+    "links_to": [],
+    "status": "draft",
+    "title": "Sichere Anmeldung",
+    "type": "Quality requirement"
+  },
+  "RS-001": {
+    "id": "RS-001",
+    "linked_from": [
+      "ACT-001",
+      "RS-002",
+      "UC-001"
+    ],
+    "links_to": [
+      "BB-002",
+      "BB-003",
+      "BB-004",
+      "BB-005",
+      "EIF-001",
+      "STK-001"
+    ],
+    "status": "draft",
+    "title": "Zugangsdaten zurücksetzen (heute)",
+    "type": "Runtime scenario"
+  },
+  "RS-002": {
+    "id": "RS-002",
+    "linked_from": [
+      "RS-001",
+      "UC-001"
+    ],
+    "links_to": [],
+    "status": "draft",
+    "title": "Zugangsdaten zurücksetzen (Ziel)",
+    "type": "Runtime scenario"
+  },
+  "RS-003": {
+    "id": "RS-003",
+    "linked_from": [],
+    "links_to": [
+      "BB-003"
+    ],
+    "status": "draft",
+    "title": "Randfälle",
+    "type": "Runtime scenario"
+  },
+  "SOL-001": {
+    "id": "SOL-001",
+    "linked_from": [
+      "DR-002",
+      "QR-001",
+      "SOL-002"
+    ],
+    "links_to": [],
+    "status": "draft",
+    "title": "Lösungsstrategie (heute)",
+    "type": "Solution strategy"
+  },
+  "SOL-002": {
+    "id": "SOL-002",
+    "linked_from": [
+      "DR-001",
+      "QR-001",
+      "SOL-001"
+    ],
+    "links_to": [],
+    "status": "draft",
+    "title": "Lösungsstrategie (Ziel)",
+    "type": "Solution strategy"
+  },
+  "STK-001": {
+    "id": "STK-001",
+    "linked_from": [
+      "DN-005",
+      "RS-001"
+    ],
+    "links_to": [],
+    "status": "draft",
+    "title": "Mitglied",
+    "type": "Stakeholder"
+  },
+  "UC-001": {
+    "id": "UC-001",
+    "linked_from": [
+      "RS-001",
+      "RS-002"
+    ],
+    "links_to": [
+      "BB-002"
+    ],
+    "status": "draft",
+    "title": "Zugangsdaten zurücksetzen",
+    "type": "Functional requirement"
+  }
+}

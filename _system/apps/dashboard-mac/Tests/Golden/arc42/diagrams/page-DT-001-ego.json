@@ -1,0 +1,42 @@
+{
+  "edges": [
+    {
+      "data": {
+        "cross": true,
+        "id": "e0",
+        "kind": "related",
+        "ntype": "BB",
+        "source": "DT-001-booking",
+        "target": "BB-001-booking"
+      }
+    }
+  ],
+  "layer_counts": {
+    "BB": 1
+  },
+  "nodes": [
+    {
+      "data": {
+        "core": false,
+        "id": "BB-001-booking",
+        "label": "Buchung",
+        "type": "BB",
+        "url": "/page/building-blocks/BB-001-booking"
+      }
+    },
+    {
+      "data": {
+        "aliases": "",
+        "assumption": false,
+        "core": true,
+        "degree": 0,
+        "focus": true,
+        "id": "DT-001-booking",
+        "label": "Buchung",
+        "state": "draft",
+        "type": "DT",
+        "url": "/page/domain-terms/DT-001-booking"
+      }
+    }
+  ]
+}

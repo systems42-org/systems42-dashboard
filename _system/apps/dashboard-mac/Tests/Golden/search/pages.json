@@ -1,0 +1,180 @@
+{
+  "DT-001": {
+    "id": "DT-001",
+    "linked_from": [
+      "STK-023"
+    ],
+    "links_to": [],
+    "status": "accepted",
+    "title": "Facilitator",
+    "type": "Domain term"
+  },
+  "DT-002": {
+    "id": "DT-002",
+    "linked_from": [],
+    "links_to": [],
+    "status": "draft",
+    "title": "Navigation",
+    "type": "Domain term"
+  },
+  "DT-003": {
+    "id": "DT-003",
+    "linked_from": [],
+    "links_to": [],
+    "status": "draft",
+    "title": "Definition of Done",
+    "type": "Domain term"
+  },
+  "FR-001": {
+    "id": "FR-001",
+    "linked_from": [
+      "STK-023"
+    ],
+    "links_to": [],
+    "status": "accepted",
+    "title": "Run a workshop",
+    "type": "Functional requirement"
+  },
+  "FR-002": {
+    "id": "FR-002",
+    "linked_from": [
+      "STK-023"
+    ],
+    "links_to": [],
+    "status": "draft",
+    "title": "Export the board",
+    "type": "Functional requirement"
+  },
+  "FR-003": {
+    "id": "FR-003",
+    "linked_from": [
+      "STK-023"
+    ],
+    "links_to": [],
+    "status": "draft",
+    "title": "Run the checks",
+    "type": "Functional requirement"
+  },
+  "FR-004": {
+    "id": "FR-004",
+    "linked_from": [
+      "STK-023"
+    ],
+    "links_to": [],
+    "status": "draft",
+    "title": "Main menu",
+    "type": "Functional requirement"
+  },
+  "FR-005": {
+    "id": "FR-005",
+    "linked_from": [],
+    "links_to": [],
+    "status": "draft",
+    "title": "Breadcrumbs",
+    "type": "Functional requirement"
+  },
+  "FR-006": {
+    "id": "FR-006",
+    "linked_from": [],
+    "links_to": [],
+    "status": "draft",
+    "title": "Text tools",
+    "type": "Functional requirement"
+  },
+  "FR-007": {
+    "id": "FR-007",
+    "linked_from": [],
+    "links_to": [],
+    "status": "draft",
+    "title": "Search the wiki",
+    "type": "Functional requirement"
+  },
+  "FR-008": {
+    "id": "FR-008",
+    "linked_from": [],
+    "links_to": [],
+    "status": "draft",
+    "title": "Wiki search tips",
+    "type": "Functional requirement"
+  },
+  "FR-009": {
+    "id": "FR-009",
+    "linked_from": [],
+    "links_to": [],
+    "status": "draft",
+    "title": "Reach",
+    "type": "Functional requirement"
+  },
+  "ISS-001": {
+    "id": "ISS-001",
+    "linked_from": [],
+    "links_to": [
+      "STK-022",
+      "STK-023"
+    ],
+    "status": "open",
+    "title": "Who holds the key",
+    "type": "Issue"
+  },
+  "ISS-002": {
+    "id": "ISS-002",
+    "linked_from": [],
+    "links_to": [],
+    "status": "open",
+    "title": "Guide to the Jedi Master role",
+    "type": "Issue"
+  },
+  "STK-003": {
+    "id": "STK-003",
+    "linked_from": [],
+    "links_to": [],
+    "status": "accepted",
+    "title": "Requirements engineers",
+    "type": "Stakeholder"
+  },
+  "STK-020": {
+    "id": "STK-020",
+    "linked_from": [
+      "STK-023"
+    ],
+    "links_to": [],
+    "status": "draft",
+    "title": "Sponsor",
+    "type": "Stakeholder"
+  },
+  "STK-021": {
+    "id": "STK-021",
+    "linked_from": [],
+    "links_to": [],
+    "status": "draft",
+    "title": "Trainer",
+    "type": "Stakeholder"
+  },
+  "STK-022": {
+    "id": "STK-022",
+    "linked_from": [
+      "ISS-001"
+    ],
+    "links_to": [],
+    "status": "draft",
+    "title": "Reviewer",
+    "type": "Stakeholder"
+  },
+  "STK-023": {
+    "id": "STK-023",
+    "linked_from": [
+      "ISS-001"
+    ],
+    "links_to": [
+      "DT-001",
+      "FR-001",
+      "FR-002",
+      "FR-003",
+      "FR-004",
+      "STK-020"
+    ],
+    "status": "accepted",
+    "title": "Keyholder",
+    "type": "Stakeholder"
+  }
+}

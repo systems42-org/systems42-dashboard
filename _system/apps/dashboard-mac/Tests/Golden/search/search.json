@@ -1,0 +1,472 @@
+{
+  "records": [
+    {
+      "aliases": [
+        "Moderator"
+      ],
+      "fields": {
+        "status": [
+          "accepted"
+        ],
+        "tags": [
+          "domain-term"
+        ]
+      },
+      "id": "DT-001",
+      "links": [
+        "STK-023"
+      ],
+      "plain": "Person who guides a session.",
+      "status": "accepted",
+      "title": "Facilitator",
+      "type": "Domain term",
+      "url": "/page/domain-terms/DT-001-facilitator"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "domain-term"
+        ]
+      },
+      "id": "DT-002",
+      "links": [],
+      "plain": "Moving between pages.",
+      "status": "draft",
+      "title": "Navigation",
+      "type": "Domain term",
+      "url": "/page/domain-terms/DT-002-navigation"
+    },
+    {
+      "aliases": [
+        "DoD"
+      ],
+      "fields": {
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "domain-term"
+        ]
+      },
+      "id": "DT-003",
+      "links": [],
+      "plain": "Checklist a story meets before release.",
+      "status": "draft",
+      "title": "Definition of Done",
+      "type": "Domain term",
+      "url": "/page/domain-terms/DT-003-definition-of-done"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "level": [
+          "feature"
+        ],
+        "notation": [
+          "agile"
+        ],
+        "priority": [
+          "must"
+        ],
+        "status": [
+          "accepted"
+        ],
+        "tags": [
+          "functional-requirement"
+        ]
+      },
+      "id": "FR-001",
+      "links": [
+        "STK-023"
+      ],
+      "plain": "The facilitator opens the board.",
+      "status": "accepted",
+      "title": "Run a workshop",
+      "type": "Functional requirement",
+      "url": "/functional-requirements/FR-001-run-a-workshop"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "level": [
+          "feature"
+        ],
+        "notation": [
+          "agile"
+        ],
+        "priority": [
+          "must"
+        ],
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "functional-requirement"
+        ]
+      },
+      "id": "FR-002",
+      "links": [
+        "STK-023"
+      ],
+      "plain": "Writes plain text for printing.",
+      "status": "draft",
+      "title": "Export the board",
+      "type": "Functional requirement",
+      "url": "/functional-requirements/FR-002-export-the-board"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "level": [
+          "feature"
+        ],
+        "notation": [
+          "agile"
+        ],
+        "priority": [
+          "should"
+        ],
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "functional-requirement"
+        ]
+      },
+      "id": "FR-003",
+      "links": [
+        "STK-023"
+      ],
+      "plain": "Run the test suite before a release.",
+      "status": "draft",
+      "title": "Run the checks",
+      "type": "Functional requirement",
+      "url": "/functional-requirements/FR-003-run-the-checks"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "level": [
+          "feature"
+        ],
+        "notation": [
+          "agile"
+        ],
+        "priority": [
+          "could"
+        ],
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "functional-requirement",
+          "navigation"
+        ]
+      },
+      "id": "FR-004",
+      "links": [
+        "STK-023"
+      ],
+      "plain": "Shows every section.",
+      "status": "draft",
+      "title": "Main menu",
+      "type": "Functional requirement",
+      "url": "/functional-requirements/FR-004-main-menu"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "level": [
+          "feature"
+        ],
+        "notation": [
+          "agile"
+        ],
+        "priority": [
+          "could"
+        ],
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "functional-requirement"
+        ]
+      },
+      "id": "FR-005",
+      "links": [],
+      "plain": "Help navigation between pages.",
+      "status": "draft",
+      "title": "Breadcrumbs",
+      "type": "Functional requirement",
+      "url": "/functional-requirements/FR-005-breadcrumbs"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "level": [
+          "feature"
+        ],
+        "notation": [
+          "agile"
+        ],
+        "priority": [
+          "could"
+        ],
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "functional-requirement"
+        ]
+      },
+      "id": "FR-006",
+      "links": [],
+      "plain": "Format pages for print once searched.",
+      "status": "draft",
+      "title": "Text tools",
+      "type": "Functional requirement",
+      "url": "/functional-requirements/FR-006-text-tools"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "level": [
+          "epic"
+        ],
+        "notation": [
+          "agile"
+        ],
+        "priority": [
+          "should"
+        ],
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "functional-requirement"
+        ]
+      },
+      "id": "FR-007",
+      "links": [],
+      "plain": "Readers look from any page (SRC-006).\nNone.",
+      "status": "draft",
+      "title": "Search the wiki",
+      "type": "Functional requirement",
+      "url": "/functional-requirements/FR-007-search-the-wiki"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "level": [
+          "feature"
+        ],
+        "notation": [
+          "agile"
+        ],
+        "priority": [
+          "should"
+        ],
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "functional-requirement"
+        ]
+      },
+      "id": "FR-008",
+      "links": [],
+      "plain": "Check the DoD first.",
+      "status": "draft",
+      "title": "Wiki search tips",
+      "type": "Functional requirement",
+      "url": "/functional-requirements/FR-008-wiki-search-tips"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "level": [
+          "feature"
+        ],
+        "notation": [
+          "agile"
+        ],
+        "priority": [
+          "should"
+        ],
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "functional-requirement"
+        ]
+      },
+      "id": "FR-009",
+      "links": [],
+      "plain": "Pages load from anywhere.",
+      "status": "draft",
+      "title": "Reach",
+      "type": "Functional requirement",
+      "url": "/functional-requirements/FR-009-reach"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "status": [
+          "open"
+        ],
+        "tags": [
+          "issue"
+        ]
+      },
+      "id": "ISS-001",
+      "links": [
+        "STK-022",
+        "STK-023"
+      ],
+      "plain": "Ask Keyholder about the key.",
+      "status": "open",
+      "title": "Who holds the key",
+      "type": "Issue",
+      "url": "/page/issues/ISS-001-who-holds-the-key"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "status": [
+          "open"
+        ],
+        "tags": [
+          "issue"
+        ]
+      },
+      "id": "ISS-002",
+      "links": [],
+      "plain": "Nobody wrote it yet.",
+      "status": "open",
+      "title": "Guide to the Jedi Master role",
+      "type": "Issue",
+      "url": "/page/issues/ISS-002-guide-to-the-jedi-master-role"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "status": [
+          "accepted"
+        ],
+        "tags": [
+          "stakeholder"
+        ]
+      },
+      "id": "STK-003",
+      "links": [],
+      "plain": "They write and refine the wiki pages.",
+      "status": "accepted",
+      "title": "Requirements engineers",
+      "type": "Stakeholder",
+      "url": "/page/stakeholders/STK-003-requirements-engineers"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "stakeholder"
+        ]
+      },
+      "id": "STK-020",
+      "links": [
+        "STK-023"
+      ],
+      "plain": "Pays for the project.",
+      "status": "draft",
+      "title": "Sponsor",
+      "type": "Stakeholder",
+      "url": "/page/stakeholders/STK-020-sponsor"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "stakeholder"
+        ]
+      },
+      "id": "STK-021",
+      "links": [],
+      "plain": "Leads the workshop.",
+      "status": "draft",
+      "title": "Trainer",
+      "type": "Stakeholder",
+      "url": "/page/stakeholders/STK-021-trainer"
+    },
+    {
+      "aliases": [],
+      "fields": {
+        "status": [
+          "draft"
+        ],
+        "tags": [
+          "stakeholder"
+        ]
+      },
+      "id": "STK-022",
+      "links": [
+        "ISS-001"
+      ],
+      "plain": "Reviews pages as an Ärztin.",
+      "status": "draft",
+      "title": "Reviewer",
+      "type": "Stakeholder",
+      "url": "/page/stakeholders/STK-022-reviewer"
+    },
+    {
+      "aliases": [
+        "Jedi Master"
+      ],
+      "fields": {
+        "status": [
+          "accepted"
+        ],
+        "tags": [
+          "stakeholder"
+        ]
+      },
+      "id": "STK-023",
+      "links": [
+        "DT-001",
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "FR-004",
+        "ISS-001",
+        "STK-020"
+      ],
+      "plain": "The person that started the dashboard app. Works with the facilitator in every workshop.",
+      "status": "accepted",
+      "title": "Keyholder",
+      "type": "Stakeholder",
+      "url": "/page/stakeholders/STK-023-keyholder"
+    }
+  ],
+  "synonyms": [
+    [
+      "facilitator",
+      "moderator"
+    ],
+    [
+      "navigation"
+    ],
+    [
+      "definition of done",
+      "dod"
+    ]
+  ]
+}
