@@ -283,7 +283,7 @@ final class Snapshot: Sendable {
             guard let relation = rules.relations[name] else { continue }
             let from = Set(relation.edges.map(\.from))
             for page in all where from.contains(page.ref.folder) {
-                let references = (page.references[relation.field] ?? []).filter { $0.key.map(relation.linkKeys.contains) ?? true }
+                let references = (page.references[relation.field] ?? []).filter { $0.key.map(RelationRules.stepLinkKeys.contains) ?? true }
                 for target in references.compactMap({ names.byStem[$0.name] }) {
                     if direction.forward { trace[page.ref, default: []].insert(target) }
                     if direction.inverse, relation.edges.contains(RelationRules.Edge(from: page.ref.folder, to: target.folder)) {

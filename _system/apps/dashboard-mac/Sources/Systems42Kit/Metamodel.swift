@@ -62,7 +62,9 @@ public struct Metamodel: Sendable {
             metamodelPages.filter { $0.entry.scalar("construct") == construct }
         }
 
-        let typePages = pages(of: "type")
+        // A repeated type name keeps its first page everywhere.
+        var seenTypes = Set<String>()
+        let typePages = pages(of: "type").filter { seenTypes.insert($0.entry.scalar("name") ?? "").inserted }
         let catalog = Catalog.build(frameworks: pages(of: "framework"), types: typePages)
         let blockPosition = Dictionary(catalog.blockIds.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
         let types = typePages.map(MMType.init).sorted { a, b in

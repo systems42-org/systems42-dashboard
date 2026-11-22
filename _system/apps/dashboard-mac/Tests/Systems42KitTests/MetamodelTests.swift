@@ -68,9 +68,10 @@ private func unmarked(_ text: String) -> String {
         #expect(goal.block == "R1")
     }
 
-    @Test func metamodelMatchesGolden() throws {
-        let model = try loadMetamodel(fixture: "basic")
-        let golden = try #require(Golden.json("basic", "metamodel.json") as? [String: Any])
+    @Test(arguments: Fixture.names)
+    func metamodelMatchesGolden(name: String) throws {
+        let model = try loadMetamodel(fixture: name)
+        let golden = try #require(Golden.json(name, "metamodel.json") as? [String: Any])
         func list(_ key: String) throws -> [[String: Any]] { try #require(golden[key] as? [[String: Any]]) }
 
         let types = try list("types")
@@ -79,6 +80,14 @@ private func unmarked(_ text: String) -> String {
         for mine in model.types {
             let theirs = try #require(types.first { $0["name"] as? String == mine.name })
             #expect(mine.label == theirs["label"] as? String)
+            #expect(mine.prefix + "-NNN" == theirs["id_pattern"] as? String || theirs["id_pattern"] as? String == nil, "\(mine.name) prefix")
+            #expect(mine.folder.trimmingCharacters(in: CharacterSet(charactersIn: "/")) == (theirs["folder"] as? String ?? "").trimmingCharacters(in: CharacterSet(charactersIn: "/")), "\(mine.name) folder")
+            #expect(mine.block == theirs["block"] as? String ?? "", "\(mine.name) block")
+            let fields = theirs["fields"] as? [[String: Any]] ?? []
+            for (a, b) in zip(mine.fields, fields) {
+                #expect(a.kind == b["kind"] as? String, "\(mine.name).\(a.name) kind")
+                #expect(a.required == (b["required"] as? Bool ?? false), "\(mine.name).\(a.name) required")
+            }
             #expect(unmarked(mine.summary) == unmarked(theirs["definition"] as? String ?? ""), "\(mine.name)")
             #expect(mine.fields.map(\.name) == (theirs["fields"] as? [[String: Any]] ?? []).compactMap { $0["name"] as? String })
         }
@@ -204,15 +213,33 @@ private func unmarked(_ text: String) -> String {
         assertUnchanged(url) { _ = try? loadMetamodel(url) }
     }
 
-    @Test func linkKeysOfAStructuredRelation() throws {
-        let model = try loadMetamodel(fixture: "basic")
-        #expect(model.relationRules.relations["steps"]?.linkKeys == ["from", "to"])
+    @Test func aRepeatedTypeNameKeepsTheFirstPage() throws {
         let url = try Fixture.tempCopy("basic")
-        let page = url.appending(path: "_system/metamodel/relations/rel-steps.md")
-        try String(contentsOf: page, encoding: .utf8)
-            .replacingOccurrences(of: "direction: directed", with: "direction: directed\nlink_keys: [to]")
-            .write(to: page, atomically: true, encoding: .utf8)
-        #expect(try loadMetamodel(url).relationRules.relations["steps"]?.linkKeys == ["to"])
+        try "---\ntype: metamodel\nconstruct: type\nname: goal\nprefix: ZZ\nfolder: wiki/zz\nlabel: Again\nblock: R1\n---\nAgain.\n"
+            .write(to: url.appending(path: "_system/metamodel/types/type-zz.md"), atomically: true, encoding: .utf8)
+        let model = try loadMetamodel(url)
+        #expect(model.types.count == 17)
+        #expect(model.types.filter { $0.name == "goal" }.count == 1)
+        #expect(model.type(named: "goal")?.prefix == "GOAL")
+        #expect(model.type(forFolder: "wiki/zz") == nil)
+        #expect(model.sections.first { $0.id == "R1" }?.folders == ["goals"])
+        #expect(model.relationRules.folders["goal"] == "wiki/goals")
+    }
+
+    @Test func aTypeFolderLeadingOutsideReadsNothingFromThere() throws {
+        let url = try Fixture.tempCopy("basic")
+        let outside = url.deletingLastPathComponent().appending(path: "outside-sources")
+        try FileManager.default.createDirectory(at: outside, withIntermediateDirectories: true)
+        try "---\nid: SRC-777\ntitle: Outside\n---\nOutside.\n".write(
+            to: outside.appending(path: "SRC-777-outside.md"), atomically: true, encoding: .utf8)
+        let typePage = url.appending(path: "_system/metamodel/types/type-source.md")
+        try String(contentsOf: typePage, encoding: .utf8).replacingOccurrences(of: "raw/sources", with: "../outside-sources")
+            .write(to: typePage, atomically: true, encoding: .utf8)
+        let store = try openStore(url)
+        #expect(store.resolve(Wikilink(target: "SRC-777-outside", label: nil, heading: nil)) == .missing)
+        #expect(store.resolve(Wikilink(target: "SRC-777", label: nil, heading: nil)) == .missing)
+        #expect(store.page(id: "SRC-777") == nil)
+        #expect(store.folders().allSatisfy { store.pages(in: $0).allSatisfy { $0.id != "SRC-777" } })
     }
 }
 

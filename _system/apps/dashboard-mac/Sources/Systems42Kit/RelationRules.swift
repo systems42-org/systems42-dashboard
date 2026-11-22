@@ -19,8 +19,6 @@ struct RelationRules: Sendable {
         /// The frontmatter field that holds the links.
         let field: String
         let edges: [Edge]
-        /// For a field that holds a list of mappings, the keys of a mapping that name pages.
-        let linkKeys: Set<String>
     }
 
     static let issueType = "issue"
@@ -31,10 +29,9 @@ struct RelationRules: Sendable {
     /// read the closed states once the metamodel marks them.
     static let closedIssueStatuses: Set<String> = ["resolved", "wontfix"]
 
-    /// The metamodel does not say which keys of a step name pages. A relation page may
-    /// declare them as `link_keys`. Without that, the ends of an edge are meant:
-    /// `from` and `to`, as in the edges of a relation page. Open debt.
-    static let defaultLinkKeys: Set<String> = ["from", "to"]
+    /// The keys of a step that name pages. The metamodel names them only in prose
+    /// (`rel-steps.md`, `type-runtime-scenario.md`), so they are fixed here. Open debt.
+    static let stepLinkKeys: Set<String> = ["from", "to"]
 
     /// Relation name to relation.
     private(set) var relations: [String: Relation] = [:]
@@ -59,9 +56,7 @@ struct RelationRules: Sendable {
                       let to = edge.scalar("to").flatMap({ wikiFolders[$0] }) else { return nil }
                 return Edge(from: from, to: to)
             }
-            let declared = page.entry.strings("link_keys")
-            relations[name] = Relation(
-                field: field, edges: edges, linkKeys: declared.isEmpty ? Self.defaultLinkKeys : Set(declared))
+            relations[name] = Relation(field: field, edges: edges)
         }
     }
 
