@@ -61,6 +61,20 @@ a change in the JavaScript can be followed. Tests compare the index and the rank
 golden data, see `Tests/Golden/README.md`. Running the tests needs neither Go nor Node. Regenerating
 the golden data (`scripts/export-golden.sh`) needs both, and Python 3.
 
+## Projections
+
+`Sources/Systems42Kit/Projections/` ports the dashboard's projections: views computed from page fields and
+never stored. `Projections(store:metamodel:agreedOnly:)` is a value you can build off the main actor. It
+answers the requirement hierarchy, story map, goal coverage matrix and backlog, the Mermaid text of the
+diagrams (`mermaid(_:)`) and the Cytoscape data of the term network and the metamodel (`graph(_:)`). The Go
+code is the reference (`internal/project/`, `internal/web/projections.go`, `internal/web/metamodel.go`), and
+each Swift function names the function it ports. The names `mermaid` and `graph` take are the file names of
+the golden data in `Tests/Golden/<fixture>/diagrams/`. A test walks those files and compares every one.
+
+The Go code names types, fields and values of the metamodel. Each projection file keeps them in one
+`enum` at its top, with the Go place they come from, so the debt to the metamodel stays visible (CON-006).
+Folders and id prefixes come from the metamodel.
+
 ## CI
 
 `.github/workflows/mac.yml` runs `swift build` and `swift test` on a macOS runner.
