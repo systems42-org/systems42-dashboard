@@ -44,9 +44,9 @@ As a [[STK-010-operators|person who runs the dashboard]] on macOS I want **to in
 
 > [!note] Open points
 > - The app is ad-hoc signed and not notarised with Apple. Homebrew marks its downloads as a browser does, so macOS may refuse the first start after an install until the person allows it.
-> - Where the tap lives is not decided. The usual form is a repository `systems42-org/homebrew-tap`, which gives the command above.
+> - The tap is a repository `systems42-org/homebrew-tap`. It does not exist yet.
 > - Built today: a cask file in the dashboard's repository that no tap offers, so nobody can install with Homebrew. It skips the checksum and names release 0.13.0.
 
 ## History
 
-> Asked for by Gernot Starke on 2026-11-22 ([[SRC-047-install-the-app-with-homebrew]]). He decided that the requirement is met by installing, not by opening without a warning, and set the priority Could ([[SRC-048-grilling-session-on-installing-with-homebrew]]).
+> Asked for by Gernot Starke on 2026-11-22 ([[SRC-047-install-the-app-with-homebrew]]). He decided that the requirement is met by installing, not by opening without a warning, set the priority Could and confirmed the tap `systems42-org/homebrew-tap` ([[SRC-048-grilling-session-on-installing-with-homebrew]]).

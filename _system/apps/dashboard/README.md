@@ -477,8 +477,9 @@ for the requirements and trade-offs behind the Go implementation.
   folder picker, Finder drag-and-drop, CON-005 preflight alerts, one free port
   per wiki (`--port 0 --ready-json`), recent wikis stored under
   `~/Library/Application Support/Systems42 Dashboard/recent.json` (never in the
-  wiki), universal `.dmg` packaging (`make app-bundle`), Homebrew cask
-  (`macos/Casks/systems42-dashboard.rb`), and automated release builds in
+  wiki), universal `.dmg` packaging (`make app-bundle`), a prepared Homebrew cask file
+  (`macos/Casks/systems42-dashboard.rb`, no tap offers it yet, so
+  `brew install` does not work), and automated release builds in
   `.github/workflows/release.yml` (signing and notarisation activate when
   `APPLE_SIGN_*` and `APPLE_NOTARY_*` secrets are configured).
 

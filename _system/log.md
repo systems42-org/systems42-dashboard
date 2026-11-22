@@ -424,4 +424,5 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Created: [[FR-064-install-the-app-with-homebrew]], a story under FR-055 for the operators.
 - Updated: [[FR-055-an-installable-dashboard-app]] (children), `_system/index.md`.
 - Decided by Gernot Starke: the requirement is met when Homebrew installs, updates and removes the app. Opening without a security warning of macOS is out of scope and stays an open point. Priority Could.
+- Closing round, answered by Gernot Starke: the tap is `systems42-org/homebrew-tap`. [[BB-004-macos-native-app]] names the Homebrew install as a future extension, no longer as existing packaging. The README and the Go summary say that a cask file is prepared and no tap offers it. No Issue was needed.
 - Claude's choices, to be checked: a story under FR-055, the goal [[GOAL-008-one-way-into-every-systems42-wiki]].
