@@ -20,9 +20,9 @@ struct LoadedWiki: Sendable {
             var found = SectionFigures()
             var issues = Set<String>()
             for folder in section.folders {
-                let subject = hasAgreedStatus(metamodel.type(forFolder: folder).flatMap { metamodel.lifecycles[$0.lifecycle] })
+                let subject = Metamodel.hasAgreedStatus(metamodel.type(forFolder: folder).flatMap { metamodel.lifecycles[$0.lifecycle] })
                 for page in store.pages(in: folder) {
-                    found.add(status: page.status.lowercased(), keptByAgreedOnly: !subject || page.status.lowercased() == agreedStatus)
+                    found.add(status: page.status.lowercased(), keptByAgreedOnly: !subject || page.status.lowercased() == Metamodel.agreedStatus)
                     issues.formUnion(store.openIssues(for: page.ref).map(\.id))
                 }
             }
@@ -178,7 +178,7 @@ struct LoadedWiki: Sendable {
             byStatus: shown,
             openIssues: all.openIssues,
             agreedShare: all.count == 0 ? 0 : Double(all.agreed) / Double(all.count),
-            showsMaturity: hasAgreedStatus(lifecycle)
+            showsMaturity: Metamodel.hasAgreedStatus(lifecycle)
         )
     }
 

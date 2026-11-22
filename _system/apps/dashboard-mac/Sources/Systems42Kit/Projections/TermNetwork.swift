@@ -19,6 +19,19 @@ struct TermNetworkProjection {
     // Relations by name and fields. Go: glossary.go `p.AsList("related")`, `p.Meta["agreed"]`.
     static let relatedRelation = "related"
     static let agreedField = "agreed"
+    /// The projection page this reads.
+    static let projection = "terminology-graph"
+    static let aliasesField = "aliases"
+    static let declaration = ProjectionDeclaration(projection, [
+        (termType, [relatedRelation, agreedField, aliasesField, DataModelProjection.relationshipsField,
+                    DataModelProjection.parentRelation, DataModelProjection.stereotypeField]),
+        (namedTypes[0], []), (namedTypes[1], []), (namedTypes[2], []), (namedTypes[3], []),
+    ])
+    /// The spellings of a true value in YAML that the Go reader takes as a bool.
+    static let trueSpellings: Set<String> = ["true", "True", "TRUE"]
+    /// The kind of an edge from `related:`, and the states of a term node.
+    static let relatedKind = "related"
+    static let draftState = "draft", deprecatedState = "deprecated", agreedState = "agreed"
     // Values. Go: glossary.go `BuildGlossaryGraph`.
     static let deprecatedStatus = "deprecated"
     static let assumptionMarker = "[!assumption]"
@@ -45,7 +58,7 @@ struct TermNetworkProjection {
     }
 
     private func isAgreed(_ page: Page) -> Bool {
-        if case .text(let value)? = page.fields[Self.agreedField] { return ["true", "True", "TRUE"].contains(value) }
+        if case .text(let value)? = page.fields[Self.agreedField] { return Self.trueSpellings.contains(value) }
         return false
     }
 
@@ -74,7 +87,7 @@ struct TermNetworkProjection {
                     let cross = !glossaryStems.contains(target)
                     var edge: [String: GraphValue] = [
                         "id": text("e\(edges.count)"), "source": text(source), "target": text(target),
-                        "cross": .bool(cross), "kind": text("related"),
+                        "cross": .bool(cross), "kind": text(Self.relatedKind),
                     ]
                     if cross {
                         edge["ntype"] = text(typeOf(target))
@@ -108,8 +121,8 @@ struct TermNetworkProjection {
 
         var nodes: [[String: GraphValue]] = []
         for page in glossary {
-            var state = "draft"
-            if page.status == Self.deprecatedStatus { state = "deprecated" } else if isAgreed(page) { state = "agreed" }
+            var state = Self.draftState
+            if page.status == Self.deprecatedStatus { state = Self.deprecatedState } else if isAgreed(page) { state = Self.agreedState }
             nodes.append([
                 "id": text(page.stem), "label": text(page.title), "type": text(termPrefix), "core": .bool(true),
                 "url": text(Self.urlPrefix + page.ref.folder + "/" + page.stem), "degree": .int(degree[page.stem] ?? 0),

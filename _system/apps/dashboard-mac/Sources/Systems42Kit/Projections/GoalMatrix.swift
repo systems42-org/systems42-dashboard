@@ -20,6 +20,49 @@ public struct GoalMatrix: Sendable {
     let coverage: [String: [Page]]
     let marks: [String: Set<String>]
 
+    static let empty = GoalMatrix(goals: [], columns: [], enablers: [], gaps: [], acceptedGaps: [], untraced: [], coverage: [:], marks: [:])
+
+    /// The matrix as the data of its table: one entry per column and one per goal. Encodes to the
+    /// JSON the golden data holds (`goal-matrix.json`).
+    public var table: Table {
+        let enablerIDs = Set(enablers.map(\.id))
+        let columnList = columns.map {
+            Table.Column(id: $0.id, status: $0.status, enabler: enablerIDs.contains($0.id), noGoal: untraced.contains($0.id))
+        }
+        var rows: [String: Table.Row] = [:]
+        for goal in goals {
+            let names = Set(servedWithoutColumn(goal: goal.id).map(\.id))
+            rows[goal.id] = Table.Row(
+                status: goal.status, gap: gaps.contains(goal.id), gapAccepted: acceptedGaps.contains(goal.id),
+                serves: columns.filter { marked(goal: goal.id, column: $0.id) }.map(\.id), servedBy: names.sorted()
+            )
+        }
+        return Table(columns: columnList, rows: rows)
+    }
+
+    public struct Table: Codable, Equatable, Sendable {
+        public struct Column: Codable, Equatable, Sendable {
+            public let id, status: String
+            public let enabler, noGoal: Bool
+            enum CodingKeys: String, CodingKey { case id, status, enabler, noGoal = "no_goal" }
+        }
+
+        public struct Row: Codable, Equatable, Sendable {
+            public let status: String
+            public let gap, gapAccepted: Bool
+            /// The ids of the columns that mark the goal.
+            public let serves: [String]
+            /// The ids of the requirements the row names instead of a mark, sorted.
+            public let servedBy: [String]
+            enum CodingKeys: String, CodingKey {
+                case status, gap, gapAccepted = "gap_accepted", serves, servedBy = "served_by"
+            }
+        }
+
+        public let columns: [Column]
+        public let rows: [String: Row]
+    }
+
     /// Whether the column serves the goal. Both are page ids.
     public func marked(goal: String, column: String) -> Bool {
         marks[goal]?.contains(column) == true
@@ -34,7 +77,7 @@ public struct GoalMatrix: Sendable {
     /// its features, then its stories, then other requirements. Empty when a column serves it.
     /// With `acceptedOnly` only accepted requirements count.
     public func servedWithoutColumn(goal: String, acceptedOnly: Bool = false) -> [Page] {
-        let serving = (coverage[goal] ?? []).filter { !acceptedOnly || $0.status == GoalsProjection.acceptedStatus }
+        let serving = (coverage[goal] ?? []).filter { !acceptedOnly || $0.status == Metamodel.agreedStatus }
         let columnIDs = Set(columns.map(\.id))
         if serving.contains(where: { columnIDs.contains($0.id) }) { return [] }
         var out: [Page] = []
@@ -60,8 +103,21 @@ struct GoalsData {
 struct GoalsProjection {
     let model: ProjectionModel
 
-    /// Go: goals_fr.go `GoalMatrix`, `p.Status() == "accepted"` for the accepted view.
-    static let acceptedStatus = "accepted"
+    /// The projection pages this reads. Go: goals_fr.go `GoalMatrix` (coverage) and `MermaidGoalTree`.
+    static let coverageProjection = "goal-coverage", treeProjection = "goal-tree"
+    static let coverageDeclaration = ProjectionDeclaration(coverageProjection, [
+        (FR.requirementType, [FR.notationField, FR.levelField, FR.goalRelation, FR.laneField, FR.parentRelation]),
+        (FR.goalType, [FR.stereotypeField]),
+    ])
+    static let treeDeclaration = ProjectionDeclaration(treeProjection, [
+        (FR.goalType, [FR.stereotypeField, FR.shortTitleField]),
+        (FR.requirementType, [FR.notationField, FR.levelField, FR.goalRelation, FR.laneField, FR.orderField, FR.parentRelation]),
+    ])
+    /// Fixed node ids, labels and Mermaid class names. Go: `MermaidGoalTree`, `MermaidGoalEpicTree`.
+    static let visionID = "V", enablerID = "ENABLER", noGoalID = "NOGOAL"
+    static let enablerLabel = "Platform / Enabler", noGoalLabel = "No goal", visionLabelPrefix = "Vision "
+    static let visionClass = "vision", goalClass = "goal", epicClass = "epic", useCaseClass = "usecase"
+    static let enablerClass = "enabler", noGoalClass = "nogoal"
 
     func shortTitle(_ page: Page) -> String {
         let short = page.trimmed(FR.shortTitleField)
@@ -139,7 +195,7 @@ struct GoalsProjection {
         for objective in data.objectives {
             let serving = data.coverage[objective.id] ?? []
             if serving.isEmpty { gaps.insert(objective.id) }
-            if !serving.contains(where: { $0.status == GoalsProjection.acceptedStatus }) { acceptedGaps.insert(objective.id) }
+            if !serving.contains(where: { $0.status == Metamodel.agreedStatus }) { acceptedGaps.insert(objective.id) }
             marks[objective.id] = Set(serving.map(\.id).filter(columnIDs.contains))
         }
         return GoalMatrix(
@@ -150,24 +206,25 @@ struct GoalsProjection {
     }
 
     /// Ports `MermaidGoalTree`: vision, then its objectives. Nil without a vision or objectives.
-    func goalTreeDiagram() -> String? {
+    func goalTreeDiagram(links style: LinkStyle) -> String? {
         let data = load()
         guard let vision = data.vision, !data.objectives.isEmpty else { return nil }
         let root = Common.cleanLabel(model.systemName, dropParenthetical: false)
+        var ids = NodeIDs(reserved: [Self.visionID])
         var lines = [
             "graph TD",
-            "  V[\"Vision \(root)\"]:::vision",
-            "  click V \"\(FR.goalURL)\(vision.id)\"",
+            "  \(Self.visionID)[\"\(Self.visionLabelPrefix)\(root)\"]:::\(Self.visionClass)",
+            "  click \(Self.visionID) \"\(model.link(to: vision, style: style))\"",
         ]
         for objective in data.objectives {
-            let nid = Common.diagramNodeID(objective.id)
+            let nid = ids.id(of: objective)
             let label = Common.cleanLabel(shortTitle(objective), dropParenthetical: true)
-            lines.append("  V --> \(nid)[\"\(objective.id)<br/>\(label)\"]:::goal")
-            lines.append("  click \(nid) \"\(FR.goalURL)\(objective.id)\"")
+            lines.append("  \(Self.visionID) --> \(nid)[\"\(Common.label(objective.id))<br/>\(label)\"]:::\(Self.goalClass)")
+            lines.append("  click \(nid) \"\(model.link(to: objective, style: style))\"")
         }
         lines += [
-            "  classDef vision fill:#2f6fb3,stroke:#7fc0ff,color:#ffffff,stroke-width:2px,font-weight:bold;",
-            "  classDef goal fill:#d7dbe3,stroke:#9aa3b2,color:#15202e;",
+            "  classDef \(Self.visionClass) fill:#2f6fb3,stroke:#7fc0ff,color:#ffffff,stroke-width:2px,font-weight:bold;",
+            "  classDef \(Self.goalClass) fill:#d7dbe3,stroke:#9aa3b2,color:#15202e;",
         ]
         return lines.joined(separator: "\n")
     }

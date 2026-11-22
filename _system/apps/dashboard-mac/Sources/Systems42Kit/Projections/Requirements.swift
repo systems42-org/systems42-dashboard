@@ -40,18 +40,40 @@ enum FR {
     /// (type-functional-requirement.md, field `release`).
     static let unscheduled = "unscheduled"
 
-    // Url shapes of the dashboard, the `click` lines of the diagrams. Go: common.go `PageURL`.
-    static let requirementURL = "/functional-requirements/"
-    static let goalURL = "/goals#"
-    static let pageURL = "/page/"
-
-    /// How a page is addressed. Ports `wiki.PageURL`.
-    static func url(of page: Page, model: ProjectionModel) -> String {
-        url(folder: page.ref.folder, stem: page.ref.stem, model: model)
+    /// Priorities in the order the metamodel lists the values of the `priority` field, lower-cased.
+    static func priorityRanks(_ model: ProjectionModel) -> [String: Int] {
+        let values = model.metamodel.type(named: requirementType)?.fields.first { $0.name == priorityField }?.values ?? []
+        return Dictionary(values.enumerated().map { ($1.lowercased(), $0) }, uniquingKeysWith: { first, _ in first })
     }
 
-    static func url(folder: String, stem: String, model: ProjectionModel) -> String {
-        folder == model.folder(ofType: requirementType) ? requirementURL + stem : pageURL + folder + "/" + stem
+    /// The order of releases in the backlog and the story map: by name with numbers by value
+    /// (`v2` before `v10`), `unscheduled` last. `proj-backlog-ranking` does not say more.
+    static func releaseLess(_ a: String, _ b: String) -> Bool {
+        if (a == unscheduled) != (b == unscheduled) { return b == unscheduled }
+        return naturalLess(a, b)
+    }
+
+    /// Compares digit runs by value and everything else by bytes.
+    static func naturalLess(_ a: String, _ b: String) -> Bool {
+        let x = Array(a.utf8), y = Array(b.utf8)
+        func isDigit(_ byte: UInt8) -> Bool { byte >= 0x30 && byte <= 0x39 }
+        var i = 0, j = 0
+        while i < x.count, j < y.count {
+            if isDigit(x[i]), isDigit(y[j]) {
+                var ei = i, ej = j
+                while ei < x.count, isDigit(x[ei]) { ei += 1 }
+                while ej < y.count, isDigit(y[ej]) { ej += 1 }
+                let da = x[i..<ei].drop { $0 == 0x30 }, db = y[j..<ej].drop { $0 == 0x30 }
+                if da.count != db.count { return da.count < db.count }
+                if let diff = zip(da, db).first(where: { $0 != $1 }) { return diff.0 < diff.1 }
+                (i, j) = (ei, ej)
+            } else {
+                if x[i] != y[j] { return x[i] < y[j] }
+                i += 1
+                j += 1
+            }
+        }
+        return x.count - i < y.count - j
     }
 
     static func notation(_ page: Page) -> String { page.lowered(notationField) }

@@ -24,7 +24,8 @@ public struct MMConstruct: Sendable {
     public let construct, name, summary, body: String
     public let frontmatter: [String: FieldValue]
     /// The lists of mappings in the frontmatter, such as the `edges` of a relation, by field name.
-    /// Each mapping holds its scalar values as text. A value that is not a scalar is left out.
+    /// Each mapping holds its scalar values as text and a list of scalars as its items joined by a comma.
+    /// Any other value is left out.
     public let entries: [String: [[String: String]]]
 }
 

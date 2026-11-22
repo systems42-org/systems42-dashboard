@@ -73,7 +73,11 @@ the golden data in `Tests/Golden/<fixture>/diagrams/`. A test walks those files 
 
 The Go code names types, fields and values of the metamodel. Each projection file keeps them in one
 `enum` at its top, with the Go place they come from, so the debt to the metamodel stays visible (CON-006).
-Folders and id prefixes come from the metamodel.
+Folders and id prefixes come from the metamodel. A projection is offered only when the metamodel has
+its projection page (`Projections.available`), and a test compares the constants with the `reads:` of
+that page. Text of a page that enters a Mermaid text goes through `Common.label` and `NodeIDs`, so an id
+or a title cannot change the shape of a diagram. `mermaid(_:links:)` writes clicks as `.page` (the
+reference the app reads) or `.dashboard` (the routes of the Go dashboard, which the golden data holds).
 
 ## CI
 

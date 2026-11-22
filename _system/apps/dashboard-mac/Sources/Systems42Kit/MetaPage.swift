@@ -45,8 +45,13 @@ struct Entry {
                 guard case .mapping(let map) = item else { return nil }
                 var record: [String: String] = [:]
                 for (field, node) in map {
-                    guard let fieldName = field.scalar?.string, let scalar = node.scalar else { continue }
-                    record[fieldName] = Frontmatter.text(scalar).trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard let fieldName = field.scalar?.string else { continue }
+                    if let scalar = node.scalar {
+                        record[fieldName] = Frontmatter.text(scalar).trimmingCharacters(in: .whitespacesAndNewlines)
+                    } else if case .sequence(let values) = node {
+                        // A list of scalars is kept as its items joined by a comma.
+                        record[fieldName] = values.compactMap { $0.scalar.map(Frontmatter.text) }.joined(separator: ",")
+                    }
                 }
                 return record
             }

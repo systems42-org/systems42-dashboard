@@ -1,16 +1,23 @@
 import Foundation
 
-/// The status that "agreed only" keeps. The Go dashboard hard-codes the same word, and no
-/// requirement defines "agreed" otherwise. Open debt: the metamodel does not name it.
-let agreedStatus = "accepted"
-
 extension Metamodel {
+    /// The status that "agreed only" keeps. The Go dashboard hard-codes the same word, and no
+    /// requirement defines "agreed" otherwise. Open debt: the metamodel does not name it.
+    public static let agreedStatus = "accepted"
+
+    /// Whether the lifecycle has an agreed status. Only pages on such a lifecycle can be agreed, so only
+    /// they are hidden by "agreed only" and only their section shows a maturity bar. Issues and sources
+    /// follow their own lifecycle and are never hidden.
+    public static func hasAgreedStatus(_ lifecycle: [String]?) -> Bool {
+        lifecycle?.contains(agreedStatus) == true
+    }
+
     /// Whether "agreed only" hides this page: its type's lifecycle has the agreed status, and the page
-    /// does not have it. Pages of types without that status (issues, sources) are never hidden.
+    /// does not have it. This is the one rule, the UI calls it too.
     public func isHiddenWhenAgreedOnly(_ page: Page) -> Bool {
         guard let type = type(forFolder: page.ref.folder),
-              lifecycles[type.lifecycle]?.contains(agreedStatus) == true else { return false }
-        return page.status.lowercased() != agreedStatus
+              Self.hasAgreedStatus(lifecycles[type.lifecycle]) else { return false }
+        return page.status.lowercased() != Self.agreedStatus
     }
 
     /// The folder below `wiki/` of the type with this name, nil when the metamodel has no such type.

@@ -28,6 +28,15 @@ public struct TreeNode: Identifiable, Sendable {
 struct HierarchyProjection {
     let model: ProjectionModel
 
+    /// The projection page this reads. Go: goals_fr.go `BuildFRHierarchy`, the story map of DR-038.
+    static let projection = "story-map"
+    static let declaration = ProjectionDeclaration(projection, [
+        (FR.requirementType, [FR.notationField, FR.levelField, FR.parentRelation, FR.orderField, FR.priorityField, FR.releaseField]),
+        (FR.blockType, [FR.driversRelation]),
+    ])
+    /// Mermaid class names of the diagram. Go: `MermaidFRSubtree`.
+    static let rootClass = "root", featureClass = "feature", storyClass = "story", blockClass = "block"
+
     /// The nodes of the Go hierarchy: epics, then use cases that have children, with features and
     /// stories below. Then the pages the Go lists keep apart (orphans, other notations) and the agile pages
     /// whose parent chain reaches no epic or use case (a cycle, a story under a story), so every
@@ -73,7 +82,7 @@ struct HierarchyProjection {
 
     /// Ports `MermaidFRSubtree` and the setup of `handleFRDetail`: one requirement's own feature and story
     /// breakdown plus the building blocks that name it in `drivers:`.
-    func subtreeDiagram(of page: Page) -> String? {
+    func subtreeDiagram(of page: Page, links style: LinkStyle) -> String? {
         let hierarchy = FR.hierarchy(model.pages(ofType: FR.requirementType), model: model)
         let node = FR.node(hierarchy, stem: page.stem)?.row
         let blocks = FR.buildingBlocks(of: page.stem, model: model)
@@ -82,34 +91,37 @@ struct HierarchyProjection {
         let direct = node?.directStories ?? []
         if features.isEmpty && ownStories.isEmpty && direct.isEmpty && blocks.isEmpty { return nil }
 
-        let rootID = Common.diagramNodeID(page.id)
+        var ids = NodeIDs()
+        let rootID = ids.id(of: page)
         var lines = [
             "graph TD",
-            "  \(rootID)[\"\(page.id)<br/>\(Common.cleanLabel(page.title, dropParenthetical: true))\"]:::root",
+            "  \(rootID)[\"\(Common.label(page.id))<br/>\(Common.cleanLabel(page.title, dropParenthetical: true))\"]:::\(Self.rootClass)",
         ]
         func child(_ parent: String, _ row: FRRow, _ css: String) -> String {
-            let nid = Common.diagramNodeID(row.page.id)
+            let nid = ids.id(of: row.page)
             let label = Common.cleanLabel(row.page.title, dropParenthetical: true)
-            lines.append("  \(parent) --> \(nid)[\"\(row.page.id)<br/>\(label)\"]:::\(css)")
-            lines.append("  click \(nid) \"\(FR.requirementURL)\(row.page.stem)\"")
+            lines.append("  \(parent) --> \(nid)[\"\(Common.label(row.page.id))<br/>\(label)\"]:::\(css)")
+            lines.append("  click \(nid) \"\(model.link(to: row.page, style: style))\"")
             return nid
         }
         for feature in features {
-            let featureID = child(rootID, feature, "feature")
-            for story in feature.stories { _ = child(featureID, story, "story") }
+            let featureID = child(rootID, feature, Self.featureClass)
+            for story in feature.stories { _ = child(featureID, story, Self.storyClass) }
         }
-        for story in ownStories { _ = child(rootID, story, "story") }
-        for story in direct { _ = child(rootID, story, "story") }
+        for story in ownStories { _ = child(rootID, story, Self.storyClass) }
+        for story in direct { _ = child(rootID, story, Self.storyClass) }
         for block in blocks {
-            let nid = Common.diagramNodeID(block.id)
-            lines.append("  \(rootID) -.-> \(nid)[[\"\(block.id)<br/>\(Common.cleanLabel(block.title, dropParenthetical: true))\"]]:::block")
-            lines.append("  click \(nid) \"\(FR.url(of: block, model: model))\"")
+            let nid = ids.id(of: block)
+            lines.append("  \(rootID) -.-> \(nid)[[\"\(Common.label(block.id))<br/>\(Common.cleanLabel(block.title, dropParenthetical: true))\"]]:::\(Self.blockClass)")
+            lines.append("  click \(nid) \"\(model.link(to: block, style: style))\"")
         }
+        // The Go dashboard draws no click on the root, the page you are on. The app does.
+        if style == .page { lines.append("  click \(rootID) \"\(model.link(to: page, style: style))\"") }
         lines += [
-            "  classDef root fill:#2f6fb3,stroke:#7fc0ff,color:#ffffff,stroke-width:2px,font-weight:bold;",
-            "  classDef feature fill:#d7dbe3,stroke:#9aa3b2,color:#15202e;",
-            "  classDef story fill:#f3f6fb,stroke:#c4ccd9,color:#15202e;",
-            "  classDef block fill:#e3efe6,stroke:#6f9b7c,color:#15202e;",
+            "  classDef \(Self.rootClass) fill:#2f6fb3,stroke:#7fc0ff,color:#ffffff,stroke-width:2px,font-weight:bold;",
+            "  classDef \(Self.featureClass) fill:#d7dbe3,stroke:#9aa3b2,color:#15202e;",
+            "  classDef \(Self.storyClass) fill:#f3f6fb,stroke:#c4ccd9,color:#15202e;",
+            "  classDef \(Self.blockClass) fill:#e3efe6,stroke:#6f9b7c,color:#15202e;",
         ]
         return lines.joined(separator: "\n")
     }

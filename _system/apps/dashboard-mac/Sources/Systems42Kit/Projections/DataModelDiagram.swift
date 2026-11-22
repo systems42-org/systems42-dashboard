@@ -24,6 +24,11 @@ struct DataModelProjection {
     // Content type. Go: web/projections.go `handleEntityDiagram`, the pages of the domain term folder.
     static let termType = "domain-term"
     static let parentRelation = "parent"
+    /// The projection page this reads.
+    static let projection = "entity-diagram"
+    static let declaration = ProjectionDeclaration(projection, [
+        (termType, [stereotypeField, parentRelation, attributesField, relationshipsField, contextField]),
+    ])
 
     // Fields and keys. Go: entity.go and wiki/page.go `DataModelPages`.
     static let stereotypeField = "stereotype", contextField = "bounded-context", attributesField = "attributes"
@@ -131,7 +136,7 @@ struct DataModelProjection {
     /// Ports `encodeMermaidMember`: letters, digits, underscore, space and dash stay, the rest becomes `#<code>;`.
     private func member(_ name: String) -> String {
         var out = ""
-        for scalar in Common.fields(name).joined(separator: " ").unicodeScalars {
+        for scalar in Common.cutText(Common.fields(name).joined(separator: " ")).unicodeScalars {
             let category = scalar.properties.generalCategory
             let isLetter = [.uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .modifierLetter, .otherLetter].contains(category)
             if isLetter || category == .decimalNumber || scalar == "_" || scalar == " " || scalar == "-" {

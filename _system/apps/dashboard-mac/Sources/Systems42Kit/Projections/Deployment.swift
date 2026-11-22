@@ -5,6 +5,15 @@ import Foundation
 struct DeploymentProjection {
     let model: ProjectionModel
 
+    /// The projection page this reads. Go: arch.go `BuildDeploymentDiagram`.
+    static let projection = "deployment-diagram"
+    static let declaration = ProjectionDeclaration(projection, [
+        (Arch.nodeType, [Arch.parentRelation, Arch.hostsRelation, Arch.connectsRelation, Arch.stateField,
+                         Arch.supersededByRelation, Arch.technologyField]),
+        (Arch.blockType, [Arch.stateField, Arch.supersededByRelation]),
+        (Arch.interfaceType, []),
+    ])
+
     /// Go: arch.go `BuildDeploymentDiagram`, the classes in the last lines.
     private static let classes = [
         "  classDef infra fill:#e3ecf7,stroke:#2f6fb3,color:#15202e;",
@@ -17,7 +26,7 @@ struct DeploymentProjection {
     }
 
     /// The diagram of all nodes (`root` empty) or of the subtree under `root`. Nil when there is nothing to draw.
-    func diagram(root: String = "") -> String? {
+    func diagram(root: String = "", links style: LinkStyle = .dashboard) -> String? {
         var tree = tree()
         if !root.isEmpty {
             guard let me = treeFind(tree, stem: root) else { return nil }
@@ -49,20 +58,23 @@ struct DeploymentProjection {
         }
         let mixed = isMixedLifecycle(inside)
 
+        var clickable: [(nid: String, page: Page)] = []
         var shown = Set<String>()
         var marked: [String: MarkedEntry] = [:]
+        var ids = NodeIDs()
         var lines = ["flowchart TB"]
 
         func emit(_ node: LevelNode, depth: Int) {
             let page = node.page
             let pad = String(repeating: "  ", count: depth)
-            let nid = Common.diagramNodeID(page.id)
-            var label = "\(page.id) · \(Common.cleanLabel(page.title, dropParenthetical: true))"
+            let nid = ids.id(of: page)
+            var label = "\(Common.label(page.id)) · \(Common.cleanLabel(page.title, dropParenthetical: true))"
             let technology = Common.cleanLabel(page.text(Arch.technologyField), dropParenthetical: true)
             if !technology.isEmpty { label += " (\(technology))" }
             label += model.lifecycleSuffix(page, mixed: mixed)
             shown.insert(page.stem)
             marked[page.stem] = MarkedEntry(key: page.stem, nid: nid, page: page)
+            clickable.append((nid, page))
 
             let hosted = hostedBlocks(page)
             if node.children.isEmpty && hosted.isEmpty {
@@ -72,10 +84,11 @@ struct DeploymentProjection {
             lines.append("\(pad)subgraph \(nid)[\"\(label)\"]")
             for stem in hosted {
                 let block = blockByStem[stem]!
-                let blockID = "\(nid)_\(Common.diagramNodeID(block.id))"
+                let blockID = ids.id("host:" + page.stem + "/" + stem, base: "\(nid)_\(Common.diagramNodeID(block.id))")
                 let key = page.stem + "/" + stem
                 marked[key] = MarkedEntry(key: key, nid: blockID, page: block)
-                lines.append("\(pad)  \(blockID)[\"\(block.id) · \(Common.cleanLabel(block.title, dropParenthetical: true))\(model.lifecycleSuffix(block, mixed: mixed))\"]:::block")
+                clickable.append((blockID, block))
+                lines.append("\(pad)  \(blockID)[\"\(Common.label(block.id)) · \(Common.cleanLabel(block.title, dropParenthetical: true))\(model.lifecycleSuffix(block, mixed: mixed))\"]:::block")
             }
             for child in node.children { emit(child, depth: depth + 1) }
             lines.append(pad + "end")
@@ -91,9 +104,9 @@ struct DeploymentProjection {
                 let stem = to.isEmpty ? "" : Frontmatter.pageName(in: to)
                 let target: String
                 if shown.contains(stem), let page = nodeByStem[stem] {
-                    target = Common.diagramNodeID(page.id)
+                    target = ids.id(of: page)
                 } else if let interface = interfaceByStem[stem] {
-                    target = Common.diagramNodeID(interface.id)
+                    target = ids.id(of: interface)
                     if neighbourSet.insert(stem).inserted { neighbours.append(stem) }
                 } else {
                     continue
@@ -105,14 +118,19 @@ struct DeploymentProjection {
                 if !noteText.isEmpty { parts.append(noteText) }
                 let label = parts.joined(separator: " · ")
                 let arrow = label.isEmpty ? " --> " : " -- \"\(label)\" --> "
-                edges.append("  \(Common.diagramNodeID(node.id))\(arrow)\(target)")
+                edges.append("  \(ids.id(of: node))\(arrow)\(target)")
             }
         }
         for stem in neighbours {
             guard let interface = interfaceByStem[stem] else { continue }
-            lines.append("  \(Common.diagramNodeID(interface.id))[\"\(Common.cleanLabel(interface.title, dropParenthetical: true))\"]:::system")
+            lines.append("  \(ids.id(of: interface))[\"\(Common.cleanLabel(interface.title, dropParenthetical: true))\"]:::system")
         }
         lines += edges
+        // The Go dashboard draws no click here. The app does: every node of a page is clickable.
+        if style == .page {
+            for stem in neighbours { if let interface = interfaceByStem[stem] { clickable.append((ids.id(of: interface), interface)) } }
+            for item in clickable { lines.append("  click \(item.nid) \"\(model.link(to: item.page, style: style))\"") }
+        }
 
         let entries = marked.values.sorted { a, b in
             a.nid != b.nid ? Common.less(a.nid, b.nid) : Common.less(a.key, b.key)

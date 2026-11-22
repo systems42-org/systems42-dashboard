@@ -243,7 +243,7 @@ import Systems42TestSupport
         try wiki.page("building-blocks", "BB-004-far", "Far", "draft", [("state", "current"), ("superseded-by", "[\"[[BB-003-b]]\"]")])
         let projections = try wiki.projections()
         #expect(projections.mermaid("page-BB-002") == nil)
-        let white = try #require(projections.mermaid("page-BB-001"))
+        let white = try #require(projections.mermaid("page-BB-001", links: .dashboard))
         #expect(white == """
             flowchart LR
               BB002["BB-002 · A"]:::block

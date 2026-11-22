@@ -31,13 +31,15 @@ struct TempWiki {
 
     /// Writes `wiki/<folder>/<stem>.md`. The id is the first two parts of the stem. `fields` are
     /// written as `key: value` lines, in order.
-    func page(_ folder: String, _ stem: String, _ title: String, _ status: String, _ fields: [(String, String)] = []) throws {
+    /// `yamlID` replaces the id, as YAML text (quote it).
+    func page(_ folder: String, _ stem: String, _ title: String, _ status: String, _ fields: [(String, String)] = [],
+              yamlID: String? = nil) throws {
         let dir = url.appending(path: "wiki").appending(path: folder)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let id = stem.split(separator: "-").prefix(2).joined(separator: "-")
         let extra = fields.map { "\($0.0): \($0.1)\n" }.joined()
         let related = fields.contains { $0.0 == "related" } ? "" : "related: []\n"
-        let text = "---\nid: \(id)\ntitle: \(title)\nstatus: \(status)\nsources: []\n\(related)\(extra)---\n\n# \(title)\n"
+        let text = "---\nid: \(yamlID ?? id)\ntitle: \(title)\nstatus: \(status)\nsources: []\n\(related)\(extra)---\n\n# \(title)\n"
         try text.write(to: dir.appending(path: "\(stem).md"), atomically: true, encoding: .utf8)
     }
 

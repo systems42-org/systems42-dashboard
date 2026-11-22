@@ -13,33 +13,18 @@ private func canonical(_ graph: Graph) throws -> String {
     try canonical(JSONSerialization.jsonObject(with: JSONEncoder().encode(graph)))
 }
 
-/// What `goal-matrix.json` holds, written from the public data of the matrix.
-private func matrixJSON(_ matrix: GoalMatrix) -> [String: Any] {
-    let columns: [[String: Any]] = matrix.columns.map { column in
-        ["id": column.id, "status": column.status, "enabler": matrix.enablers.contains { $0.id == column.id },
-         "no_goal": matrix.untraced.contains(column.id)]
-    }
-    var rows: [String: Any] = [:]
-    for goal in matrix.goals {
-        let serves = matrix.columns.filter { matrix.marked(goal: goal.id, column: $0.id) }.map(\.id)
-        rows[goal.id] = [
-            "status": goal.status, "gap": matrix.gaps.contains(goal.id), "gap_accepted": matrix.acceptedGaps.contains(goal.id),
-            "serves": serves, "served_by": Array(Set(matrix.servedWithoutColumn(goal: goal.id).map(\.id))).sorted(),
-        ] as [String: Any]
-    }
-    return ["columns": columns, "rows": rows]
-}
-
 @Suite struct GoldenProjectionTests {
     @Test(arguments: Fixture.names)
     func mermaidMatchesGolden(fixture: String) throws {
         let projections = try projections(fixture)
         var checked = 0
+        let others = Golden.diagrams(fixture).filter { !$0.hasSuffix(".mmd") && !$0.hasSuffix(".json") }
+        #expect(others.isEmpty, "\(fixture): the walk has no projection for \(others)")
         for file in Golden.diagrams(fixture) where file.hasSuffix(".mmd") {
             let name = String(file.dropLast(".mmd".count))
             let want = try Golden.text(fixture, "diagrams/\(file)")
             checked += 1
-            guard let got = projections.mermaid(name) else {
+            guard let got = projections.mermaid(name, links: .dashboard) else {
                 Issue.record("\(fixture): no projection for \(file)")
                 continue
             }
@@ -60,7 +45,7 @@ private func matrixJSON(_ matrix: GoalMatrix) -> [String: Any] {
             checked += 1
             let got: String
             if name == "goal-matrix" {
-                got = try canonical(matrixJSON(projections.goalMatrix()))
+                got = try canonical(JSONSerialization.jsonObject(with: JSONEncoder().encode(projections.goalMatrix().table)))
             } else if name.hasPrefix("page-"), name.hasSuffix("-ego") {
                 let id = String(name.dropFirst("page-".count).dropLast("-ego".count))
                 got = try canonical(projections.termNeighbourhood(of: id))
@@ -124,10 +109,11 @@ private func matrixJSON(_ matrix: GoalMatrix) -> [String: Any] {
 @Suite struct StoryMapAndBacklogTests {
     @Test func storyMapReleases() throws {
         let map = try projections("basic").storyMap()
-        #expect(map.releases == ["v1", "unscheduled"])
+        // an epic that names `unscheduled` and has no card in it adds no row
+        #expect(map.releases == ["v1"])
         #expect(map.backbone.map(\.id) == ["FR-001", "FR-006"])
         #expect(map.backbone.first { $0.id == "FR-006" }?.release == "unscheduled")
-        #expect(map.cards(under: "FR-001", release: "v1").map(\.id) == ["FR-002", "FR-003", "FR-004", "FR-005"])
+        #expect(map.cards(under: "FR-001", release: "v1").map(\.id) == ["FR-002", "FR-003", "FR-005", "FR-004"])
         #expect(map.cards(under: "FR-001", release: "unscheduled").isEmpty)
         #expect(map.cards(under: "no-such", release: "v1").isEmpty)
     }
@@ -136,7 +122,12 @@ private func matrixJSON(_ matrix: GoalMatrix) -> [String: Any] {
         #expect(try projections("basic").backlog().map(\.id) == ["FR-001", "FR-002", "FR-003", "FR-005", "FR-004", "FR-006"])
     }
 
-    @Test func backlogSortsByPriorityThenReleaseThenOrderThenId() throws {
+    @Test func releasesSortByNameWithNumbersByValueAndUnscheduledLast() {
+        let names = ["v10", "unscheduled", "v2", "v1", "2027", "v2.1"]
+        #expect(names.sorted(by: FR.releaseLess) == ["2027", "v1", "v2", "v2.1", "v10", "unscheduled"])
+    }
+
+    @Test func backlogSortsByReleaseThenPriorityThenOrderThenId() throws {
         let wiki = try TempWiki()
         defer { wiki.remove() }
         func fr(_ n: Int, _ priority: String, _ release: String, _ order: String) throws {
@@ -152,7 +143,7 @@ private func matrixJSON(_ matrix: GoalMatrix) -> [String: Any] {
         try fr(6, "Won't", "v1", "1")
         try fr(7, "Must", "v1", "2")
         try fr(8, "Should", "v1", "")
-        #expect(try wiki.projections().backlog().map(\.id) == ["FR-004", "FR-007", "FR-003", "FR-002", "FR-008", "FR-001", "FR-006", "FR-005"])
+        #expect(try wiki.projections().backlog().map(\.id) == ["FR-004", "FR-007", "FR-003", "FR-008", "FR-001", "FR-006", "FR-005", "FR-002"])
     }
 }
 

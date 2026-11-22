@@ -5,6 +5,15 @@ import Foundation
 struct RuntimeProjection {
     let model: ProjectionModel
 
+    /// The projection page this reads. Go: arch.go `BuildSequenceDiagram`.
+    static let projection = "sequence-diagram"
+    static let declaration = ProjectionDeclaration(projection, [
+        (Arch.scenarioType, [Arch.stepsRelation]),
+        (Arch.blockType, []),
+        (Arch.stakeholderType, []),
+        (Arch.interfaceType, []),
+    ])
+
     /// One drawn step of a scenario.
     struct Step {
         let fromStem, fromLabel, toStem, toLabel, message, note: String
@@ -28,7 +37,7 @@ struct RuntimeProjection {
         guard let page = model.byStem[stem] else { return ("", stem.isEmpty ? "?" : stem) }
         let plain = [model.folder(ofType: Arch.stakeholderType), model.folder(ofType: Arch.interfaceType)]
         if plain.contains(page.ref.folder) { return (stem, Common.cleanLabel(page.title, dropParenthetical: true)) }
-        return (stem, "\(page.id) · \(Common.cleanLabel(page.title, dropParenthetical: true))")
+        return (stem, "\(Common.label(page.id)) · \(Common.cleanLabel(page.title, dropParenthetical: true))")
     }
 
     /// Ports `StepsOf`: the steps that are mappings, in order.

@@ -74,7 +74,7 @@ import Systems42Kit
             lifecycle: lifecycle,
             order: PageOrder(enums: declared, statuses: lifecycle),
             exemptFolders: Set(section.folders.filter { folder in
-                !hasAgreedStatus(metamodel.type(forFolder: folder).flatMap { metamodel.lifecycles[$0.lifecycle] })
+                !Metamodel.hasAgreedStatus(metamodel.type(forFolder: folder).flatMap { metamodel.lifecycles[$0.lifecycle] })
             })
         )
         setupCache = (session.revision, setup)

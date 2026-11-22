@@ -30,6 +30,14 @@ struct ContextProjection {
     ]
     static let core = "CORE"
     static let personPrefix = "Person · "
+    /// The projection page this reads.
+    static let projection = "context-diagram"
+    static let declaration = ProjectionDeclaration(projection, [
+        (interfaceType, [shortTitleField, partnerField, tierField, flowsField]),
+        (stakeholderType, [providesField, receivesField, roleField, natureField]),
+    ])
+    /// The side a band or group is ranked on when nothing says more, and the node classes. Go: `tierSide`, `BuildContextDiagram`.
+    static let leftSide = "left", systemClass = "system", actorClass = "actor"
     static let classes = [
         "  classDef core fill:#2f6fb3,stroke:#7fc0ff,stroke-width:2px,color:#ffffff,font-weight:bold;",
         "  classDef system fill:#d7dbe3,stroke:#9aa3b2,color:#15202e;",
@@ -46,7 +54,7 @@ struct ContextProjection {
 
     /// Ports `tierSide`.
     private func side(of tier: String) -> String {
-        Self.tierBands.first { $0.key == tier }?.side ?? "left"
+        Self.tierBands.first { $0.key == tier }?.side ?? Self.leftSide
     }
 
     /// Ports `eifNodeLabel`.
@@ -89,6 +97,7 @@ struct ContextProjection {
     /// The diagram, nil when no interface or stakeholder gives an edge.
     func diagram() -> String? {
         let center = Common.cleanLabel(model.systemName, dropParenthetical: false)
+        var ids = NodeIDs(reserved: [Self.core] + Self.tierBands.map { Common.diagramNodeID($0.key) })
         var bands: [String: [Node]] = [:]
         var loose: [Node] = []
         var edges: [String] = []
@@ -97,7 +106,7 @@ struct ContextProjection {
             let label: String, source: String, arrow: String, target: String
             if !ins.isEmpty && !outs.isEmpty {
                 label = edgeLabel(ordered ?? ins + outs)
-                (source, arrow, target) = side == "left" ? (nid, "<-->", Self.core) : (Self.core, "<-->", nid)
+                (source, arrow, target) = side == Self.leftSide ? (nid, "<-->", Self.core) : (Self.core, "<-->", nid)
             } else if !ins.isEmpty {
                 (label, source, arrow, target) = (edgeLabel(ins), nid, "-->", Self.core)
             } else if !outs.isEmpty {
@@ -111,9 +120,9 @@ struct ContextProjection {
         for page in model.pages(ofType: Self.interfaceType) where page.status != Self.deprecatedStatus {
             let (ins, outs, ordered) = flows(of: page)
             if ins.isEmpty && outs.isEmpty { continue }
-            let nid = Common.diagramNodeID(page.id)
+            let nid = ids.id(of: page)
             let tier = page.lowered(Self.tierField)
-            let node = Node(nid: nid, label: nodeLabel(page), cls: "system")
+            let node = Node(nid: nid, label: nodeLabel(page), cls: Self.systemClass)
             if Self.tierBands.contains(where: { $0.key == tier }) { bands[tier, default: []].append(node) } else { loose.append(node) }
             addEdge(nid, ins: ins, outs: outs, side: side(of: tier), ordered: ordered)
         }
@@ -122,7 +131,7 @@ struct ContextProjection {
             let label: String
             var provides: [String] = []
             var receives: [String] = []
-            var cls = "actor"
+            var cls = ContextProjection.actorClass
         }
         var groups: [Group] = []
         var groupIndex: [String: Int] = [:]
@@ -146,20 +155,20 @@ struct ContextProjection {
                 groupIndex[label] = index
                 groups.append(Group(label: label))
             }
-            if isOrganization { groups[index].cls = "system" }
+            if isOrganization { groups[index].cls = Self.systemClass }
             union(&groups[index].provides, provides)
             union(&groups[index].receives, receives)
         }
         for group in groups {
-            let nid = Common.diagramNodeID(group.label)
+            let nid = ids.id("role:" + group.label, base: Common.diagramNodeID(group.label))
             loose.append(Node(nid: nid, label: group.label, cls: group.cls))
             addEdge(nid, ins: group.provides.map { [Self.dataKey: $0] }, outs: group.receives.map { [Self.dataKey: $0] },
-                    side: "left", ordered: nil)
+                    side: Self.leftSide, ordered: nil)
         }
         if edges.isEmpty { return nil }
 
         func nodeLine(_ node: Node) -> String {
-            node.cls == "actor"
+            node.cls == Self.actorClass
                 ? "  \(node.nid)([\"\(Self.personPrefix)\(node.label)\"]):::actor"
                 : "  \(node.nid)[\"\(node.label)\"]:::\(node.cls)"
         }

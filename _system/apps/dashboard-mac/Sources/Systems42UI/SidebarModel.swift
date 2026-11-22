@@ -26,17 +26,6 @@ public struct SidebarRow: Identifiable {
     public var id: String { section.id }
 }
 
-/// The status that "agreed only" keeps. The Go dashboard hard-codes the same word, and
-/// no requirement defines "agreed" otherwise.
-let agreedStatus = "accepted"
-
-/// Whether the lifecycle has an agreed status. Only pages on such a lifecycle can be agreed, so only
-/// they are hidden by "agreed only" and only their section shows a maturity bar. Issues and sources
-/// follow their own lifecycle and are never hidden.
-func hasAgreedStatus(_ lifecycle: [String]?) -> Bool {
-    lifecycle?.contains(agreedStatus) == true
-}
-
 /// What the sidebar shows for one section, counted over all its pages.
 struct SectionFigures: Sendable {
     /// Page counts per status, in the order the statuses first appear.
@@ -46,7 +35,7 @@ struct SectionFigures: Sendable {
     var openIssues: Int { openIssueIDs.count }
 
     var count: Int { byStatus.reduce(0) { $0 + $1.count } }
-    var agreed: Int { byStatus.first { $0.status == agreedStatus }?.count ?? 0 }
+    var agreed: Int { byStatus.first { $0.status == Metamodel.agreedStatus }?.count ?? 0 }
 
     /// Page counts per status of the pages that "agreed only" keeps.
     private var kept: [String: Int] = [:]
