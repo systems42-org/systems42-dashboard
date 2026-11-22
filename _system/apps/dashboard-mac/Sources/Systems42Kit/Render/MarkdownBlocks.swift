@@ -4,21 +4,40 @@ import Markdown
 /// Turns the Markdown body of a page into blocks. Reads no file and opens no URL.
 ///
 /// `resolve` tells what a wikilink points at, `title` what to show for a link without a label.
+/// Both run on the calling thread, in one pass after parsing, so a closure that needs the main
+/// actor is safe. Parsing runs on a worker thread with a large stack and sees only text.
 /// Page text never becomes anything but these values: raw HTML is text, and a link
 /// is an outside link only with the scheme `http`, `https` or `mailto`.
 ///
-/// The closures run on a worker thread while the caller waits. A page nested more deeply than
-/// the parser's stack allows (see `nestingBound`) is returned as one code block with a problem.
+/// A page nested more deeply than the parser's stack allows (see `nestingBound`) is returned as
+/// one code block with a problem. Its follows notes are still read.
 public func renderPage(
     _ body: String,
     resolve: (Wikilink) -> LinkTarget,
     title: (LinkTarget) -> String?
 ) -> RenderedPage {
-    let text = body.replacingOccurrences(of: "\r\n", with: "\n")
+    var follows = Follows()
+    let text = follows.dropNotes(from: withLineFeeds(body))
     guard nestingBound(text) <= maxNesting else {
-        return RenderedPage(follows: [], blocks: [.code(language: nil, body)], problems: [tooDeepProblem])
+        return RenderedPage(follows: follows.labels, blocks: [.code(language: nil, text)], problems: [tooDeepProblem])
     }
-    return StackWorker.shared.run { convertPage(text, resolve: resolve, title: title) }
+    let start = follows
+    let parsed = StackWorker.shared.run { parsePage(text, follows: start) }
+    let blocks = withoutActuallyEscaping(resolve) { resolve in
+        withoutActuallyEscaping(title) { title in
+            let resolver = LinkResolver(links: parsed.links, resolve: resolve, title: title)
+            return parsed.blocks.map { resolver.block($0) }
+        }
+    }
+    return RenderedPage(follows: parsed.follows, blocks: blocks, problems: [])
+}
+
+/// The parser ends a line at `\n`, `\r` and `\r\n`. The bound and the table step count lines
+/// by `\n`, so every line ending becomes one. Other characters are no line ends to the parser:
+/// form feed and vertical tab are no indent, U+2028 and U+2029 are ordinary text, NUL is replaced.
+func withLineFeeds(_ text: String) -> String {
+    guard text.utf8.contains(UInt8(ascii: "\r")) else { return text }
+    return text.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
 }
 
 let tooDeepProblem = "This page is nested too deeply to format. It is shown as plain text."
@@ -65,23 +84,67 @@ func nestingBound(_ text: String) -> Int {
     return count
 }
 
-/// Parses and converts on the calling thread. `renderPage` calls it on the worker.
-func convertPage(
-    _ text: String,
-    resolve: (Wikilink) -> LinkTarget,
-    title: (LinkTarget) -> String?
-) -> RenderedPage {
-    withoutActuallyEscaping(resolve) { resolve in
-        withoutActuallyEscaping(title) { title in
-            let renderer = PageRenderer(resolve: resolve, title: title)
-            let source = renderer.dropFollowsNotes(text)
-            var document = Document(parsing: source)
-            if let fixed = escapingWikilinkPipes(in: source, document: document) {
-                document = Document(parsing: fixed)
-            }
-            let blocks = renderer.blocks(of: document, depth: 0)
-            return RenderedPage(follows: renderer.follows, blocks: blocks, problems: [])
+/// What the worker hands back: blocks whose wikilinks are still to resolve. Each such link is an
+/// `.link([], .missing, raw: "<index>")` that points into `links`.
+struct ParsedPage: Sendable {
+    let follows: [String]
+    let blocks: [Block]
+    let links: [PendingLink]
+}
+
+struct PendingLink: Sendable {
+    let link: Wikilink
+    /// In the label of an outside link a wikilink is only text.
+    let plain: Bool
+}
+
+/// Parses and converts. Runs on the worker and sees no closure of the caller.
+func parsePage(_ text: String, follows: Follows) -> ParsedPage {
+    let renderer = PageRenderer(follows: follows)
+    var document = Document(parsing: text)
+    if let fixed = escapingWikilinkPipes(in: text, document: document) {
+        document = Document(parsing: fixed)
+    }
+    let blocks = renderer.blocks(of: document, depth: 0)
+    return ParsedPage(follows: renderer.follows.labels, blocks: blocks, links: renderer.links)
+}
+
+/// Resolves the pending links of a block tree, on the calling thread. The tree is capped in
+/// depth already, so this needs no large stack.
+private struct LinkResolver {
+    let links: [PendingLink]
+    let resolve: (Wikilink) -> LinkTarget
+    let title: (LinkTarget) -> String?
+
+    func block(_ block: Block) -> Block {
+        switch block {
+        case .heading(let level, let inlines): .heading(level: level, self.inlines(inlines))
+        case .paragraph(let inlines): .paragraph(self.inlines(inlines))
+        case .list(let ordered, let items): .list(ordered: ordered, items: items.map { $0.map { self.block($0) } })
+        case .table(let header, let rows):
+            .table(header: header.map { self.inlines($0) }, rows: rows.map { $0.map { self.inlines($0) } })
+        case .callout(let kind, let title, let inner): .callout(kind: kind, title: inlines(title), inner.map { self.block($0) })
+        case .quote(let inner): .quote(inner.map { self.block($0) })
+        case .code, .rule, .diagram: block
         }
+    }
+
+    func inlines(_ inlines: [Inline]) -> [Inline] {
+        var out: [Inline] = []
+        for inline in inlines {
+            switch inline {
+            case .link(_, _, let raw):
+                let pending = links[Int(raw)!]
+                let target = resolve(pending.link)
+                let shown = pending.link.label ?? title(target) ?? pending.link.name
+                out.append(pending.plain ? .text(shown) : .link([.text(shown)], target, raw: pending.link.target))
+            case .emphasis(let inner): out.append(.emphasis(self.inlines(inner)))
+            case .strong(let inner): out.append(.strong(self.inlines(inner)))
+            case .url(let label, let url): out.append(.url(self.inlines(label), url))
+            case .text, .code: out.append(inline)
+            }
+        }
+        return merged(out)
     }
 }
 
@@ -138,22 +201,24 @@ private func escapingWikilinkPipes(in source: String, document: Document) -> Str
 }
 
 /// One thread with a large stack. The parser recurses once or more per nesting level, and a
-/// thread of a caller has 512 KB or 8 MB. Callers wait, so one job runs at a time.
+/// thread of a caller has 512 KB or 8 MB. Callers wait, so one job runs at a time. A job holds
+/// no closure of a caller: it takes a string and gives back `Sendable` values.
 final class StackWorker: @unchecked Sendable {
     static let shared = StackWorker()
     static let stackSize = 128 << 20
 
+    private final class Box<T>: @unchecked Sendable { var value: T? }
+
     private let lock = NSLock()
     private let wake = DispatchSemaphore(value: 0)
     private let done = DispatchSemaphore(value: 0)
-    private var job: (() -> Void)?
-    private var thread: Thread?
+    private var job: (@Sendable () -> Void)?
 
     private init() {
         let thread = Thread { [self] in loop() }
         thread.stackSize = Self.stackSize
+        thread.qualityOfService = .userInitiated  // a caller on the main thread waits for it
         thread.name = "Systems42 page renderer"
-        self.thread = thread
         thread.start()
     }
 
@@ -169,17 +234,14 @@ final class StackWorker: @unchecked Sendable {
         }
     }
 
-    func run<T>(_ work: () -> T) -> T {
-        if Thread.current === thread { return work() }
+    func run<T: Sendable>(_ work: @escaping @Sendable () -> T) -> T {
+        let box = Box<T>()
         lock.lock()
-        defer { lock.unlock() }
-        var result: T?
-        withoutActuallyEscaping(work) { work in
-            job = { result = work() }
-            wake.signal()
-            done.wait()
-        }
-        return result!
+        job = { box.value = work() }
+        wake.signal()
+        done.wait()
+        lock.unlock()
+        return box.value!
     }
 }
 
@@ -201,31 +263,20 @@ public func renderInline(
     return [.text(text)]
 }
 
-private let maxBlockDepth = 10
-private let maxInlineDepth = 32
+/// The formats a page says it follows (FR-035), in order, without duplicates.
+struct Follows: Sendable {
+    private(set) var labels: [String] = []
+    private var seen: Set<String> = []
 
-private final class PageRenderer {
-    let resolve: (Wikilink) -> LinkTarget
-    let title: (LinkTarget) -> String?
-    private(set) var follows: [String] = []
-    private var seenFollows: Set<String> = []
-
-    init(resolve: @escaping (Wikilink) -> LinkTarget, title: @escaping (LinkTarget) -> String?) {
-        self.resolve = resolve
-        self.title = title
-    }
-
-    // MARK: follows
-
-    private func addFollow(_ label: String) {
+    mutating func add(_ label: String) {
         let trimmed = label.trimmingCharacters(in: .whitespaces)
-        if !trimmed.isEmpty, seenFollows.insert(trimmed.lowercased()).inserted { follows.append(trimmed) }
+        if !trimmed.isEmpty, seen.insert(trimmed.lowercased()).inserted { labels.append(trimmed) }
     }
 
     /// Removes `> follows ...` notes outside fenced code (FR-035). The fence rule is the Go
     /// dashboard's. A note without a link and with more than 6 words or any of `.!?;:` is an
     /// ordinary quote and stays.
-    func dropFollowsNotes(_ body: String) -> String {
+    mutating func dropNotes(from body: String) -> String {
         guard body.contains("follows") else { return body }
         var kept: [Substring] = []
         var fence: (char: Character, length: Int)?
@@ -237,7 +288,7 @@ private final class PageRenderer {
                     fence = open
                 }
                 kept.append(line)
-            } else if fence == nil, let note = Self.followsNote(line), takeFollowsNote(note) {
+            } else if fence == nil, let note = Self.followsNote(line), takeNote(note) {
                 continue
             } else {
                 kept.append(line)
@@ -247,15 +298,15 @@ private final class PageRenderer {
     }
 
     /// Adds the formats of a follows note. False for text that is an ordinary quote.
-    private func takeFollowsNote(_ note: String) -> Bool {
+    private mutating func takeNote(_ note: String) -> Bool {
         let links = Wikilink.all(in: note)
         if links.isEmpty {
             if note.split(whereSeparator: \.isWhitespace).count > 6 || note.contains(where: { ".!?;:".contains($0) }) {
                 return false
             }
-            addFollow(Self.withoutLeadingThe(note))
+            add(Self.withoutLeadingThe(note))
         } else {
-            links.forEach { addFollow($0.name) }
+            links.forEach { add($0.name) }
         }
         return true
     }
@@ -286,14 +337,24 @@ private final class PageRenderer {
     }
 
     /// `<!-- follows [[Q42]], https://... -->`: the links are formats the page follows.
-    private func takeFollowsComment(_ html: String) -> Bool {
+    mutating func takeComment(_ html: String) -> Bool {
         let trimmed = html.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.hasPrefix("<!--"), trimmed.hasSuffix("-->"), trimmed.count >= 7 else { return false }
         let inner = trimmed.dropFirst(4).dropLast(3).trimmingCharacters(in: .whitespacesAndNewlines)
         guard inner.hasPrefix("follows"), inner.dropFirst(7).first.map(\.isWhitespace) ?? true else { return false }
-        Wikilink.all(in: inner).forEach { addFollow($0.name) }
+        Wikilink.all(in: inner).forEach { add($0.name) }
         return true
     }
+}
+
+private let maxBlockDepth = 10
+private let maxInlineDepth = 32
+
+private final class PageRenderer {
+    var follows: Follows
+    private(set) var links: [PendingLink] = []
+
+    init(follows: Follows) { self.follows = follows }
 
     // MARK: blocks
 
@@ -314,7 +375,7 @@ private final class PageRenderer {
         case is ThematicBreak:
             out.append(.rule)
         case let html as HTMLBlock:
-            if !takeFollowsComment(html.rawHTML) {
+            if !follows.takeComment(html.rawHTML) {
                 out.append(.paragraph([.text(html.rawHTML.trimmingCharacters(in: .whitespacesAndNewlines))]))
             }
         case let table as Table:
@@ -429,7 +490,7 @@ private final class PageRenderer {
             case is SoftBreak: run += " "
             case is LineBreak: run += "\n"
             case let html as InlineHTML:
-                if takeFollowsComment(html.rawHTML) { afterComment = true } else { run += html.rawHTML }
+                if follows.takeComment(html.rawHTML) { afterComment = true } else { run += html.rawHTML }
             case let code as InlineCode:
                 flush(); out.append(.code(code.code))
             case let emphasis as Emphasis:
@@ -467,9 +528,8 @@ private final class PageRenderer {
         for match in matches {
             if match.utf8Range.lowerBound > position { out.append(.text(slice(position..<match.utf8Range.lowerBound))) }
             position = match.utf8Range.upperBound
-            let target = resolve(match.link)
-            let shown = match.link.label ?? title(target) ?? match.link.name
-            out.append(inLink ? .text(shown) : .link([.text(shown)], target, raw: match.link.target))
+            out.append(.link([], .missing, raw: String(links.count)))  // resolved by the caller
+            links.append(PendingLink(link: match.link, plain: inLink))
         }
         if position < bytes.count { out.append(.text(slice(position..<bytes.count))) }
         return merged(out)

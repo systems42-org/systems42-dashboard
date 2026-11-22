@@ -382,6 +382,49 @@ private func plain(_ blocks: [Block]) -> String { text(allInlines(blocks).filter
         #expect(page.problems == ["This page is nested too deeply to format. It is shown as plain text."])
     }
 
+    @Test func loneCarriageReturnsEndLinesForTheBoundToo() throws {
+        let body = "a\r" + String(repeating: "- b\r", count: 12_000)
+        let page = try render(body)
+        #expect(page.problems.count == 1)
+        #expect(page.blocks == [.code(language: nil, withLineFeeds(body))])
+        #expect(try blocks("a\r- b") == [.paragraph([.text("a")]), .list(ordered: false, items: [[.paragraph([.text("b")])]])])
+        let deep = (0..<2000).map { String(repeating: " ", count: $0 * 2) + "- x\($0)" }.joined(separator: "\r")
+        #expect(depth(try blocks(deep)) <= 20)
+    }
+
+    @Test func aTableWithLoneCarriageReturnsKeepsItsCells() throws {
+        let body = "| A | B |\r|---|---|\r| [[FR-002-checkout|Checkout]] | 2 |\r"
+        guard case .table(_, let rows)? = try blocks(body).first else { Issue.record("no table"); return }
+        #expect(rows[0].count == 2 && text(rows[0][0]) == "Checkout" && rows[0][1] == [.text("2")])
+    }
+
+    @Test func otherControlCharactersAreNoLineEndsToTheParser() throws {
+        for scalar in ["\u{0C}", "\u{0B}", "\u{2028}", "\u{2029}", "\u{0}"] {
+            let result = try blocks("a\(scalar)- b")
+            #expect(result.count == 1 && { if case .paragraph = result[0] { true } else { false } }(), "\(scalar.unicodeScalars.first!.value)")
+            #expect(nestingBound("a\(scalar)- b") == 0)
+        }
+    }
+
+    @Test func aFallbackPageKeepsItsFollowsLabels() throws {
+        let page = try render("> follows [[MADR]]\n" + String(repeating: "> ", count: 20_000) + "x")
+        #expect(page.problems.count == 1)
+        #expect(page.follows == ["MADR"])
+    }
+
+    @MainActor @Test func closuresRunOnTheCallingThreadAndSeeTheMainActor() {
+        var count = 0
+        let page = renderPage("See [[FR-003]] and [[a|b]], [x [[c]]](https://x.example).", resolve: { _ in
+            MainActor.assumeIsolated { count += 1 }
+            return .missing
+        }, title: { _ in
+            MainActor.assumeIsolated { count += 1 }
+            return nil
+        })
+        #expect(count == 3 + 2)  // three resolves, titles for the two links without a label
+        #expect(links(page.blocks).count == 2)
+    }
+
     @Test func plainReadingKeepsTheProblemAndRenderInlineStaysLiteral() throws {
         let body = String(repeating: "> ", count: 20_000) + "x"
         let page = try render(body)
