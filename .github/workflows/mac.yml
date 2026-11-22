@@ -1,0 +1,31 @@
+# Builds and tests the native Mac app. Runs only when the app or this file
+# changes, so wiki commits start no macOS job.
+name: mac
+
+on:
+  pull_request:
+    paths: ['_system/apps/dashboard-mac/**', '.github/workflows/mac.yml']
+  push:
+    branches: [main]
+    paths: ['_system/apps/dashboard-mac/**', '.github/workflows/mac.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  swift:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Select newest Xcode
+        run: |
+          xcode="$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
+          sudo xcode-select -s "$xcode"
+          swift --version
+
+      - name: Build
+        run: swift build --package-path _system/apps/dashboard-mac
+
+      - name: Test
+        run: swift test --package-path _system/apps/dashboard-mac
