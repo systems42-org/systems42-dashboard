@@ -21,19 +21,25 @@ struct PageView: View {
     let session: WikiSession
     let ref: PageRef
     @State private var model: PageModel?
+    @State private var removed = false
 
     var body: some View {
         Group {
             if let model {
                 PageContent(model: model, session: session)
+            } else if removed {
+                Text("This page was removed.").foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 Color.clear
             }
         }
         .task {
-            let made = PageModel(session: session, ref: ref)
+            guard let made = PageModel(session: session, ref: ref) else {
+                removed = true
+                return
+            }
             model = made
-            await made?.load()
+            await made.load()
         }
     }
 }
@@ -59,10 +65,8 @@ private struct PageContent: View {
                 } else {
                     BlockList(blocks: model.blocks)
                 }
-                let line = model.relationLine
-                if !line.isEmpty { InlineTextView(line, font: .callout).foregroundStyle(.secondary) }
                 Divider()
-                RelationsPanel(outgoing: model.outgoing, incoming: model.incoming)
+                RelationsPanel(outgoing: model.outgoing, incoming: model.incoming, definition: model.definition(of:))
                 IssuesPanel(issues: model.openIssues)
                 SourcesPanel(sources: model.sources)
             }

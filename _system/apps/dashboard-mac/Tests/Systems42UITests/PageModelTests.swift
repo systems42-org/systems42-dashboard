@@ -79,18 +79,19 @@ private func ids(_ groups: [(relation: String, label: String, pages: [Page])]) -
     }
 
     @Test func relationLabelsComeFromTheMetamodel() async throws {
-        // No relation page of the fixtures declares a label: the field name is prettified.
         let s = try await session("basic")
+        // Outgoing: the field name made readable.
         let child = try model(s, "functional-requirements", "FR-004-confirm-loan")
         #expect(child.outgoing.first { $0.relation == "parent" }?.label == "Parent")
-
-        // A relation page that declares a label wins.
-        let url = try Fixture.tempCopy("basic")
-        let file = url.appending(path: "_system/metamodel/relations/rel-parent.md")
-        let text = try String(contentsOf: file, encoding: .utf8)
-        try text.replacingOccurrences(of: "name: parent\n", with: "name: parent\nlabel: Refines\n").write(to: file, atomically: true, encoding: .utf8)
-        let labelled = try model(try await session("basic", root: url), "functional-requirements", "FR-004-confirm-loan")
-        #expect(labelled.outgoing.first { $0.relation == "parent" }?.label == "Refines")
+        // Incoming: the inverse that rel-parent.md declares.
+        var labels: [String] = []
+        for folder in s.store.folders() {
+            for page in s.store.pages(in: folder) {
+                labels += try model(s, folder, page.ref.stem).incoming.filter { $0.relation == "parent" }.map(\.label)
+            }
+        }
+        #expect(!labels.isEmpty)
+        #expect(Set(labels) == ["Children"])
     }
 
     @Test func openIssuesOnThePage() async throws {
@@ -133,14 +134,6 @@ private func ids(_ groups: [(relation: String, label: String, pages: [Page])]) -
         await m.load()
         #expect(m.rendered.blocks.count == m.blocks.count + 1)
         #expect(!m.blocks.contains { if case .heading(1, _) = $0 { true } else { false } })
-    }
-
-    @Test func theRelationLineLinksTheStoredRelations() async throws {
-        let m = try model(try await session("basic"), "functional-requirements", "FR-004-confirm-loan")
-        let targets = m.relationLine.compactMap { inline -> LinkTarget? in
-            if case .link(_, let target, _) = inline { target } else { nil }
-        }
-        #expect(targets.contains(.page(PageRef(folder: "functional-requirements", stem: "FR-002-checkout"))))
     }
 
     @Test func missingLinkIsMarked() async throws {
@@ -274,11 +267,63 @@ private func ids(_ groups: [(relation: String, label: String, pages: [Page])]) -
 
     @Test func aResultThatArrivesAfterANewRevisionIsDropped() async throws {
         let s = try await session("basic")
-        let m = try model(s, "functional-requirements", "FR-004-confirm-loan")
+        let gate = Gate()
+        let m = try #require(PageModel(session: s, ref: fr4, reading: preference(plain: false), render: gate.render))
+        let loading = Task { await m.load() }
+        await gate.untilRenderIsWaiting()
+        // The wiki is replaced while the render "runs".
         s.replace(with: LoadedWiki(root: s.root))
-        await m.load()
+        await gate.finishRender()
+        await loading.value
         #expect(m.rendered.blocks.isEmpty)
         #expect(m.isStale)
+        #expect(s.renderedPage(of: fr4) == nil)
+    }
+
+    @Test func keepingAnOldRevisionDoesNothing() async throws {
+        let s = try await session("basic")
+        let old = s.revision
+        s.replace(with: LoadedWiki(root: s.root))
+        let page = RenderedPage(follows: [], blocks: [.rule])
+        s.keep(RenderedBody(normal: page, plain: page), of: fr4, revision: old)
+        #expect(s.renderedPage(of: fr4) == nil)
+        s.keep(RenderedBody(normal: page, plain: page), of: fr4, revision: s.revision)
+        #expect(s.renderedPage(of: fr4)?.normal == page)
+    }
+
+    @Test func aPageIsRenderedOnceWhileARenderRuns() async throws {
+        let s = try await session("basic")
+        let gate = Gate()
+        let first = try #require(PageModel(session: s, ref: fr4, reading: preference(plain: false), render: gate.render))
+        let second = try #require(PageModel(session: s, ref: fr4, reading: preference(plain: false), render: gate.render))
+        let a = Task { await first.load() }
+        await gate.untilRenderIsWaiting()
+        let b = Task { await second.load() }
+        for _ in 0..<20 { await Task.yield() }
+        await gate.finishRender()
+        await a.value
+        await b.value
+        #expect(await gate.renders == 1)
+        #expect(!first.rendered.blocks.isEmpty)
+        #expect(!second.rendered.blocks.isEmpty)
+    }
+
+    @Test func aCancelledLoadKeepsNothing() async throws {
+        let s = try await session("basic")
+        let gate = Gate()
+        let m = try #require(PageModel(session: s, ref: fr4, reading: preference(plain: false), render: gate.render))
+        let loading = Task { await m.load() }
+        await gate.untilRenderIsWaiting()
+        loading.cancel()
+        await gate.finishRender()
+        await loading.value
+        #expect(m.rendered.blocks.isEmpty)
+        #expect(s.renderedPage(of: fr4) == nil)
+    }
+
+    @Test func aRemovedPageGivesNoModel() async throws {
+        let s = try await session("basic")
+        #expect(PageModel(session: s, ref: PageRef(folder: "functional-requirements", stem: "FR-999-gone"), reading: preference(plain: false)) == nil)
     }
 
     @Test func readingPreferenceIsKeptInTheDefaults() {
@@ -307,6 +352,62 @@ private func ids(_ groups: [(relation: String, label: String, pages: [Page])]) -
             }
         }
     }
+
+    @Test func theDefinitionOfAnEntryIsTheFirstTextParagraphAsPlainText() async throws {
+        let url = try Fixture.tempCopy("basic")
+        let loan = "---\nid: DT-002\ntitle: Loan\nstatus: draft\n---\n\n# Loan\n\n1. first\n2. second\n\n- item\n\n*It* is `code` and [[DT-001-book|a book]] and [x](https://example.org).\n"
+        try loan.write(to: url.appending(path: "wiki/domain-terms/DT-002-loan.md"), atomically: true, encoding: .utf8)
+        let s = try await session("basic", root: url)
+        let m = try model(s, "functional-requirements", "FR-004-confirm-loan")
+        let page = try #require(s.store.page(PageRef(folder: "domain-terms", stem: "DT-002-loan")))
+        #expect(m.definition(of: page) == "It is code and a book and x.")
+    }
+
+    @Test func aDefinitionFromRenderedBlocksMatchesTheCheapOne() async throws {
+        let s = try await session("basic")
+        let m = try model(s, "functional-requirements", "FR-004-confirm-loan")
+        let loan = try #require(s.store.page(PageRef(folder: "domain-terms", stem: "DT-002-loan")))
+        let cheap = m.definition(of: loan)
+        let other = try model(s, "domain-terms", "DT-002-loan")
+        await other.load()
+        let fresh = try model(s, "functional-requirements", "FR-004-confirm-loan")
+        #expect(fresh.definition(of: loan) == cheap)
+    }
+
+    @Test func aPageWithoutTextHasNoDefinition() async throws {
+        let url = try Fixture.tempCopy("basic")
+        try "---\nid: DT-002\ntitle: Loan\nstatus: draft\n---\n\n# Loan\n\n- only a list\n".write(to: url.appending(path: "wiki/domain-terms/DT-002-loan.md"), atomically: true, encoding: .utf8)
+        let s = try await session("basic", root: url)
+        let m = try model(s, "functional-requirements", "FR-004-confirm-loan")
+        let page = try #require(s.store.page(PageRef(folder: "domain-terms", stem: "DT-002-loan")))
+        #expect(m.definition(of: page) == nil)
+    }
+
+    @Test func everyRelationEntryWithTextHasADefinitionAndNoneWithoutText() async throws {
+        let s = try await session("basic")
+        let m = try model(s, "functional-requirements", "FR-004-confirm-loan")
+        let entries = (m.outgoing + m.incoming).flatMap(\.pages)
+        #expect(!entries.isEmpty)
+        for page in entries {
+            let text = m.definition(of: page)
+            #expect(text == nil || (!text!.isEmpty && text!.count <= 301), "\(page.id)")
+        }
+        #expect(entries.contains { m.definition(of: $0) != nil })
+    }
+
+    @Test(arguments: [
+        ("systems42://page?folder=domain-terms&stem=DT-001-book", false),
+        ("file:///etc/hosts", false),
+        ("HTTP://EXAMPLE.ORG", true),
+        ("ftp://example.org/x", false),
+        ("x-apple.systempreferences:", false),
+    ])
+    func aURLInlineOnlyActsForWebSchemes(address: String, allowed: Bool) throws {
+        let url = try #require(URL(string: address))
+        let content = InlineContent(.url([.text("t")], url))
+        #expect(content.actions == (allowed ? [.web(url)] : []))
+        #expect(content.text.runs.contains { $0.link != nil } == allowed)
+    }
 }
 
 func allLinks(_ blocks: [Block]) -> [Inline] {
@@ -329,5 +430,37 @@ func allLinks(_ blocks: [Block]) -> [Inline] {
         case .quote(let inner): allLinks(inner)
         case .code, .rule, .diagram: []
         }
+    }
+}
+
+let fr4 = PageRef(folder: "functional-requirements", stem: "FR-004-confirm-loan")
+
+/// A render the test holds back until it says go, with no sleeping.
+actor Gate {
+    private(set) var renders = 0
+    private var waiting: CheckedContinuation<Void, Never>?
+    private var released = false
+
+    nonisolated var render: PageRender {
+        { body, store in
+            await self.hold()
+            return await PageModel.renderBody(body, store)
+        }
+    }
+
+    private func hold() async {
+        renders += 1
+        if released { return }
+        await withCheckedContinuation { waiting = $0 }
+    }
+
+    func untilRenderIsWaiting() async {
+        while waiting == nil { await Task.yield() }
+    }
+
+    func finishRender() {
+        released = true
+        waiting?.resume()
+        waiting = nil
     }
 }

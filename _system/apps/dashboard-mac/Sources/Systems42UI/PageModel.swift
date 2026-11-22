@@ -30,16 +30,19 @@ public struct FollowItem: Sendable {
     private let session: WikiSession
     private let reading: ReadingPreference
     private let revision: Int
-    private var base: RenderedPage?
-    @ObservationIgnored private var plainBase: RenderedPage?
+    private var base: RenderedBody?
+    @ObservationIgnored private var definitions: [PageRef: Known] = [:]
+    private let render: PageRender
 
     /// Nil when the page is not in the loaded wiki.
-    public init?(session: WikiSession, ref: PageRef, reading: ReadingPreference = .shared) {
+    /// `render` makes the blocks of a body off the main thread. Tests pass their own.
+    public init?(session: WikiSession, ref: PageRef, reading: ReadingPreference = .shared, render: @escaping PageRender = PageModel.renderBody) {
         guard let page = session.store.page(ref) else { return nil }
         let store = session.store
         let metamodel = session.metamodel
         self.session = session
         self.reading = reading
+        self.render = render
         self.page = page
         revision = session.revision
         base = session.renderedPage(of: ref)
@@ -77,11 +80,7 @@ public struct FollowItem: Sendable {
     /// The body as blocks, plain when the reader chose it. Empty until `load()` is done.
     public var rendered: RenderedPage {
         guard let base else { return RenderedPage(follows: [], blocks: []) }
-        guard reading.plain else { return base }
-        if let plainBase { return plainBase }
-        let plain = plainReading(base)
-        plainBase = plain
-        return plain
+        return reading.plain ? base.plain : base.normal
     }
 
     /// The body to draw: a first heading that repeats the title is left out, the head shows it.
@@ -107,17 +106,22 @@ public struct FollowItem: Sendable {
     /// True when the wiki was replaced after this model was made. A new model is needed then.
     public var isStale: Bool { revision != session.revision }
 
-    /// Renders the body off the main thread. A result for a replaced wiki is dropped.
+    /// The default `PageRender`: the Kit's renderer, run on the calling (background) task.
+    public nonisolated static func renderBody(_ body: String, _ store: WikiStore) async -> RenderedPage {
+        renderPage(body, resolve: { store.resolve($0) }, title: { name(of: $0, in: store) })
+    }
+
+    /// Renders the body off the main thread, once per page even when two models ask. A result for a
+    /// replaced wiki, or for a cancelled caller, is dropped and not kept.
     public func load() async {
         guard base == nil, !isStale else { return }
-        let body = page.body
-        let store = session.store
-        let result = await Task.detached(priority: .userInitiated) {
-            renderPage(body, resolve: { store.resolve($0) }, title: { Self.name(of: $0, in: store) })
-        }.value
-        guard base == nil, !isStale else { return }
+        if let kept = session.renderedPage(of: page.ref) {
+            base = kept
+            return
+        }
+        let result = await session.rendering(of: page, using: render).value
+        guard !Task.isCancelled, base == nil, !isStale else { return }
         session.keep(result, of: page.ref, revision: revision)
-        plainBase = nil
         base = result
     }
 
@@ -136,7 +140,7 @@ public struct FollowItem: Sendable {
     public func definition(for target: LinkTarget) -> String? {
         switch target {
         case .page(let ref):
-            return session.store.page(ref).flatMap { Self.firstParagraph(of: $0.body) }
+            return session.store.page(ref).flatMap(definition(of:))
         case .anchor(let name):
             return session.metamodel.anchor(name).map(\.definition).flatMap { $0.isEmpty ? nil : $0 }
         case .source, .metamodel, .missing:
@@ -144,38 +148,47 @@ public struct FollowItem: Sendable {
         }
     }
 
-    /// The first paragraph of a body that is no heading, quote, list, table or comment, as one line
-    /// without emphasis marks, cut to `definitionLength`. Nil when there is none.
-    static func firstParagraph(of body: String) -> String? {
-        let blocks = body.components(separatedBy: "\n\n").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-        guard let paragraph = blocks.first(where: { text in
-            guard let first = text.first else { return false }
-            return !"#>-|<".contains(first) && !text.hasPrefix("* ") && !text.hasPrefix("+ ") && !text.hasPrefix("```")
-        }) else { return nil }
-        var line = paragraph.split(separator: "\n", omittingEmptySubsequences: false)
-            .map { $0.trimmingCharacters(in: .whitespaces) }.joined(separator: " ")
-        for match in Wikilink.matches(in: line).reversed() {
-            var bytes = Array(line.utf8)
-            bytes.replaceSubrange(match.utf8Range, with: Array((match.link.label ?? match.link.name).utf8))
-            line = String(decoding: bytes, as: UTF8.self)
+    /// The first paragraph of a page as plain text, cut to `definitionLength`. Nil when the page has none.
+    /// It comes from the rendered blocks when the session has them, else from rendering the first text paragraph alone.
+    public func definition(of other: Page) -> String? {
+        if let known = definitions[other.ref] { return known.text }
+        let inlines: [Inline]?
+        if let kept = session.renderedPage(of: other.ref) {
+            inlines = kept.normal.blocks.lazy.compactMap { if case .paragraph(let inlines) = $0 { inlines } else { nil } }.first
+        } else if let chunk = Self.firstTextChunk(of: other.body) {
+            let store = session.store
+            inlines = renderInline(chunk, resolve: { store.resolve($0) }, title: { Self.name(of: $0, in: store) })
+        } else {
+            inlines = nil
         }
-        line = line.replacingOccurrences(of: "**", with: "").replacingOccurrences(of: "__", with: "")
-        guard !line.isEmpty else { return nil }
-        return line.count > definitionLength ? String(line.prefix(definitionLength)) + "…" : line
+        var line = inlines.map(Self.plainText) ?? ""
+        line = line.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        let text: String? = line.isEmpty ? nil : (line.count > Self.definitionLength ? String(line.prefix(Self.definitionLength)) + "…" : line)
+        definitions[other.ref] = Known(text: text)
+        return text
     }
 
-    /// The compact line under the body: each stored relation of the page with its targets as links.
-    var relationLine: [Inline] {
-        var inlines: [Inline] = []
-        for group in outgoing where group.relation != WikiStore.bodyKey {
-            if !inlines.isEmpty { inlines.append(.text("  ·  ")) }
-            inlines.append(.text(group.label + " "))
-            for (index, target) in group.pages.enumerated() {
-                if index > 0 { inlines.append(.text(", ")) }
-                inlines.append(.link([.text(target.id)], .page(target.ref), raw: target.id))
+    private struct Known { let text: String? }
+
+    /// The first part of a body that is not a heading, quote, list, table, comment or fence.
+    private static func firstTextChunk(of body: String) -> String? {
+        body.components(separatedBy: "\n\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first { text in
+                guard let first = text.first else { return false }
+                if "#>-|<".contains(first) || text.hasPrefix("```") || text.hasPrefix("~~~") { return false }
+                if text.hasPrefix("* ") || text.hasPrefix("+ ") { return false }
+                return text.range(of: "^\\d+[.)]\\s", options: .regularExpression) == nil
             }
-        }
-        return inlines
+    }
+
+    static func plainText(_ inlines: [Inline]) -> String {
+        inlines.map { inline in
+            switch inline {
+            case .text(let value), .code(let value): value
+            case .emphasis(let inner), .strong(let inner), .link(let inner, _, _), .url(let inner, _): plainText(inner)
+            }
+        }.joined()
     }
 
     // MARK: Relations
@@ -203,16 +216,14 @@ public struct FollowItem: Sendable {
     }
 }
 
-/// The labels of relations, from the metamodel: a relation page's label or title, else the field name made readable.
-/// For the other end of a link the relation's inverse is used when the page names one.
+/// The labels of relations, from the metamodel: the field name made readable. For the other end of a
+/// link, the name the relation page declares as its inverse.
 struct RelationLabels {
-    private static let labelKey = "label", inverseKey = "inverse", fieldKey = "field"
-
-    private let relations: [MMConstruct]
+    private let metamodel: Metamodel
     private let order: [String]
 
     init(metamodel: Metamodel, type: MMType?) {
-        relations = metamodel.relations
+        self.metamodel = metamodel
         order = (type?.fields ?? []).map(\.name)
     }
 
@@ -229,13 +240,7 @@ struct RelationLabels {
 
     func label(of field: String, incoming: Bool) -> String {
         if field == WikiStore.bodyKey { return incoming ? "Mentions this page" : "Mentioned in the text" }
-        let relation = relations.first { $0.frontmatter[Self.fieldKey] == .text(field) } ?? relations.first { $0.name == field }
-        func text(_ key: String) -> String? {
-            guard case .text(let value)? = relation?.frontmatter[key], !value.isEmpty else { return nil }
-            return value
-        }
-        if let declared = text(Self.labelKey) ?? text(PageKey.title) { return declared }
-        if incoming, let inverse = text(Self.inverseKey) { return FieldLabel.text(inverse) }
+        if incoming, let inverse = metamodel.relation(storedIn: field)?.inverse { return FieldLabel.text(inverse) }
         return FieldLabel.text(field)
     }
 }

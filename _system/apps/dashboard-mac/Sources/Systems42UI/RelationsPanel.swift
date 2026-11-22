@@ -5,6 +5,8 @@ import Systems42Kit
 struct RelationsPanel: View {
     let outgoing: [PageModel.RelationGroup]
     let incoming: [PageModel.RelationGroup]
+    /// The definition of an entry: the first paragraph of its page. It shows on hover and VoiceOver reads it.
+    let definition: (Page) -> String?
     @Environment(\.pageLinks) private var links
 
     var body: some View {
@@ -25,14 +27,23 @@ struct RelationsPanel: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(verbatim: group.label).font(.caption).foregroundStyle(.secondary)
                         ForEach(group.pages, id: \.ref) { page in
-                            Button { links.open(.page(page.ref)) } label: {
-                                Text(verbatim: "\(page.id)  \(page.title)").lineLimit(1)
-                            }
-                            .buttonStyle(.link)
+                            entry(page)
                         }
                     }
                 }
             }
+        }
+    }
+
+    @ViewBuilder private func entry(_ page: Page) -> some View {
+        let button = Button { links.open(.page(page.ref)) } label: {
+            Text(verbatim: "\(page.id)  \(page.title)").lineLimit(1)
+        }
+        .buttonStyle(.link)
+        if let text = definition(page) {
+            button.help(text).accessibilityHint(text)
+        } else {
+            button
         }
     }
 }

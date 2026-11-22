@@ -20,6 +20,7 @@ struct PageHead: View {
                 }
             }
             Text(verbatim: model.page.title).font(.title.bold()).fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
             if !model.followItems.isEmpty {
                 HStack(spacing: 6) {
                     Text("Follows").font(.caption).foregroundStyle(.secondary)

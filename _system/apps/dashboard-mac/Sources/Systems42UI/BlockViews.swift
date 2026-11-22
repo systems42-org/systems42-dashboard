@@ -45,6 +45,7 @@ struct BlockView: View {
         switch block {
         case .heading(let level, let inlines):
             InlineTextView(inlines, font: Self.font(forHeading: level)).fontWeight(.semibold).padding(.top, 6)
+                .accessibilityAddTraits(.isHeader)
         case .paragraph(let inlines):
             InlineTextView(inlines)
         case .list(let ordered, let items):
@@ -165,7 +166,7 @@ private struct CalloutBlock: View {
             Label {
                 InlineTextView(title).fontWeight(.semibold)
             } icon: {
-                Image(systemName: style.symbol).foregroundStyle(style.color)
+                Image(systemName: style.symbol).foregroundStyle(style.color).accessibilityLabel(Text(verbatim: kind))
             }
             BlockList(blocks: inner)
         }
