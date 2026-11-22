@@ -104,6 +104,11 @@ public struct Metamodel: Sendable {
         return types.first { $0.folder == folder || ($0.folder.split(separator: "/").last == wanted && wanted != nil) }
     }
 
+    /// The section whose types include the issue type. Nil when the metamodel has none.
+    public var issueSection: Section? {
+        sections.first { $0.types.contains(RelationRules.issueType) }
+    }
+
     /// The anchor with this name, title or alias, ignoring case.
     public func anchor(_ nameOrAlias: String) -> Anchor? {
         anchorsByName[nameOrAlias.lowercased()]
