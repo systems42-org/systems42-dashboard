@@ -39,7 +39,7 @@ import app  # noqa: E402
 GET_ROUTES = [
     "/", "/domain-terms", "/graph/domain-terms", "/issues", "/stakeholders", "/decisions",
     "/search", "/goals", "/entity-diagram", "/req42", "/req42/functional-requirements", "/arc42/building-blocks",
-    "/arc42/deployment", "/arc42/runtime", "/arc42/concepts",
+    "/arc42/strategy", "/arc42/deployment", "/arc42/runtime", "/arc42/concepts",
     "/req42/scope", "/req42/models", "/req42/quality", "/req42/constraints",
     "/arc42", "/commons", "/help", "/metamodel", "/method",
 ]

@@ -1,4 +1,4 @@
-{# Typed link groups (drivers, shaped by, used by, addressed by, the arc42
+{# Typed link groups (drivers, realizes, shaped by, used by, addressed by, the arc42
    view links and supersession) in the look of
    the relations panel: one block per heading, one group per page type. #}
 {% macro link_groups(heading, groups) %}
@@ -21,6 +21,7 @@
   {{ link_groups("Replaced by", trace.replaced_by) }}
   {{ link_groups("Replaces", trace.replaces) }}
   {{ link_groups("Drivers", trace.drivers) }}
+  {{ link_groups("Realizes", trace.realizes) }}
   {{ link_groups("Shaped by", trace.shaped_by) }}
   {{ link_groups("Applies to", trace.applies_to) }}
   {{ link_groups("Hosts", trace.hosts) }}
@@ -29,6 +30,7 @@
   {{ link_groups("Governed by", trace.governed_by) }}
   {{ link_groups("Takes part in", trace.takes_part_in) }}
   {{ link_groups("Addressed by", trace.addressed_by) }}
+  {{ link_groups("Realized by", trace.realized_by) }}
 </nav>
 {% endif %}
 {% endmacro %}

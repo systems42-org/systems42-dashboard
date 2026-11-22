@@ -21,7 +21,7 @@ WIKI_FOLDERS = [
     "glossary", "domain-terms", "goals", "stakeholders", "context", "external-interfaces",
     "data-models", "activity-models", "use-cases", "functional-requirements",
     "quality-requirements", "constraints", "issues", "building-blocks", "decisions",
-    "concepts", "runtime-scenarios", "deployment-nodes",
+    "solution-strategy", "crosscutting-concepts", "runtime-scenarios", "deployment-nodes",
 ]
 
 _tmp = Path(tempfile.mkdtemp())
@@ -75,8 +75,10 @@ _page("building-blocks", "BB-001-scalars",
 _page("deployment-nodes", "DN-001-scalars",
       "id: DN-001\ntitle: Node\nstereotype: host\nstate: current\nparent: 7\nhosts: 7\nconnects: 7")
 _page("runtime-scenarios", "RS-001-scalars",
-      "id: RS-001\ntitle: Scenario\nstate: current\nsteps: 7\ndrivers: 7")
-_page("concepts", "CC-001-scalars", "id: CC-001\ntitle: Concept\nstate: current\napplies-to: 7")
+      "id: RS-001\ntitle: Scenario\nstate: current\nsteps: 7\nrealizes: 7")
+_page("crosscutting-concepts", "CC-001-scalars", "id: CC-001\ntitle: Concept\nstate: current\napplies-to: 7")
+_page("solution-strategy", "SOL-001-scalars",
+      "id: SOL-001\ntitle: Strategy\nstate: current\ndrivers: 7\ndecisions: 7\nsuperseded-by: 7")
 _page("decisions", 'DR-002-quote" onmouseover="x', "id: DR-002\ntitle: Quote in the file name")
 _page("decisions", "DR-001-scalars", "id: DR-001\ntitle: Decision\nkind: 7\ndrivers: 7\ntags: 7")
 # not UTF-8

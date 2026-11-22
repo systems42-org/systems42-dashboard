@@ -302,6 +302,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.handleGlossaryGraph(w, r)
 	case p == "/graph/glossary":
 		s.handleLegacyRedirect(w, r, "/graph/domain-terms")
+	case p == "/arc42/strategy":
+		s.handleStrategy(w, r)
 	case p == "/arc42/building-blocks":
 		s.handleBuildingBlocks(w, r)
 	case p == "/arc42/concepts":

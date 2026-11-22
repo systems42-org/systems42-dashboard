@@ -9,7 +9,7 @@ sources: []
 related: []
 tags: [runtime-scenario]
 steps: []
-drivers: ["[[UC-001-reset-credentials]]"]
+realizes: ["[[UC-001-reset-credentials]]"]
 decisions: []
 state: target
 superseded-by:

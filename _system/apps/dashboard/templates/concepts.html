@@ -19,10 +19,10 @@
   {% endfor %}
 </ul>
 {% else %}
-<p class="muted">No concepts yet. Add pages under <code>wiki/concepts/</code> from <code>_templates/concept.md</code>.</p>
+<p class="muted">No crosscutting concepts yet. Add pages under <code>wiki/crosscutting-concepts/</code> from <code>_templates/crosscutting-concept.md</code>.</p>
 {% endfor %}
 {% if rows %}
 <h2 class="mm-h2">All concepts</h2>
-{{ arch_table(list_spec("concept"), rows, [("Category", "category", "text")]) }}
+{{ arch_table(list_spec("crosscutting-concept"), rows, [("Category", "category", "text")]) }}
 {% endif %}
 {% endblock %}

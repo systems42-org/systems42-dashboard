@@ -61,6 +61,12 @@ NON_WIKI_PREFIXES = {"SRC"}
 # the entry with the migration; the test fails once a template declares it.
 KNOWN_UNTIL_MIGRATION = {"notation"}
 
+# ID prefixes the dashboard maps for meta's metamodel (DR-040) that this
+# repository's own `_templates/` emit only once they are synced from meta
+# (issue #103). Remove the entry with the sync; the test fails once a template
+# emits it.
+PREFIXES_UNTIL_SYNC = {"SOL"}
+
 
 def _templates() -> list[Path]:
     files = sorted(TEMPLATES.glob("*.md"))
@@ -118,8 +124,10 @@ def test_no_type_map_entry_is_dead():
                        ("_TYPE_LABEL", set(app._TYPE_LABEL)),
                        ("_REL_TYPE_ORDER", set(app._REL_TYPE_ORDER))):
         # This repository's wiki still emits GLO/DM. The app also serves migrated DT vaults.
-        dead = sorted(keys - emitted - {"DT"})
+        dead = sorted(keys - emitted - {"DT"} - PREFIXES_UNTIL_SYNC)
         assert not dead, f"{name} maps prefixes no template emits: {dead}"
+    gone = PREFIXES_UNTIL_SYNC & emitted
+    assert not gone, f"now emitted, remove from PREFIXES_UNTIL_SYNC: {gone}"
     codes = {m["code"] for m in app.SUPPORTING_MODEL_TYPES}
     assert codes <= emitted, \
         f"SUPPORTING_MODEL_TYPES uses codes no template emits: {sorted(codes - emitted)}"

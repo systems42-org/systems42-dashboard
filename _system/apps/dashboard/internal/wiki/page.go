@@ -28,14 +28,19 @@ var (
 	whitespaceRE    = regexp.MustCompile(`\s+`)
 )
 
-// ArchFolders lists the four arc42 architecture content folders (A2-A5).
-var ArchFolders = []string{"building-blocks", "concepts", "runtime-scenarios", "deployment-nodes"}
+// ArchFolders lists the arc42 architecture content folders (A1-A5).
+var ArchFolders = []string{"solution-strategy", "building-blocks", "crosscutting-concepts", "runtime-scenarios", "deployment-nodes"}
+
+// DriverFolders lists the folders whose `drivers:` the Addressed-by panel reads
+// (proj-addressed-by). A runtime scenario names its requirement in `realizes:`.
+var DriverFolders = []string{"decisions", "solution-strategy", "building-blocks", "crosscutting-concepts", "deployment-nodes"}
 
 var archFolderSet = map[string]bool{
-	"building-blocks":   true,
-	"concepts":          true,
-	"runtime-scenarios": true,
-	"deployment-nodes":  true,
+	"solution-strategy":     true,
+	"building-blocks":       true,
+	"crosscutting-concepts": true,
+	"runtime-scenarios":     true,
+	"deployment-nodes":      true,
 }
 
 var validArchStates = map[string]bool{
@@ -51,8 +56,8 @@ var TypeFolder = map[string]string{
 	"EIF": "external-interfaces", "GOAL": "goals", "CTX": "context",
 	"FR": "functional-requirements", "CON": "constraints", "ISS": "issues",
 	"UC": "functional-requirements", "ACT": "activity-models", "QR": "quality-requirements",
-	"DR": "decisions", "BB": "building-blocks", "CC": "concepts",
-	"RS": "runtime-scenarios", "DN": "deployment-nodes",
+	"DR": "decisions", "SOL": "solution-strategy", "BB": "building-blocks",
+	"CC": "crosscutting-concepts", "RS": "runtime-scenarios", "DN": "deployment-nodes",
 }
 
 // TypeLabel maps stem ID prefixes to group labels for the relations and trace panels.
@@ -61,14 +66,14 @@ var TypeLabel = map[string]string{
 	"CTX": "Context", "EIF": "External interfaces", "GOAL": "Goals",
 	"FR": "Functional requirements", "UC": "Use cases", "ACT": "Activity models",
 	"QR": "Quality requirements", "CON": "Constraints", "DR": "Decisions",
-	"BB": "Building blocks", "CC": "Concepts", "RS": "Runtime scenarios",
-	"DN": "Deployment nodes", "ISS": "Issues",
+	"SOL": "Solution strategies", "BB": "Building blocks", "CC": "Crosscutting concepts",
+	"RS": "Runtime scenarios", "DN": "Deployment nodes", "ISS": "Issues",
 }
 
 // RelTypeOrder defines the group display order in relations and trace panels.
 var RelTypeOrder = []string{
 	"DT", "GLO", "STK", "DM", "CTX", "EIF", "GOAL", "FR", "UC", "ACT",
-	"QR", "CON", "DR", "BB", "CC", "RS", "DN", "ISS",
+	"QR", "CON", "DR", "SOL", "BB", "CC", "RS", "DN", "ISS",
 }
 
 // FolderLabels maps wiki subfolder names to display names, matching app.py.
@@ -87,8 +92,9 @@ var FolderLabels = map[string]string{
 	"stakeholders":            "Stakeholder",
 	"issues":                  "Issue",
 	"decisions":               "Decision record",
+	"solution-strategy":       "Solution strategy",
 	"building-blocks":         "Building block",
-	"concepts":                "Crosscutting concept",
+	"crosscutting-concepts":   "Crosscutting concept",
 	"runtime-scenarios":       "Runtime scenario",
 	"deployment-nodes":        "Deployment node",
 }
@@ -200,7 +206,7 @@ func (p *Page) Aliases() []string {
 	return out
 }
 
-// IsArchFolder reports whether folder is one of the four arc42 folders.
+// IsArchFolder reports whether folder is one of the arc42 folders.
 func IsArchFolder(folder string) bool {
 	return archFolderSet[folder]
 }

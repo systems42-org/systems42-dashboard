@@ -216,11 +216,11 @@ wiki folders), `out` (deliberately not captured, an inactive tile) or `planned`
 | **R4** Supporting Models | Requirements | count of model pages: activity models and the entity diagram | `/req42/models` |
 | **R5** Team Structure | Requirements | out of scope, inactive tile | — |
 | **R6** Roadmap | Requirements | out of scope, inactive tile | — |
-| **A1** Solution Strategy | Architecture | planned, "not captured yet" | — |
+| **A1** Solution Strategy | Architecture | strategy page count; "not captured yet" while the metamodel keeps A1 planned | `/arc42/strategy` |
 | **A2** Building Block View | Architecture | planned | — |
 | **A3** Deployment View | Architecture | planned | — |
 | **A4** Runtime View | Architecture | planned | — |
-| **A5** Crosscutting Concepts | Architecture | planned | — |
+| **A5** Crosscutting Concepts | Architecture | concept count (`wiki/crosscutting-concepts/`) | `/arc42/concepts` |
 | **C1** Quality Requirements | Commons | scenario count | `/req42/quality` |
 | **C2** Constraints | Commons | constraint count | `/req42/constraints` |
 | **C3** Scope & Context | Commons | external interface count | `/req42/scope` |

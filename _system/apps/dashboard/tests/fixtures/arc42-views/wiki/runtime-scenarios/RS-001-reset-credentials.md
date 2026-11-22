@@ -15,7 +15,7 @@ steps:
   - {from: "[[BB-002-identity]]", to: "[[BB-004-account]]", message: Token prüfen}
   - {from: "[[BB-003-console]]", to: "[[BB-005-secrets]]", message: Hash speichern}
   - {from: "[[BB-004-account]]", to: "[[BB-999-ghost]]", message: Protokoll}
-drivers: ["[[UC-001-reset-credentials]]", "[[ACT-001-self-service]]"]
+realizes: ["[[UC-001-reset-credentials]]", "[[ACT-001-self-service]]"]
 decisions: []
 state: current
 superseded-by: "[[RS-002-reset-credentials-new]]"

@@ -90,7 +90,7 @@ def test_routes_are_unchanged():
     assert by_id["C5"]["href"] == "/domain-terms"
     assert by_id["C6"]["href"] == "/issues"
     assert set(catalog.SECTION_BY_SLUG) == {"functional-requirements", "models", "quality", "constraints", "scope",
-                                           "building-blocks", "deployment", "runtime", "concepts"}
+                                           "strategy", "building-blocks", "deployment", "runtime", "concepts"}
 
 
 def test_lookups():
