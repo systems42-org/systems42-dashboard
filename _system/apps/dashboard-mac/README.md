@@ -40,9 +40,10 @@ Each fixture is a small Systems42 derivative: `wiki/`, `raw/sources/`,
 | `arc42-views` | `arc42-views/wiki/` |
 | `domain-model` | `domain-model/` |
 | `hostile` | written by hand, see its `README.md` |
+| `tailored` | `basic` with a renamed and an added section, see its `README.md` |
 
 The fixtures are frozen copies and are committed. `hostile` holds broken pages, and
-the script refreshes only its `_system/`. Refresh them on purpose:
+the script refreshes only its `_system/`. It leaves `tailored` alone. Refresh them on purpose:
 
     _system/apps/dashboard-mac/scripts/sync-fixtures.sh
 
