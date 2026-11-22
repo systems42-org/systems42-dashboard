@@ -44,6 +44,9 @@ public struct PageRelations: Equatable, Sendable {
 /// written without quotes in YAML (`parent: [[FR-001]]`) is a list in a list, so
 /// YAML drops the brackets and the link does not count, as in the dashboard.
 public final class WikiStore: @unchecked Sendable {
+    /// The key `linksFrom` and `linksTo` use for the links of the page body.
+    public static let bodyKey = "text"
+
     private let root: WikiRoot
 
     private let lock = NSLock()
@@ -279,7 +282,7 @@ final class Snapshot: Sendable {
                 }
             }
             for (field, links) in page.fieldLinks { add(links, field: field) }
-            add(page.bodyLinks, field: "text")
+            add(page.bodyLinks, field: WikiStore.bodyKey)
             outgoing[page.ref] = perField
             for (field, targets) in perField {
                 for target in targets { incoming[target, default: [:]][field, default: []].append(page.ref) }

@@ -77,6 +77,9 @@ struct LoadedWiki: Sendable {
     public private(set) var orientation: Orientation?
     /// Counts up each time the loaded wiki is replaced, so models know their rows are stale.
     public private(set) var revision = 0
+    /// Rendered page bodies of the current revision. A replaced wiki empties it.
+    @ObservationIgnored private var renderedPages: [PageRef: RenderedPage] = [:]
+    private static let mostRenderedPages = 100
     private var history: [Place] = []
     private var position = -1
 
@@ -104,7 +107,20 @@ struct LoadedWiki: Sendable {
         metamodel = loaded.metamodel
         figures = loaded.figures
         orientation = loaded.orientation
+        renderedPages = [:]
         revision += 1
+    }
+
+    /// The rendered body of a page, if it was rendered for the current wiki.
+    func renderedPage(of ref: PageRef) -> RenderedPage? {
+        renderedPages[ref]
+    }
+
+    /// Keeps a rendered body. A result of an older revision is dropped.
+    func keep(_ page: RenderedPage, of ref: PageRef, revision: Int) {
+        guard revision == self.revision else { return }
+        if renderedPages.count >= Self.mostRenderedPages { renderedPages = [:] }
+        renderedPages[ref] = page
     }
 
     /// Reads the wiki on the calling thread. The app uses `open(_:)` instead.
