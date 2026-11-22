@@ -65,7 +65,7 @@ var knownSections = map[string]knownMeta{
 	"R4": {href: "/req42/models", slug: "models", colors: []string{"req"}},
 	"R5": {colors: []string{"org"}, note: "Organisation / team setup — " + outNote},
 	"R6": {colors: []string{"org"}, note: "Release planning — " + outNote},
-	"A1": {colors: []string{"arc"}},
+	"A1": {href: "/arc42/strategy", slug: "strategy", colors: []string{"arc"}},
 	"A2": {href: "/arc42/building-blocks", slug: "building-blocks", colors: []string{"arc"}},
 	"A3": {href: "/arc42/deployment", slug: "deployment", colors: []string{"arc"}},
 	"A4": {href: "/arc42/runtime", slug: "runtime", colors: []string{"arc"}},

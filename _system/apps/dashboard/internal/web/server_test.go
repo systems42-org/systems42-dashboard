@@ -454,7 +454,7 @@ func TestPhase3ProjectionRoutesAndFilters(t *testing.T) {
 	for _, u := range []string{
 		"/req42/scope", "/req42/models", "/req42/functional-requirements",
 		"/goals", "/entity-diagram", "/graph/domain-terms",
-		"/arc42/building-blocks", "/arc42/deployment", "/arc42/runtime", "/arc42/concepts",
+		"/arc42/strategy", "/arc42/building-blocks", "/arc42/deployment", "/arc42/runtime", "/arc42/concepts",
 		"/functional-requirements/FR-055-an-installable-dashboard-app",
 	} {
 		rec := httptest.NewRecorder()

@@ -52,7 +52,7 @@ func TestHostileVault(t *testing.T) {
 		"glossary", "domain-terms", "goals", "stakeholders", "context", "external-interfaces",
 		"data-models", "activity-models", "use-cases", "functional-requirements",
 		"quality-requirements", "constraints", "issues", "building-blocks", "decisions",
-		"concepts", "runtime-scenarios", "deployment-nodes",
+		"solution-strategy", "crosscutting-concepts", "runtime-scenarios", "deployment-nodes",
 	}
 	for _, f := range folders {
 		_ = os.MkdirAll(filepath.Join(wikiDir, f), 0o755)
@@ -75,8 +75,9 @@ func TestHostileVault(t *testing.T) {
 	writePage(t, wikiDir, "quality-requirements", "QR-001-scalar-dimensions", "id: QR-001\ntitle: Quality\ndimensions: 7\nrelated: 7", "# T\n")
 	writePage(t, wikiDir, "building-blocks", "BB-001-scalars", "id: BB-001\ntitle: Block\nstate: current\nparent: 7\nuses: 7\ndrivers: 7\ndecisions: 7", "# T\n")
 	writePage(t, wikiDir, "deployment-nodes", "DN-001-scalars", "id: DN-001\ntitle: Node\nstereotype: host\nstate: current\nparent: 7\nhosts: 7\nconnects: 7", "# T\n")
-	writePage(t, wikiDir, "runtime-scenarios", "RS-001-scalars", "id: RS-001\ntitle: Scenario\nstate: current\nsteps: 7\ndrivers: 7", "# T\n")
-	writePage(t, wikiDir, "concepts", "CC-001-scalars", "id: CC-001\ntitle: Concept\nstate: current\napplies-to: 7", "# T\n")
+	writePage(t, wikiDir, "runtime-scenarios", "RS-001-scalars", "id: RS-001\ntitle: Scenario\nstate: current\nsteps: 7\nrealizes: 7", "# T\n")
+	writePage(t, wikiDir, "crosscutting-concepts", "CC-001-scalars", "id: CC-001\ntitle: Concept\nstate: current\napplies-to: 7", "# T\n")
+	writePage(t, wikiDir, "solution-strategy", "SOL-001-scalars", "id: SOL-001\ntitle: Strategy\nstate: current\ndrivers: 7\ndecisions: 7\nsuperseded-by: 7", "# T\n")
 	writePage(t, wikiDir, "decisions", `DR-002-quote" onmouseover="x`, "id: DR-002\ntitle: Quote in the file name", "# T\n")
 	writePage(t, wikiDir, "decisions", "DR-001-scalars", "id: DR-001\ntitle: Decision\nkind: 7\ndrivers: 7\ntags: 7", "# T\n")
 
@@ -185,7 +186,7 @@ func TestHostileVault(t *testing.T) {
 		"/", "/req42", "/arc42", "/commons", "/req42/scope", "/req42/models",
 		"/req42/quality", "/req42/constraints", "/req42/functional-requirements",
 		"/goals", "/entity-diagram", "/graph/domain-terms",
-		"/arc42/building-blocks", "/arc42/deployment", "/arc42/runtime", "/arc42/concepts",
+		"/arc42/strategy", "/arc42/building-blocks", "/arc42/deployment", "/arc42/runtime", "/arc42/concepts",
 		"/metamodel", "/method", "/changes", "/issues", "/issues?status=open",
 		"/stakeholders", "/decisions", "/domain-terms", "/source/SRC-001-hostile",
 	} {
@@ -439,8 +440,18 @@ func TestHostileEveryType(t *testing.T) {
 		"use-case": "use-cases", "functional-requirement": "functional-requirements",
 		"quality-requirement": "quality-requirements", "constraint": "constraints",
 		"building-block": "building-blocks", "deployment-node": "deployment-nodes",
-		"runtime-scenario": "runtime-scenarios", "concept": "concepts",
-		"decision-record": "decisions", "issue": "issues",
+		"runtime-scenario": "runtime-scenarios", "decision-record": "decisions", "issue": "issues",
+	}
+	// This repository's _templates/ follow meta's metamodel (DR-040) once
+	// synced (issue #103): until then the crosscutting concept template is
+	// concept.md and there is no solution-strategy template.
+	if _, err := os.Stat(filepath.Join(root, "_templates", "crosscutting-concept.md")); err == nil {
+		typeFolders["crosscutting-concept"] = "crosscutting-concepts"
+	} else {
+		typeFolders["concept"] = "crosscutting-concepts"
+	}
+	if _, err := os.Stat(filepath.Join(root, "_templates", "solution-strategy.md")); err == nil {
+		typeFolders["solution-strategy"] = "solution-strategy"
 	}
 	structural := map[string]bool{
 		"id": true, "type": true, "status": true, "stereotype": true,
@@ -600,7 +611,7 @@ func TestHostileEveryType(t *testing.T) {
 		"/", "/req42", "/arc42", "/commons", "/req42/scope", "/req42/models",
 		"/req42/quality", "/req42/constraints", "/req42/functional-requirements",
 		"/goals", "/entity-diagram", "/graph/domain-terms",
-		"/arc42/building-blocks", "/arc42/deployment", "/arc42/runtime", "/arc42/concepts",
+		"/arc42/strategy", "/arc42/building-blocks", "/arc42/deployment", "/arc42/runtime", "/arc42/concepts",
 		"/metamodel", "/method", "/changes", "/issues", "/issues?status=open",
 		"/stakeholders", "/decisions", "/domain-terms",
 		"/search", "/search.json", "/join", "/who", "/help", "/about",

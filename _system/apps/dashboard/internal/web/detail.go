@@ -30,6 +30,12 @@ var addressableFolders = map[string]bool{
 	"activity-models":         true,
 }
 
+// realizableFolders are the folders a runtime scenario's `realizes:` may name (rel-realizes).
+var realizableFolders = map[string]bool{
+	"functional-requirements": true,
+	"activity-models":         true,
+}
+
 type issueVocab struct {
 	status   map[string]bool
 	severity map[string]bool
@@ -182,9 +188,11 @@ func buildTrace(sn *requestSnapshot, stem, folder string) map[string]any {
 	byStem := sn.byStem()
 	trace := map[string]any{
 		"drivers":       []map[string]any{},
+		"realizes":      []map[string]any{},
 		"shaped_by":     []map[string]any{},
 		"used_by":       []map[string]any{},
 		"addressed_by":  []map[string]any{},
+		"realized_by":   []map[string]any{},
 		"replaced_by":   []map[string]any{},
 		"replaces":      []map[string]any{},
 		"applies_to":    []map[string]any{},
@@ -202,9 +210,12 @@ func buildTrace(sn *requestSnapshot, stem, folder string) map[string]any {
 				break
 			}
 		}
-		if p := byStem[stem]; p != nil {
+		if p := byStem[stem]; p != nil && folder != "runtime-scenarios" {
 			trace["drivers"] = linkGroups(wiki.LinksOf(p, "drivers", byStem), byStem)
 		}
+	}
+	if folder == "runtime-scenarios" && me != nil {
+		trace["realizes"] = linkGroups(wiki.LinksOf(me, "realizes", byStem), byStem)
 	}
 	if me != nil && folder != "decisions" {
 		trace["shaped_by"] = linkGroups(wiki.LinksOf(me, "decisions", byStem), byStem)
@@ -238,7 +249,7 @@ func buildTrace(sn *requestSnapshot, stem, folder string) map[string]any {
 	}
 	if folder == "building-blocks" || folder == "deployment-nodes" {
 		var governedBy []string
-		for _, p := range sortedByID(sn.folder("concepts")) {
+		for _, p := range sortedByID(sn.folder("crosscutting-concepts")) {
 			if containsStr(wiki.LinksOf(p, "applies-to", byStem), stem) {
 				governedBy = append(governedBy, p.Stem)
 			}
@@ -254,15 +265,15 @@ func buildTrace(sn *requestSnapshot, stem, folder string) map[string]any {
 		}
 		trace["takes_part_in"] = linkGroups(takesPart, byStem)
 	}
-	if folder == "concepts" && me != nil {
+	if folder == "crosscutting-concepts" && me != nil {
 		trace["applies_to"] = linkGroups(wiki.LinksOf(me, "applies-to", byStem), byStem)
 	}
 	if folder == "deployment-nodes" && me != nil {
 		trace["hosts"] = linkGroups(wiki.LinksOf(me, "hosts", byStem), byStem)
 	}
 	if addressableFolders[folder] {
-		candidates := append([]*wiki.Page{}, sortedByID(sn.folder("decisions"))...)
-		for _, f := range wiki.ArchFolders {
+		var candidates []*wiki.Page
+		for _, f := range wiki.DriverFolders {
 			candidates = append(candidates, sortedByID(sn.folder(f))...)
 		}
 		var addressed []string
@@ -272,6 +283,15 @@ func buildTrace(sn *requestSnapshot, stem, folder string) map[string]any {
 			}
 		}
 		trace["addressed_by"] = linkGroups(addressed, byStem)
+	}
+	if realizableFolders[folder] {
+		var realizedBy []string
+		for _, p := range sortedByID(sn.folder("runtime-scenarios")) {
+			if containsStr(wiki.LinksOf(p, "realizes", byStem), stem) {
+				realizedBy = append(realizedBy, p.Stem)
+			}
+		}
+		trace["realized_by"] = linkGroups(realizedBy, byStem)
 	}
 	return trace
 }
