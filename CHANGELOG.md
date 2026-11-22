@@ -69,6 +69,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
   next.
 
 ### Changed
+- Dashboard release 0.13.0 (`_system/apps/dashboard/VERSION`).
 - Dashboard: the multi-column sort presets of the section lists (FR-021) live in the dashboard (`SORT_PRESETS` in `app.py`), not in the metamodel (CON-006). The Domain Terms list takes `domain-term` when the metamodel has that type. The type key `sort_orders:` and its lint check are gone from `_system/metamodel/`, as in the Systems42 meta repository; delete it from your type pages if you added it.
 - Issues: `category:` and `owner:` follow the Systems42 metamodel (meta pull request 55). The category `systems42` is now `method`, both fields are optional, and `owner:` takes a `[[STK-...]]` link only. Rename `category: systems42` to `method` in your issues. The dashboard still shows an owner written as a plain name.
 - Dashboard: the sections come from the repository's metamodel
