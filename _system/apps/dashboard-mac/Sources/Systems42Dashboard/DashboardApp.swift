@@ -28,6 +28,7 @@ struct DashboardApp: App {
         .commands {
             OpenCommands(recent: recent)
             ReadingCommands()
+            SearchCommands()
             MetamodelCommands()
             MethodCommands()
         }

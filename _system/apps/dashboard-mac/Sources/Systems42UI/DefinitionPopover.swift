@@ -44,6 +44,7 @@ struct InlineTextView: View {
     let content: InlineContent
     var font: Font?
     @Environment(\.pageLinks) private var links
+    @Environment(\.pageMarks) private var marks
     @State private var shown: Definition?
 
     init(_ inlines: [Inline], font: Font? = nil) {
@@ -52,7 +53,7 @@ struct InlineTextView: View {
     }
 
     var body: some View {
-        Text(content.text)
+        Text(marks.apply(to: content.text))
             .font(font)
             .fixedSize(horizontal: false, vertical: true)
             .environment(\.openURL, OpenURLAction { url in

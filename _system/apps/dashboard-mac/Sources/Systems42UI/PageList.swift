@@ -7,7 +7,9 @@ struct ListColumn: View {
     @Binding var storedStates: String
 
     var body: some View {
-        if let id = session.selectedSection, let section = session.metamodel.sections.first(where: { $0.id == id }) {
+        if session.shownSearch != nil {
+            SearchResults(session: session, model: session.search)
+        } else if let id = session.selectedSection, let section = session.metamodel.sections.first(where: { $0.id == id }) {
             // A new section gets a new model, with the state it had when it was last shown.
             PageList(session: session, section: section, storedStates: $storedStates)
                 .id(section.id)
