@@ -28,7 +28,7 @@ AREAS: list[dict] = [
      "href": "/req42", "colors": ["req"]},
     {"key": "architecture", "label": "Architecture", "subtitle": "structure, interfaces, views",
      "href": "/arc42", "colors": ["arc"]},
-    {"key": "commons", "label": "Commons", "subtitle": "shared by both peaks",
+    {"key": "commons", "label": "Commons", "subtitle": "shared by both areas",
      "href": "/commons", "colors": ["req", "arc"]},
 ]
 

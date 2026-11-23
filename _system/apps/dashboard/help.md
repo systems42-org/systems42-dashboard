@@ -3,8 +3,8 @@
 ## Reading this dashboard
 
 **Three areas, two levels.** The home page shows **Requirements** and
-**Architecture** as two peaks and **Commons** as the ground both stand on.
-Between the peaks sits the *valley*: what the agent did — the vault's state,
+**Architecture** side by side and **Commons** below, which both share.
+The *middle column* between them shows what the agent did: the vault's state,
 the latest changes, the open issues, and a link to the decisions. Click an area to open its page; each page shows that cabinet's
 sections as tiles; a tile opens the section's list; a list opens the page.
 

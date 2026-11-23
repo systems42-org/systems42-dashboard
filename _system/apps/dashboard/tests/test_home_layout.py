@@ -83,7 +83,7 @@ def test_home_shows_two_peaks_the_valley_and_commons_in_order():
     assert positions == sorted(positions), positions
     for old in ("tile-r1", "tile-c6", "tile-adrs", "tile-changes", "tile-issues", 'class="tiles"'):
         assert old not in body, old
-    for sub in ("goals, needs, constraints", "structure, interfaces, views", "shared by both peaks"):
+    for sub in ("goals, needs, constraints", "structure, interfaces, views", "shared by both areas"):
         assert sub in body, sub
 
 

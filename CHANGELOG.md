@@ -76,6 +76,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
   next.
 
 ### Changed
+- Dashboard: the home page, Help and the README no longer call Requirements and Architecture "peaks" or the column between them the "valley", since the Chart mark replaced the Peaks mark. Commons is "shared by both areas" (Python and Go).
 - Website: the line under the hero buttons says how many pages of requirements and architecture the demo holds. It no longer counts "views", the exported HTML files.
 - Dashboard release 0.14.2 (`_system/apps/dashboard/VERSION`).
 - Website: the hero and the page headers show the Chart mark's six columns in mint and sky instead of the two peaks. The columns grow from left to right as in the dashboard's intro, not under reduced motion. On a phone all six columns show. The card titles carry a small column instead of a triangle.
