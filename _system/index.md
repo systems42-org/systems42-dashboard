@@ -250,3 +250,5 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-051-domain-term-obsidian]] Domain term: Obsidian (document)
 - [[SRC-052-closing-round-on-the-domain-terms]] Closing round on the domain terms (interview)
 - [[SRC-049-grilling-session-on-the-mac-native-app]] Grilling session on the Mac-native app (interview)
+- [[SRC-053-the-chart-mark]] The Chart mark (diagram)
+- [[SRC-054-grilling-session-on-the-chart-mark]] Grilling session on the Chart mark (interview)
