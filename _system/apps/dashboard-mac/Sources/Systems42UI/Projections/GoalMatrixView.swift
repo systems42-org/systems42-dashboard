@@ -8,8 +8,8 @@ struct GoalMatrixView: View {
     let model: MatrixModel
     let selected: PageRef?
     let onSelect: (PageRef) -> Void
-    @State private var hovered: String?
-    @FocusState private var focused: String?
+    /// Hover and focus of the headers live here, and only the caption reads them, so a hover does not draw the matrix again.
+    @State private var columnState = ColumnState()
 
     private static let goalWidth: CGFloat = 230, cellWidth: CGFloat = 64, rowHeight: CGFloat = 48, headerHeight: CGFloat = 62
     private static let gapWidth: CGFloat = 16
@@ -21,8 +21,7 @@ struct GoalMatrixView: View {
     /// The matrix and the text under it. `scrolls: false` leaves out the scroll view, which an offscreen render does not draw.
     func content(scrolls: Bool) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-                Text(caption).font(.callout).foregroundStyle(.secondary).lineLimit(1).truncationMode(.tail)
-                    .frame(height: 20, alignment: .leading)
+                Caption(model: model, state: columnState)
                 HStack(alignment: .top, spacing: 0) {
                     goalColumn
                     if scrolls { ScrollView(.horizontal) { columnGrid } } else { columnGrid }
@@ -33,13 +32,6 @@ struct GoalMatrixView: View {
                 served
         }
         .padding(12)
-    }
-
-    /// The title of the column that is hovered or has the focus.
-    private var caption: String {
-        let key = focused ?? hovered
-        if let key, let column = model.columns.first(where: { $0.item.key == key }) { return column.item.text }
-        return "Hover over or focus a column to see its title."
     }
 
     // MARK: Goal column
@@ -100,22 +92,7 @@ struct GoalMatrixView: View {
     }
 
     private func header(_ column: MatrixModel.Column) -> some View {
-        let key = column.item.key
-        return OpenButton(label: column.accessibilityLabel, selected: selected == column.item.ref, action: { if let ref = column.item.ref { onSelect(ref) } }) {
-            VStack(spacing: 1) {
-                Text(column.item.id).font(.system(.caption, design: .monospaced)).lineLimit(1).minimumScaleFactor(0.7)
-                if column.untraced {
-                    Text("no goal").font(.caption2.bold()).foregroundStyle(ProjectionStyle.warning)
-                } else if column.enabler {
-                    Text("enabler").font(.caption2).foregroundStyle(.secondary)
-                }
-            }
-            .frame(width: Self.cellWidth, height: Self.headerHeight - 6)
-            .background(column.untraced ? ProjectionStyle.warning.opacity(0.18) : .clear, in: RoundedRectangle(cornerRadius: 4))
-        }
-        .focused($focused, equals: key)
-        .onHover { inside in hovered = inside ? key : (hovered == key ? nil : hovered) }
-        .help(column.item.text)
+        ColumnHeader(column: column, selected: selected == column.item.ref, state: columnState, onSelect: onSelect)
     }
 
     private func cell(row: MatrixModel.Row, index: Int) -> some View {
@@ -151,5 +128,57 @@ struct GoalMatrixView: View {
                 .accessibilityElement(children: .contain)
             }
         }
+    }
+}
+
+/// Which column is hovered or has the focus.
+@MainActor @Observable private final class ColumnState {
+    var hovered: String?
+    var focused: String?
+}
+
+/// The title of the column that is hovered or has the focus.
+private struct Caption: View {
+    let model: MatrixModel
+    let state: ColumnState
+
+    var body: some View {
+        let key = state.focused ?? state.hovered
+        let text = key.flatMap { key in model.columns.first { $0.item.key == key }?.item.text }
+        Text(text ?? "Hover over or focus a column to see its title.")
+            .font(.callout).foregroundStyle(.secondary).lineLimit(1).truncationMode(.tail)
+            .frame(height: 20, alignment: .leading)
+    }
+}
+
+private struct ColumnHeader: View {
+    let column: MatrixModel.Column
+    let selected: Bool
+    let state: ColumnState
+    let onSelect: (PageRef) -> Void
+    @FocusState private var focus: Bool
+
+    var body: some View {
+        let key = column.item.key
+        OpenButton(label: column.accessibilityLabel, selected: selected, action: { if let ref = column.item.ref { onSelect(ref) } }) {
+            VStack(spacing: 1) {
+                Text(column.item.id).font(.system(.caption, design: .monospaced)).lineLimit(1).minimumScaleFactor(0.7)
+                if column.untraced {
+                    Text("no goal").font(.caption2.bold()).foregroundStyle(ProjectionStyle.warning)
+                } else if column.enabler {
+                    Text("enabler").font(.caption2).foregroundStyle(.secondary)
+                }
+            }
+            .frame(width: 64, height: 56)
+            .background(column.untraced ? ProjectionStyle.warning.opacity(0.18) : .clear, in: RoundedRectangle(cornerRadius: 4))
+        }
+        .focused($focus)
+        .onChange(of: focus) { _, now in
+            if now { state.focused = key } else if state.focused == key { state.focused = nil }
+        }
+        .onHover { inside in
+            if inside { state.hovered = key } else if state.hovered == key { state.hovered = nil }
+        }
+        .help(column.item.text)
     }
 }

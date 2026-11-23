@@ -82,7 +82,9 @@ struct LoadedWiki: Sendable {
     public private(set) var mode = ListModel.listMode
 
     /// Whether the list column shows a projection and no search results: it then takes the width of list and page.
-    public var showsProjection: Bool { shownSearch == nil && selectedSection != nil && mode != ListModel.listMode }
+    public var showsProjection: Bool {
+        shownSearch == nil && selectedSection != nil && ProjectionHost.nativeProjections.contains(mode)
+    }
 
     private var figures: [String: SectionFigures]
     public private(set) var orientation: Orientation?
@@ -259,7 +261,8 @@ struct LoadedWiki: Sendable {
     func showUnrecorded(section: WikiSection.ID?, page: PageRef?) {
         let section = section.flatMap { id in metamodel.sections.contains { $0.id == id } ? id : nil }
         let page = page.flatMap { store.page($0) == nil ? nil : $0 }
-        restore(Place(section: section, page: page, issuesAbout: nil), remember: false)
+        // The mode stays what the section is shown in, so a tour step never changes the remembered mode.
+        restore(Place(section: section, page: page, issuesAbout: nil, mode: modeShown(in: section)), remember: false)
     }
 
     /// The number of places in the history.
@@ -286,6 +289,14 @@ struct LoadedWiki: Sendable {
         guard selectedSection == id, shownSearch == nil, mode == ListModel.listMode else { return }
         mode = stored
         if history.indices.contains(position) { history[position].mode = stored }
+    }
+
+    /// Selects the page of an element of a projection. The section and the mode stay, only the page changes,
+    /// so the inspector may show a page of any section. Without a projection it selects like `select(page:)`.
+    public func selectInProjection(_ ref: PageRef) {
+        guard store.page(ref) != nil else { return }
+        guard showsProjection else { select(page: ref); return }
+        go(to: Place(section: selectedSection, page: ref, issuesAbout: issueFilter, mode: mode))
     }
 
     /// Closes the page that shows next to a projection. Records the place.
@@ -341,7 +352,10 @@ struct LoadedWiki: Sendable {
         restore(place, remember: true)
     }
 
-    private func restore(_ place: Place, remember: Bool) {
+    private func restore(_ wanted: Place, remember: Bool) {
+        // A mode the section does not offer now (the wiki was reloaded) shows the list.
+        var place = wanted
+        if let id = place.section, !offers(place.mode, in: id) { place.mode = ListModel.listMode }
         if remember, let id = place.section { rememberedModes[id] = place.mode }
         mode = place.mode
         selectedSection = place.section

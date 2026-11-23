@@ -6,10 +6,17 @@ struct Chip: View {
     let text: String
     var tint: Color = .secondary
 
+    /// A chip for an empty value draws nothing.
     var body: some View {
+        if !text.isEmpty { chip }
+    }
+
+    private var chip: some View {
         Text(text)
             .font(.caption2)
-            .lineLimit(1)
+            .lineLimit(2)
+            .truncationMode(.tail)
+            .frame(maxWidth: 180)
             .foregroundStyle(tint)
             .padding(.horizontal, 5)
             .background(.quaternary, in: Capsule())

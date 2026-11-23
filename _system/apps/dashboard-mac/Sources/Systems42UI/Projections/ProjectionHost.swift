@@ -52,6 +52,16 @@ private struct ProjectionView: View {
     @Binding var outline: Bool
 
     var body: some View {
+        content
+            .opacity(model.isCurrent ? 1 : 0.45)
+            .overlay(alignment: .top) {
+                if !model.isCurrent && model.data != nil {
+                    ProgressView("Updating").controlSize(.small).padding(6).background(.regularMaterial, in: Capsule()).padding(.top, 8)
+                }
+            }
+    }
+
+    @ViewBuilder private var content: some View {
         if let data = model.data {
             let selected = session.selectedPage
             let onSelect: (PageRef) -> Void = { model.select($0) }
@@ -60,7 +70,7 @@ private struct ProjectionView: View {
                 if data.matrix.isEmpty { Hint(mode: mode) } else { GoalMatrixView(model: data.matrix, selected: selected, onSelect: onSelect) }
             case ProjectionHost.backlogMode:
                 if data.backlog.isEmpty { Hint(mode: mode) } else { BacklogView(rows: data.backlog, selected: selected, onSelect: onSelect) }
-            default:
+            case ProjectionHost.storyMapMode:
                 if data.storyMap.isEmpty && data.outline.isEmpty {
                     Hint(mode: mode)
                 } else {
@@ -75,12 +85,15 @@ private struct ProjectionView: View {
                         .padding(8)
                         .accessibilityLabel("Show the requirements as a story map or as an outline")
                         if outline {
-                            HierarchyView(model: model, roots: data.outline, selected: selected, onSelect: onSelect)
+                            HierarchyView(model: model, roots: data.outline, revision: data.revision, selected: selected, onSelect: onSelect)
                         } else {
                             StoryMapView(model: data.storyMap, selected: selected, onSelect: onSelect)
                         }
                     }
                 }
+            default:
+                // A mode the app does not draw. `WikiSession.showsProjection` keeps the host away from it.
+                Text("This view is not available.").foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         } else {
             ProgressView().controlSize(.small).frame(maxWidth: .infinity, maxHeight: .infinity)

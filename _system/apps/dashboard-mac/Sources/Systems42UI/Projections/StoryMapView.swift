@@ -29,8 +29,9 @@ struct StoryMapView: View {
             }
             ForEach(model.releases, id: \.self) { release in
                 HStack(alignment: .top, spacing: 8) {
-                    Text(release).font(.callout.bold()).frame(width: Self.labelWidth, alignment: .leading)
-                        .accessibilityLabel("Release \(release)")
+                    Text(ProjectionLabel.release(release)).font(.callout.bold()).lineLimit(2).truncationMode(.tail)
+                        .frame(width: Self.labelWidth, alignment: .leading)
+                        .accessibilityLabel("Release \(ProjectionLabel.release(release))")
                     ForEach(Array(model.columns.enumerated()), id: \.element.item.key) { index, column in
                         VStack(alignment: .leading, spacing: 6) {
                             ForEach(model.cards(column: index, release: release), id: \.item.key) { card in

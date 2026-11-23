@@ -87,6 +87,17 @@ struct StoryMapModel: Sendable {
     }
 }
 
+/// Words for values a page may leave empty.
+enum ProjectionLabel {
+    static let noRelease = "No release"
+
+    /// The release as a row label. A page with no release is not in a row of its own in the core, but a
+    /// name made of nothing must not give a blank label.
+    static func release(_ name: String) -> String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? noRelease : name
+    }
+}
+
 // MARK: Hierarchy
 
 /// One node of the outline. The key is its place in the tree, so it is unique whatever the page ids are.
@@ -116,12 +127,16 @@ struct OutlineNode: Sendable {
         nodes.enumerated().map { OutlineNode($1, key: "\($0)") }
     }
 
-    /// The rows that are visible when the nodes whose key is in `collapsed` hide their children.
-    static func flatten(_ roots: [OutlineNode], collapsed: Set<String>) -> [Row] {
+    /// The pages of the nodes, so a view knows which selected page the outline holds.
+    var refs: [PageRef] { (item.ref.map { [$0] } ?? []) + children.flatMap(\.refs) }
+
+    /// The rows that are visible when the nodes whose page is in `collapsed` hide their children.
+    /// The collapsed set holds page references, so it stays right when the wiki is reloaded.
+    static func flatten(_ roots: [OutlineNode], collapsed: Set<PageRef>) -> [Row] {
         var rows: [Row] = []
         var stack = roots.reversed().map { (node: $0, depth: 0) }
         while let (node, depth) = stack.popLast() {
-            let open = !collapsed.contains(node.key)
+            let open = !(node.item.ref.map(collapsed.contains) ?? false)
             rows.append(Row(node: node, depth: depth, expanded: open))
             if open { stack.append(contentsOf: node.children.reversed().map { (node: $0, depth: depth + 1) }) }
         }

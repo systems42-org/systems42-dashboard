@@ -14,9 +14,17 @@ import Systems42Kit
     private weak var session: WikiSession?
     private(set) var data: ProjectionData?
     @ObservationIgnored private var running: (key: Key, task: Task<ProjectionData, Never>)?
+    /// Makes the data off the main thread. Tests pass their own to hold a computation.
+    typealias Build = @Sendable (WikiStore, Metamodel, Bool, Int) async -> ProjectionData
+    private let build: Build
 
-    public init(session: WikiSession) {
+    public convenience init(session: WikiSession) {
+        self.init(session: session, build: { ProjectionData.build(store: $0, metamodel: $1, agreedOnly: $2, revision: $3) })
+    }
+
+    init(session: WikiSession, build: @escaping Build) {
         self.session = session
+        self.build = build
     }
 
     /// The key the data should have now. Nil when the session is gone.
@@ -39,9 +47,9 @@ import Systems42Kit
             task = running.task
         } else {
             running?.task.cancel()
-            let store = session.store, metamodel = session.metamodel
+            let store = session.store, metamodel = session.metamodel, build = self.build
             task = Task.detached(priority: .userInitiated) {
-                ProjectionData.build(store: store, metamodel: metamodel, agreedOnly: key.agreedOnly, revision: key.revision)
+                await build(store, metamodel, key.agreedOnly, key.revision)
             }
             running = (key, task)
         }
@@ -53,15 +61,16 @@ import Systems42Kit
 
     /// Opens the page of a card, a row or a node. The session is the only writer of the selection.
     func select(_ ref: PageRef) {
-        session?.select(page: ref)
+        session?.selectInProjection(ref)
     }
 
     /// The children and the building blocks of a requirement, computed off the main thread.
     func detail(of ref: PageRef) async -> HierarchyDetail {
-        guard let session, let page = session.store.page(ref), let projections = data?.projections else {
+        // The data must come from the wiki the store holds, else the two would disagree.
+        guard let session, let page = session.store.page(ref), let data, data.revision == session.revision else {
             return HierarchyDetail(children: [], buildingBlocks: [])
         }
-        let id = page.id
+        let id = page.id, projections = data.projections
         return await Task.detached(priority: .userInitiated) {
             let found = projections.detail(of: id)
             return HierarchyDetail(children: found.children.map(ProjectionItem.init), buildingBlocks: found.buildingBlocks.map(ProjectionItem.init))
