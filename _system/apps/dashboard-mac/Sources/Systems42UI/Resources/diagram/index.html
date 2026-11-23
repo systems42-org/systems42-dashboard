@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<!-- Nothing is fetched from anywhere but this folder. The app also blocks it with a content rule list. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src file:; style-src file: 'unsafe-inline'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="diagram.css">
+</head>
+<body>
+<main id="diagram" aria-live="polite"></main>
+<script src="mermaid.min.js"></script>
+<script src="cytoscape.min.js"></script>
+<script src="layout-base.js"></script>
+<script src="cose-base.js"></script>
+<script src="cytoscape-fcose.js"></script>
+<script src="glossary-graph.js"></script>
+<script src="metamodel-graph.js"></script>
+<script src="diagram.js"></script>
+</body>
+</html>

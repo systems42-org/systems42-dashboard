@@ -65,8 +65,9 @@ private struct PageContent: View {
                 if model.isLoading {
                     ProgressView().controlSize(.small)
                 } else {
-                    BlockList(blocks: model.blocks)
+                    BlockList(blocks: model.blocks, lazy: true)
                 }
+                PageDiagram(session: session, ref: model.page.ref)
                 Divider()
                 RelationsPanel(outgoing: model.outgoing, incoming: model.incoming, definition: model.definition(of:))
                 IssuesPanel(issues: model.openIssues)

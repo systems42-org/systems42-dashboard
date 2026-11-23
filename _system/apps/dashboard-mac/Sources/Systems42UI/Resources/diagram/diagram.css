@@ -1,0 +1,25 @@
+/* Colour tokens of the dashboard's style.css (dark and light), so the shared graph styles
+   read the same here. The page is the app's own file and is not synced. */
+:root {
+  --font-text: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, Menlo, monospace;
+  --bg-soft: #14203a; --card: #16223d; --card-2: #1b294a; --line: #25345a;
+  --ink: #e8eef9; --ink-soft: #9fb0cc; --ink-dim: #6f81a3; --accent: #3ea6ff;
+  --graph-bg: #0c1424;
+  --layer-dt-ink: #5fa3e8; --layer-stk-ink: #e6b667; --layer-eif-ink: #b39ad6; --layer-goal-ink: #e0c068;
+  --layer-rest-ink: #aab4c9; --layer-bb-ink: #7fb8ff;
+}
+:root[data-theme="light"] {
+  --bg-soft: #eaf1fa; --card: #ffffff; --card-2: #edf3fb; --line: #d2ddec;
+  --ink: #14213c; --ink-soft: #4c5c7a; --ink-dim: #5c6c87; --accent: #1667c4;
+  --graph-bg: #f0f5fc;
+  --layer-dt-ink: #2f6fb3; --layer-stk-ink: #8a5c10; --layer-eif-ink: #59418c; --layer-goal-ink: #7a6014;
+  --layer-rest-ink: #4d5a72; --layer-bb-ink: #1f5fa8;
+}
+html, body { margin: 0; height: 100%; background: var(--graph-bg); color: var(--ink); font-family: var(--font-text); }
+#diagram { height: 100%; overflow: auto; }
+#diagram.graph { overflow: hidden; }
+#diagram pre.mermaid { display: flex; justify-content: center; margin: 0; padding: 12px; background: transparent; font-family: var(--font-text); }
+#diagram .s42-link { cursor: pointer; }
+#diagram .s42-link:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+#diagram .s42-message { padding: 16px; color: var(--ink-soft); }

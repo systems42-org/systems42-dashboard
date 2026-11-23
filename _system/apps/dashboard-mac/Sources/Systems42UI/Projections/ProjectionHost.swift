@@ -3,13 +3,13 @@ import Systems42Kit
 
 /// Draws the projection a section is shown in, and decides which projections a section offers.
 /// A mode is the name of a projection page of the metamodel. The graph diagrams (context, building blocks,
-/// deployment, data model, term network) are drawn in a web view by a later issue: they join this host
-/// by adding their projection name to `nativeProjections` and a case to `ProjectionView`.
+/// deployment, data model, goal tree, term network) are drawn in a locked-down web view (`GraphModes`).
 struct ProjectionHost: View {
     /// The projections the app draws natively, by the name of their projection page. Open debt (CON-006):
     /// the metamodel does not say how a projection is drawn, so this list is code. The hierarchy has no
     /// page of its own: `story-map` reads it, and the story map view switches between map and outline.
-    static let nativeProjections = [storyMapMode, matrixMode, backlogMode]
+    /// The graph projections are drawn in the web view.
+    static let nativeProjections = [storyMapMode, matrixMode, backlogMode] + GraphModes.all
     static let storyMapMode = "story-map", matrixMode = "goal-coverage", backlogMode = "backlog-ranking"
 
     /// `list`, then the projections the section's types declare, the wiki's metamodel has a page for
@@ -91,6 +91,14 @@ private struct ProjectionView: View {
                         }
                     }
                 }
+            case GraphModes.termNetwork:
+                TermNetworkView(session: session, model: session.termNetwork, onSelect: onSelect)
+            case _ where GraphModes.mermaidModes.contains(mode):
+                if let source = data.diagrams[mode] {
+                    ProjectionDiagram(session: session, source: source, label: ProjectionHost.label(ofMode: mode, metamodel: session.metamodel), onSelect: onSelect)
+                } else {
+                    Text(GraphModes.emptyHint(for: mode)).foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             default:
                 // A mode the app does not draw. `WikiSession.showsProjection` keeps the host away from it.
                 Text("This view is not available.").foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -98,6 +106,20 @@ private struct ProjectionView: View {
         } else {
             ProgressView().controlSize(.small).frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+    }
+}
+
+/// A Mermaid diagram of a section: a click opens the page in the inspector and keeps the projection.
+private struct ProjectionDiagram: View {
+    let session: WikiSession
+    let source: DiagramSource
+    let label: String
+    let onSelect: (PageRef) -> Void
+
+    var body: some View {
+        DiagramView(DiagramContent(source), label: label, title: { session.linkTitle(of: $0) }, fallbackText: nil,
+                    select: { if let ref = $0.ref { onSelect(ref) } })
+        .padding(10)
     }
 }
 

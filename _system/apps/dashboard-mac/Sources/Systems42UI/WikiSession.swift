@@ -99,6 +99,7 @@ struct LoadedWiki: Sendable {
     @ObservationIgnored var tourModelStore: TourModel?
     @ObservationIgnored var searchModelStore: SearchModel?
     @ObservationIgnored var projectionsModelStore: ProjectionsModel?
+    @ObservationIgnored var termNetworkModelStore: TermNetworkModel?
     /// The mode the section was last shown in, so a section comes back as the reader left it.
     private var rememberedModes: [WikiSection.ID: String] = [:]
     private var history: [Place] = []

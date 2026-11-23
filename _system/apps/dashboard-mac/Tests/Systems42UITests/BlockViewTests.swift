@@ -31,8 +31,8 @@ import Systems42Kit
         #expect(Set(kinds).count == Self.everyCase.count)
     }
 
-    @Test func aMermaidBlockShowsItsSource() {
-        #expect(BlockView.kind(of: .diagram(language: "mermaid", "x")) == .sourceListing)
+    @Test func aMermaidBlockIsADiagram() {
+        #expect(BlockView.kind(of: .diagram(language: "mermaid", "x")) == .diagram)
     }
 
     @Test func aCalloutKindIsOnlyAStyleLookup() {

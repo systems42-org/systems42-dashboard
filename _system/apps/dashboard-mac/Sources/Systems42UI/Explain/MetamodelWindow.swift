@@ -180,7 +180,7 @@ private struct EntryColumn: View {
             } else if model.showsVersionNotice, let notice = model.versionNotice {
                 VersionExplanationView(notice: notice)
             } else if model.mode == .graph && model.selectedKind == MetamodelModel.types {
-                GraphOutlineView(outline: model.graphOutline)
+                GraphModeView(model: model)
             } else if let entry = model.selectedEntry {
                 switch entry.kind {
                 case MetamodelModel.types: TypeEntryView(model: model, store: session.store, entry: entry)
@@ -194,7 +194,39 @@ private struct EntryColumn: View {
     }
 }
 
-/// The Graph mode as data: types grouped by section, relations as lines. A web view draws it later (issue 128).
+/// The Graph mode: the drawn graph, and the outline as its text form. A click on a type opens its entry.
+private struct GraphModeView: View {
+    let model: MetamodelModel
+
+    /// The label of each node, by id. The first node of an id wins.
+    static func labels(of graph: Graph) -> [String: String] {
+        var labels: [String: String] = [:]
+        for node in graph.nodes where labels[node.id] == nil { labels[node.id] = node.data["label"]?.string }
+        return labels
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if let graph = model.drawnGraph {
+                let labels = Self.labels(of: graph)
+                DiagramView(DiagramContent(.graph(graph, layout: DiagramLayout.metamodel)), label: "Graph of the content types and their relations",
+                            title: { labels[$0.id] ?? $0.id }, fallbackText: nil,
+                            select: { node in model.show(link: MetamodelModel.Link(kind: MetamodelModel.types, name: node.id, title: node.id)) })
+                    .padding(10)
+            } else {
+                ProgressView().controlSize(.small).frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            Divider()
+            DisclosureGroup("Text form") {
+                GraphOutlineView(outline: model.graphOutline).frame(height: 220)
+            }
+            .padding(10)
+        }
+        .task(id: model.revision) { await model.loadGraph() }
+    }
+}
+
+/// The Graph mode as text: types grouped by section, relations as lines.
 private struct GraphOutlineView: View {
     let outline: MetamodelModel.GraphOutline
 

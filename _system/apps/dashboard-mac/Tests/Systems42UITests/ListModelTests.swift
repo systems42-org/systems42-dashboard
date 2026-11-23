@@ -243,7 +243,7 @@ private let requirements = "functional-requirements"
         let (_, m) = try await model("basic", folder: requirements)
         #expect(m.modes.first == ListModel.listMode && m.modes.count > 1)
         let (_, terms) = try await model("basic", folder: "domain-terms")
-        #expect(terms.modes == [ListModel.listMode])
+        #expect(terms.modes == [ListModel.listMode, "terminology-graph", "entity-diagram"])
     }
 
     @Test func selectingARowGoesThroughHistory() async throws {

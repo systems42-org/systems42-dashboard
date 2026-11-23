@@ -21,7 +21,12 @@ let package = Package(
                 .product(name: "Markdown", package: "swift-markdown"),
             ]
         ),
-        .target(name: "Systems42UI", dependencies: ["Systems42Kit"]),
+        .target(
+            name: "Systems42UI",
+            dependencies: ["Systems42Kit"],
+            // The diagram page and its libraries. DiagramAssets finds them in every way the app runs.
+            resources: [.copy("Resources/diagram")]
+        ),
         .executableTarget(
             name: "Systems42Dashboard",
             dependencies: ["Systems42UI", "Systems42Kit"],
