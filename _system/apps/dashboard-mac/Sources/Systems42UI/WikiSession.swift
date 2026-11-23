@@ -12,7 +12,15 @@ struct LoadedWiki: Sendable {
     let orientation: Orientation?
 
     init(root: WikiRoot) {
-        let store = WikiStore(root: root)
+        self.init(root: root, store: WikiStore(root: root))
+    }
+
+    /// Reads the wiki again for a refresh. Pages whose files did not change are not parsed again.
+    init(root: WikiRoot, reusing previous: WikiStore, changed: [URL]) {
+        self.init(root: root, store: WikiStore(root: root, reusing: previous, changed: changed))
+    }
+
+    private init(root: WikiRoot, store: WikiStore) {
         // One snapshot gives the pages and the metamodel, so the wiki is read once.
         let metamodel = store.metamodel
         var figures: [String: SectionFigures] = [:]
@@ -62,7 +70,7 @@ struct LoadedWiki: Sendable {
 /// The observable model of one open wiki: what the window shows and where the reader is.
 @MainActor @Observable public final class WikiSession {
     public let root: WikiRoot
-    public let config: WikiConfig
+    public private(set) var config: WikiConfig
     public private(set) var store: WikiStore
     public private(set) var metamodel: Metamodel
     public var selectedSection: WikiSection.ID?
@@ -95,6 +103,13 @@ struct LoadedWiki: Sendable {
     /// Renders that are running, so a page is rendered once however many models ask for it.
     @ObservationIgnored private var running: [PageRef: Task<RenderedBody, Never>] = [:]
     private static let mostRenderedPages = 100
+    /// What the folder watcher and the refresh need. See `WikiSession+Refresh.swift`.
+    @ObservationIgnored var watcher: FileWatcher?
+    @ObservationIgnored var refreshing: Task<Void, Never>?
+    @ObservationIgnored var changesWaiting: Set<URL> = []
+    /// The parts of a wiki folder that are gone, nil while the folder is whole. The window then
+    /// shows the same view as for a folder that is not a wiki.
+    public internal(set) var missingParts: [String]?
     @ObservationIgnored fileprivate var explainerModel: MetamodelModel?
     @ObservationIgnored var tourModelStore: TourModel?
     @ObservationIgnored var searchModelStore: SearchModel?
@@ -129,6 +144,7 @@ struct LoadedWiki: Sendable {
 
     /// Swaps in a freshly read wiki. Models read through the session, so they follow on their next read.
     func replace(with loaded: LoadedWiki) {
+        config = loaded.config
         store = loaded.store
         metamodel = loaded.metamodel
         figures = loaded.figures

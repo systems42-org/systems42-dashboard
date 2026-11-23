@@ -19,29 +19,45 @@ public struct WikiWindowRoot: View {
             case nil:
                 ProgressView().frame(minWidth: 400, minHeight: 300)
             case .session(let session)?:
-                WikiWindow(session: session)
-            case .failed(let failure)?:
-                PreflightFailureView(failure: failure) {
-                    guard let other = FolderChooser.choose() else { return }
-                    openWindow.openWiki(other)
-                    dismiss()
+                if let missing = session.missingParts {
+                    // The folder was moved or removed while the window was open.
+                    chooseAgain(PreflightFailure(folder: folder, missing: missing))
+                } else {
+                    WikiWindow(session: session)
                 }
+            case .failed(let failure)?:
+                chooseAgain(failure)
             }
         }
         .opensDroppedFolders()
         .onAppear {
-            if case .session(let session)? = result { OpenSessions.shared.register(session) }
+            if case .session(let session)? = result {
+                OpenSessions.shared.register(session)
+                session.startWatching()
+            }
         }
         .onDisappear {
-            if case .session(let session)? = result { OpenSessions.shared.unregister(session) }
+            if case .session(let session)? = result {
+                OpenSessions.shared.unregister(session)
+                session.stopWatching()
+            }
         }
         .task {
             let loaded = await OpenedWiki.open(folder)
             if case .session(let session) = loaded {
                 OpenSessions.shared.register(session)
+                session.startWatching()
                 opened(folder)
             }
             result = loaded
+        }
+    }
+
+    private func chooseAgain(_ failure: PreflightFailure) -> some View {
+        PreflightFailureView(failure: failure) {
+            guard let other = FolderChooser.choose() else { return }
+            openWindow.openWiki(other)
+            dismiss()
         }
     }
 }
