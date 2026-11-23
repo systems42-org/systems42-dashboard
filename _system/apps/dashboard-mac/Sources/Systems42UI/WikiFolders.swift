@@ -59,16 +59,25 @@ extension OpenWindowAction {
 extension View {
     /// Opens a wiki window for each folder the system hands to the app, such as a folder
     /// dropped on the Dock icon.
-    public func opensDroppedFolders() -> some View {
-        modifier(OpensDroppedFolders())
+    public func opensDroppedFolders(banner: NoticeBoard.Window = .wiki) -> some View {
+        modifier(OpensDroppedFolders(banner: banner))
     }
 }
 
 private struct OpensDroppedFolders: ViewModifier {
+    let banner: NoticeBoard.Window
     @Environment(\.openWindow) private var openWindow
 
     func body(content: Content) -> some View {
-        content.onOpenURL { url in
+        content
+            .overlay(alignment: .top) { NoticeBanner(board: DeepLinkRouter.shared.board, window: banner) }
+            .onOpenURL { url in
+            if url.scheme?.lowercased() == DeepLink.scheme {
+                // A link from outside. It selects a page of a wiki that is open or recent, nothing else.
+                DeepLinkRouter.shared.configure(openWiki: { openWindow.openWiki($0) })
+                DeepLinkRouter.shared.handle(url)
+                return
+            }
             for folder in WikiFolders.fromOpened([url]) { openWindow.openWiki(folder) }
         }
     }

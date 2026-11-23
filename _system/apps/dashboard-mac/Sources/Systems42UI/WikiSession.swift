@@ -95,6 +95,8 @@ struct LoadedWiki: Sendable {
     }
 
     private var figures: [String: SectionFigures]
+    /// When the wiki on screen was read, for the About window.
+    public private(set) var refreshedAt = Date()
     public private(set) var orientation: Orientation?
     /// Counts up each time the loaded wiki is replaced, so models know their rows are stale.
     public private(set) var revision = 0
@@ -151,6 +153,7 @@ struct LoadedWiki: Sendable {
         metamodel = loaded.metamodel
         figures = loaded.figures
         orientation = loaded.orientation
+        refreshedAt = Date()
         renderedPages = [:]
         running = [:]
         revision += 1
@@ -344,6 +347,9 @@ struct LoadedWiki: Sendable {
         // Picking a page of the restricted issues list keeps the restriction.
         go(to: Place(section: id, page: ref, issuesAbout: id == selectedSection ? issueFilter : nil, mode: modeShown(in: id)))
     }
+
+    public var canGoBack: Bool { position > 0 }
+    public var canGoForward: Bool { position + 1 < history.count }
 
     public func back() {
         guard position > 0 else { return }

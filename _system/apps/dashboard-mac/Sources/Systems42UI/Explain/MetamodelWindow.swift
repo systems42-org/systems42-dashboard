@@ -33,6 +33,11 @@ import Systems42Kit
     func session(for folder: URL) -> WikiSession? {
         table[Self.key(folder)]?.session
     }
+
+    /// The sessions that are alive, in no particular order.
+    func all() -> [WikiSession] {
+        table.values.compactMap(\.session)
+    }
 }
 
 /// The wiki folder of the focused window, for the Help menu.
@@ -81,7 +86,7 @@ public struct MetamodelCommands: Commands {
             Button("Metamodel") {
                 if let folder { openWindow(id: MetamodelWindowRoot.windowID, value: folder) }
             }
-            .keyboardShortcut("m", modifiers: [.command, .shift])
+            .shortcut(Shortcuts.metamodel)
             .disabled(folder == nil)
         }
     }
@@ -380,7 +385,7 @@ struct EntryBody: View {
                     switch action {
                     case .anchor(let name): model.show(.anchor(name))
                     case .metamodel(let name): model.show(.metamodel(name))
-                    case .web(let url): NSWorkspace.shared.open(url)
+                    case .web(let url): OutgoingLinks.openFromContent(url)
                     case .page(let ref): openPage.run(ref)
                     }
                 },

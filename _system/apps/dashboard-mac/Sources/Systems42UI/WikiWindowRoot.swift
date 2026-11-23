@@ -48,7 +48,9 @@ public struct WikiWindowRoot: View {
                 OpenSessions.shared.register(session)
                 session.startWatching()
                 opened(folder)
+                DeepLinkRouter.shared.sessionOpened(session)
             }
+            if case .failed = loaded { DeepLinkRouter.shared.openFailed(folder) }
             result = loaded
         }
     }

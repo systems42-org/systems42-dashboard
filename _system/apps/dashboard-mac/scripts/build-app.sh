@@ -36,6 +36,12 @@ cat > "$app/Contents/Info.plist" <<PLIST
   <key>CFBundleVersion</key><string>$version</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>NSHighResolutionCapable</key><true/>
+  <!-- Links of the form systems42://<wiki>/<page id>. They only select a page, see DeepLink.swift. -->
+  <key>CFBundleURLTypes</key>
+  <array><dict>
+    <key>CFBundleURLName</key><string>org.systems42.dashboard.native.link</string>
+    <key>CFBundleURLSchemes</key><array><string>systems42</string></array>
+  </dict></array>
   <key>CFBundleDocumentTypes</key>
   <array><dict>
     <key>CFBundleTypeName</key><string>Folder</string>

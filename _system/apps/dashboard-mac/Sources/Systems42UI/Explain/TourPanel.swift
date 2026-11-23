@@ -21,11 +21,11 @@ struct TourPanel: View {
                 .accessibilityElement(children: .combine)
                 HStack {
                     Button("Back") { tour.previous() }
-                        .keyboardShortcut(.leftArrow, modifiers: [.command, .option])
+                        .shortcut(Shortcuts.previousTourStep)
                         .disabled(tour.current == 0)
                         .accessibilityLabel("Previous step")
                     Button(tour.current + 1 >= tour.steps.count ? "Finish" : "Next") { tour.next() }
-                        .keyboardShortcut(.rightArrow, modifiers: [.command, .option])
+                        .shortcut(Shortcuts.nextTourStep)
                         .accessibilityLabel(tour.current + 1 >= tour.steps.count ? "Finish the tour" : "Next step")
                     if stop.step.showsType == nil {
                         Button("Open The Method") { openWindow(id: MethodWindow.windowID) }
@@ -37,7 +37,7 @@ struct TourPanel: View {
                     }
                     Spacer()
                     Button("Stop") { tour.stop() }
-                        .keyboardShortcut(.cancelAction)
+                        .shortcut(Shortcuts.stopTour)
                         .accessibilityLabel("Stop the tour")
                 }
             }

@@ -34,4 +34,16 @@ public enum Preflight {
         guard parts.isEmpty else { throw PreflightError.missing(parts) }
         return WikiRoot(url: url)
     }
+
+    /// The file or folder `relative` names under the wiki root, with every symlink resolved, or nil
+    /// when it does not exist or resolves outside the root. An empty, absolute or `..` path gives nil
+    /// too. Use it for any path a wiki file or a page names.
+    public static func contained(_ relative: String, in root: WikiRoot) -> URL? {
+        guard !relative.isEmpty, !relative.hasPrefix("/"), !relative.hasPrefix("~"),
+              !relative.split(separator: "/").contains("..") else { return nil }
+        guard let rootReal = Files.realPath(root.url),
+              let real = Files.realPath(root.url.appending(path: relative)),
+              Files.isInside(real, rootReal) else { return nil }
+        return URL(fileURLWithPath: real)
+    }
 }

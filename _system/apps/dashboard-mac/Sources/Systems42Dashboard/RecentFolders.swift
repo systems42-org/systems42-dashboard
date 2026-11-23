@@ -5,6 +5,7 @@ import Systems42UI
 
 /// The recent wikis, kept under Application Support and never inside a wiki.
 @MainActor @Observable final class RecentFolders {
+    static let shared = RecentFolders()
     private(set) var urls: [URL] = []
     private var store: RecentWikis
 

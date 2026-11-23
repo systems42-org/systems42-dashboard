@@ -113,6 +113,7 @@ private struct PageContent: View {
             .frame(maxWidth: Self.readingWidth, alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .contextMenu { PageActionButtons(session: session) }
         .environment(\.pageLinks, links)
         .environment(\.pageMarks, marks)
     }
@@ -122,7 +123,7 @@ private struct PageContent: View {
             open: { action in
                 switch action {
                 case .page(let ref): session.open(.page(ref))
-                case .web(let url): NSWorkspace.shared.open(url)
+                case .web(let url): OutgoingLinks.openFromContent(url)
                 case .anchor(let name): explain(.link(.anchor(name)))
                 case .metamodel(let name): explain(.link(.metamodel(name)))
                 }

@@ -43,7 +43,10 @@ public struct WikiWindow: View {
             TourPanel(tour: session.tour)
         }
         .overlay(alignment: .topTrailing) { SuggestionList(model: session.search) }
-        .toolbar { ToolbarItem { SearchField(model: session.search) } }
+        .toolbar {
+            ToolbarItem { PageActionsMenu(session: session) }
+            ToolbarItem { SearchField(model: session.search) }
+        }
         .focusedSceneValue(\.wikiSearch, session.search)
         .onChange(of: session.shownSearch) { _, _ in session.search.followSession() }
         .onChange(of: session.selectedPage) { _, _ in session.search.followSelection() }
@@ -134,27 +137,13 @@ private struct ProjectionColumn: View {
     }
 }
 
-/// View > Show in List: leaves the projection and keeps the selected page.
-public struct ProjectionCommands: Commands {
-    @FocusedValue(\.wikiSession) private var session
-
-    public init() {}
-
-    public var body: some Commands {
-        CommandGroup(after: .toolbar) {
-            Button("Show in List") { session?.select(mode: ListModel.listMode) }
-                .keyboardShortcut("l", modifiers: [.command, .shift])
-                .disabled(session?.showsProjection != true)
-        }
-    }
-}
-
 private struct WikiSessionKey: FocusedValueKey {
     typealias Value = WikiSession
 }
 
 extension FocusedValues {
-    var wikiSession: WikiSession? {
+    /// The session of the focused wiki window, for the menu commands.
+    public var wikiSession: WikiSession? {
         get { self[WikiSessionKey.self] }
         set { self[WikiSessionKey.self] = newValue }
     }
