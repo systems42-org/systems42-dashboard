@@ -62,14 +62,23 @@ window.S42Diagram = (function () {
     });
   }
 
-  function mermaidTheme(theme) {
-    var light = theme === "light";
+  // Keys a %%{init}%% directive in the text may not change, besides Mermaid's own list.
+  var SECURE = ["secure", "securityLevel", "startOnLoad", "maxTextSize", "suppressErrorRendering", "maxEdges",
+                "htmlLabels", "flowchart", "theme", "themeVariables"];
+
+  function mermaidConfig(payload) {
+    var light = payload.theme === "light";
     return {
       startOnLoad: false, securityLevel: "strict", htmlLabels: false, suppressErrorRendering: true,
+      maxTextSize: payload.maxText, secure: SECURE,
       theme: light ? "default" : "dark", themeVariables: light ? CLUSTER.light : CLUSTER.dark,
       flowchart: { useMaxWidth: true, curve: "basis", htmlLabels: false },
       sequence: { useMaxWidth: true }, er: { useMaxWidth: true }, class: { useMaxWidth: true }
     };
+  }
+
+  function isErrorDrawing(svg) {
+    return svg.getAttribute("aria-roledescription") === "error" || svg.querySelector(".error-icon, .error-text") !== null;
   }
 
   function drawMermaid(payload) {
@@ -79,9 +88,12 @@ window.S42Diagram = (function () {
     pre.className = "mermaid";
     pre.textContent = payload.text;
     host.appendChild(pre);
-    mermaid.initialize(mermaidTheme(payload.theme));
+    // Start from the defaults every time, so nothing a diagram text changed stays for the next one.
+    if (mermaid.mermaidAPI && mermaid.mermaidAPI.reset) { mermaid.mermaidAPI.reset(); }
+    mermaid.initialize(mermaidConfig(payload));
     return Promise.resolve(mermaid.run({ nodes: [pre] })).then(function () {
-      if (!pre.querySelector("svg")) { message("This diagram could not be drawn."); return "error: no svg"; }
+      var svg = pre.querySelector("svg");
+      if (!svg || isErrorDrawing(svg)) { message("This diagram could not be drawn."); return "error: no svg"; }
       bindMermaidClicks(pre, payload.links || []);
       return "ok";
     }, function () {
@@ -104,14 +116,30 @@ window.S42Diagram = (function () {
     var reg = G.register(window.cytoscape);
     var engine = reg.avail.fcose ? "fcose" : "cose";
     var links = new Set(payload.links || []);
+    var frames = payload.frameColours || {};
+    // The frame colour of a node type, from the app. Only plain prefixes and colours make a selector.
+    var ALNUM = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    function plain(text, extra) {
+      return typeof text === "string" && text.length > 0 && text.length < 20 &&
+        Array.prototype.every.call(text, function (c) { return ALNUM.indexOf(c) >= 0 || extra.indexOf(c) >= 0; });
+    }
+    function styled() {
+      var rules = style();
+      Object.keys(frames).forEach(function (prefix) {
+        if (plain(prefix, "_-") && plain(frames[prefix], "#")) {
+          rules.push({ selector: 'node[type="' + prefix + '"]', style: { "border-color": frames[prefix] } });
+        }
+      });
+      return rules;
+    }
     cy = window.cytoscape({
       container: host, elements: { nodes: payload.graph.nodes, edges: payload.graph.edges },
-      wheelSensitivity: 0.2, style: style(), layout: { name: "preset" }
+      wheelSensitivity: 0.2, style: styled(), layout: { name: "preset" }
     });
     cy.on("tap", "node", function (e) { var id = e.target.id(); if (links.has(id)) { post(id); } });
     if (themeObserver) { themeObserver.disconnect(); }
     var current = cy;
-    themeObserver = new MutationObserver(function () { current.style(style()); });
+    themeObserver = new MutationObserver(function () { current.style(styled()); });
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
     var options = G.layoutOpts(engine, true, { compact: payload.preset !== "metamodel" && payload.graph.nodes.length < 12 });
     options.animate = false;
@@ -143,5 +171,11 @@ window.S42Diagram = (function () {
     return true;
   }
 
-  return { render: render, count: function () { return cy ? cy.nodes().length : -1; }, tap: tap };
+  // For the tests of the app: the settings Mermaid draws with now.
+  function config() {
+    var c = window.mermaid && mermaid.mermaidAPI ? mermaid.mermaidAPI.getConfig() : {};
+    return { htmlLabels: c.htmlLabels === true, flowchartHtmlLabels: !!(c.flowchart && c.flowchart.htmlLabels), securityLevel: c.securityLevel };
+  }
+
+  return { config: config, render: render, count: function () { return cy ? cy.nodes().length : -1; }, tap: tap };
 })();

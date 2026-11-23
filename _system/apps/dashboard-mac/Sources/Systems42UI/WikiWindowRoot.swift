@@ -19,7 +19,7 @@ public struct WikiWindowRoot: View {
             case nil:
                 ProgressView().frame(minWidth: 400, minHeight: 300)
             case .session(let session)?:
-                WikiWindow(session: session)
+                WikiWindow(session: session).environment(\.diagramBudget, session.diagramBudget)
             case .failed(let failure)?:
                 PreflightFailureView(failure: failure) {
                     guard let other = FolderChooser.choose() else { return }

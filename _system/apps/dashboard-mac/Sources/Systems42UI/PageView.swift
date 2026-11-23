@@ -65,7 +65,7 @@ private struct PageContent: View {
                 if model.isLoading {
                     ProgressView().controlSize(.small)
                 } else {
-                    BlockList(blocks: model.blocks)
+                    BlockList(blocks: model.blocks, lazy: true)
                 }
                 PageDiagram(session: session, ref: model.page.ref)
                 Divider()

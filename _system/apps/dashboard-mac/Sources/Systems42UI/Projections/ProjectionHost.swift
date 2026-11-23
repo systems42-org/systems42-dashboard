@@ -117,12 +117,8 @@ private struct ProjectionDiagram: View {
     let onSelect: (PageRef) -> Void
 
     var body: some View {
-        DiagramView(source, label: label, allowsLinks: true, title: { id in
-            guard let ref = DiagramContent(source).node(id: id)?.ref, let page = session.store.page(ref) else { return id }
-            return ProjectionItem(page).text
-        }, fallbackText: nil, select: { id in
-            if let ref = DiagramContent(source).node(id: id)?.ref { onSelect(ref) }
-        })
+        DiagramView(DiagramContent(source), label: label, title: { session.linkTitle(of: $0) }, fallbackText: nil,
+                    select: { if let ref = $0.ref { onSelect(ref) } })
         .padding(10)
     }
 }

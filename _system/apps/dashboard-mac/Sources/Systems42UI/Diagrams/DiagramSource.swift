@@ -15,11 +15,17 @@ public enum DiagramLayout {
 
 /// Limits on what the web view is asked to draw. A larger diagram shows a message and the text list instead.
 public enum DiagramLimits {
-    /// The most bytes of Mermaid text.
-    public static let mostMermaidBytes = 100_000
+    /// The most bytes of Mermaid text. Mermaid's own `maxTextSize` is set to the same number, so the two cannot disagree.
+    public static let mostMermaidBytes = 50_000
     /// The most nodes and edges of a graph.
     public static let mostGraphNodes = 1_500
     public static let mostGraphEdges = 4_000
+    /// How long one draw may take. A diagram that needs longer shows a message, and its web view is dropped.
+    public static let renderTimeout = Duration.seconds(10)
+    /// The most web views that live at once in one window. The others show a placeholder with the text list.
+    public static let mostLiveViews = 4
+    /// The most Mermaid blocks of one page body that are drawn. Further blocks show their source.
+    public static let mostBlocksPerPage = 20
 }
 
 /// A source checked and prepared for the page: the Mermaid text without its click lines, and the nodes
@@ -67,24 +73,42 @@ struct DiagramContent: Equatable, Sendable {
         }
     }
 
-    /// Takes the click lines out of Mermaid text. The Kit writes `click <id> "systems42://page?folder=..&stem=.."`.
+    /// Takes the click statements out of Mermaid text. The Kit writes `click <id> "systems42://page?folder=..&stem=.."`
+    /// on a line of its own: that line gives a node. A click statement anywhere else, also after a `;`, is
+    /// cut and gives nothing. The scan is linear and uses no pattern matching.
     private static func split(_ text: String) -> (text: String, nodes: [Node]) {
-        var kept: [Substring] = []
+        var kept: [String] = []
         var nodes: [Node] = []
         var seen = Set<String>()
         for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
             let trimmed = line.drop { $0 == " " || $0 == "\t" }
-            guard trimmed.lowercased().hasPrefix("click ") else { kept.append(line); continue }
-            let rest = trimmed.dropFirst(6)
-            guard let space = rest.firstIndex(of: " "), let open = rest.firstIndex(of: "\""),
-                  let close = rest.lastIndex(of: "\""), open < close else { continue }
-            let id = String(rest[..<space])
-            let target = String(rest[rest.index(after: open)..<close])
-            if !id.isEmpty, let url = URL(string: target), case .page(let ref)? = LinkAction(url: url), seen.insert(id).inserted {
-                nodes.append(Node(id: id, ref: ref))
+            if isClick(trimmed) {
+                if let node = node(of: trimmed), seen.insert(node.id).inserted { nodes.append(node) }
+                continue
             }
+            var cut = false
+            var statements: [Substring] = []
+            for statement in line.split(separator: ";", omittingEmptySubsequences: false) {
+                if isClick(statement.drop { $0 == " " || $0 == "\t" }) { cut = true } else { statements.append(statement) }
+            }
+            kept.append(cut ? statements.joined(separator: ";") : String(line))
         }
         return (kept.joined(separator: "\n"), nodes)
+    }
+
+    private static func isClick(_ statement: Substring) -> Bool {
+        statement.lowercased().hasPrefix("click ")
+    }
+
+    /// The node of a line `click <id> "<url>"`, when the url is a page reference of the app.
+    private static func node(of line: Substring) -> Node? {
+        let rest = line.dropFirst(6)
+        guard let space = rest.firstIndex(of: " "), let open = rest.firstIndex(of: "\""),
+              let close = rest.lastIndex(of: "\""), open < close else { return nil }
+        let id = String(rest[..<space])
+        let target = String(rest[rest.index(after: open)..<close])
+        guard !id.isEmpty, let url = URL(string: target), case .page(let ref)? = LinkAction(url: url) else { return nil }
+        return Node(id: id, ref: ref)
     }
 
     /// The content types of the metamodel graph. A type node carries a `prefix`, a section group does not.

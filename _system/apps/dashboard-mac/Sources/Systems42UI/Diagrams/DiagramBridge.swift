@@ -16,16 +16,24 @@ enum DiagramBridge {
         let graph: Graph?
         let preset: String
         let links: [String]
+        /// Mermaid's `maxTextSize`: the app's own limit.
+        let maxText: Int
+        /// The frame colour of a node type, by id prefix, as `#rrggbb` for this theme.
+        let frameColours: [String: String]
     }
 
-    static func payload(for content: DiagramContent, dark: Bool) -> Payload {
+    static func payload(for content: DiagramContent, dark: Bool, frameColours: [String: [String]] = [:]) -> Payload {
         let theme = dark ? "dark" : "light"
         let links = content.nodes.map(\.id)
+        var colours: [String: String] = [:]
+        for (prefix, pair) in frameColours where pair.count == 2 { colours[prefix] = dark ? pair[1] : pair[0] }
         switch content.source {
         case .mermaid:
-            return Payload(kind: "mermaid", theme: theme, text: content.mermaidText, graph: nil, preset: "", links: links)
+            return Payload(kind: "mermaid", theme: theme, text: content.mermaidText, graph: nil, preset: "", links: links,
+                           maxText: DiagramLimits.mostMermaidBytes, frameColours: colours)
         case .graph(let graph, let layout):
-            return Payload(kind: "graph", theme: theme, text: "", graph: graph, preset: layout, links: links)
+            return Payload(kind: "graph", theme: theme, text: "", graph: graph, preset: layout, links: links,
+                           maxText: DiagramLimits.mostMermaidBytes, frameColours: colours)
         }
     }
 
@@ -66,7 +74,7 @@ enum DiagramBridge {
         return out
     }
 
-    /// Whether the page may navigate to the URL: only the bundled page itself.
+    /// Whether the URL is the bundled page itself. The web view allows that navigation once, for the first load.
     static func allowsNavigation(to url: URL?, page: URL) -> Bool {
         guard let url else { return false }
         return url.standardizedFileURL == page.standardizedFileURL

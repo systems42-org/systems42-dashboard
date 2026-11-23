@@ -20,6 +20,8 @@ struct CalloutStyle {
 /// One view per `Block` case.
 struct BlockView: View {
     let block: Block
+    /// False for a Mermaid block past the page's limit: it shows its source.
+    var drawsDiagram = true
 
     /// What a block is drawn as. One name per case, so a test can check that none is missing.
     enum Kind: Hashable {
@@ -65,7 +67,14 @@ struct BlockView: View {
             Divider().padding(.vertical, 4)
         case .diagram(let language, let text):
             // The text is the author's own: no node of it opens a page. When it cannot be drawn the reader sees the source.
-            DiagramView(.mermaid(text), label: "\(language) diagram", allowsLinks: false, title: { $0 }, fallbackText: text, select: { _ in })
+            if drawsDiagram {
+                DiagramView(DiagramContent(.mermaid(text), allowsLinks: false), label: "\(language) diagram", title: { $0.id }, fallbackText: text, select: { _ in })
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(verbatim: "\(language) source").font(.caption).foregroundStyle(.secondary)
+                    CodeBlock(text: text)
+                }
+            }
         }
     }
 
@@ -83,11 +92,36 @@ struct BlockView: View {
 struct BlockList: View {
     let blocks: [Block]
 
+    /// A lazy list makes a diagram's view only when it comes near the screen. The page body is lazy.
+    var lazy = false
+
+    /// The blocks with whether a diagram among them is drawn. The Mermaid blocks past `mostBlocksPerPage` show their source.
+    private var items: [(block: Block, draws: Bool)] {
+        zip(blocks, Self.draws(blocks)).map { ($0, $1) }
+    }
+
+    /// Per block: whether a diagram among them is drawn. Only the first `mostBlocksPerPage` Mermaid blocks are.
+    static func draws(_ blocks: [Block]) -> [Bool] {
+        var diagrams = 0
+        return blocks.map { block in
+            guard case .diagram = block else { return true }
+            diagrams += 1
+            return diagrams <= DiagramLimits.mostBlocksPerPage
+        }
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
-                BlockView(block: block)
-            }
+        let items = items
+        if lazy {
+            LazyVStack(alignment: .leading, spacing: 10) { rows(items) }
+        } else {
+            VStack(alignment: .leading, spacing: 10) { rows(items) }
+        }
+    }
+
+    @ViewBuilder private func rows(_ items: [(block: Block, draws: Bool)]) -> some View {
+        ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+            BlockView(block: item.block, drawsDiagram: item.draws)
         }
     }
 }

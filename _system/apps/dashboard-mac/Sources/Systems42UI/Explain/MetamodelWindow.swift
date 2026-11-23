@@ -60,7 +60,7 @@ public struct MetamodelWindowRoot: View {
         // The session is looked up on every read, so this view never keeps a closed wiki alive.
         Group {
             if let session = OpenSessions.shared.session(for: folder) {
-                MetamodelWindow(session: session, folder: folder)
+                MetamodelWindow(session: session, folder: folder).environment(\.diagramBudget, session.diagramBudget)
             } else {
                 Text("This wiki is not open.").foregroundStyle(.secondary).frame(minWidth: 400, minHeight: 200)
             }
@@ -198,14 +198,20 @@ private struct EntryColumn: View {
 private struct GraphModeView: View {
     let model: MetamodelModel
 
+    /// The label of each node, by id. The first node of an id wins.
+    static func labels(of graph: Graph) -> [String: String] {
+        var labels: [String: String] = [:]
+        for node in graph.nodes where labels[node.id] == nil { labels[node.id] = node.data["label"]?.string }
+        return labels
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             if let graph = model.drawnGraph {
-                DiagramView(.graph(graph, layout: DiagramLayout.metamodel), label: "Graph of the content types and their relations",
-                            allowsLinks: true,
-                            title: { id in graph.nodes.first { $0.id == id }?.data["label"]?.string ?? id },
-                            fallbackText: nil,
-                            select: { id in model.show(link: MetamodelModel.Link(kind: MetamodelModel.types, name: id, title: id)) })
+                let labels = Self.labels(of: graph)
+                DiagramView(DiagramContent(.graph(graph, layout: DiagramLayout.metamodel)), label: "Graph of the content types and their relations",
+                            title: { labels[$0.id] ?? $0.id }, fallbackText: nil,
+                            select: { node in model.show(link: MetamodelModel.Link(kind: MetamodelModel.types, name: node.id, title: node.id)) })
                     .padding(10)
             } else {
                 ProgressView().controlSize(.small).frame(maxWidth: .infinity, maxHeight: .infinity)

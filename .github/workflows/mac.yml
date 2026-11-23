@@ -24,6 +24,10 @@ jobs:
           sudo xcode-select -s "$xcode"
           swift --version
 
+      # The diagram libraries are copies of the web dashboard's. Fails when they drift.
+      - name: Diagram assets match the dashboard
+        run: _system/apps/dashboard-mac/scripts/sync-diagram-assets.sh --check
+
       - name: Build
         run: swift build --package-path _system/apps/dashboard-mac
 
