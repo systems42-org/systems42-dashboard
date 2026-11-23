@@ -76,6 +76,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
   next.
 
 ### Changed
+- Website: the line under the hero buttons says how many pages of requirements and architecture the demo holds. It no longer counts "views", the exported HTML files.
 - Dashboard release 0.14.2 (`_system/apps/dashboard/VERSION`).
 - Website: the hero and the page headers show the Chart mark's six columns in mint and sky instead of the two peaks. The columns grow from left to right as in the dashboard's intro, not under reduced motion. On a phone all six columns show. The card titles carry a small column instead of a triangle.
 - Dashboard brand: the Chart mark replaces the Peaks mark (FR-032). An axis with six columns, each a green Requirements block and a blue Architecture block, coloured by `--area-req`, `--area-arc` and `--ink`. Commons red is gone. The favicon is a reduced mark with three solid columns. The intro draws the axis, then grows the columns from left to right, about 2 s. `docs/brand/` adds a lockup with the wordmark "systems42 DASHBOARD" for use outside the dashboard. The Mac app icon still shows the peaks ([#172](https://github.com/systems42-org/systems42-dashboard/issues/172)).
