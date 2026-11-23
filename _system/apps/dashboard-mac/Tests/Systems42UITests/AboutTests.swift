@@ -80,4 +80,30 @@ import Systems42TestSupport
         #expect(HelpText.markdown.contains("Help > Metamodel, The Method and Guided Tour"))
         #expect(HelpText.markdown.contains("## The LLM wiki"))
     }
+
+    @Test func everyValueFromTheWikiIsOneCleanBoundedLine() async throws {
+        let folder = try Fixture.tempCopy("basic")
+        defer { try? FileManager.default.removeItem(at: folder.deletingLastPathComponent()) }
+        let long = String(repeating: "L", count: 500)
+        let yaml = "system_name: \"Name\\u202EEvil\\nSecond line \(long)\"\nbrand: \"b\\u0085r\\u2028and\\u200B\(long)\"\ndashboard_version: \"1\\u202E.\\n2\"\n"
+        try yaml.write(to: folder.appending(path: "_system/wiki.yaml"), atomically: true, encoding: .utf8)
+        let s = WikiSession(root: try Preflight.open(folder))
+        let wiki = try #require(AboutModel(appVersion: "0.13.0", session: s).wiki)
+        let shown = [wiki.name, wiki.brand, wiki.release ?? "", wiki.notice ?? "", wiki.metamodel, wiki.folderText]
+        for text in shown {
+            #expect(!Untrusted.hasUnsafe(text), "\(text)")
+            #expect(text.count <= 201)
+        }
+        #expect(wiki.name.hasPrefix("NameEvilSecond line"))
+        #expect(wiki.brand.hasPrefix("brand"))
+        #expect(wiki.release == "1.2")
+        #expect(wiki.notice?.contains("1.2") == true)
+    }
+
+    @Test func theHelpTextHoldsNothingFalseForTheMacApp() {
+        for phrase in ["then reload", "A6", "network grouped", "as arrows", "tables with"] {
+            #expect(!HelpText.markdown.contains(phrase), "\(phrase)")
+        }
+        #expect(HelpText.markdown.contains("Help > Metamodel"))
+    }
 }

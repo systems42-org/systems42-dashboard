@@ -268,21 +268,23 @@ import Systems42TestSupport
             r.router.handle(link(i % 2 == 0 ? s.title : s.root.url.lastPathComponent, ids[i % ids.count]))
             r.router.board.dismiss()
         }
-        #expect(r.activations.value <= DeepLinkRouter.handledPerWindow)
-        #expect(s.historyCount <= DeepLinkRouter.handledPerWindow)
-        #expect(r.opened.value.count <= DeepLinkRouter.handledPerWindow)
+        #expect(r.activations.value <= DeepLinkRouter.handledPerInterval)
+        #expect(s.historyCount <= DeepLinkRouter.handledPerInterval)
+        #expect(r.opened.value.count <= DeepLinkRouter.handledPerInterval)
     }
 
-    @Test func theLimitIsPerWindowOfTime() async throws {
+    @Test func theLimitIsPerIntervalOfTime() async throws {
         let s = try await session("basic")
         let ids = s.store.pages(in: "functional-requirements").map(\.id)
         let clock = Box(Date(timeIntervalSince1970: 1000))
         let r = rig(sessions: [s], now: { clock.value })
-        for i in 0..<DeepLinkRouter.handledPerWindow + 2 { r.router.handle(link(s.title, ids[i % ids.count])) }
-        #expect(r.activations.value == DeepLinkRouter.handledPerWindow)
-        clock.value = clock.value.addingTimeInterval(DeepLinkRouter.window + 1)
+        for i in 0..<DeepLinkRouter.handledPerInterval + 2 { r.router.handle(link(s.title, ids[i % ids.count])) }
+        #expect(r.activations.value == DeepLinkRouter.handledPerInterval)
+        #expect(r.notice?.text == DeepLinkRouter.tooManyLinks)
+        r.router.board.dismiss()
+        clock.value = clock.value.addingTimeInterval(DeepLinkRouter.interval + 1)
         r.router.handle(link(s.title, ids[0] + "-x"))
-        #expect(r.activations.value == DeepLinkRouter.handledPerWindow + 1)
+        #expect(r.activations.value == DeepLinkRouter.handledPerInterval + 1)
     }
 
     // MARK: Text from a link
@@ -419,15 +421,100 @@ import Systems42TestSupport
         r.router.handle(link("First", "x"))
         #expect(r.notice?.button != nil)
         r.router.board.dismiss()
-        clock.value = clock.value.addingTimeInterval(DeepLinkRouter.window + 1)
+        clock.value = clock.value.addingTimeInterval(DeepLinkRouter.interval + 1)
         r.router.handle(link("First", "y"))
         #expect(r.router.nameReads == 1)
         r.router.board.dismiss()
         try "system_name: \"Second\"\n".write(to: file, atomically: true, encoding: .utf8)
         try FileManager.default.setAttributes([.modificationDate: Date().addingTimeInterval(500)], ofItemAtPath: file.path)
-        clock.value = clock.value.addingTimeInterval(DeepLinkRouter.window + 1)
+        clock.value = clock.value.addingTimeInterval(DeepLinkRouter.interval + 1)
         r.router.handle(link("Second", "x"))
         #expect(r.router.nameReads == 2)
         #expect(r.notice?.button?.title == "Open Second")
+    }
+
+    // MARK: Notices
+
+    @Test func eachNewNoticeIsAnnouncedOnceWithTheTextOnScreen() async throws {
+        let s = try await session("basic")
+        let spoken = Box<[String]>([])
+        let r = rig(sessions: [s], now: { Date(timeIntervalSince1970: 1000) })
+        r.router.board.announce = { spoken.value.append($0) }
+        r.router.handle(link(s.title, "FR-999-nothing"))
+        #expect(spoken.value == [try #require(r.notice?.text)])
+        // Links dropped while it shows announce nothing.
+        r.router.handle(link(s.title, "FR-998-nothing"))
+        #expect(spoken.value.count == 1)
+        r.router.board.dismiss()
+        r.router.handle(link(s.title, "FR-997-nothing"))
+        #expect(spoken.value.count == 2)
+        #expect(spoken.value[1] == r.notice?.text)
+    }
+
+    @Test func linksOverTheLimitShowOneFixedLineAndNoLinkText() async throws {
+        let s = try await session("basic")
+        let spoken = Box<[String]>([])
+        let r = rig(sessions: [s], now: { Date(timeIntervalSince1970: 1000) })
+        r.router.board.announce = { spoken.value.append($0) }
+        for i in 0..<DeepLinkRouter.handledPerInterval {
+            r.router.handle(link(s.title, "SECRET-\(i)"))
+            r.router.board.dismiss()
+        }
+        r.router.handle(link(s.title, "SECRET-x"))
+        #expect(r.notice?.text == DeepLinkRouter.tooManyLinks)
+        #expect(!(r.notice?.text.contains("SECRET") ?? true))
+        #expect(spoken.value.last == DeepLinkRouter.tooManyLinks)
+        r.router.board.dismiss()
+        let count = spoken.value.count
+        for i in 0..<20 { r.router.handle(link(s.title, "SECRET-y\(i)")) }
+        #expect(r.notice == nil)
+        #expect(spoken.value.count == count)
+    }
+
+    @Test func aNoticeWithoutAButtonExpiresAndOneWithAButtonStays() async throws {
+        let s = try await session("basic")
+        let a = try await session("search")
+        let clock = Box(Date(timeIntervalSince1970: 1000))
+        let r = rig(sessions: [s], recent: [a.root.url], now: { clock.value })
+        r.router.handle(link(s.title, "FR-999-nothing"))
+        r.router.board.expireIfDue(at: clock.value.addingTimeInterval(NoticeBoard.lifetime - 1))
+        #expect(r.notice != nil)
+        r.router.board.expireIfDue(at: clock.value.addingTimeInterval(NoticeBoard.lifetime))
+        #expect(r.notice == nil)
+        // With a button.
+        r.router.handle(link(a.title, "FR-1"))
+        #expect(r.notice?.button != nil)
+        r.router.board.expireIfDue(at: clock.value.addingTimeInterval(NoticeBoard.lifetime * 10))
+        #expect(r.notice != nil)
+    }
+
+    @Test func aLinkAfterTheLifetimeFindsTheOldNoticeGone() async throws {
+        let s = try await session("basic")
+        let page = try firstPage(s)
+        let clock = Box(Date(timeIntervalSince1970: 1000))
+        let r = rig(sessions: [s], now: { clock.value })
+        r.router.handle(link(s.title, "FR-999-nothing"))
+        clock.value = clock.value.addingTimeInterval(NoticeBoard.lifetime + 1)
+        r.router.handle(link(s.title, page.id))
+        #expect(s.selectedPage == page.ref)
+    }
+
+    @Test func theOpenButtonGoesWhenThatWikiOpensByAnyMeans() async throws {
+        let a = try await session("search")
+        let other = try await session("arc42")
+        let r = rig(sessions: [], recent: [a.root.url])
+        r.router.handle(link(a.title, "FR-1"))
+        #expect(r.notice?.button != nil)
+        r.router.sessionOpened(other)
+        #expect(r.notice != nil)
+        r.router.sessionOpened(a)
+        #expect(r.notice == nil)
+    }
+
+    @Test func onlyTheFrontmostWikiWindowOrTheWelcomeWindowShowsTheBanner() {
+        #expect(NoticeBoard.isVisible(in: .wiki, isKey: true, wikiWindowsOpen: true))
+        #expect(!NoticeBoard.isVisible(in: .wiki, isKey: false, wikiWindowsOpen: true))
+        #expect(NoticeBoard.isVisible(in: .welcome, isKey: false, wikiWindowsOpen: false))
+        #expect(!NoticeBoard.isVisible(in: .welcome, isKey: true, wikiWindowsOpen: true))
     }
 }

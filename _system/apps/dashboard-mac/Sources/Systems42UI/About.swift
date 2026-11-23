@@ -9,6 +9,8 @@ public struct AboutModel: Equatable {
     public struct Wiki: Equatable {
         public let name: String
         public let folder: URL
+        /// The folder as the window shows it: home written as `~`, cleaned, bounded.
+        public let folderText: String
         /// The dashboard release the wiki names in `wiki.yaml`, nil when it names none.
         public let release: String?
         /// FR-055: set when the wiki names a release other than the app's.
@@ -31,17 +33,19 @@ public struct AboutModel: Equatable {
             wiki = nil
             return
         }
-        let release = session.config.dashboardVersion
+        // Everything that comes from the wiki is cleaned: one line, no control or format characters, bounded.
+        let release = session.config.dashboardVersion.map { Untrusted.clean($0) }
         wiki = Wiki(
-            name: session.title,
+            name: Untrusted.clean(session.title, longest: 80),
             folder: session.root.url,
+            folderText: Untrusted.clean((session.root.url.path as NSString).abbreviatingWithTildeInPath, longest: 200),
             release: release,
-            notice: ReleaseNotice.text(wikiNames: release, appVersion: appVersion),
-            metamodel: Self.metamodelLine(session.metamodel.version),
-            metamodelNotice: MetamodelModel.notice(for: session.metamodel.version)?.line,
+            notice: ReleaseNotice.text(wikiNames: release, appVersion: appVersion).map { Untrusted.clean($0, longest: 200) },
+            metamodel: Untrusted.clean(Self.metamodelLine(session.metamodel.version)),
+            metamodelNotice: MetamodelModel.notice(for: session.metamodel.version).map { Untrusted.clean($0.line, longest: 200) },
             supportedVersions: Metamodel.supportedVersions,
             refreshed: session.refreshedAt,
-            brand: session.config.brand)
+            brand: Untrusted.clean(session.config.brand, longest: 80))
     }
 
     static func metamodelLine(_ state: VersionState) -> String {
@@ -88,7 +92,7 @@ struct AboutView: View {
                 Divider()
                 Text(wiki.name).font(.headline)
                 Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 4) {
-                    row("Folder", wiki.folder.path)
+                    row("Folder", wiki.folderText)
                     row("Dashboard release", wiki.release ?? "not named")
                     row("Brand", wiki.brand)
                     row("Metamodel", wiki.metamodel)

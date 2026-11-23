@@ -107,28 +107,80 @@ public struct DeepLinkNotice {
 
     public let text: String
     public let button: Button?
+    /// The wiki the button would open. The notice goes away when that wiki opens by any means.
+    let waitingFor: URL?
+    let id = UUID()
+
+    init(text: String, button: Button? = nil, waitingFor: URL? = nil) {
+        self.text = text
+        self.button = button
+        self.waitingFor = waitingFor
+    }
 }
 
-/// The one notice on screen. A window shows it as a banner. While one shows, links are dropped.
+/// The one notice on screen. A window shows it as a banner, and VoiceOver is told once when it is set.
+/// While one shows, links are dropped. A notice without a button goes away after `lifetime`. One with a
+/// button stays until the reader dismisses it or the wiki it offers has opened.
 @MainActor @Observable public final class NoticeBoard {
-    public private(set) var current: DeepLinkNotice?
+    /// How long a notice without a button stays.
+    public static let lifetime: TimeInterval = 15
 
-    func show(_ notice: DeepLinkNotice) { current = notice }
+    /// The kinds of window that may show the banner.
+    public enum Window { case wiki, welcome }
+
+    public private(set) var current: DeepLinkNotice?
+    @ObservationIgnored private var shownAt = Date.distantPast
+    /// Speaks a new notice. Tests replace it.
+    @ObservationIgnored var announce: @MainActor (String) -> Void = { NoticeBoard.speak($0) }
+
+    func show(_ notice: DeepLinkNotice, at moment: Date) {
+        current = notice
+        shownAt = moment
+        announce(notice.text)
+    }
+
     public func dismiss() { current = nil }
+
+    /// Removes a notice without a button once its time is up.
+    public func expireIfDue(at moment: Date) {
+        guard let current, current.button == nil, moment.timeIntervalSince(shownAt) >= Self.lifetime else { return }
+        self.current = nil
+    }
+
+    /// Removes the notice that offers to open this folder.
+    func dismissWaiting(for folder: URL) {
+        guard let waiting = current?.waitingFor, WikiFolders.standardized(waiting) == WikiFolders.standardized(folder) else { return }
+        current = nil
+    }
+
+    /// Only the frontmost wiki window shows the banner. The Welcome window shows it while no wiki window is open.
+    public static func isVisible(in window: Window, isKey: Bool, wikiWindowsOpen: Bool) -> Bool {
+        switch window {
+        case .wiki: isKey
+        case .welcome: !wikiWindowsOpen
+        }
+    }
+
+    private static func speak(_ text: String) {
+        NSAccessibility.post(element: NSApplication.shared, notification: .announcementRequested,
+                             userInfo: [.announcement: text, .priority: NSAccessibilityPriorityLevel.high.rawValue])
+    }
 }
 
 /// Finds the wiki and the page a link names. It selects a page, or tells the reader why not. It opens a
 /// wiki only when the reader presses the button of the message. A name that fits two wikis picks none.
 ///
 /// Limits against a flood of links: an identical link within `sameEvent` counts once, a link that arrives
-/// while a notice shows is dropped, and at most `handledPerWindow` links are handled per `window`. The
-/// rest are dropped without a word. The app comes to the front once per handled link.
+/// while a notice shows is dropped, and at most `handledPerInterval` links are handled per `interval`. The
+/// rest are dropped, and one fixed line says so once per interval. The app comes to the front once per handled link.
 @MainActor public final class DeepLinkRouter {
     public static let shared = DeepLinkRouter()
 
     static let sameEvent: TimeInterval = 1
-    static let handledPerWindow = 3
-    static let window: TimeInterval = 10
+    static let handledPerInterval = 3
+    static let interval: TimeInterval = 10
+    /// The one line shown when links were dropped because of the limit. It holds no link text.
+    static let tooManyLinks = "Too many links arrived. Some were ignored."
     /// How long the reader has to finish opening a wiki after pressing the button.
     static let pendingLifetime: TimeInterval = 30
 
@@ -142,6 +194,7 @@ public struct DeepLinkNotice {
     private var pending: (folder: URL, pageID: String?, since: Date)?
     private var last: (url: URL, at: Date)?
     private var handled: [Date] = []
+    private var limitNoticeAt: Date?
     private(set) var nameReads = 0
     private var names: [URL: (modified: Date?, name: String)] = [:]
 
@@ -168,9 +221,16 @@ public struct DeepLinkNotice {
         let moment = now()
         if let last, last.url == url, moment.timeIntervalSince(last.at) < Self.sameEvent { return }
         last = (url, moment)
+        board.expireIfDue(at: moment)
         guard board.current == nil else { return }
-        handled.removeAll { moment.timeIntervalSince($0) >= Self.window }
-        guard handled.count < Self.handledPerWindow else { return }
+        handled.removeAll { moment.timeIntervalSince($0) >= Self.interval }
+        guard handled.count < Self.handledPerInterval else {
+            if limitNoticeAt.map({ moment.timeIntervalSince($0) >= Self.interval }) ?? true {
+                limitNoticeAt = moment
+                board.show(DeepLinkNotice(text: Self.tooManyLinks), at: moment)
+            }
+            return
+        }
         handled.append(moment)
         pending = nil
         activate()
@@ -202,12 +262,14 @@ public struct DeepLinkNotice {
                 guard let self else { return }
                 pending = (folder, pageID, now())
                 openWiki(folder)
-            }))
+            },
+            waitingFor: folder), at: moment)
     }
 
     /// A wiki finished opening. A link that waited for exactly this folder selects its page now, once.
     /// Another wiki that finishes meanwhile is not the one the reader agreed to.
     public func sessionOpened(_ session: WikiSession) {
+        board.dismissWaiting(for: session.root.url)
         guard let waiting = pending else { return }
         guard now().timeIntervalSince(waiting.since) < Self.pendingLifetime else {
             pending = nil
@@ -238,7 +300,7 @@ public struct DeepLinkNotice {
     }
 
     private func tell(_ text: String) {
-        board.show(DeepLinkNotice(text: text, button: nil))
+        board.show(DeepLinkNotice(text: text), at: now())
     }
 
     private struct Candidate {

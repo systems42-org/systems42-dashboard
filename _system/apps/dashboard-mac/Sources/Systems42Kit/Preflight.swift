@@ -37,7 +37,7 @@ public enum Preflight {
 
     /// The file or folder `relative` names under the wiki root, with every symlink resolved, or nil
     /// when it does not exist or resolves outside the root. An empty, absolute or `..` path gives nil
-    /// too. This is how app code reads anything the wiki names by path (the brand folder).
+    /// too. Use it for any path a wiki file or a page names.
     public static func contained(_ relative: String, in root: WikiRoot) -> URL? {
         guard !relative.isEmpty, !relative.hasPrefix("/"), !relative.hasPrefix("~"),
               !relative.split(separator: "/").contains("..") else { return nil }

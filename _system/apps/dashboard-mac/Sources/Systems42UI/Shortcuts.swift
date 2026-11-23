@@ -8,11 +8,27 @@ public struct Shortcut: Sendable {
     public let keys: String
     public let key: KeyEquivalent
     public let modifiers: EventModifiers
+    /// The cancel action: Escape and Cmd-period, as the system gives them to a button marked with it.
+    public let isCancelAction: Bool
+
+    /// Every key combination of the entry, as the menu writes them.
+    public var keyList: [String] { isCancelAction ? ["⎋", "⌘."] : [keys] }
+
+    var equivalent: KeyboardShortcut { isCancelAction ? .cancelAction : KeyboardShortcut(key, modifiers: modifiers) }
+
+    init(cancelAction name: String) {
+        self.name = name
+        keys = "⎋"
+        key = .escape
+        modifiers = []
+        isCancelAction = true
+    }
 
     init(_ name: String, _ key: Character, _ modifiers: EventModifiers = .command) {
         self.name = name
         self.key = KeyEquivalent(key)
         self.modifiers = modifiers
+        isCancelAction = false
         var text = ""
         if modifiers.contains(.control) { text += "⌃" }
         if modifiers.contains(.option) { text += "⌥" }
@@ -27,13 +43,14 @@ public struct Shortcut: Sendable {
         self.keys = keys
         self.key = key
         self.modifiers = modifiers
+        isCancelAction = false
     }
 }
 
 extension View {
     /// Attaches a shortcut of the list.
     public func shortcut(_ shortcut: Shortcut) -> some View {
-        keyboardShortcut(shortcut.key, modifiers: shortcut.modifiers)
+        keyboardShortcut(shortcut.equivalent)
     }
 }
 
@@ -52,7 +69,7 @@ public enum Shortcuts {
     public static let help = Shortcut("Systems42 Dashboard Help", keys: "⌘?", key: "/", modifiers: [.command, .shift])
     public static let previousTourStep = Shortcut("Previous Tour Step", keys: "⌥⌘←", key: .leftArrow, modifiers: [.command, .option])
     public static let nextTourStep = Shortcut("Next Tour Step", keys: "⌥⌘→", key: .rightArrow, modifiers: [.command, .option])
-    public static let stopTour = Shortcut("Stop Tour", keys: "⎋", key: .escape, modifiers: [])
+    public static let stopTour = Shortcut(cancelAction: "Stop Tour")
 
     /// Cmd-1 to Cmd-9.
     public static let sections: [Shortcut] = (1...9).map { Shortcut("Section \($0)", Character(String($0))) }

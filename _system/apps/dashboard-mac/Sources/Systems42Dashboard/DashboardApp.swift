@@ -73,7 +73,7 @@ private struct Welcome: View {
 
     var body: some View {
         WelcomeView(recent: recent.urls) { openWindow.openWiki($0) }
-            .opensDroppedFolders()
+            .opensDroppedFolders(banner: .welcome)
             .task {
                 guard let folder = launch.take() else { return }
                 openWindow.openWiki(folder)

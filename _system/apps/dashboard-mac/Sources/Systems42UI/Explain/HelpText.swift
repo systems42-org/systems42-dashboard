@@ -3,7 +3,8 @@
 /// for the diagram assets, so the text lives here as Swift source. It describes the web dashboard's
 /// pages, header and footer: the native app offers the same things in its menus, which About and
 /// the menu bar show. Changes: the sections on the browser UI, the start sentence, the diagram
-/// placeholder and the heading attribute are left out, and links into the web dashboard are plain text.
+/// placeholder, the heading attribute and the sentence on the diagram are left out, the description of the
+/// web view of the metamodel and "then reload" are changed, and links into the web dashboard are plain text.
 /// Update this copy when `help.md` changes.
 public enum HelpText {
     public static let markdown = #"""
@@ -24,7 +25,7 @@ public enum HelpText {
       agent which kinds of pages exist and how they link.
 
     The dashboard only reads `wiki/`. To change a page, change the source or ask
-    the agent, then reload.
+    the agent.
 
     ## The Systems42 model in brief
 
@@ -38,17 +39,15 @@ public enum HelpText {
     **Commons** (C1–C7) are the sections both sides depend on: Quality
     Requirements, Constraints, Scope & Context, Stakeholders, Domain Terms,
     Issues and Decisions. Architecture and business decisions share
-    one list there, filterable by kind; the diagram still draws architecture
-    decisions as A6.
+    one list there, filterable by kind.
 
     ## The metamodel
 
     Which kinds of pages the wiki holds, which frontmatter fields link them, and
     which views are only ever projected from them is declared in
     `_system/metamodel/`, one page per type, relation, framework section,
-    projection and rule. **Metamodel** shows it: the types as a
-    network grouped by section, with the relations as arrows, and tables with
-    each construct's definition, its fields and a live example page from this wiki.
+    projection and rule. **Help > Metamodel** shows it: each
+    construct's definition and fields and, for a type, an example page from this wiki.
     It also lists the requirement notations: every functional requirement names
     its `notation:` (Agile, use case, EARS, prose or a project's own) and one of
     that notation's `level:` values, and each notation file defines its levels,
