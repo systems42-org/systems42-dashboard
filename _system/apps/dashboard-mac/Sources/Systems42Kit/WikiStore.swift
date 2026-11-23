@@ -91,6 +91,11 @@ public final class WikiStore: @unchecked Sendable {
         current().names.resolve(link)
     }
 
+    /// How links resolve in the current snapshot, for the search index.
+    func linkNames() -> Names {
+        current().names
+    }
+
     /// The pages `ref` links to, by the field the link stands in, or "text" for the body.
     /// Each list is in the order of the links, without duplicates and without `ref` itself.
     public func linksFrom(_ ref: PageRef) -> [String: [PageRef]] {
@@ -170,10 +175,17 @@ struct Names: Sendable {
     var metamodel: [String: String] = [:]
     /// The start of a source id, such as `SRC-`.
     var sourceIdStart: String?
+    /// Source stem or id to the id of that source record, first record wins (the search index uses it).
+    var sourceIds: [String: String] = [:]
+
+    /// Whether a link target names a provenance record rather than a page.
+    func isSource(target: String, name: String) -> Bool {
+        target.hasPrefix("raw/") || sourceIdStart.map(name.hasPrefix) == true
+    }
 
     func resolve(_ link: Wikilink) -> LinkTarget {
         let name = link.name
-        if link.target.hasPrefix("raw/") || sourceIdStart.map(name.hasPrefix) == true {
+        if isSource(target: link.target, name: name) {
             if let source = sources[name] { return .source(source) }
         } else if let found = byStem[name] ?? byId[name] ?? byAlias[name] {
             return .page(found)
@@ -263,6 +275,8 @@ final class Snapshot: Sendable {
                 for source in Files.pages(in: sourcesDir, folder: folder.name, inside: sourcesReal, cache: cache, seen: &seen) {
                     if names.sources[source.ref.stem] == nil { names.sources[source.ref.stem] = source.ref.stem }
                     if names.sources[source.id] == nil { names.sources[source.id] = source.ref.stem }
+                    if names.sourceIds[source.ref.stem] == nil { names.sourceIds[source.ref.stem] = source.id }
+                    if names.sourceIds[source.id] == nil { names.sourceIds[source.id] = source.id }
                 }
             }
         }
