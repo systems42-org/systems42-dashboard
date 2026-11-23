@@ -39,6 +39,10 @@ The dashboard offers HTML for most of this. The script parses it and reads:
   `.detail-head`, ids from the `<code>` of each `.rel-block` list item.
   `linked_from` leaves out the pages that `links_to` already shows, as the
   dashboard does (a page that links both ways appears under "Links to" only).
+  The export reads every block that is not "Links to" as "Linked from". That
+  includes the blocks of the trace panel (Drivers, Realizes, Used by and so on),
+  so `linked_from` also holds the pages of that panel, and `links_to` leaves
+  them out. `WikiStore.relations(of:)` keeps the three lists apart.
   The export fails when a page lacks its head or status badge, or when a
   whole fixture shows no link.
   The type label comes from `search.json`, because a requirement page shows
