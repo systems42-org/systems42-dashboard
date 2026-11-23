@@ -7,6 +7,7 @@ import Systems42Kit
 enum LinkAction: Equatable, Sendable {
     case page(PageRef)
     case anchor(String)
+    case metamodel(String)
     case web(URL)
 
     private static let scheme = "systems42"
@@ -25,6 +26,9 @@ enum LinkAction: Equatable, Sendable {
             parts.queryItems = [URLQueryItem(name: "folder", value: ref.folder), URLQueryItem(name: "stem", value: ref.stem)]
         case .anchor(let name):
             parts.host = "anchor"
+            parts.queryItems = [URLQueryItem(name: "name", value: name)]
+        case .metamodel(let name):
+            parts.host = "metamodel"
             parts.queryItems = [URLQueryItem(name: "name", value: name)]
         case .web(let url):
             return url
@@ -46,6 +50,9 @@ enum LinkAction: Equatable, Sendable {
         case "anchor":
             guard let name = value("name") else { return nil }
             self = .anchor(name)
+        case "metamodel":
+            guard let name = value("name") else { return nil }
+            self = .metamodel(name)
         default:
             return nil
         }
@@ -83,8 +90,9 @@ struct InlineContent {
             switch target {
             case .page(let ref): url = LinkAction.page(ref).url
             case .anchor(let name): url = LinkAction.anchor(name).url
+            case .metamodel(let name): url = LinkAction.metamodel(name).url
             case .missing: absent = true
-            case .source, .metamodel: break
+            case .source: break
             }
             if let url { actions.append(LinkAction(url: url)!) }
             for item in label { append(item, bold: bold, italic: italic, link: url, missing: absent) }

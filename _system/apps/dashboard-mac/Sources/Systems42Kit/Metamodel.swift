@@ -1,7 +1,7 @@
 import Foundation
 
 /// One field a type page declares for its pages.
-public struct MMField: Sendable {
+public struct MMField: Equatable, Sendable {
     public let name, kind: String
     public let doc: String?
     public let values: [String]
@@ -12,6 +12,8 @@ public struct MMField: Sendable {
 /// A content type as its page in `_system/metamodel/types/` declares it.
 public struct MMType: Sendable {
     public let name, prefix, folder, label, labelDe, block, summary: String
+    /// The first plain paragraph of the body: not a list, table, quote or comment.
+    public let definition: String
     /// The name of the lifecycle the type's `status` follows, "" when the page names none.
     public let lifecycle: String
     public let fields: [MMField]
@@ -22,6 +24,8 @@ public struct MMType: Sendable {
 /// A relation, projection or rule page of the metamodel.
 public struct MMConstruct: Sendable {
     public let construct, name, summary, body: String
+    /// The page's `summary` field, else the first plain paragraph of the body.
+    public let definition: String
     public let frontmatter: [String: FieldValue]
     /// The lists of mappings in the frontmatter, such as the `edges` of a relation, by field name.
     /// Each mapping holds its scalar values as text and a list of scalars as its items joined by a comma.
@@ -35,6 +39,8 @@ public struct MMFramework: Sendable {
         public let id, title: String
     }
     public let name, area: String
+    /// The first plain paragraph of the body.
+    public let definition: String
     public let blocks: [Block]
 }
 
@@ -52,7 +58,7 @@ public struct Metamodel: Sendable {
 
     public let types: [MMType]
     public let frameworks: [MMFramework]
-    public let relations, projections, rules: [MMConstruct]
+    public let relations, projections, rules, notations: [MMConstruct]
     public let anchors: [Anchor]
     public let sections: [Section]
     /// Lifecycle name to its statuses in order, from `meta-metamodel`.
@@ -105,6 +111,7 @@ public struct Metamodel: Sendable {
             relations: pages(of: "relation").map { MMConstruct($0, construct: "relation") },
             projections: pages(of: "projection").map { MMConstruct($0, construct: "projection") },
             rules: pages(of: "rule").map { MMConstruct($0, construct: "rule") },
+            notations: pages(of: "notation").map { MMConstruct($0, construct: "notation") },
             anchors: anchors,
             sections: catalog.sections,
             lifecycles: readLifecycles(pages(of: "meta-metamodel")),
@@ -193,6 +200,7 @@ extension MMType {
             labelDe: entry.scalar("label_de") ?? "",
             block: entry.scalar("block") ?? "",
             summary: MetaText.summary(of: page.body),
+            definition: MetaText.definition(of: page.body),
             lifecycle: entry.scalar("lifecycle") ?? "",
             fields: entry.entries("fields").compactMap(MMField.init),
             anchors: entry.strings("anchors"),
@@ -224,6 +232,7 @@ extension MMConstruct {
             name: page.entry.scalar("name") ?? page.stem,
             summary: MetaText.summary(of: page.body),
             body: page.body,
+            definition: page.entry.scalar("summary") ?? MetaText.definition(of: page.body),
             frontmatter: page.fields,
             entries: page.entry.records
         )
@@ -235,6 +244,7 @@ extension MMFramework {
         self.init(
             name: page.entry.scalar("name") ?? page.stem,
             area: page.entry.scalar("area") ?? "",
+            definition: MetaText.definition(of: page.body),
             blocks: page.entry.entries("blocks").compactMap { block in
                 block.scalar("id").map { MMFramework.Block(id: $0, title: block.scalar("title") ?? $0) }
             }
@@ -244,46 +254,79 @@ extension MMFramework {
 
 /// Text taken from the body of a metamodel or anchor page.
 enum MetaText {
-    private static let heading = "(?m)^#\\s+.*$"
-    private static let blankLine = "\\n\\s*\\n"
     private static let noParagraph = ["-", "*", "|", "#"]
+    private static let notDefinition = noParagraph + [">", "<!--"]
+
+    private static func lines(_ text: String) -> [String] {
+        text.components(separatedBy: "\n")
+    }
+
+    private static func isBlank(_ line: String) -> Bool {
+        line.allSatisfy(\.isWhitespace)
+    }
+
+    /// A level one heading: `#` and a space or tab.
+    private static func isHeading(_ line: String) -> Bool {
+        guard line.hasPrefix("#") else { return false }
+        let second = line.dropFirst().first
+        return second == " " || second == "\t"
+    }
+
+    /// The lines without the first level one heading, trimmed at both ends.
+    private static func withoutHeading(lines: [String]) -> [String] {
+        var kept = lines
+        if let index = kept.firstIndex(where: isHeading) { kept.remove(at: index) }
+        let start = kept.firstIndex { !isBlank($0) } ?? kept.endIndex
+        let end = kept.lastIndex { !isBlank($0) }.map { $0 + 1 } ?? start
+        return Array(kept[start..<end])
+    }
 
     /// The body without its first level one heading.
     static func withoutHeading(_ body: String) -> String {
-        guard let range = body.range(of: heading, options: .regularExpression) else { return body }
-        return String(body[..<range.lowerBound] + body[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+        let lines = lines(body)
+        guard lines.contains(where: isHeading) else { return body }
+        return withoutHeading(lines: lines).joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// The paragraphs of the lines, one scan, each as its lines. Blank lines separate them.
+    private static func paragraphs(_ lines: [String], _ visit: ([String]) -> Bool) {
+        var current: [String] = []
+        for line in lines {
+            if isBlank(line) {
+                if !current.isEmpty, !visit(current) { return }
+                current = []
+            } else {
+                current.append(line)
+            }
+        }
+        if !current.isEmpty { _ = visit(current) }
     }
 
     /// The first paragraph of the body, after the heading, as one line. Empty when it is a list, table or heading.
     static func summary(of body: String) -> String {
-        let text = withoutHeading(body)
-        let head = firstParagraph(text) ?? ""
-        let trimmed = head.drop { $0.isWhitespace }
-        if noParagraph.contains(where: trimmed.hasPrefix) { return "" }
-        return oneLine(head)
+        var result = ""
+        paragraphs(withoutHeading(lines: lines(body))) { paragraph in
+            let head = paragraph[0].drop { $0.isWhitespace }
+            result = noParagraph.contains(where: head.hasPrefix) ? "" : oneLine(paragraph)
+            return false
+        }
+        return result
     }
 
     /// The first paragraph that is not a quote, list, table, heading or comment.
     static func definition(of body: String) -> String {
-        var rest = withoutHeading(body)
-        while let paragraph = firstParagraph(rest) {
-            let head = paragraph.drop { $0.isWhitespace }
-            if !head.isEmpty, !(noParagraph + [">", "<!--"]).contains(where: head.hasPrefix) { return oneLine(paragraph) }
-            guard let split = rest.range(of: blankLine, options: .regularExpression) else { break }
-            rest = String(rest[split.upperBound...])
+        var result = ""
+        paragraphs(withoutHeading(lines: lines(body))) { paragraph in
+            let head = paragraph[0].drop { $0.isWhitespace }
+            if notDefinition.contains(where: head.hasPrefix) { return true }
+            result = oneLine(paragraph)
+            return false
         }
-        return ""
+        return result
     }
 
-    private static func firstParagraph(_ text: String) -> String? {
-        guard !text.isEmpty else { return nil }
-        guard let split = text.range(of: blankLine, options: .regularExpression) else { return text }
-        return String(text[..<split.lowerBound])
-    }
-
-    private static func oneLine(_ text: String) -> String {
-        text.split(separator: "\n", omittingEmptySubsequences: false)
-            .map { $0.trimmingCharacters(in: .whitespaces) }.joined(separator: " ")
+    private static func oneLine(_ lines: [String]) -> String {
+        lines.map { $0.trimmingCharacters(in: .whitespaces) }.joined(separator: " ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

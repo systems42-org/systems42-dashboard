@@ -29,9 +29,18 @@ public struct WikiWindowRoot: View {
             }
         }
         .opensDroppedFolders()
+        .onAppear {
+            if case .session(let session)? = result { OpenSessions.shared.register(session) }
+        }
+        .onDisappear {
+            if case .session(let session)? = result { OpenSessions.shared.unregister(session) }
+        }
         .task {
             let loaded = await OpenedWiki.open(folder)
-            if case .session = loaded { opened(folder) }
+            if case .session(let session) = loaded {
+                OpenSessions.shared.register(session)
+                opened(folder)
+            }
             result = loaded
         }
     }

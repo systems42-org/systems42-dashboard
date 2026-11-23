@@ -4,6 +4,7 @@ import Systems42Kit
 /// The areas and sections of the wiki with their counts.
 struct Sidebar: View {
     @Bindable var session: WikiSession
+    @Environment(\.explain) private var explain
 
     var body: some View {
         // The rows are a `ForEach` over identifiable rows, so each row's id (a `String`) is its
@@ -14,6 +15,9 @@ struct Sidebar: View {
                     ForEach(group.rows) { row in
                         SidebarRowView(row: row, color: group.area.color) {
                             session.showIssues(of: row.section.id)
+                        }
+                        .contextMenu {
+                            Button("About \(row.section.title)") { explain(.section(row.section.id)) }
                         }
                     }
                 } header: {

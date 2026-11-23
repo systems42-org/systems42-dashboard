@@ -82,6 +82,7 @@ struct LoadedWiki: Sendable {
     /// Renders that are running, so a page is rendered once however many models ask for it.
     @ObservationIgnored private var running: [PageRef: Task<RenderedBody, Never>] = [:]
     private static let mostRenderedPages = 100
+    @ObservationIgnored fileprivate var explainerModel: MetamodelModel?
     private var history: [Place] = []
     private var position = -1
 
@@ -258,3 +259,13 @@ struct RenderedBody: Equatable, Sendable {
 
 /// Makes the blocks of a page body. It runs off the main actor.
 public typealias PageRender = @Sendable (_ body: String, _ store: WikiStore) async -> RenderedPage
+
+extension WikiSession {
+    /// The model of the Metamodel window of this wiki. One per session, so a window and the links that open it share their selection.
+    public var explainer: MetamodelModel {
+        if let model = explainerModel { return model }
+        let model = MetamodelModel(session: self)
+        explainerModel = model
+        return model
+    }
+}

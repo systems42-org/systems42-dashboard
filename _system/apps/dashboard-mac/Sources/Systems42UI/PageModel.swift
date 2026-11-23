@@ -19,6 +19,8 @@ public struct FollowItem: Sendable {
     public let page: Page
     /// Status first, then the enum fields of the page's type. `doc` is the field's explanation in the metamodel.
     public let head: [(label: String, value: String, doc: String?)]
+    /// For each head badge, what the metamodel says about its field: the doc and the allowed values. Nil when it says nothing.
+    public let headHelp: [String?]
     public let outgoing: [RelationGroup]
     public let incoming: [RelationGroup]
     public let openIssues: [Page]
@@ -49,12 +51,20 @@ public struct FollowItem: Sendable {
 
         let type = metamodel.type(forFolder: ref.folder)
         var head: [(label: String, value: String, doc: String?)] = []
-        if !page.status.isEmpty { head.append((FieldLabel.text(PageKey.status), page.status, nil)) }
+        var headHelp: [String?] = []
+        if !page.status.isEmpty {
+            head.append((FieldLabel.text(PageKey.status), page.status, nil))
+            headHelp.append(FieldHelp.text(doc: nil, values: type.flatMap { metamodel.lifecycles[$0.lifecycle] } ?? []))
+        }
         for field in type?.fields ?? [] where field.kind == ListModel.enumKind && field.name != PageKey.status {
             let value = PageOrder.text(of: field.name, in: page)
-            if !value.isEmpty { head.append((FieldLabel.text(field.name), value, field.doc)) }
+            if !value.isEmpty {
+                head.append((FieldLabel.text(field.name), value, field.doc))
+                headHelp.append(FieldHelp.text(doc: field.doc, values: field.values))
+            }
         }
         self.head = head
+        self.headHelp = headHelp
 
         let relations = store.relations(of: ref)
         let from = store.linksFrom(ref), to = store.linksTo(ref)

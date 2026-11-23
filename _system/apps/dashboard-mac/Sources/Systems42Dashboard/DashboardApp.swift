@@ -28,6 +28,10 @@ struct DashboardApp: App {
         .commands {
             OpenCommands(recent: recent)
             ReadingCommands()
+            MetamodelCommands()
+        }
+        WindowGroup("Metamodel", id: MetamodelWindowRoot.windowID, for: URL.self) { $folder in
+            if let folder { MetamodelWindowRoot(folder: folder) }
         }
     }
 }
