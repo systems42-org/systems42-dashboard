@@ -412,7 +412,7 @@ img { max-width: 100%; height: auto; }
 }
 
 /* A small peak before each card title: mint for requirements, sky otherwise. */
-.card h3::before {
+.card h2::before, .card h3::before {
   content: "";
   display: inline-block;
   width: 0.72em;
@@ -424,7 +424,7 @@ img { max-width: 100%; height: auto; }
 
 .card .card-link { color: var(--card-ink); }
 
-.card h3 {
+.card h2, .card h3 {
   margin: 0 0 0.45rem;
   font-size: 1.14rem;
   letter-spacing: -0.01em;

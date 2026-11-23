@@ -14,7 +14,7 @@
   <div class="container">
     <div class="card-grid">
       <article class="card">
-        <h3>macOS desktop app (<code>.dmg</code>)</h3>
+        <h2>macOS desktop app (<code>.dmg</code>)</h2>
         <p>Universal macOS app (Apple Silicon &amp; Intel, macOS 14+). Menu-bar launcher with folder picker and recent wikis. Needs no Docker, uv, Python or terminal.</p>
         <div class="cta-row" style="margin-top: auto;">
           <a class="btn btn-primary" href="https://github.com/systems42-org/systems42-dashboard/releases/download/v{{ version }}/Systems42-Dashboard-{{ version }}-universal.dmg" rel="noopener">Download macOS App (.dmg)</a>
@@ -23,7 +23,7 @@
       </article>
 
       <article class="card">
-        <h3>Launcher script (<code>dashboard.sh</code>)</h3>
+        <h2>Launcher script (<code>dashboard.sh</code>)</h2>
         <p>The only dashboard file a wiki repository needs. Reads <code>dashboard_version:</code> from <code>_system/wiki.yaml</code> and starts the pinned release with Docker (<code>./dashboard.sh up</code>) or uv (<code>./dashboard.sh uv</code>).</p>
         <p class="checksum">SHA-256: {{ launcher_sha256 }}</p>
         <div class="cta-row" style="margin-top: auto;">
@@ -32,7 +32,7 @@
       </article>
 
       <article class="card">
-        <h3>Standalone Go binaries (Linux &amp; Windows)</h3>
+        <h2>Standalone Go binaries (Linux &amp; Windows)</h2>
         <p>Single static binary with all templates and assets embedded. Needs no Docker or Python: run <code>systems42-dashboard --open /path/to/wiki</code>.</p>
         <ul style="margin: 0.4rem 0 0.8rem; padding-left: 1.2rem;">
           <li><a href="https://github.com/systems42-org/systems42-dashboard/releases/download/v{{ version }}/systems42-dashboard-{{ version }}-linux-amd64.tar.gz" rel="noopener">Linux x86_64 (<code>.tar.gz</code>)</a></li>
@@ -45,14 +45,14 @@
 
     <div class="card-grid-2" style="margin-top: 1.15rem;">
       <article class="card">
-        <h3>Container image (Docker)</h3>
+        <h2>Container image (Docker)</h2>
         <p>Multi-architecture image (<code>linux/amd64</code> and <code>linux/arm64</code>) published publicly on GitHub Container Registry. No registry login required.</p>
         <pre><code>docker pull ghcr.io/systems42-org/dashboard:{{ version }}</code></pre>
         <a class="card-link" href="https://github.com/systems42-org/systems42-dashboard/pkgs/container/dashboard" rel="noopener">View on GHCR →</a>
       </article>
 
       <article class="card">
-        <h3>GitHub releases &amp; Python wheel</h3>
+        <h2>GitHub releases &amp; Python wheel</h2>
         <p>Every numbered release publishes the container image, the Python wheel for <code>./dashboard.sh uv</code>, the macOS <code>.dmg</code> and the standalone Go binaries from one tag.</p>
         <pre><code>./dashboard.sh update</code></pre>
         <a class="card-link" href="https://github.com/systems42-org/systems42-dashboard/releases/tag/v{{ version }}" rel="noopener">Release v{{ version }} on GitHub →</a>
