@@ -57,6 +57,12 @@ public final class WikiStore: @unchecked Sendable {
         self.root = root
     }
 
+    /// The metamodel of the current snapshot. It is read together with the pages, so a
+    /// session never reads it a second time for the same state of the wiki.
+    public var metamodel: Metamodel {
+        current().metamodel
+    }
+
     /// The sub-folders of `wiki/`, sorted. Hidden folders and folders that lead out of the wiki are left out.
     public func folders() -> [String] {
         current().folders
@@ -187,11 +193,12 @@ final class Snapshot: Sendable {
     /// Per page, the pages the dashboard's trace panel lists for it (see `PageRelations`).
     let trace: [PageRef: Set<PageRef>]
     let issueFolder: String?
+    let metamodel: Metamodel
 
     private init(
         folders: [String], pagesByFolder: [String: [Page]], names: Names,
         outgoing: [PageRef: [String: [PageRef]]], incoming: [PageRef: [String: [PageRef]]],
-        trace: [PageRef: Set<PageRef>], issueFolder: String?
+        trace: [PageRef: Set<PageRef>], issueFolder: String?, metamodel: Metamodel
     ) {
         self.folders = folders
         self.pagesByFolder = pagesByFolder
@@ -202,6 +209,7 @@ final class Snapshot: Sendable {
         self.incoming = incoming
         self.trace = trace
         self.issueFolder = issueFolder
+        self.metamodel = metamodel
     }
 
     static func sorted(_ refs: some Sequence<PageRef>) -> [PageRef] {
@@ -222,7 +230,8 @@ final class Snapshot: Sendable {
     static func build(root: URL, cache: inout [String: CachedPage], folderNames: [String]? = nil) -> Snapshot {
         var seen: [String: CachedPage] = [:]
         defer { cache = seen }
-        let rules = Metamodel.load(url: root).relationRules
+        let metamodel = Metamodel.load(url: root)
+        let rules = metamodel.relationRules
         let rootReal = Files.realPath(root)
 
         var folders: [String] = []
@@ -294,7 +303,7 @@ final class Snapshot: Sendable {
         }
         return Snapshot(
             folders: folders, pagesByFolder: pagesByFolder, names: names, outgoing: outgoing,
-            incoming: incoming, trace: trace, issueFolder: rules.issueFolder
+            incoming: incoming, trace: trace, issueFolder: rules.issueFolder, metamodel: metamodel
         )
     }
 }
