@@ -71,7 +71,8 @@ private let term = "wiki/domain-terms/DT-001-book.md"
         #expect(await wait { !w.calls.all.isEmpty })
         try await Task.sleep(for: .seconds(2))
         #expect(w.calls.all.count == 1)
-        #expect(w.calls.names.count == 50)
+        // FSEvents may add the folder itself or a file from the fixture copy to the batch.
+        #expect(w.calls.names.filter { $0.hasSuffix("-burst.md") }.count == 50)
     }
 
     @Test func stopEndsCallbacks() async throws {
