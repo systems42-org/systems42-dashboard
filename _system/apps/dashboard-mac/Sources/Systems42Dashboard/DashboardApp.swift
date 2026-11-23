@@ -29,6 +29,7 @@ struct DashboardApp: App {
             OpenCommands(recent: recent)
             ReadingCommands()
             SearchCommands()
+            ProjectionCommands()
             MetamodelCommands()
             MethodCommands()
         }
