@@ -9,13 +9,13 @@ struct PageHead: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Text(verbatim: model.page.id).font(.system(.caption, design: .monospaced)).foregroundStyle(.secondary)
-                ForEach(Array(model.head.enumerated()), id: \.offset) { _, badge in
+                ForEach(Array(model.head.enumerated()), id: \.offset) { index, badge in
                     Text(verbatim: badge.value)
                         .font(.caption2)
                         .padding(.horizontal, 7)
                         .padding(.vertical, 1)
                         .background(.quaternary, in: Capsule())
-                        .help(badge.doc.map { "\(badge.label): \($0)" } ?? badge.label)
+                        .fieldHelp(title: badge.label, model.headHelp[index])
                         .accessibilityLabel("\(badge.label): \(badge.value)")
                 }
             }
@@ -34,16 +34,14 @@ struct PageHead: View {
 /// A "follows" label. One that names an anchor shows its definition on a click.
 private struct FollowLabel: View {
     let item: FollowItem
-    @State private var shown = false
+    @Environment(\.explain) private var explain
 
     var body: some View {
         if let anchor = item.anchor {
-            Button(item.label) { shown = true }
+            Button(item.label) { explain(.link(.anchor(anchor.name))) }
                 .buttonStyle(.link)
                 .font(.caption)
-                .popover(isPresented: $shown) {
-                    DefinitionPopover(definition: Definition(title: anchor.title, text: anchor.definition))
-                }
+                .help("Open the entry for \(anchor.title)")
         } else {
             Text(verbatim: item.label).font(.caption)
         }

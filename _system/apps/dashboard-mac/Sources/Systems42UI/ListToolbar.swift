@@ -4,6 +4,7 @@ import SwiftUI
 struct ListToolbar: ToolbarContent {
     let model: ListModel
     @State private var sorting = false
+    @Environment(\.explain) private var explain
 
     var body: some ToolbarContent {
         ToolbarItemGroup {
@@ -18,6 +19,8 @@ struct ListToolbar: ToolbarContent {
                 .help("Sort the list")
                 .popover(isPresented: $sorting, arrowEdge: .bottom) { SortEditor(model: model) }
             FilterMenu(model: model)
+            Button("About this section", systemImage: "info.circle") { explain(.section(model.sectionID)) }
+                .help("Explain what this section holds, from the metamodel")
         }
     }
 }

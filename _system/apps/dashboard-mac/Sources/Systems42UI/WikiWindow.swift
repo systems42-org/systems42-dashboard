@@ -6,21 +6,30 @@ public struct WikiWindow: View {
     @Bindable var session: WikiSession
     @SceneStorage("selectedSection") private var storedSection = ""
     @SceneStorage("listStates") private var storedListStates = ""
+    @Environment(\.openWindow) private var openWindow
 
     init(session: WikiSession) {
         self.session = session
     }
 
     public var body: some View {
-        NavigationSplitView {
-            Sidebar(session: session)
-                .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 320)
-        } content: {
-            ListColumn(session: session, storedStates: $storedListStates)
-                .navigationSplitViewColumnWidth(min: 240, ideal: 260, max: 480)
-        } detail: {
-            PagePlaceholder(session: session)
+        VStack(spacing: 0) {
+            VersionNoticeLine(session: session)
+            NavigationSplitView {
+                Sidebar(session: session)
+                    .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 320)
+            } content: {
+                ListColumn(session: session, storedStates: $storedListStates)
+                    .navigationSplitViewColumnWidth(min: 240, ideal: 260, max: 480)
+            } detail: {
+                PagePlaceholder(session: session)
+            }
         }
+        .environment(\.explain, ExplainAction { target in
+            guard ExplainAction.apply(target, to: session.explainer) else { return }
+            openWindow(id: MetamodelWindowRoot.windowID, value: session.root.url)
+        })
+        .focusedSceneValue(\.wikiFolder, session.root.url)
         .navigationTitle(session.title)
         .navigationSubtitle(session.subtitle ?? "")
         .onAppear {

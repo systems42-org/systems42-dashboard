@@ -12,6 +12,8 @@ public struct MMField: Sendable {
 /// A content type as its page in `_system/metamodel/types/` declares it.
 public struct MMType: Sendable {
     public let name, prefix, folder, label, labelDe, block, summary: String
+    /// The first plain paragraph of the body: not a list, table, quote or comment.
+    public let definition: String
     /// The name of the lifecycle the type's `status` follows, "" when the page names none.
     public let lifecycle: String
     public let fields: [MMField]
@@ -22,6 +24,8 @@ public struct MMType: Sendable {
 /// A relation, projection or rule page of the metamodel.
 public struct MMConstruct: Sendable {
     public let construct, name, summary, body: String
+    /// The page's `summary` field, else the first plain paragraph of the body.
+    public let definition: String
     public let frontmatter: [String: FieldValue]
     /// The lists of mappings in the frontmatter, such as the `edges` of a relation, by field name.
     /// Each mapping holds its scalar values as text and a list of scalars as its items joined by a comma.
@@ -35,6 +39,8 @@ public struct MMFramework: Sendable {
         public let id, title: String
     }
     public let name, area: String
+    /// The first plain paragraph of the body.
+    public let definition: String
     public let blocks: [Block]
 }
 
@@ -52,7 +58,7 @@ public struct Metamodel: Sendable {
 
     public let types: [MMType]
     public let frameworks: [MMFramework]
-    public let relations, projections, rules: [MMConstruct]
+    public let relations, projections, rules, notations: [MMConstruct]
     public let anchors: [Anchor]
     public let sections: [Section]
     /// Lifecycle name to its statuses in order, from `meta-metamodel`.
@@ -105,6 +111,7 @@ public struct Metamodel: Sendable {
             relations: pages(of: "relation").map { MMConstruct($0, construct: "relation") },
             projections: pages(of: "projection").map { MMConstruct($0, construct: "projection") },
             rules: pages(of: "rule").map { MMConstruct($0, construct: "rule") },
+            notations: pages(of: "notation").map { MMConstruct($0, construct: "notation") },
             anchors: anchors,
             sections: catalog.sections,
             lifecycles: readLifecycles(pages(of: "meta-metamodel")),
@@ -193,6 +200,7 @@ extension MMType {
             labelDe: entry.scalar("label_de") ?? "",
             block: entry.scalar("block") ?? "",
             summary: MetaText.summary(of: page.body),
+            definition: MetaText.definition(of: page.body),
             lifecycle: entry.scalar("lifecycle") ?? "",
             fields: entry.entries("fields").compactMap(MMField.init),
             anchors: entry.strings("anchors"),
@@ -224,6 +232,7 @@ extension MMConstruct {
             name: page.entry.scalar("name") ?? page.stem,
             summary: MetaText.summary(of: page.body),
             body: page.body,
+            definition: page.entry.scalar("summary") ?? MetaText.definition(of: page.body),
             frontmatter: page.fields,
             entries: page.entry.records
         )
@@ -235,6 +244,7 @@ extension MMFramework {
         self.init(
             name: page.entry.scalar("name") ?? page.stem,
             area: page.entry.scalar("area") ?? "",
+            definition: MetaText.definition(of: page.body),
             blocks: page.entry.entries("blocks").compactMap { block in
                 block.scalar("id").map { MMFramework.Block(id: $0, title: block.scalar("title") ?? $0) }
             }

@@ -193,6 +193,8 @@ private func ids(_ groups: [(relation: String, label: String, pages: [Page])]) -
         #expect(LinkAction(url: page.url) == page)
         let anchor = LinkAction.anchor("MADR")
         #expect(LinkAction(url: anchor.url) == anchor)
+        let metamodel = LinkAction.metamodel("rel-parent")
+        #expect(LinkAction(url: metamodel.url) == metamodel)
         #expect(LinkAction(url: URL(string: "https://example.org")!) == .web(URL(string: "https://example.org")!))
         #expect(LinkAction(url: URL(string: "javascript:alert(1)")!) == nil)
     }
@@ -208,7 +210,7 @@ private func ids(_ groups: [(relation: String, label: String, pages: [Page])]) -
             .link([.text("e")], .source("SRC-001"), raw: "SRC-001"),
         ]
         let content = InlineContent(inlines)
-        #expect(content.actions == [.page(page), .anchor("MADR")])
+        #expect(content.actions == [.page(page), .anchor("MADR"), .metamodel("parent")])
         #expect(String(content.text.characters) == "abcde")
         _ = s
     }

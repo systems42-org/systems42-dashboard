@@ -47,6 +47,7 @@ struct PageView: View {
 private struct PageContent: View {
     let model: PageModel
     let session: WikiSession
+    @Environment(\.explain) private var explain
 
     /// A comfortable line length for reading.
     private static let readingWidth: CGFloat = 720
@@ -84,17 +85,20 @@ private struct PageContent: View {
                 switch action {
                 case .page(let ref): session.open(.page(ref))
                 case .web(let url): NSWorkspace.shared.open(url)
-                case .anchor: break
+                case .anchor(let name): explain(.link(.anchor(name)))
+                case .metamodel(let name): explain(.link(.metamodel(name)))
                 }
             },
             definition: { action, optionHeld in
                 switch action {
                 case .anchor(let name):
+                    // A click opens the anchor's entry. Option-click shows its definition.
+                    guard optionHeld else { return nil }
                     return model.definition(for: .anchor(name)).map { Definition(title: name, text: $0) }
                 case .page(let ref):
                     guard optionHeld, let text = model.definition(for: .page(ref)) else { return nil }
                     return Definition(title: session.store.page(ref)?.title ?? ref.stem, text: text)
-                case .web:
+                case .web, .metamodel:
                     return nil
                 }
             }

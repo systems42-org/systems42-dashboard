@@ -31,7 +31,10 @@ public struct WikiWindowRoot: View {
         .opensDroppedFolders()
         .task {
             let loaded = await OpenedWiki.open(folder)
-            if case .session = loaded { opened(folder) }
+            if case .session(let session) = loaded {
+                OpenSessions.register(session)
+                opened(folder)
+            }
             result = loaded
         }
     }

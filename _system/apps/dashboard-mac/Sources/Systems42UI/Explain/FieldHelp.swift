@@ -1,0 +1,51 @@
+import SwiftUI
+
+/// The text a field's help popover shows: what the metamodel says about the field and the values it allows.
+enum FieldHelp {
+    static func text(doc: String?, values: [String]) -> String? {
+        var lines: [String] = []
+        if let doc, !doc.isEmpty { lines.append(doc) }
+        if !values.isEmpty { lines.append("Values: " + values.joined(separator: ", ")) }
+        return lines.isEmpty ? nil : lines.joined(separator: "\n")
+    }
+}
+
+private struct FieldHelpModifier: ViewModifier {
+    let title: String
+    let text: String?
+    @State private var shown = false
+    @State private var pending: Task<Void, Never>?
+    @FocusState private var focused: Bool
+
+    func body(content: Content) -> some View {
+        if let text {
+            content
+                .focusable()
+                .focused($focused)
+                .onChange(of: focused) { _, now in shown = now }
+                .onHover { inside in
+                    pending?.cancel()
+                    if inside {
+                        pending = Task {
+                            try? await Task.sleep(for: .milliseconds(400))
+                            if !Task.isCancelled { shown = true }
+                        }
+                    } else {
+                        shown = false
+                    }
+                }
+                .popover(isPresented: $shown, arrowEdge: .bottom) {
+                    DefinitionPopover(definition: Definition(title: title, text: text))
+                }
+        } else {
+            content
+        }
+    }
+}
+
+extension View {
+    /// Shows the help text in a popover on hover and on focus. Without text the view stays as it is.
+    func fieldHelp(title: String, _ text: String?) -> some View {
+        modifier(FieldHelpModifier(title: title, text: text))
+    }
+}
