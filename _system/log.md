@@ -464,4 +464,5 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
   - Q8: the tiles in the source image are presentation only. The marks stay transparent.
   - Q9: the brand files were built in the same pull request as this capture.
 - Updated: [[FR-032-example-brands-to-try]]. Created: SRC-053, SRC-054.
-- Not changed: the Mac app icon (`macos/build-app.sh`) and the website (`site/`) still draw the peaks.
+- Also in the pull request: the website hero and page headers show the Chart mark, and dashboard release 0.14.2.
+- Not changed: the Mac app icon (`macos/build-app.sh`) still draws the peaks, [#172](https://github.com/systems42-org/systems42-dashboard/issues/172).
