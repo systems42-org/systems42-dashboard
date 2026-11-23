@@ -13,6 +13,12 @@ public enum FieldValue: Equatable, Sendable {
     case other
 }
 
+/// A page name a field refers to. `key` is the key of the mapping the name stood in, nil for a list item.
+struct Reference: Equatable, Sendable {
+    let key: String?
+    let name: String
+}
+
 /// What `Frontmatter.read` found in the YAML block of a page.
 struct FrontmatterFields {
     var fields: [String: FieldValue] = [:]
@@ -21,7 +27,7 @@ struct FrontmatterFields {
     /// Page names a field refers to as the dashboard's trace panel reads them:
     /// the items of a list, bare or linked, and the values of a list of mappings
     /// (the `from` and `to` of a step). A value that names no page is dropped later.
-    var references: [String: [String]] = [:]
+    var references: [String: [Reference]] = [:]
     var problems: [String] = []
 }
 
@@ -63,24 +69,38 @@ enum Frontmatter {
     /// Nesting the YAML parser is trusted with, counted before it runs.
     static let deepestInput = 100
 
-    static func read(_ yaml: String) -> FrontmatterFields {
-        var result = FrontmatterFields()
+    /// The top-level mapping of a YAML block. Nil when the block is empty, too deeply
+    /// nested, not valid YAML or not a mapping, and `problems` then says why (an empty block says nothing).
+    static func mapping(of yaml: String, problems: inout [String]) -> Node.Mapping? {
         guard nestingDepth(of: yaml) <= deepestInput else {
-            result.problems.append("the frontmatter is nested too deeply")
-            return result
+            problems.append("the frontmatter is nested too deeply")
+            return nil
         }
         let root: Node?
         do {
             root = try compose(yaml: yaml)
         } catch {
-            result.problems.append("the frontmatter is not valid YAML")
-            return result
+            problems.append("the frontmatter is not valid YAML")
+            return nil
         }
-        guard let root else { return result }
+        guard let root else { return nil }
         guard case .mapping(let mapping) = root else {
-            if root.scalar?.string.isEmpty != true { result.problems.append("the frontmatter is not a mapping") }
-            return result
+            if root.scalar?.string.isEmpty != true { problems.append("the frontmatter is not a mapping") }
+            return nil
         }
+        return mapping
+    }
+
+    static func read(_ yaml: String) -> FrontmatterFields {
+        var problems: [String] = []
+        let parsed = mapping(of: yaml, problems: &problems)
+        var result = parsed.map(read(mapping:)) ?? FrontmatterFields()
+        result.problems = problems + result.problems
+        return result
+    }
+
+    static func read(mapping: Node.Mapping) -> FrontmatterFields {
+        var result = FrontmatterFields()
         var budget = mostNodes
         for (key, value) in mapping {
             guard let name = key.scalar?.string else { continue }
@@ -217,24 +237,26 @@ enum Frontmatter {
         }
 
         /// The names a field points at. Reads lists and the values of mappings in them.
-        mutating func references(of node: Node) -> [String] {
-            var names: [String] = []
-            walkReferences(node, depth: 0, into: &names)
-            return names
+        mutating func references(of node: Node) -> [Reference] {
+            var found: [Reference] = []
+            walkReferences(node, key: nil, depth: 0, into: &found)
+            return found
         }
 
-        private mutating func walkReferences(_ node: Node, depth: Int, into names: inout [String]) {
+        private mutating func walkReferences(_ node: Node, key: String?, depth: Int, into found: inout [Reference]) {
             guard spend(depth: depth) else { return }
             switch node {
             case .scalar(let scalar):
                 let name = Frontmatter.pageName(in: Frontmatter.text(scalar))
-                if !name.isEmpty { names.append(name) }
+                if !name.isEmpty { found.append(Reference(key: key, name: name)) }
             case .sequence(let sequence):
                 for item in sequence {
                     if case .mapping(let mapping) = item {
-                        for (_, value) in mapping { walkReferences(value, depth: depth + 1, into: &names) }
+                        for (entryKey, value) in mapping {
+                            walkReferences(value, key: entryKey.scalar?.string ?? "", depth: depth + 1, into: &found)
+                        }
                     } else {
-                        walkReferences(item, depth: depth + 1, into: &names)
+                        walkReferences(item, key: key, depth: depth + 1, into: &found)
                     }
                 }
             case .mapping, .alias:

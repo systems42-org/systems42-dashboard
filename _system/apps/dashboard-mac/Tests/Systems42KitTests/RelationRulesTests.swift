@@ -4,8 +4,8 @@ import Systems42TestSupport
 @testable import Systems42Kit
 
 @Suite struct RelationRulesTests {
-    @Test func readsTypesAndRelationsFromTheMetamodel() {
-        let rules = RelationRules.read(root: Fixture.url("basic"))
+    @Test func readsTypesAndRelationsFromTheMetamodel() throws {
+        let rules = try loadMetamodel(fixture: "basic").relationRules
         #expect(rules.issueFolder == "issues")
         #expect(rules.sourceIdStart == "SRC-")
         #expect(rules.relations["drivers"]?.field == "drivers")
@@ -21,7 +21,7 @@ import Systems42TestSupport
         try FileManager.default.removeItem(at: url.appending(path: "_system/metamodel"))
         try FileManager.default.createDirectory(at: url.appending(path: "_system/metamodel"), withIntermediateDirectories: false)
         store.reload(changed: nil)
-        #expect(RelationRules.read(root: url).relations.isEmpty)
+        #expect(try loadMetamodel(url).relationRules.relations.isEmpty)
         #expect(store.pages(in: "domain-terms").count == 4)
         #expect(store.openIssues(for: ref("domain-terms", "DT-001-book")).isEmpty)
         #expect(store.relations(of: ref("domain-terms", "DT-001-book")).traced.isEmpty)
@@ -49,23 +49,46 @@ import Systems42TestSupport
         #expect(store.resolve(Wikilink(target: "QQ-001", label: nil, heading: nil)) == .source("QQ-001-s"))
     }
 
-    @Test func noSourceFileNamesAFolderOfTheWiki() throws {
-        var folders = Set<String>()
-        for fixture in ["basic", "arc42-views"] {
-            let wiki = Fixture.url(fixture).appending(path: "wiki")
-            folders.formUnion(try FileManager.default.contentsOfDirectory(atPath: wiki.path).filter { !$0.hasPrefix(".") })
+    @Test func theSourceFolderComesFromTheTypePage() throws {
+        let (url, store) = try tempStore("basic")
+        let fm = FileManager.default
+        try fm.createDirectory(at: url.appending(path: "raw/records"), withIntermediateDirectories: true)
+        try "---\nid: SRC-001\ntitle: S\n---\n".write(
+            to: url.appending(path: "raw/records/SRC-001-s.md"), atomically: true, encoding: .utf8)
+        let link = Wikilink(target: "SRC-001-s", label: nil, heading: nil)
+        store.reload(changed: nil)
+        #expect(store.resolve(link) == .missing)
+        let typePage = url.appending(path: "_system/metamodel/types/type-source.md")
+        let text = try String(contentsOf: typePage, encoding: .utf8).replacingOccurrences(of: "raw/sources", with: "raw/records")
+        try text.write(to: typePage, atomically: true, encoding: .utf8)
+        store.reload(changed: nil)
+        #expect(store.resolve(link) == .source("SRC-001-s"))
+    }
+
+    @Test func aStepMessageIsNotALink() throws {
+        let (url, store) = try tempStore("arc42-views")
+        let scenario = url.appending(path: "wiki/runtime-scenarios/RS-009-message.md")
+        func write(_ message: String) throws {
+            try """
+            ---
+            id: RS-009
+            type: runtime-scenario
+            title: Message
+            status: draft
+            steps:
+              - {from: "[[BB-003-console]]", to: "[[BB-004-account]]", message: \(message)}
+            ---
+            """.write(to: scenario, atomically: true, encoding: .utf8)
+            store.reload(changed: nil)
         }
-        #expect(folders.count >= 10)
-        let sources = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .appending(path: "Sources/Systems42Kit")
-        let files = try FileManager.default.contentsOfDirectory(atPath: sources.path).filter { $0.hasSuffix(".swift") }
-        #expect(files.count >= 5)
-        for file in files {
-            let text = try String(contentsOf: sources.appending(path: file), encoding: .utf8)
-            for folder in folders {
-                #expect(!text.contains("\"\(folder)\""), "\(file) names the folder \(folder)")
-            }
-        }
+        try write("BB-002-identity")
+        #expect(store.relations(of: ref("building-blocks", "BB-002-identity")).traced
+            .contains(ref("runtime-scenarios", "RS-009-message")) == false)
+        #expect(store.relations(of: ref("building-blocks", "BB-004-account")).traced
+            .contains(ref("runtime-scenarios", "RS-009-message")))
+        try write("\"[[BB-002-identity]]\"")
+        // a link in a message is still not an end of the step
+        #expect(store.relations(of: ref("building-blocks", "BB-002-identity")).traced
+            .contains(ref("runtime-scenarios", "RS-009-message")) == false)
     }
 }

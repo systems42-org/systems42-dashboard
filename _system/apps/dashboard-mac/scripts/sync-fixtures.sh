@@ -30,8 +30,9 @@ build() {
 }
 
 # hostile is hand-written: only its copy of _system/ is refreshed.
+# tailored is a hand-edited copy of basic: it is kept as it is.
 mkdir -p "$out"
-find "$out" -mindepth 1 -maxdepth 1 ! -name hostile -exec rm -rf {} +
+find "$out" -mindepth 1 -maxdepth 1 ! -name hostile ! -name tailored -exec rm -rf {} +
 build basic wiki ""
 build search search-wiki ""
 build arc42 arc42/wiki ""

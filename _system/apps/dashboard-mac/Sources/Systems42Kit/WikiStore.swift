@@ -222,7 +222,7 @@ final class Snapshot: Sendable {
     static func build(root: URL, cache: inout [String: CachedPage], folderNames: [String]? = nil) -> Snapshot {
         var seen: [String: CachedPage] = [:]
         defer { cache = seen }
-        let rules = RelationRules.read(root: root)
+        let rules = Metamodel.load(url: root).relationRules
         let rootReal = Files.realPath(root)
 
         var folders: [String] = []
@@ -245,11 +245,13 @@ final class Snapshot: Sendable {
             if names.byId[page.id] == nil { names.byId[page.id] = page.ref }
             for alias in page.aliases where names.byAlias[alias] == nil { names.byAlias[alias] = page.ref }
         }
-        let sourcesDir = root.appending(path: "raw/sources")
-        if let sourcesReal = Files.realPath(sourcesDir), let rootReal, Files.isInside(sourcesReal, rootReal) {
-            for source in Files.pages(in: sourcesDir, folder: "sources", inside: sourcesReal, cache: cache, seen: &seen) {
-                if names.sources[source.ref.stem] == nil { names.sources[source.ref.stem] = source.ref.stem }
-                if names.sources[source.id] == nil { names.sources[source.id] = source.ref.stem }
+        if let folder = rules.sourceFolder {
+            let sourcesDir = root.appending(path: folder.path)
+            if let sourcesReal = Files.realPath(sourcesDir), let rootReal, Files.isInside(sourcesReal, rootReal) {
+                for source in Files.pages(in: sourcesDir, folder: folder.name, inside: sourcesReal, cache: cache, seen: &seen) {
+                    if names.sources[source.ref.stem] == nil { names.sources[source.ref.stem] = source.ref.stem }
+                    if names.sources[source.id] == nil { names.sources[source.id] = source.ref.stem }
+                }
             }
         }
         names.anchors = Files.nameIndex(root: root, folder: "_system/anchors", recursive: false)
@@ -281,7 +283,8 @@ final class Snapshot: Sendable {
             guard let relation = rules.relations[name] else { continue }
             let from = Set(relation.edges.map(\.from))
             for page in all where from.contains(page.ref.folder) {
-                for target in (page.references[relation.field] ?? []).compactMap({ names.byStem[$0] }) {
+                let references = (page.references[relation.field] ?? []).filter { $0.key.map(RelationRules.stepLinkKeys.contains) ?? true }
+                for target in references.compactMap({ names.byStem[$0.name] }) {
                     if direction.forward { trace[page.ref, default: []].insert(target) }
                     if direction.inverse, relation.edges.contains(RelationRules.Edge(from: page.ref.folder, to: target.folder)) {
                         trace[target, default: []].insert(page.ref)
@@ -322,12 +325,12 @@ enum Files {
         return (try? URL(fileURLWithPath: real).resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true
     }
 
-    private struct Info {
+    struct Info {
         let size: Int
         let modified: Date?
     }
 
-    private static func regularFile(_ real: String) -> Info? {
+    static func regularFile(_ real: String) -> Info? {
         let keys: Set<URLResourceKey> = [.isRegularFileKey, .fileSizeKey, .contentModificationDateKey]
         guard let values = try? URL(fileURLWithPath: real).resourceValues(forKeys: keys),
               values.isRegularFile == true else { return nil }
@@ -425,22 +428,5 @@ enum Files {
             for key in keys where !key.isEmpty && index[key.lowercased()] == nil { index[key.lowercased()] = canonical }
         }
         return index
-    }
-
-    /// The frontmatter of the `.md` files in one folder below the root whose names start
-    /// with `prefix`, in file name order. Files that lead out of the root, are not regular,
-    /// are too large or have no readable mapping are left out.
-    static func frontmatter(root: URL, folder: String, prefix: String) -> [RelationRules.Entry] {
-        let dir = root.appending(path: folder)
-        guard let rootReal = realPath(root), let dirReal = realPath(dir), isInside(dirReal, rootReal) else { return [] }
-        var entries: [RelationRules.Entry] = []
-        for file in names(in: dir) where file.hasPrefix(prefix) && file.hasSuffix(".md") {
-            guard let real = realPath(dir.appending(path: file)), isInside(real, rootReal), regularFile(real) != nil,
-                  case .text(let text, _) = read(real, limit: 1024 * 1024),
-                  let yaml = Frontmatter.split(text).yaml, Frontmatter.nestingDepth(of: yaml) <= Frontmatter.deepestInput,
-                  let node = try? compose(yaml: yaml), case .mapping(let mapping) = node else { continue }
-            entries.append(RelationRules.Entry(mapping: mapping))
-        }
-        return entries
     }
 }

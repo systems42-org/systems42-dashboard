@@ -43,7 +43,7 @@ public struct Page: Identifiable, Sendable {
     /// The wikilinks in the body.
     public let bodyLinks: [Wikilink]
     /// What a field points at, for the trace of an architecture page.
-    let references: [String: [String]]
+    let references: [String: [Reference]]
     let aliases: [String]
 
     init(ref: PageRef, text: String, readProblems: [String] = [], checksFrontmatter: Bool = true) {
