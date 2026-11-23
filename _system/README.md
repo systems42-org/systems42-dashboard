@@ -3,7 +3,7 @@
 Internal machinery for the wiki. Not requirements content — this is *about* the wiki.
 
 - `workflows/` — the operating procedures the agent follows: **capture** (formerly ingest), **inspect**
-  (formerly audit; content lint), **relations** (graph/link lint), **report**. `AGENTS.md` points here; `CLAUDE.md` imports `AGENTS.md` for Claude Code.
+  (formerly audit; content lint), **clarify**, **implement**, **recover** (alias archeology), **relations** (graph/link lint), **report**. `AGENTS.md` points here; `CLAUDE.md` imports `AGENTS.md` for Claude Code.
 - `metamodel/` — the explicit metamodel: `meta-metamodel.md` is the
   framework-agnostic language (type, relation, framework, projection, anchor,
   notation, rule); `types/`, `relations/`, `frameworks/`, `projections/`,
