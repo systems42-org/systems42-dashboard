@@ -76,6 +76,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
   next.
 
 ### Changed
+- Dashboard brand: the Chart mark replaces the Peaks mark (FR-032). An axis with six columns, each a green Requirements block and a blue Architecture block, coloured by `--area-req`, `--area-arc` and `--ink`. Commons red is gone. The favicon is a reduced mark with three solid columns. The intro draws the axis, then grows the columns from left to right, about 2 s. `docs/brand/` adds a lockup with the wordmark "systems42 DASHBOARD" for use outside the dashboard. The Mac app icon and the website still show the peaks.
 - Website: the home page drops the card with four numbers, among them "0 install steps". The two peaks now stand free in the hero, and one line under the buttons says what the demo shows.
 - Website: dashboard.systems42.org uses the colours of the Systems42 logo on large areas. Header, hero and page headers are navy with the two peaks in mint green and sky blue, the section on getting started is mint, and headings use the dashboard's display face. On a phone the home page no longer scrolls sideways.
 - Docs: the dashboard README and the Go summary no longer name a Homebrew cask as a way to install the app. The cask file is prepared, but no tap offers it yet.

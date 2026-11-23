@@ -12,7 +12,7 @@ intro: on          # off: the home page shows no intro, whatever the brand has
 
 ## Choosing a brand
 
-- `brand: systems42` is the Peaks mark and its intro (the default, also when
+- `brand: systems42` is the Chart mark and its intro (the default, also when
   `brand:` is missing). The mark is described in `docs/brand/README.md`.
 - `brand: brand/` is a folder of your own, relative to the wiki repository
   root. The dashboard only reads it and serves its marks at `/brand/<file>`.
@@ -28,7 +28,7 @@ dashboard logs a warning.
 |------|----------------|-------|
 | `mark-dark.svg` (required) | Home page hero (5.2rem square) and the top bar on every other page (1.35rem), in the dark theme, which is the default | Square `viewBox`, transparent background, no text. Must stay recognisable at 1.35rem. |
 | `mark-light.svg` (required) | The same places in the light theme | The same drawing, coloured for a light background. |
-| `favicon.svg` (required) | Browser tab | Must read at 16 px. One colouring for both light and dark tab bars. |
+| `favicon.svg` (required) | Browser tab | Must read at 16 px, on light and dark tab bars. A `prefers-color-scheme` rule inside the SVG may switch colours. |
 | `intro.html` (optional) | Home page, before the hero | See below. |
 
 An `<img>` cannot use the page's CSS variables, which is why the marks come in two
