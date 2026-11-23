@@ -4,9 +4,9 @@ type: domain-term
 title: Keyholder
 status: draft
 created: 2026-11-22
-updated: 2026-11-22
+updated: 2026-11-23
 sources: ["[[SRC-050-domain-terms-of-the-dashboard]]"]
-related: ["[[DT-010-session]]", "[[DT-012-view]]", "[[STK-023-keyholder]]", "[[FR-046-shared-session-in-a-workshop]]"]
+related: ["[[DT-029-yoda]]", "[[DT-010-session]]", "[[DT-012-view]]", "[[STK-023-keyholder]]", "[[FR-046-shared-session-in-a-workshop]]"]
 tags: [domain-term]
 aliases: []
 bounded-context: Systems42 dashboard
