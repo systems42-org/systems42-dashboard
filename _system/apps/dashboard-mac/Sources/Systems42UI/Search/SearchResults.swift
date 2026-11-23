@@ -127,7 +127,7 @@ private struct SearchState: View {
     let model: SearchModel
 
     var body: some View {
-        if model.isIndexing {
+        if model.showsIndexing {
             VStack(spacing: 8) {
                 ProgressView().controlSize(.small)
                 Text("Still indexing the wiki.").foregroundStyle(.secondary)

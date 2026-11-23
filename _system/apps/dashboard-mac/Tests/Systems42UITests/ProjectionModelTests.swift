@@ -191,8 +191,9 @@ private func loaded(_ s: WikiSession, agreedOnly: Bool = false) async throws -> 
         let s = try await session("basic")
         let first = try await loaded(s)
         s.replace(with: LoadedWiki(root: try Preflight.open(Fixture.url("basic"))))
-        let second = try await loaded(s)
-        #expect(first.revision == 0 && second.revision == 1)
+        _ = try await loaded(s)
+        // The wiki is the same, so the views keep their data. The newest computation is for revision 1.
+        #expect(first.revision == 0 && s.projections.latest?.revision == 1 && s.projections.isCurrent)
     }
 
     @Test func modeIsPartOfThePlaceAndRemembered() async throws {

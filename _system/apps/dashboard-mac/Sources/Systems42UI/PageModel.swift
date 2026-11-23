@@ -31,7 +31,7 @@ public struct FollowItem: Sendable {
 
     private let session: WikiSession
     private let reading: ReadingPreference
-    @ObservationIgnored private var revision: Int
+    private var revision: Int
     /// Everything this model shows, as text. Two models with the same one show the same page.
     @ObservationIgnored private(set) var fingerprint = ""
     private var base: RenderedBody?
@@ -40,7 +40,9 @@ public struct FollowItem: Sendable {
 
     /// Nil when the page is not in the loaded wiki.
     /// `render` makes the blocks of a body off the main thread. Tests pass their own.
-    public init?(session: WikiSession, ref: PageRef, reading: ReadingPreference = .shared, render: @escaping PageRender = PageModel.renderBody) {
+    /// There is no default for `render`: a default-argument closure in an init of an observable class
+    /// that sets observed properties aborted the runtime ("freed pointer was not the last allocation").
+    public init?(session: WikiSession, ref: PageRef, reading: ReadingPreference, render: @escaping PageRender) {
         guard let page = session.store.page(ref) else { return nil }
         let store = session.store
         let metamodel = session.metamodel
@@ -126,6 +128,16 @@ public struct FollowItem: Sendable {
         revision = newRevision
         definitions = [:]
         if let base { session.keep(base, of: page.ref, revision: newRevision) }
+    }
+
+    /// The page with the Kit's renderer and the shared reading preference.
+    public convenience init?(session: WikiSession, ref: PageRef) {
+        self.init(session: session, ref: ref, reading: .shared, render: PageModel.renderBody)
+    }
+
+    /// The page with the Kit's renderer.
+    public convenience init?(session: WikiSession, ref: PageRef, reading: ReadingPreference) {
+        self.init(session: session, ref: ref, reading: reading, render: PageModel.renderBody)
     }
 
     // MARK: Body

@@ -138,10 +138,10 @@ private func edit(_ root: URL, _ path: String, _ change: (String) -> String) thr
         await diagram.load()
         let before = try #require(diagram.source)
 
-        let budget = CountingBudget()
+        let budget = DiagramBudget()
         let view = DiagramViewModel(budget: budget)
         await view.show(DiagramContent(before), dark: false)
-        #expect(budget.asked == 1 && budget.pageCount == 1)
+        #expect(budget.asks == 1 && budget.pageCount == 1)
 
         // A page far from the term changes: new revision, same diagram.
         let file = try edit(root, "wiki/domain-terms/DT-004-review-policy.md") { $0 + "\nMore text.\n" }
@@ -150,7 +150,7 @@ private func edit(_ root: URL, _ path: String, _ change: (String) -> String) thr
         let after = try #require(diagram.source)
         #expect(after == before)
         await view.show(DiagramContent(after), dark: false)
-        #expect(budget.asked == 1, "the same source asked for another draw")
+        #expect(budget.asks == 1, "the same source asked for another draw")
         #expect(budget.pageCount == 1)
 
         // A change of the diagram itself draws again, on the same page.
@@ -160,17 +160,7 @@ private func edit(_ root: URL, _ path: String, _ change: (String) -> String) thr
         let changed = try #require(diagram.source)
         #expect(changed != before)
         await view.show(DiagramContent(changed), dark: false)
-        #expect(budget.asked == 2 && budget.pageCount == 1)
+        #expect(budget.asks == 2 && budget.pageCount == 1)
         view.close()
-    }
-}
-
-/// A budget that counts the draws it was asked for.
-@MainActor private final class CountingBudget: DiagramBudget {
-    private(set) var asked = 0
-
-    override func ask(_ lease: Lease, recipe: DiagramPage.Recipe, reply: @escaping (Grant?) -> Void) -> Bool {
-        asked += 1
-        return super.ask(lease, recipe: recipe, reply: reply)
     }
 }

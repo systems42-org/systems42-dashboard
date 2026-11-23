@@ -42,7 +42,7 @@ struct SuggestionList: View {
     var body: some View {
         if model.suggestionsOpen {
             VStack(alignment: .leading, spacing: 0) {
-                if model.isIndexing {
+                if model.showsIndexing {
                     Text("Still indexing the wiki.").foregroundStyle(.secondary).padding(8)
                 } else if model.quick.isEmpty {
                     Text("No page matches.").foregroundStyle(.secondary).padding(8)

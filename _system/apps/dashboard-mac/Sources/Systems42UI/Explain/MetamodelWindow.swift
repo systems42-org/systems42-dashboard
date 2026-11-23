@@ -340,7 +340,11 @@ extension EnvironmentValues {
     private(set) var blocks: [Block] = []
     private let render: Render
 
-    init(render: @escaping Render = PageModel.renderBody) {
+    convenience init() {
+        self.init(render: PageModel.renderBody)
+    }
+
+    init(render: @escaping Render) {
         self.render = render
     }
 

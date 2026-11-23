@@ -89,6 +89,7 @@ private struct DetailPanel: View {
     let revision: Int
     let onSelect: (PageRef) -> Void
     @State private var detail: HierarchyDetail?
+    @State private var shownRef: PageRef?
 
     private struct Key: Hashable {
         let ref: PageRef
@@ -109,8 +110,11 @@ private struct DetailPanel: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
         .task(id: Key(ref: ref, revision: revision)) {
-            detail = nil
+            // The old detail stays while the new one is computed for the same page.
+            if shownRef != ref { detail = nil }
+            await model.load()
             detail = await model.detail(of: ref)
+            shownRef = ref
         }
     }
 

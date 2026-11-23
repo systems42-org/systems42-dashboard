@@ -20,7 +20,7 @@ struct TermNetworkView: View {
                             frameColours: LayerColour.frames(of: model.layers, in: session.metamodel),
                             select: { if let ref = $0.ref { onSelect(ref) } })
                     .padding(10)
-                    .opacity(model.isCurrent ? 1 : 0.45)
+                    .opacity(model.isUpdating ? 0.45 : 1)
             }
         }
         .task(id: TermNetworkModel.Key(revision: session.revision, agreedOnly: session.agreedOnly, layers: model.enabled)) {

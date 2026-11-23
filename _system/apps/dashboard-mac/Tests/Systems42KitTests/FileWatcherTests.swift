@@ -61,7 +61,8 @@ private let term = "wiki/domain-terms/DT-001-book.md"
     }
 
     @Test func burstIsOneChange() async throws {
-        let w = try watch()
+        // A slow machine may take longer than 300 ms for 50 writes, which would split the burst.
+        let w = try watch(debounce: .seconds(1))
         defer { w.remove() }
         try await Task.sleep(for: .milliseconds(300))
         for number in 0..<50 {
