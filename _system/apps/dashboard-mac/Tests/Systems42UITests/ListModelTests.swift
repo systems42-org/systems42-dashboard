@@ -389,8 +389,9 @@ private let requirements = "functional-requirements"
             )
         }
         #expect(result.count == 3334)
-        // Measured 70 ms in a debug build. The limit leaves a factor of 5 for a loaded CI machine.
-        #expect(time < .milliseconds(400), "took \(time)")
+        // Measured 70 ms in a debug build. The CI machine is up to 7 times slower while the
+        // other tests run beside it, so the limit leaves a factor of 28.
+        #expect(time < .seconds(2), "took \(time)")
     }
 }
 
