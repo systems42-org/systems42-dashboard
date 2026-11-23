@@ -23,13 +23,16 @@ public enum DiagramLimits {
     /// The most levels of nesting, over every form that opens a block: `subgraph`, `block`, `{`. Layout time grows
     /// faster than the depth, and a draw that is too slow cannot be stopped inside the web view.
     public static let mostNestingDepth = 25
-    /// The longest statement or label in characters. A statement ends at a newline or a `;`, but not inside quotes.
+    /// The longest statement in characters. A statement ends at a newline, or at a `;` outside quotes.
     public static let mostStatementLength = 2_000
     /// How long one draw may take. A diagram that needs longer shows a message, and its web view is dropped.
     public static let renderTimeout = Duration.seconds(10)
-    /// The most web processes the whole app has for diagrams: drawing, and busy ones that were given up on.
-    /// A diagram that finds none free shows its text list and says diagrams are busy.
-    public static let mostWebProcesses = 4
+    /// The most diagram web views of the whole app that are drawing, or were given up on while busy.
+    /// A diagram that finds no place shows its text list, says diagrams are busy, and waits in line.
+    public static let mostBusyPages = 4
+    /// The most diagram web views of the whole app, idle ones included. For a new one the idle view drawn
+    /// longest ago is closed.
+    public static let mostPages = 8
     /// The most Mermaid blocks of one page body that are drawn. Further blocks show their source.
     public static let mostBlocksPerPage = 20
 }
@@ -102,17 +105,22 @@ struct DiagramContent: Equatable, Sendable {
         return (kept.joined(separator: "\n"), nodes)
     }
 
-    /// `click` followed by any whitespace: Mermaid takes a tab as the separator too.
     /// Whether the text nests deeper than `mostNestingDepth` or has a statement longer than `mostStatementLength`.
-    /// One linear scan, no pattern matching. A statement ends at a newline or a `;` outside double quotes.
+    /// A first filter, not the guarantee: one linear scan, no pattern matching.
     static func exceedsShape(_ text: String) -> Bool {
         let shape = shape(of: text)
         return shape.depth > DiagramLimits.mostNestingDepth || shape.longest > DiagramLimits.mostStatementLength
     }
 
+    /// The deepest nesting and the longest statement or label. A line that starts with `%%` is a comment or
+    /// directive and is skipped. A quote ends at the end of its line at the latest. A statement ends at a newline,
+    /// or at a `;` outside a quote. Nesting counts `subgraph`, `block` and `block:ID` (closed by `end`) and `{`.
+    ///
+    /// Mermaid reads a quoted label over line ends, and a long one hangs the draw. So the length of a label
+    /// that goes on after its line counts up to the next quote, comment lines included. It changes no nesting.
+    /// An unclosed quote in a statement fails in Mermaid anyway, so a label that runs on to the end is refused.
     static func shape(of text: String) -> (depth: Int, longest: Int) {
         var keywords = 0, braces = 0, deepest = 0, longest = 0
-        var inQuote = false
         var head = "", length = 0
         func finish() {
             longest = max(longest, length)
@@ -122,19 +130,48 @@ struct DiagramContent: Equatable, Sendable {
             head = ""
             length = 0
         }
-        for character in text {
-            if character == "\"" { inQuote.toggle() }
-            if !inQuote, character == "\n" || character == ";" { finish(); continue }
-            if !inQuote, character == "{" { braces += 1; deepest = max(deepest, keywords + braces) }
-            if !inQuote, character == "}", braces > 0 { braces -= 1 }
-            length += 1
-            // Only the start of a statement is kept, for its first word.
-            if head.count < 64 { head.append(character) }
+        // The length so far of a label that went on after its line, or nil.
+        var label: Int?
+        for line in text.split(whereSeparator: \.isNewline) {
+            var rest = line[...]
+            if let open = label {
+                if let quote = line.firstIndex(of: "\"") {
+                    longest = max(longest, open + line.distance(from: line.startIndex, to: quote))
+                    label = nil
+                    rest = line[line.index(after: quote)...]
+                } else {
+                    label = open + line.count
+                    longest = max(longest, open + line.count)
+                    rest = line[line.endIndex...]
+                }
+            }
+            if line.drop(while: \.isWhitespace).hasPrefix("%%") { continue }
+            var inQuote = false
+            for character in line {
+                if character == "\"" { inQuote.toggle() }
+                if !inQuote, character == ";" { finish(); continue }
+                if !inQuote, character == "{" { braces += 1; deepest = max(deepest, keywords + braces) }
+                if !inQuote, character == "}", braces > 0 { braces -= 1 }
+                length += 1
+                // Only the start of a statement is kept, for its first word.
+                if head.count < 64 { head.append(character) }
+            }
+            finish()
+            if label == nil { label = unclosedLabel(in: rest) }
         }
-        finish()
         return (deepest, longest)
     }
 
+    /// The length of the label after the last quote of the text that is not closed, or nil when every quote is.
+    private static func unclosedLabel(in text: Substring) -> Int? {
+        var open: Int?
+        for character in text {
+            if character == "\"" { open = open == nil ? 0 : nil } else if let count = open { open = count + 1 }
+        }
+        return open
+    }
+
+    /// `click` followed by any whitespace: Mermaid takes a tab as the separator too.
     private static func isClick(_ statement: Substring) -> Bool {
         let word = statement.prefix(5)
         guard word.lowercased() == "click" else { return false }

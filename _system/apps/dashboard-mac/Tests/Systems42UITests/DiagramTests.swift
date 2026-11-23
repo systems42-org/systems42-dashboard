@@ -26,8 +26,9 @@ private let limit: Duration = .seconds(30)
     }
 }
 
-@MainActor private func openPage() async throws -> DiagramPage {
-    try #require(await DiagramPage.open())
+/// A page of its own budget. The caller ends it.
+@MainActor private func openPage() async throws -> OpenedPage {
+    try #require(await OpenedPage.open())
 }
 
 /// A graph made the way the dashboard's JSON has it. The Kit builds its nodes itself.
@@ -149,7 +150,9 @@ private final class Loopback: Sendable {
         #expect(failed == true)
         #expect(server.count == before)
 
-        let page = try await openPage()
+        let opened = try await openPage()
+        defer { opened.end() }
+        let page = opened.page
         let mermaid = await page.evaluate("return typeof mermaid === 'object' && typeof cytoscape === 'function'") as? Bool
         #expect(mermaid == true)
     }
@@ -158,7 +161,9 @@ private final class Loopback: Sendable {
         let outside = FileManager.default.temporaryDirectory.appending(path: "s42-outside-\(UUID().uuidString).js")
         try "window.leak = true;".write(to: outside, atomically: true, encoding: .utf8)
         defer { try? FileManager.default.removeItem(at: outside) }
-        let page = try await openPage()
+        let opened = try await openPage()
+        defer { opened.end() }
+        let page = opened.page
         let outcome = await page.evaluate("""
             return await new Promise(resolve => {
               const s = document.createElement('script');
@@ -196,9 +201,11 @@ private final class Loopback: Sendable {
     }
 
     @Test func aScriptCannotNavigateAwayOrOpenAWindow() async throws {
-        let page = try await openPage()
-        let opened = await page.evaluate("return window.open('https://example.com/') === null") as? Bool
-        #expect(opened == true)
+        let opened = try await openPage()
+        defer { opened.end() }
+        let page = opened.page
+        let noWindow = await page.evaluate("return window.open('https://example.com/') === null") as? Bool
+        #expect(noWindow == true)
         _ = await page.evaluate("window.location.href = 'https://example.com/'; return 1;")
         await until("the cancelled navigation") { page.cancelledNavigations > 0 }
         #expect(page.cancelledNavigations > 0)
@@ -206,9 +213,12 @@ private final class Loopback: Sendable {
     }
 
     @Test func theWebViewKeepsNothingAndReadsOnlyItsFolder() async throws {
-        let page = try await openPage()
-        #expect(!page.webView.configuration.websiteDataStore.isPersistent)
-        #expect(!page.webView.configuration.preferences.javaScriptCanOpenWindowsAutomatically)
+        let opened = try await openPage()
+        defer { opened.end() }
+        let page = opened.page
+        let web = try #require(page.webView)
+        #expect(!web.configuration.websiteDataStore.isPersistent)
+        #expect(!web.configuration.preferences.javaScriptCanOpenWindowsAutomatically)
     }
 
     // MARK: Hostile text
@@ -216,7 +226,9 @@ private final class Loopback: Sendable {
     private static let hostileLabel = "<img src=x onerror=\"window.webkit.messageHandlers.select.postMessage('pwned')\">"
 
     @Test func hostileLabelIsInert() async throws {
-        let page = try await openPage()
+        let opened = try await openPage()
+        defer { opened.end() }
+        let page = opened.page
         var selected: [String] = []
         page.onSelect = { selected.append($0) }
         let hostile = graph([
@@ -234,7 +246,9 @@ private final class Loopback: Sendable {
     }
 
     @Test func hostileMermaidTextIsInert() async throws {
-        let page = try await openPage()
+        let opened = try await openPage()
+        defer { opened.end() }
+        let page = opened.page
         var selected: [String] = []
         page.onSelect = { selected.append($0) }
         let texts = [
@@ -273,7 +287,9 @@ private final class Loopback: Sendable {
         let statements = mermaid.split(separator: "\n").map { $0.drop { $0 == " " } }
         #expect(!statements.contains { $0.hasPrefix("click A call") })
         #expect(!mermaid.contains("alert(1);"))
-        let page = try await openPage()
+        let opened = try await openPage()
+        defer { opened.end() }
+        let page = opened.page
         var selected: [String] = []
         page.onSelect = { selected.append($0) }
         #expect(await page.show(DiagramContent(source), dark: false) == .drawn)
@@ -283,7 +299,9 @@ private final class Loopback: Sendable {
     // MARK: Clicks and validation
 
     @Test func clickReportsTheNodeId() async throws {
-        let page = try await openPage()
+        let opened = try await openPage()
+        defer { opened.end() }
+        let page = opened.page
         var selected: [String] = []
         page.onSelect = { selected.append($0) }
         let mermaid = "flowchart TB\n  A[\"One\"] --> B[\"Two\"]\n  click A \"systems42://page?folder=goals&stem=GOAL-001-x\"\n  click B \"systems42://page?folder=goals&stem=GOAL-002-y\""
@@ -307,7 +325,9 @@ private final class Loopback: Sendable {
     }
 
     @Test func aMessageThatIsNoKnownNodeIsDropped() async throws {
-        let page = try await openPage()
+        let opened = try await openPage()
+        defer { opened.end() }
+        let page = opened.page
         var selected: [String] = []
         page.onSelect = { selected.append($0) }
         let content = DiagramContent(.mermaid("flowchart TB\n  A[\"One\"]\n  click A \"systems42://page?folder=goals&stem=GOAL-001-x\""))
@@ -464,7 +484,7 @@ private final class Loopback: Sendable {
         try FileManager.default.createDirectory(at: empty, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: empty) }
         #expect(DiagramAssets.locate(in: [empty]) == nil)
-        #expect(await DiagramPage.open(folder: nil) == nil)
+        #expect(await DiagramPage.recipe(folder: nil) == nil)
         let model = DiagramViewModel(folder: { nil }, budget: DiagramBudget())
         await model.show(DiagramContent(.mermaid("flowchart TB\n  A --> B")), dark: false)
         #expect(model.state == .message(DiagramState.missingFiles))
@@ -494,7 +514,9 @@ private final class Loopback: Sendable {
     }
 
     @Test func aNewerShowSupersedesAnOlderOne() async throws {
-        let page = try await openPage()
+        let opened = try await openPage()
+        defer { opened.end() }
+        let page = opened.page
         let slow = DiagramContent(.mermaid("flowchart TB\n  A --> B"))
         let fast = DiagramContent(.mermaid("flowchart TB\n  C --> D"))
         // Two tasks on the main actor start in order: the second asks while the first waits for the page.
@@ -505,7 +527,9 @@ private final class Loopback: Sendable {
     }
 
     @Test func aBrokenMermaidTextIsAMessage() async throws {
-        let page = try await openPage()
+        let opened = try await openPage()
+        defer { opened.end() }
+        let page = opened.page
         #expect(await page.show(DiagramContent(.mermaid("flowchart TB\n  A -->")), dark: false) == .failed)
         #expect(await page.show(DiagramContent(.mermaid("not a diagram at all")), dark: false) == .failed)
     }
@@ -572,7 +596,9 @@ private final class Loopback: Sendable {
 
     @Test func aMetamodelGraphDrawsAndTapsOpenNoPage() async throws {
         let s = try await session("basic")
-        let page = try await openPage()
+        let opened = try await openPage()
+        defer { opened.end() }
+        let page = opened.page
         var selected: [String] = []
         page.onSelect = { selected.append($0) }
         let graph = try #require(Projections(store: s.store, metamodel: s.metamodel, agreedOnly: false).graph("metamodel-graph"))

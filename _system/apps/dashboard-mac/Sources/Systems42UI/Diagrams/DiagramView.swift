@@ -15,21 +15,20 @@ enum DiagramState: Equatable {
     static let tookTooLong = "This diagram took too long to draw."
     static let stopped = "The diagram view stopped working."
     static let busy = "Diagrams are busy. This one is drawn when another has finished. The pages it names are listed below."
+    static let evicted = "This diagram was closed to make room for others. The pages it names are listed below."
 }
 
-/// The model of one diagram view: it owns the web view and feeds it. Requests supersede each other: only
-/// the latest one is drawn, and an older one never sets the state.
+/// The model of one diagram view. It holds a lease of the app's `DiagramBudget`, which holds the web view.
+/// Requests supersede each other: only the latest one is drawn, and an older one never sets the state.
 @MainActor @Observable final class DiagramViewModel {
     private(set) var state = DiagramState.loading
-    @ObservationIgnored private(set) var page: DiagramPage?
-    @ObservationIgnored private var opening: Task<DiagramPage?, Never>?
     @ObservationIgnored private var request = 0
     @ObservationIgnored private var shown: Shown?
     @ObservationIgnored var onSelect: ((String) -> Void)?
-    /// The budget of the whole app. A web view counts against it while it draws, and a given-up one until it answers.
+    /// The budget of the whole app.
     @ObservationIgnored let budget: DiagramBudget
-    @ObservationIgnored private var seat: DiagramBudget.Seat?
-    /// Opens the web view. Tests give their own folder, or none.
+    @ObservationIgnored private let lease: DiagramBudget.Lease
+    /// The bundled folder. Tests give their own, or none.
     @ObservationIgnored private let folder: () -> URL?
     @ObservationIgnored private let timeout: Duration
 
@@ -44,22 +43,29 @@ enum DiagramState: Equatable {
         self.folder = folder
         self.timeout = timeout
         self.budget = budget
+        lease = budget.lease()
+        lease.onEvicted = { [weak self] in self?.evicted() }
     }
 
+    deinit {
+        let budget = budget, lease = lease
+        Task { @MainActor in budget.giveBack(lease) }
+    }
+
+    /// The page, while the budget keeps one for this view.
+    var page: DiagramPage? { lease.page }
     var webView: NSView? { page?.webView }
 
-    /// Gives the web view back. The next `show` opens a new one.
+    /// Gives the page back to the budget. The next `show` gets a new one.
     func close() {
         request += 1
-        releaseSeat()
-        opening?.cancel()
-        opening = nil
-        page = nil
+        budget.giveBack(lease)
         shown = nil
         state = .loading
     }
 
-    /// Draws the content. The same content in the same theme is not drawn again.
+    /// Draws the content. The same content in the same theme is not drawn again. When the budget has no place,
+    /// the view says diagrams are busy and draws by itself when its turn comes.
     func show(_ content: DiagramContent, dark: Bool, frameColours: [String: [String]] = [:]) async {
         request += 1
         let mine = request
@@ -71,34 +77,31 @@ enum DiagramState: Equatable {
         }
         let wanted = Shown(content: content, dark: dark, colours: frameColours)
         if wanted == shown, state == .drawn, page?.isAlive == true { return }
+        guard let recipe = await DiagramPage.recipe(folder: folder(), timeout: timeout) else {
+            if mine == request { state = .message(DiagramState.missingFiles) }
+            return
+        }
         var retried = false
-        while true {
-            // No place in the budget: the text list stays, and the diagram waits for a free place.
-            guard takeSeat() else {
-                page = nil
+        while mine == request {
+            let outcome = await budget.draw(lease, recipe: recipe, waiting: {
                 shown = nil
                 state = .message(DiagramState.busy)
-                return
+            }) { page -> DiagramPage.Outcome in
+                guard mine == request else { return .superseded }
+                watch(page)
+                shown = wanted
+                return await page.show(content, dark: dark, frameColours: frameColours)
             }
-            guard let page = await ensurePage() else {
-                releaseSeat()
-                if mine == request { state = .message(DiagramState.missingFiles) }
-                return
-            }
-            guard mine == request else { return }
-            shown = wanted
-            let outcome = await page.show(content, dark: dark, frameColours: frameColours)
-            guard mine == request else { return }
+            guard mine == request, let outcome else { return }
             switch outcome {
             case .drawn: state = .drawn
             case .failed: state = .message(DiagramState.notDrawn)
             case .superseded: return
             case .timedOut:
-                discard(page)
+                shown = nil
                 state = .message(DiagramState.tookTooLong)
-            case .crashed:
-                releaseSeat()
-                discard(page)
+            case .crashed, .refused:
+                shown = nil
                 // A process that died is opened again, once.
                 if !retried { retried = true; continue }
                 state = .message(DiagramState.stopped)
@@ -107,128 +110,20 @@ enum DiagramState: Equatable {
         }
     }
 
-    private func takeSeat() -> Bool {
-        if seat != nil { return true }
-        seat = budget.acquire()
-        return seat != nil
+    private func watch(_ page: DiagramPage) {
+        page.onSelect = { [weak self] id in self?.onSelect?(id) }
+        page.onTerminate = { [weak self, weak page] in
+            guard let self, let page, self.page === page else { return }
+            shown = nil
+            state = .message(DiagramState.stopped)
+        }
     }
 
-    private func releaseSeat() {
-        if let seat { budget.release(seat) }
-        seat = nil
-    }
-
-    private func discard(_ dead: DiagramPage) {
-        if page === dead { page = nil }
+    /// The budget took the idle page to make room. The view shows the text list and does not draw by itself.
+    private func evicted() {
+        guard state != .message(DiagramState.busy) else { return }
         shown = nil
-    }
-
-    /// The live page, opened when there is none. Requests that come while it opens share one open.
-    private func ensurePage() async -> DiagramPage? {
-        if let page, page.isAlive { return page }
-        page = nil
-        let task: Task<DiagramPage?, Never>
-        if let opening {
-            task = opening
-        } else {
-            let folder = folder(), timeout = timeout
-            task = Task { await DiagramPage.open(folder: folder, timeout: timeout) }
-            opening = task
-        }
-        let opened = await task.value
-        guard opening == task else { return page }
-        opening = nil
-        guard let opened else { return nil }
-        opened.onSelect = { [weak self] id in self?.onSelect?(id) }
-        // A draw that took too long leaves a busy process: its seat stays counted until the web view answers.
-        opened.onRetire = { [weak self] web in
-            guard let self, let seat = self.seat else { return }
-            self.budget.retire(seat, view: web)
-            self.seat = nil
-        }
-        opened.onTerminate = { [weak self, weak opened] in
-            guard let self, self.page === opened else { return }
-            self.releaseSeat()
-            self.page = nil
-            self.shown = nil
-            self.state = .message(DiagramState.stopped)
-        }
-        page = opened
-        return opened
-    }
-}
-
-/// The web processes of all diagram views of the app, in every window. A web view is a process that loads
-/// 3.5 MB of script, and WebKit has no public way to stop a script that never ends. So the number of
-/// processes that are drawing or busy is bounded here, whatever the input is: `DiagramLimits.mostWebProcesses`.
-///
-/// A view that draws holds a seat. A draw that took too long gives up its web view, which may stay busy:
-/// the seat stays counted for as long as the web view does not answer a trivial script, or its process is gone.
-@MainActor @Observable final class DiagramBudget {
-    /// The budget of the whole app.
-    static let shared = DiagramBudget()
-    let limit: Int
-
-    /// A place for one web view. Held by identity.
-    @MainActor final class Seat {}
-
-    private var seats: [Seat] = []
-    private var retired: [Retired] = []
-    @ObservationIgnored private var watching: Task<Void, Never>?
-
-    @MainActor private final class Retired {
-        let seat: Seat
-        let view: WKWebView
-        var probing = false
-        var answered = false
-        init(seat: Seat, view: WKWebView) { self.seat = seat; self.view = view }
-    }
-
-    init(limit: Int = DiagramLimits.mostWebProcesses) {
-        self.limit = limit
-    }
-
-    /// The places in use: drawing views and given-up views that have not answered.
-    var inUse: Int { seats.count + retired.count }
-    var isFull: Bool { inUse >= limit }
-    /// The given-up web views that have not answered.
-    var busyCount: Int { retired.count }
-
-    /// A place, or nil when every place is in use.
-    func acquire() -> Seat? {
-        guard !isFull else { return nil }
-        let seat = Seat()
-        seats.append(seat)
-        return seat
-    }
-
-    func release(_ seat: Seat) {
-        seats.removeAll { $0 === seat }
-    }
-
-    /// The seat's web view is given up. The place stays in use until the view answers or its process is gone.
-    func retire(_ seat: Seat, view: WKWebView) {
-        seats.removeAll { $0 === seat }
-        retired.append(Retired(seat: seat, view: view))
-        guard watching == nil else { return }
-        watching = Task { [weak self] in
-            while true {
-                // `self` is held only for the call, never across the sleep.
-                guard let more = self?.watch(), more else { self?.watching = nil; return }
-                try? await Task.sleep(for: .milliseconds(250))
-            }
-        }
-    }
-
-    /// Asks each given-up web view for a trivial answer, and frees the places of the ones that gave it
-    /// (also with an error: the process is gone). True while some remain.
-    private func watch() -> Bool {
-        for item in retired where !item.probing {
-            item.probing = true
-            item.view.evaluateJavaScript("1") { _, _ in item.answered = true }
-        }
-        retired.removeAll { $0.answered }
-        return !retired.isEmpty
+        state = .message(DiagramState.evicted)
     }
 }
 
@@ -242,7 +137,7 @@ private struct WebViewHost: NSViewRepresentable {
 
 /// A diagram drawn in the locked-down web view, and every node that opens a page as a text link under it.
 /// The text links are the way in for the keyboard and for a screen reader. The web view exists only while
-/// the diagram is on screen and has a place in the window's budget.
+/// the diagram is on screen and the app's budget has a place for it.
 public struct DiagramView: View {
     let content: DiagramContent
     let label: String
@@ -290,7 +185,7 @@ public struct DiagramView: View {
             DiagramLinkList(nodes: content.nodes, title: title, select: select)
         }
         .onDisappear { model.close() }
-        .task(id: Run(content: content, dark: scheme == .dark, colours: frameColours, attempt: attempt, free: !model.budget.isFull)) {
+        .task(id: Run(content: content, dark: scheme == .dark, colours: frameColours, attempt: attempt)) {
             model.onSelect = { id in if let node = content.node(id: id) { select(node) } }
             await model.show(content, dark: scheme == .dark, frameColours: frameColours)
         }
@@ -301,8 +196,6 @@ public struct DiagramView: View {
         let dark: Bool
         let colours: [String: [String]]
         let attempt: Int
-        /// A place is free. A diagram that waited for one is drawn when this turns true.
-        let free: Bool
     }
 
     @ViewBuilder private var placeholder: some View {
@@ -312,9 +205,10 @@ public struct DiagramView: View {
         case .message(let text):
             VStack(alignment: .leading, spacing: 6) {
                 Text(verbatim: text).foregroundStyle(.secondary)
-                if text != DiagramState.tooLarge && text != DiagramState.missingFiles {
+                if text == DiagramState.evicted {
+                    Button("Show diagram") { attempt += 1 }
+                } else if ![DiagramState.tooLarge, DiagramState.missingFiles, DiagramState.busy].contains(text) {
                     Button("Draw again") { attempt += 1 }
-                        .disabled(model.budget.isFull)
                 }
                 if let fallbackText {
                     Text(verbatim: fallbackText).font(.system(.callout, design: .monospaced)).textSelection(.enabled)
