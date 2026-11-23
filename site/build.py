@@ -477,7 +477,17 @@ def build_site(repo_dir: Path, demo_wiki: Path, out_dir: Path) -> None:
     # 2. Copy site static assets and brand marks.
     assets_dir = out_dir / "assets"
     assets_dir.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(site_dir / "static" / "site.css", assets_dir / "site.css")
+    for static_file in sorted((site_dir / "static").iterdir()):
+        if static_file.is_file():
+            shutil.copy2(static_file, assets_dir / static_file.name)
+    # The display face is the dashboard's own, so site and dashboard share it.
+    fonts_dir = assets_dir / "fonts"
+    fonts_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(
+        repo_dir / "_system" / "apps" / "dashboard" / "static" / "vendor" / "fonts"
+        / "BricolageGrotesque-var.woff2",
+        fonts_dir / "BricolageGrotesque-var.woff2",
+    )
     brand_dir = repo_dir / "_system" / "apps" / "dashboard" / "brands" / "systems42"
     for name in ("favicon.svg", "mark-light.svg", "mark-dark.svg"):
         shutil.copy2(brand_dir / name, assets_dir / name)
