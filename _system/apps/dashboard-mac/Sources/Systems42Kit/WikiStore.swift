@@ -138,6 +138,15 @@ public final class WikiStore: @unchecked Sendable {
             .sorted { $0.id < $1.id }
     }
 
+    /// A store for the same wiki that starts with the parsed pages of `previous`, minus those
+    /// of `changed`. `previous` stays as it is, so whoever still reads it sees one state.
+    /// The first question builds a snapshot that equals a fresh store's: a kept page is used
+    /// only while its file's modification time and size are the same.
+    public init(root: WikiRoot, reusing previous: WikiStore, changed: [URL]) {
+        self.root = root
+        cache = previous.lock.withLock { Self.dropping(changed, from: previous.cache) }
+    }
+
     /// Forget what was read. With `nil` everything is read again. With files, those
     /// files are read again and the rest keeps its parsed pages. Either way the
     /// next question builds a new snapshot, so added and removed files show up.
@@ -145,9 +154,26 @@ public final class WikiStore: @unchecked Sendable {
         lock.withLock {
             snapshot = nil
             guard let changed else { cache = [:]; return }
-            let paths = Set(changed.map(\.path))
-            let real = Set(changed.compactMap(Files.realPath))
-            cache = cache.filter { key, _ in !paths.contains(key) && !(Files.realPath(path: key).map(real.contains) ?? false) }
+            cache = Self.dropping(changed, from: cache)
+        }
+    }
+
+    /// The cache without the entries at or below a changed path. A changed folder, or the
+    /// root itself, so drops everything below it.
+    private static func dropping(_ changed: [URL], from cache: [String: CachedPage]) -> [String: CachedPage] {
+        let paths = Set(changed.map(\.path))
+        let real = Set(changed.compactMap(Files.realPath))
+        func hit(_ key: String, in set: Set<String>) -> Bool {
+            if set.contains(key) { return true }
+            var parent = key
+            while let slash = parent.lastIndex(of: "/"), slash != parent.startIndex {
+                parent = String(parent[..<slash])
+                if set.contains(parent) { return true }
+            }
+            return false
+        }
+        return cache.filter { key, _ in
+            !hit(key, in: paths) && !(Files.realPath(path: key).map { hit($0, in: real) } ?? false)
         }
     }
 

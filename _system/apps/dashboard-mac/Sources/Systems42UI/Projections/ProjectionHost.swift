@@ -53,9 +53,9 @@ private struct ProjectionView: View {
 
     var body: some View {
         content
-            .opacity(model.isCurrent ? 1 : 0.45)
+            .opacity(model.isUpdating ? 0.45 : 1)
             .overlay(alignment: .top) {
-                if !model.isCurrent && model.data != nil {
+                if model.isUpdating {
                     ProgressView("Updating").controlSize(.small).padding(6).background(.regularMaterial, in: Capsule()).padding(.top, 8)
                 }
             }

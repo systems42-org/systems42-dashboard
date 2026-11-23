@@ -4,10 +4,12 @@ import SwiftUI
 struct PreflightFailureView: View {
     let failure: PreflightFailure
     let chooseAnother: () -> Void
+    /// What the reader is told first.
+    var heading = "This folder is not a Systems42 wiki"
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("This folder is not a Systems42 wiki").font(.title2)
+            Text(heading).font(.title2)
             Text(failure.folder.path).font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
             Text("It lacks:")
             VStack(alignment: .leading, spacing: 2) {

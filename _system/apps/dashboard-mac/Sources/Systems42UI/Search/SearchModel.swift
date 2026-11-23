@@ -215,6 +215,10 @@ struct SearchBackend: Sendable {
     public private(set) var facets: [(field: String, values: [(String, Int)])] = []
     /// True until the index of the current wiki is ready.
     public private(set) var isIndexing = true
+    /// True while a new index is built for a changed wiki and the results of the old one are still shown.
+    public private(set) var isRebuilding = false
+    /// Whether the views say "Still indexing". Not during a rebuild: the results on screen stay until the new ones come.
+    public var showsIndexing: Bool { isIndexing && !isRebuilding }
     public private(set) var suggestionsOpen = false
     /// The suggestion the arrow keys are on.
     public private(set) var highlighted: Int?
@@ -261,10 +265,12 @@ struct SearchBackend: Sendable {
     private func startBuild() {
         guard let session else { return }
         let revision = session.revision, store = session.store, metamodel = session.metamodel
+        // A rebuild for a changed wiki keeps what is on screen. It is replaced when the new index answers.
+        isRebuilding = index != nil || isRebuilding
         index = nil
         indexRevision = revision
         isIndexing = true
-        clearResults()
+        if !isRebuilding { clearResults() }
         buildToken += 1
         let token = buildToken
         work.start(.build, Task { [weak self, backend] in
@@ -283,6 +289,7 @@ struct SearchBackend: Sendable {
         }
         index = built
         isIndexing = false
+        isRebuilding = false
         runQuick()
         runFull()
     }

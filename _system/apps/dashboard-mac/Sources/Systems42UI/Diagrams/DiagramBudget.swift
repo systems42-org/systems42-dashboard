@@ -105,6 +105,8 @@ import Foundation
     var waitingCount: Int { line.count }
     /// How many idle pages were evicted to make room.
     private(set) var evictions = 0
+    /// How many draws were asked for since the budget was made, granted or not. Tests count with it.
+    private(set) var asks = 0
     /// The pages that exist, for tests.
     var pages: [Page] { entries.map(\.page) }
 
@@ -112,6 +114,7 @@ import Foundation
     /// order of asking, or nil when the lease is given back first. True when the request waits in line.
     @discardableResult
     func ask(_ lease: Lease, recipe: Page.Recipe, reply: @escaping (Grant?) -> Void) -> Bool {
+        asks += 1
         let ownBusy = lease.entry?.busy == true
         if line.isEmpty || ownBusy, let grant = grant(lease, recipe) {
             reply(grant)

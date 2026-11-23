@@ -29,6 +29,9 @@ import Systems42Kit
     /// The key the graph and the layers were computed for.
     private(set) var loadedKey: Key?
     @ObservationIgnored private var layersKey: Key?
+    /// True when a new graph has taken longer than the projections' delay. The view dims only then.
+    public private(set) var isUpdating = false
+    @ObservationIgnored private var timer: Task<Void, Never>?
 
     public init(session: WikiSession) {
         self.session = session
@@ -52,16 +55,26 @@ import Systems42Kit
     public func load() async {
         guard let session else { return }
         await session.projections.load()
-        guard let key = currentKey, !isCurrent, let projections = session.projections.data?.projections,
+        guard let key = currentKey, !isCurrent, let projections = session.projections.latest?.projections,
               session.projections.isCurrent else { return }
         let metamodel = session.metamodel
+        if timer == nil, !graph.nodes.isEmpty {
+            timer = Task { [weak self] in
+                try? await Task.sleep(for: ProjectionsModel.updatingDelay)
+                guard !Task.isCancelled else { return }
+                self?.isUpdating = true
+            }
+        }
         let wantLayers = layersKey != Key(revision: key.revision, agreedOnly: key.agreedOnly, layers: [])
         let result = await Task.detached(priority: .userInitiated) {
             (graph: projections.termNetwork(layers: key.layers),
              layers: wantLayers ? Self.layers(of: projections, metamodel: metamodel) : nil)
         }.value
         guard currentKey == key, !Task.isCancelled else { return }
-        graph = result.graph
+        timer?.cancel()
+        timer = nil
+        isUpdating = false
+        if graph != result.graph { graph = result.graph }
         if let found = result.layers {
             layers = found
             layersKey = Key(revision: key.revision, agreedOnly: key.agreedOnly, layers: [])

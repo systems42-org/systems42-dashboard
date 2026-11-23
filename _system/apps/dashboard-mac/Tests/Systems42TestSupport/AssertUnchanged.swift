@@ -47,3 +47,20 @@ private func snapshot(_ root: URL) -> [String: FileState]? {
     }
     return failure.happened ? nil : result
 }
+
+/// `assertUnchanged` for a body that waits. The test's own edits do not belong in `body`.
+public func assertUnchangedAsync(
+    _ wiki: URL,
+    sourceLocation: SourceLocation = #_sourceLocation,
+    isolation: isolated (any Actor)? = #isolation,
+    _ body: () async throws -> Void
+) async rethrows {
+    let before = snapshot(wiki)
+    #expect(before != nil, "cannot list \(wiki.path)", sourceLocation: sourceLocation)
+    try await body()
+    let after = snapshot(wiki)
+    #expect(after != nil, "cannot list \(wiki.path)", sourceLocation: sourceLocation)
+    if let before, let after {
+        #expect(after == before, "a file under \(wiki.path) changed", sourceLocation: sourceLocation)
+    }
+}

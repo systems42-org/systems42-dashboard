@@ -36,8 +36,8 @@ struct ProjectionItem: Sendable, Hashable {
 // MARK: Story map
 
 /// The story map as the view draws it: backbone columns, release rows, cards in the cells.
-struct StoryMapModel: Sendable {
-    struct Card: Sendable {
+struct StoryMapModel: Sendable, Equatable {
+    struct Card: Sendable, Equatable {
         let item: ProjectionItem
         let level, priority: String
         /// What a screen reader says.
@@ -46,7 +46,7 @@ struct StoryMapModel: Sendable {
         }
     }
 
-    struct Column: Sendable {
+    struct Column: Sendable, Equatable {
         let item: ProjectionItem
         let level: String
         /// The cards by release.
@@ -101,13 +101,13 @@ enum ProjectionLabel {
 // MARK: Hierarchy
 
 /// One node of the outline. The key is its place in the tree, so it is unique whatever the page ids are.
-struct OutlineNode: Sendable {
+struct OutlineNode: Sendable, Equatable {
     let key: String
     let item: ProjectionItem
     let level: String
     let children: [OutlineNode]
 
-    struct Row: Sendable {
+    struct Row: Sendable, Equatable {
         let node: OutlineNode
         let depth: Int
         let expanded: Bool
@@ -154,8 +154,8 @@ struct HierarchyDetail: Sendable {
 // MARK: Goal matrix
 
 /// The goal coverage matrix as the view draws it.
-struct MatrixModel: Sendable {
-    struct Column: Sendable {
+struct MatrixModel: Sendable, Equatable {
+    struct Column: Sendable, Equatable {
         let item: ProjectionItem
         let level: String
         let enabler, untraced: Bool
@@ -169,7 +169,7 @@ struct MatrixModel: Sendable {
         }
     }
 
-    struct Row: Sendable {
+    struct Row: Sendable, Equatable {
         let item: ProjectionItem
         /// No requirement serves the goal.
         let gap: Bool
@@ -219,7 +219,7 @@ struct MatrixModel: Sendable {
 
 // MARK: Backlog
 
-struct BacklogRow: Sendable {
+struct BacklogRow: Sendable, Equatable {
     let rank: Int
     let item: ProjectionItem
     let release, priority, level: String
@@ -245,6 +245,12 @@ struct ProjectionData: Sendable {
     let diagrams: [String: DiagramSource]
     /// The snapshot the models came from, for the detail of one requirement.
     let projections: Projections
+
+    /// Whether a view would draw the same for both: the models, not the revision or the snapshot.
+    func sameContent(as other: ProjectionData) -> Bool {
+        agreedOnly == other.agreedOnly && storyMap == other.storyMap && outline == other.outline
+            && matrix == other.matrix && backlog == other.backlog && diagrams == other.diagrams
+    }
 
     static func build(store: WikiStore, metamodel: Metamodel, agreedOnly: Bool, revision: Int) -> ProjectionData {
         let projections = Projections(store: store, metamodel: metamodel, agreedOnly: agreedOnly)

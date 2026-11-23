@@ -31,14 +31,18 @@ public struct FollowItem: Sendable {
 
     private let session: WikiSession
     private let reading: ReadingPreference
-    private let revision: Int
+    private var revision: Int
+    /// Everything this model shows, as text. Two models with the same one show the same page.
+    @ObservationIgnored private(set) var fingerprint = ""
     private var base: RenderedBody?
     @ObservationIgnored private var definitions: [PageRef: Known] = [:]
     private let render: PageRender
 
     /// Nil when the page is not in the loaded wiki.
     /// `render` makes the blocks of a body off the main thread. Tests pass their own.
-    public init?(session: WikiSession, ref: PageRef, reading: ReadingPreference = .shared, render: @escaping PageRender = PageModel.renderBody) {
+    /// There is no default for `render`: a default-argument closure in an init of an observable class
+    /// that sets observed properties aborted the runtime ("freed pointer was not the last allocation").
+    public init?(session: WikiSession, ref: PageRef, reading: ReadingPreference, render: @escaping PageRender) {
         guard let page = session.store.page(ref) else { return nil }
         let store = session.store
         let metamodel = session.metamodel
@@ -83,6 +87,57 @@ public struct FollowItem: Sendable {
 
         let section = metamodel.sections.first { $0.folders.contains(ref.folder) }
         path = [section?.area.label, section?.title, page.title].compactMap { $0 }
+        fingerprint = Self.fingerprint(of: self, store: store, metamodel: metamodel)
+    }
+
+    /// What a reader can see of this page: its fields and body, what its links point at (titles, anchor
+    /// definitions), and the relation, issue and source lists. Not what the render does with it.
+    private static func fingerprint(of model: PageModel, store: WikiStore, metamodel: Metamodel) -> String {
+        let page = model.page
+        var parts = [page.id, page.type, page.title, page.status, page.body, page.problems.joined(separator: "\n")]
+        parts.append(page.fields.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: "\n"))
+        var links = page.bodyLinks
+        for key in page.fieldLinks.keys.sorted() { links += page.fieldLinks[key] ?? [] }
+        for link in links {
+            let target = store.resolve(link)
+            var line = "\(link.target)|\(target)"
+            switch target {
+            case .page(let ref): line += "|" + (store.page(ref)?.title ?? "")
+            case .anchor(let name): line += "|" + (metamodel.anchor(name)?.definition ?? "")
+            default: break
+            }
+            parts.append(line)
+        }
+        parts += model.head.map { "\($0.label)=\($0.value)|\($0.doc ?? "")" }
+        parts += model.headHelp.map { $0 ?? "" }
+        for group in model.outgoing + model.incoming {
+            parts.append("\(group.relation)|\(group.label)|" + group.pages.map { "\($0.ref.folder)/\($0.ref.stem):\($0.title):\($0.status)" }.joined(separator: ","))
+        }
+        parts += model.openIssues.map { "\($0.id):\($0.title):\($0.status)" }
+        parts += model.sources
+        parts += model.path
+        return parts.joined(separator: "\u{1}")
+    }
+
+    /// Whether the body was rendered, so the model can be shown.
+    var isLoaded: Bool { base != nil }
+
+    /// Takes the current revision of the session. Only for a model that shows what the new revision shows.
+    /// The rendered body goes back into the session's cache, and what was read of other pages is forgotten.
+    func follow(revision newRevision: Int) {
+        revision = newRevision
+        definitions = [:]
+        if let base { session.keep(base, of: page.ref, revision: newRevision) }
+    }
+
+    /// The page with the Kit's renderer and the shared reading preference.
+    public convenience init?(session: WikiSession, ref: PageRef) {
+        self.init(session: session, ref: ref, reading: .shared, render: PageModel.renderBody)
+    }
+
+    /// The page with the Kit's renderer.
+    public convenience init?(session: WikiSession, ref: PageRef, reading: ReadingPreference) {
+        self.init(session: session, ref: ref, reading: reading, render: PageModel.renderBody)
     }
 
     // MARK: Body

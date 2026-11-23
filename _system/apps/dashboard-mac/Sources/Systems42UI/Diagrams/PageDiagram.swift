@@ -73,7 +73,7 @@ import Systems42Kit
         let revision = session.revision
         guard loadedRevision != revision else { return }
         await session.projections.load()
-        guard session.revision == revision, session.projections.isCurrent, let projections = session.projections.data?.projections else { return }
+        guard session.revision == revision, session.projections.isCurrent, let projections = session.projections.latest?.projections else { return }
         let stem = page.ref.stem
         let metamodel = session.metamodel
         let isTerm = session.metamodel.type(forFolder: ref.folder)?.projections.contains(GraphModes.termNetwork) == true
