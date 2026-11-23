@@ -83,6 +83,7 @@ struct LoadedWiki: Sendable {
     @ObservationIgnored private var running: [PageRef: Task<RenderedBody, Never>] = [:]
     private static let mostRenderedPages = 100
     @ObservationIgnored fileprivate var explainerModel: MetamodelModel?
+    @ObservationIgnored var tourModelStore: TourModel?
     private var history: [Place] = []
     private var position = -1
 
@@ -204,6 +205,11 @@ struct LoadedWiki: Sendable {
     public func showIssues(of section: WikiSection.ID) {
         guard let issues = metamodel.issueSection else { return }
         go(to: Place(section: issues.id, page: nil, issuesAbout: section))
+    }
+
+    /// Shows no section and no page, and records the place.
+    public func clearSelection() {
+        go(to: Place(section: nil, page: nil))
     }
 
     /// Shows a section with no page chosen, and records the place. The one way to change section.
