@@ -24,6 +24,7 @@ public struct WikiWindow: View {
             } detail: {
                 PagePlaceholder(session: session)
             }
+            TourPanel(tour: session.tour)
         }
         .environment(\.explain, ExplainAction { target in
             ExplainAction.apply(target, to: session.explainer)

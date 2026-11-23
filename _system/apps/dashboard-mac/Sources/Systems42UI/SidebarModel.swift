@@ -69,4 +69,6 @@ struct SectionFigures: Sendable {
 public struct Orientation: Equatable, Sendable {
     public let title: String
     public let text: String
+    /// The page the vision comes from.
+    public let ref: PageRef
 }

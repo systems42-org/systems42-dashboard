@@ -52,7 +52,7 @@ struct LoadedWiki: Sendable {
                 let paragraph = page.body.components(separatedBy: "\n\n")
                     .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                     .first { !$0.isEmpty && !["#", ">", "-", "|", "<"].contains(String($0.first!)) } ?? ""
-                return Orientation(title: page.title, text: paragraph.replacingOccurrences(of: "**", with: "").replacingOccurrences(of: "\n", with: " "))
+                return Orientation(title: page.title, text: paragraph.replacingOccurrences(of: "**", with: "").replacingOccurrences(of: "\n", with: " "), ref: page.ref)
             }
         }
         return nil
@@ -83,6 +83,7 @@ struct LoadedWiki: Sendable {
     @ObservationIgnored private var running: [PageRef: Task<RenderedBody, Never>] = [:]
     private static let mostRenderedPages = 100
     @ObservationIgnored fileprivate var explainerModel: MetamodelModel?
+    @ObservationIgnored var tourModelStore: TourModel?
     private var history: [Place] = []
     private var position = -1
 
@@ -206,6 +207,17 @@ struct LoadedWiki: Sendable {
         go(to: Place(section: issues.id, page: nil, issuesAbout: section))
     }
 
+    /// Shows a place without recording it in the history. Only the tour uses it. A page that does
+    /// not exist, or a section the wiki lacks, shows nothing.
+    func showUnrecorded(section: WikiSection.ID?, page: PageRef?) {
+        let section = section.flatMap { id in metamodel.sections.contains { $0.id == id } ? id : nil }
+        let page = page.flatMap { store.page($0) == nil ? nil : $0 }
+        restore(Place(section: section, page: page, issuesAbout: nil))
+    }
+
+    /// The number of places in the history.
+    var historyCount: Int { history.count }
+
     /// Shows a section with no page chosen, and records the place. The one way to change section.
     public func select(section id: WikiSection.ID?) {
         guard let id else { return }
@@ -237,7 +249,9 @@ struct LoadedWiki: Sendable {
     }
 
     private func go(to place: Place) {
-        if position >= 0, history[position] == place { return }
+        // A place the tour showed without recording differs from the recorded one, so it is recorded.
+        if position >= 0, history[position] == place,
+           place == Place(section: selectedSection, page: selectedPage, issuesAbout: issueFilter) { return }
         history = Array(history.prefix(position + 1)) + [place]
         if history.count > Self.longestHistory { history.removeFirst(history.count - Self.longestHistory) }
         position = history.count - 1
