@@ -66,6 +66,11 @@ public final class WikiStore: @unchecked Sendable {
         current().metamodel
     }
 
+    /// The project identity from `_system/wiki.yaml`, read fresh on each call.
+    public func config() -> WikiConfig {
+        WikiConfig.load(root)
+    }
+
     /// The sub-folders of `wiki/`, sorted. Hidden folders and folders that lead out of the wiki are left out.
     public func folders() -> [String] {
         current().folders

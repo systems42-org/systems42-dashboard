@@ -50,6 +50,8 @@ public struct Page: Identifiable, Sendable {
     public let bodyLinks: [Wikilink]
     /// What a field points at, for the trace of an architecture page.
     let references: [String: [Reference]]
+    /// The items of each list field, for the fields that hold mappings.
+    let items: [String: [FieldItem]]
     let aliases: [String]
 
     init(ref: PageRef, text: String, readProblems: [String] = [], checksFrontmatter: Bool = true) {
@@ -81,6 +83,7 @@ public struct Page: Identifiable, Sendable {
         self.fieldLinks = read.links
         self.bodyLinks = Wikilink.all(in: split.body)
         self.references = read.references
+        self.items = read.items
         switch read.fields["aliases"] {
         case .list(let items)?: self.aliases = items.filter { !$0.isEmpty }
         case .text(let item)?: self.aliases = item.isEmpty ? [] : [item]
