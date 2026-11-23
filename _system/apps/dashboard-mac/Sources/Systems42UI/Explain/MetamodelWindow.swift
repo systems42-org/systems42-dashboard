@@ -60,7 +60,7 @@ public struct MetamodelWindowRoot: View {
         // The session is looked up on every read, so this view never keeps a closed wiki alive.
         Group {
             if let session = OpenSessions.shared.session(for: folder) {
-                MetamodelWindow(session: session, folder: folder).environment(\.diagramBudget, session.diagramBudget)
+                MetamodelWindow(session: session, folder: folder)
             } else {
                 Text("This wiki is not open.").foregroundStyle(.secondary).frame(minWidth: 400, minHeight: 200)
             }

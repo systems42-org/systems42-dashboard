@@ -20,13 +20,16 @@ public enum DiagramLimits {
     /// The most nodes and edges of a graph.
     public static let mostGraphNodes = 1_500
     public static let mostGraphEdges = 4_000
-    /// The most levels of nested subgraphs. Layout time grows faster than the depth: 400 levels took 3 s and
-    /// 1,200 took 13 s, and a draw that is too slow cannot be stopped inside the web view.
-    public static let mostSubgraphDepth = 25
+    /// The most levels of nesting, over every form that opens a block: `subgraph`, `block`, `{`. Layout time grows
+    /// faster than the depth, and a draw that is too slow cannot be stopped inside the web view.
+    public static let mostNestingDepth = 25
+    /// The longest statement or label in characters. A statement ends at a newline or a `;`, but not inside quotes.
+    public static let mostStatementLength = 2_000
     /// How long one draw may take. A diagram that needs longer shows a message, and its web view is dropped.
     public static let renderTimeout = Duration.seconds(10)
-    /// The most web views that live at once in one window. The others show a placeholder with the text list.
-    public static let mostLiveViews = 4
+    /// The most web processes the whole app has for diagrams: drawing, and busy ones that were given up on.
+    /// A diagram that finds none free shows its text list and says diagrams are busy.
+    public static let mostWebProcesses = 4
     /// The most Mermaid blocks of one page body that are drawn. Further blocks show their source.
     public static let mostBlocksPerPage = 20
 }
@@ -68,7 +71,7 @@ struct DiagramContent: Equatable, Sendable {
             let split = Self.split(text)
             mermaidText = split.text
             nodes = allowsLinks ? split.nodes : []
-            tooLarge = text.utf8.count > DiagramLimits.mostMermaidBytes || Self.subgraphDepth(of: text) > DiagramLimits.mostSubgraphDepth
+            tooLarge = text.utf8.count > DiagramLimits.mostMermaidBytes || Self.exceedsShape(text)
         case .graph(let graph, let layout):
             mermaidText = ""
             nodes = allowsLinks ? (layout == DiagramLayout.metamodel ? Self.types(of: graph) : Self.nodes(of: graph)) : []
@@ -100,14 +103,36 @@ struct DiagramContent: Equatable, Sendable {
     }
 
     /// `click` followed by any whitespace: Mermaid takes a tab as the separator too.
-    /// The deepest nesting of `subgraph` ... `end` in the text, from a linear scan of its lines.
-    static func subgraphDepth(of text: String) -> Int {
-        var depth = 0, deepest = 0
-        for line in text.split(separator: "\n") {
-            let word = line.drop { $0 == " " || $0 == "\t" }.prefix { !$0.isWhitespace && $0 != ";" }.lowercased()
-            if word == "subgraph" { depth += 1; deepest = max(deepest, depth) } else if word == "end", depth > 0 { depth -= 1 }
+    /// Whether the text nests deeper than `mostNestingDepth` or has a statement longer than `mostStatementLength`.
+    /// One linear scan, no pattern matching. A statement ends at a newline or a `;` outside double quotes.
+    static func exceedsShape(_ text: String) -> Bool {
+        let shape = shape(of: text)
+        return shape.depth > DiagramLimits.mostNestingDepth || shape.longest > DiagramLimits.mostStatementLength
+    }
+
+    static func shape(of text: String) -> (depth: Int, longest: Int) {
+        var keywords = 0, braces = 0, deepest = 0, longest = 0
+        var inQuote = false
+        var head = "", length = 0
+        func finish() {
+            longest = max(longest, length)
+            let word = head.drop { $0 == " " || $0 == "\t" }.prefix { !$0.isWhitespace && $0 != "{" }.lowercased()
+            if word == "subgraph" || word == "block" || word.hasPrefix("block:") { keywords += 1 } else if word == "end", keywords > 0 { keywords -= 1 }
+            deepest = max(deepest, keywords + braces)
+            head = ""
+            length = 0
         }
-        return deepest
+        for character in text {
+            if character == "\"" { inQuote.toggle() }
+            if !inQuote, character == "\n" || character == ";" { finish(); continue }
+            if !inQuote, character == "{" { braces += 1; deepest = max(deepest, keywords + braces) }
+            if !inQuote, character == "}", braces > 0 { braces -= 1 }
+            length += 1
+            // Only the start of a statement is kept, for its first word.
+            if head.count < 64 { head.append(character) }
+        }
+        finish()
+        return (deepest, longest)
     }
 
     private static func isClick(_ statement: Substring) -> Bool {

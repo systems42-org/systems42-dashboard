@@ -16,6 +16,13 @@ private let limit: Duration = .seconds(30)
     }
 }
 
+/// Waits for a web view to finish loading.
+@MainActor private final class Loaded: NSObject, WKNavigationDelegate {
+    private(set) var done = false
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { done = true }
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { done = true }
+}
+
 private func flow(_ label: String) -> DiagramContent {
     DiagramContent(.mermaid("flowchart TB\n  A[\"\(label)\"] --> B[\"other\"]"))
 }
@@ -61,7 +68,7 @@ private func nested(_ depth: Int) -> String {
     // MARK: A dead or slow web process
 
     @Test func aDeadProcessLeavesLoadingAndALaterShowDraws() async throws {
-        let model = DiagramViewModel(timeout: .seconds(5))
+        let model = DiagramViewModel(timeout: .seconds(5), budget: DiagramBudget())
         await model.show(flow("FIRST"), dark: false)
         #expect(model.state == .drawn)
         let old = try #require(model.page)
@@ -88,22 +95,22 @@ private func nested(_ depth: Int) -> String {
 
     @Test func aRenderThatTakesTooLongEndsWithAMessage() async throws {
         // A bound no draw can meet: the page is retired and the message says why.
-        let model = DiagramViewModel(timeout: .milliseconds(1))
+        let model = DiagramViewModel(timeout: .milliseconds(1), budget: DiagramBudget())
         await model.show(slowToDraw, dark: false)
         #expect(model.state == .message(DiagramState.tookTooLong))
         #expect(model.page == nil)
         // The next show opens a new page.
-        let again = DiagramViewModel(timeout: .seconds(10))
+        let again = DiagramViewModel(timeout: .seconds(10), budget: DiagramBudget())
         await again.show(flow("FAST"), dark: false)
         #expect(again.state == .drawn)
     }
 
     @Test func deeplyNestedSubgraphsAreRefusedBeforeTheyHangAProcess() {
         // 400 nested levels took 3 s in Mermaid, 1,200 took 13 s, 2,500 ran for minutes: a draw that cannot be stopped.
-        for depth in [DiagramLimits.mostSubgraphDepth + 1, 400, 1_200, 2_500] {
+        for depth in [DiagramLimits.mostNestingDepth + 1, 400, 1_200, 2_500] {
             #expect(DiagramContent(.mermaid(nested(depth))).tooLarge, "\(depth)")
         }
-        #expect(!DiagramContent(.mermaid(nested(DiagramLimits.mostSubgraphDepth))).tooLarge)
+        #expect(!DiagramContent(.mermaid(nested(DiagramLimits.mostNestingDepth))).tooLarge)
         // Flat subgraphs are not nesting, and `end` words in other places do not count.
         let flat = "flowchart TB\n" + String(repeating: "subgraph a\nA\nend\n", count: 100)
         #expect(!DiagramContent(.mermaid(flat)).tooLarge)
@@ -112,7 +119,7 @@ private func nested(_ depth: Int) -> String {
     // MARK: Requests supersede each other
 
     @Test func theLatestOfTwoRequestsIsDrawn() async throws {
-        let model = DiagramViewModel()
+        let model = DiagramViewModel(budget: DiagramBudget())
         let old = Task { await model.show(flow("OLDLABEL"), dark: false) }
         try await Task.sleep(for: .milliseconds(5))
         let new = Task { await model.show(flow("NEWLABEL"), dark: false) }
@@ -124,7 +131,7 @@ private func nested(_ depth: Int) -> String {
     }
 
     @Test func theLatestOfFiveRequestsIsDrawn() async throws {
-        let model = DiagramViewModel()
+        let model = DiagramViewModel(budget: DiagramBudget())
         var tasks: [Task<Void, Never>] = []
         for n in 0..<5 {
             tasks.append(Task { await model.show(flow("LABEL\(n)X"), dark: false) })
@@ -138,7 +145,7 @@ private func nested(_ depth: Int) -> String {
     }
 
     @Test func aThemeChangeDuringTheFirstLoadWins() async throws {
-        let model = DiagramViewModel()
+        let model = DiagramViewModel(budget: DiagramBudget())
         let light = Task { await model.show(flow("THEME"), dark: false) }
         let dark = Task { await model.show(flow("THEME"), dark: true) }
         await light.value
@@ -148,31 +155,28 @@ private func nested(_ depth: Int) -> String {
     }
 
     @Test func filesAreMissingOnlyWhenTheyAre() async throws {
-        let model = DiagramViewModel()
+        let model = DiagramViewModel(budget: DiagramBudget())
         let first = Task { await model.show(flow("A1"), dark: false) }
         let second = Task { await model.show(flow("A2"), dark: false) }
         await first.value
         await second.value
         #expect(model.state != .message(DiagramState.missingFiles))
-        let none = DiagramViewModel(folder: { nil })
+        let none = DiagramViewModel(folder: { nil }, budget: DiagramBudget())
         await none.show(flow("A3"), dark: false)
         #expect(none.state == .message(DiagramState.missingFiles))
     }
 
     // MARK: Budget
 
-    @Test func aWindowHasAFixedNumberOfLiveViews() {
+    @Test func theBudgetIsAFixedNumberOfPlaces() {
         let budget = DiagramBudget(limit: 2)
-        let a = DiagramSlot(), b = DiagramSlot(), c = DiagramSlot()
-        #expect(budget.acquire(a) && budget.acquire(b))
-        #expect(!budget.acquire(c) && !c.isLive)
-        #expect(budget.acquire(a), "asking again is no second place")
-        #expect(budget.liveCount == 2)
-        budget.claim(c)
-        #expect(c.isLive && !a.isLive && b.isLive, "the view that had a place longest gives it up")
-        budget.release(b)
-        #expect(budget.liveCount == 1 && !b.isLive)
-        #expect(DiagramLimits.mostLiveViews == 4)
+        let a = budget.acquire(), b = budget.acquire()
+        #expect(a != nil && b != nil && budget.inUse == 2 && budget.isFull)
+        #expect(budget.acquire() == nil)
+        if let a { budget.release(a) }
+        #expect(budget.acquire() != nil)
+        #expect(DiagramLimits.mostWebProcesses == 4)
+        #expect(DiagramBudget.shared.limit == DiagramLimits.mostWebProcesses, "one budget for the whole app")
     }
 
     @Test func blocksPastTheLimitShowTheirSource() {
@@ -262,7 +266,8 @@ private func nested(_ depth: Int) -> String {
         var views: [WeakView] = []
         for _ in 0..<3 {
             var page = await DiagramPage.open(timeout: .milliseconds(1))
-            page?.onRetire = { budget.noteRetired($0) }
+            let seat = try #require(budget.acquire())
+            page?.onRetire = { budget.retire(seat, view: $0) }
             if let pid = page.flatMap({ processID(of: $0.webView) }) { pids.append(pid) }
             if let web = page?.webView { views.append(WeakView(web)) }
             #expect(await page?.show(slowToDraw, dark: false) == .timedOut)
@@ -270,20 +275,108 @@ private func nested(_ depth: Int) -> String {
         }
         guard pids.count == 3 else { Issue.record("no process ids on this macOS"); return }
         // The retired pages count against the budget until their process answers, then they are released.
-        await until("the budget to let go") { budget.retiredAlive == 0 }
+        await until("the budget to let go") { budget.inUse == 0 }
         await until("the web views to be released") { views.allSatisfy { $0.view == nil } }
         await until("the processes to end") { pids.allSatisfy(isGone) }
         #expect(pids.allSatisfy(isGone))
     }
 
-    @Test func aRetiredViewCountsAgainstTheBudgetUntilItAnswers() async throws {
+    /// A web view whose script computes for `milliseconds` (or for ever), its process id, and the call that was made.
+    @MainActor private func busyView(milliseconds: Int?) async -> (view: WKWebView, pid: Int32)? {
+        let view = WKWebView(frame: .zero)
+        view.loadHTMLString("<p>busy</p>", baseURL: nil)
+        let probe = Loaded()
+        view.navigationDelegate = probe
+        await until("the busy view to load") { probe.done }
+        guard let pid = processID(of: view) else { return nil }
+        let spin = milliseconds.map { "const t = Date.now(); while (Date.now() - t < \($0)) {}" } ?? "for (;;) {}"
+        view.callAsyncJavaScript(spin, arguments: [:], in: nil, in: .page) { _ in }
+        return (view, pid)
+    }
+
+    @Test func stuckDrawsFillTheAppBudgetAndNothingFreesThemUntilTheProcessIsGone() async throws {
+        let budget = DiagramBudget(limit: DiagramLimits.mostWebProcesses)
+        var stuck: [(view: WKWebView, pid: Int32)] = []
+        for _ in 0..<DiagramLimits.mostWebProcesses {
+            guard let busy = await busyView(milliseconds: nil) else {
+                Issue.record("no process ids on this macOS")
+                for item in stuck { Darwin.kill(item.pid, SIGKILL) }
+                return
+            }
+            stuck.append(busy)
+            budget.retire(try #require(budget.acquire()), view: busy.view)
+        }
+        #expect(budget.inUse == DiagramLimits.mostWebProcesses && budget.isFull)
+        // A request in another window draws from the same budget: it is told diagrams are busy, and opens no web view.
+        var opened = 0
+        let other = DiagramViewModel(folder: { opened += 1; return DiagramAssets.folder }, budget: budget)
+        await other.show(flow("WAITING"), dark: false)
+        #expect(other.state == .message(DiagramState.busy))
+        #expect(opened == 0 && other.webView == nil)
+        // However long it waits, nothing frees a place.
+        try await Task.sleep(for: .seconds(3))
+        #expect(budget.inUse == DiagramLimits.mostWebProcesses)
+        await other.show(flow("WAITING"), dark: false)
+        #expect(other.state == .message(DiagramState.busy))
+        // A process that is gone frees its place. Then the waiting diagram is drawn.
+        for item in stuck { Darwin.kill(item.pid, SIGKILL) }
+        await until("the places to free") { budget.inUse == 0 }
+        await other.show(flow("WAITING"), dark: false)
+        #expect(other.state == .drawn)
+        other.close()
+        #expect(budget.inUse == 0)
+    }
+
+    @Test func aDrawThatAnswersLateFreesItsPlace() async throws {
         let budget = DiagramBudget(limit: 1)
-        let web = WKWebView(frame: .zero)
-        budget.noteRetired(web)
-        #expect(budget.retiredAlive == 1)
-        #expect(!budget.acquire(DiagramSlot()), "a retired view that is not gone holds the place")
-        await until("the view to answer") { budget.retiredAlive == 0 }
-        #expect(budget.acquire(DiagramSlot()))
+        guard let busy = await busyView(milliseconds: 2_000) else { Issue.record("no process ids on this macOS"); return }
+        budget.retire(try #require(budget.acquire()), view: busy.view)
+        #expect(budget.isFull && budget.acquire() == nil)
+        await until("the late answer") { !budget.isFull }
+        #expect(budget.acquire() != nil)
+    }
+
+    @Test func theWatchDoesNotKeepTheBudgetAlive() async throws {
+        weak var weakBudget: DiagramBudget?
+        do {
+            let budget = DiagramBudget(limit: 1)
+            weakBudget = budget
+            guard let busy = await busyView(milliseconds: 1_500) else { Issue.record("no process ids on this macOS"); return }
+            budget.retire(try #require(budget.acquire()), view: busy.view)
+        }
+        await until("the budget to be released") { weakBudget == nil }
+        #expect(weakBudget == nil)
+    }
+
+    @Test func threeKindsOfRunawayTextAreRefusedAndOpenNoWebView() async throws {
+        let words = "flowchart TB\n  A[\"" + Array(repeating: "word", count: 9_500).joined(separator: " ") + "\"]"
+        let blocks = "block-beta\n" + (0..<400).map { "block:b\($0)\n" }.joined() + "x\n" + String(repeating: "end\n", count: 400)
+        let oneLine = "flowchart TB\n" + (0..<1_200).map { "subgraph s\($0)" }.joined(separator: ";") + ";A;" + Array(repeating: "end", count: 1_200).joined(separator: ";")
+        let states = "stateDiagram-v2\n" + (0..<400).map { "state s\($0) {\n" }.joined() + "a --> b\n" + String(repeating: "}\n", count: 400)
+        let quoted = "flowchart TB\n  A[\"" + Array(repeating: "word", count: 9_500).joined(separator: "\n") + "\"]"
+        for (name, text) in [("long label", words), ("nested blocks", blocks), ("one line", oneLine), ("nested states", states), ("label over lines", quoted)] {
+            #expect(text.utf8.count <= DiagramLimits.mostMermaidBytes + 5_000, Comment(rawValue: name))
+            let content = DiagramContent(.mermaid(text))
+            #expect(content.tooLarge, Comment(rawValue: name))
+            var opened = 0
+            let model = DiagramViewModel(folder: { opened += 1; return DiagramAssets.folder }, budget: DiagramBudget())
+            await model.show(content, dark: false)
+            #expect(model.state == .message(DiagramState.tooLarge), Comment(rawValue: name))
+            #expect(opened == 0 && model.webView == nil, Comment(rawValue: name))
+        }
+    }
+
+    @Test func diagramsOfTheKitAreNeverRefused() throws {
+        var count = 0
+        for fixture in Fixture.names {
+            for name in Golden.diagrams(fixture) where name.hasSuffix(".mmd") {
+                let text = try Golden.text(fixture, "diagrams/" + name)
+                #expect(!DiagramContent(.mermaid(text)).tooLarge, Comment(rawValue: "\(fixture)/\(name)"))
+                count += 1
+            }
+        }
+        #expect(count > 10)
+        #expect(!DiagramContent(.mermaid("flowchart TB\n  A{\"x\"} --> B{y}\n  subgraph s\n  C[\"a; b\"]\n  end")).tooLarge)
     }
 
     @Test func aClickWithATabIsCut() {

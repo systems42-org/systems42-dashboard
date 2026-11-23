@@ -453,7 +453,7 @@ private final class Loopback: Sendable {
         #expect(!DiagramContent(.mermaid("flowchart TB\n  A --> B")).tooLarge)
 
         var opened = 0
-        let model = DiagramViewModel(folder: { opened += 1; return DiagramAssets.folder })
+        let model = DiagramViewModel(folder: { opened += 1; return DiagramAssets.folder }, budget: DiagramBudget())
         await model.show(DiagramContent(.mermaid(big)), dark: false)
         #expect(model.state == .message(DiagramState.tooLarge))
         #expect(opened == 0, "no web view for a diagram that is not drawn")
@@ -465,7 +465,7 @@ private final class Loopback: Sendable {
         defer { try? FileManager.default.removeItem(at: empty) }
         #expect(DiagramAssets.locate(in: [empty]) == nil)
         #expect(await DiagramPage.open(folder: nil) == nil)
-        let model = DiagramViewModel(folder: { nil })
+        let model = DiagramViewModel(folder: { nil }, budget: DiagramBudget())
         await model.show(DiagramContent(.mermaid("flowchart TB\n  A --> B")), dark: false)
         #expect(model.state == .message(DiagramState.missingFiles))
         #expect(DiagramAssets.report(folder: nil) == "diagram assets: missing")
