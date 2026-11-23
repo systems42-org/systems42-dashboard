@@ -5,21 +5,23 @@ import Systems42Kit
 /// The list of the pages of one section: sort, filters and the rows they give.
 /// Pages and metamodel are read through the session, so a reload reaches an existing model.
 @MainActor @Observable public final class ListModel {
-    /// The mode that shows plain rows. Projection modes come with later issues.
-    public static let listMode = "list"
+    /// The mode that shows plain rows. The other modes are projections the section's types declare.
+    public nonisolated static let listMode = "list"
     public static let statusField = PageKey.status
     static let enumKind = "enum"
 
     public let sectionID: WikiSection.ID
     public var state: ListState
-    public let modes: [String] = [ListModel.listMode]
+    /// `list`, then the projections the section's types declare and the app draws, see `ProjectionHost.modes`.
+    public var modes: [String] { setup.modes }
 
-    private let session: WikiSession
+    let session: WikiSession
     private let fallbackSection: WikiSection
 
     /// What the metamodel says about the section's types, read again after a reload.
     private struct Setup {
         let section: WikiSection
+        let modes: [String]
         let presets: [SortPreset]
         let columns: [String]
         let enums: [(field: String, values: [String])]
@@ -46,6 +48,7 @@ import Systems42Kit
         fallbackSection = section
         self.state = ListState(mode: Self.listMode)
         self.state = sanitized(state)
+        if session.selectedSection == section.id { self.state.mode = session.mode }
     }
 
     private var setup: Setup {
@@ -68,6 +71,7 @@ import Systems42Kit
         let lifecycle = metamodel.lifecycle(of: section)
         let setup = Setup(
             section: section,
+            modes: ProjectionHost.modes(for: section, metamodel: metamodel),
             presets: section.types.lazy.map { metamodel.sortPresets(for: $0) }.first { !$0.isEmpty } ?? [],
             columns: columns,
             enums: enumNames.filter { $0 != PageKey.status }.map { (field: $0, values: declared[$0] ?? []) },
@@ -88,7 +92,7 @@ import Systems42Kit
         if !result.sort.allSatisfy({ known.contains($0.field) }) { result.sort = first }
         let offered = Set(filterFields.map(\.field))
         result.filters = result.filters.filter { offered.contains($0.key) }
-        if result.mode != Self.listMode { result.mode = Self.listMode }
+        if !modes.contains(result.mode) { result.mode = Self.listMode }
         return result
     }
 
@@ -144,6 +148,21 @@ import Systems42Kit
         let plain = [PageKey.id, PageKey.title, PageKey.status]
         let shown = [PageKey.status] + (presets.first?.keys.map(\.field) ?? []).filter { !plain.contains($0) }
         return shown.map { value(of: $0, in: page) }.filter { !$0.isEmpty }
+    }
+
+    /// The mode the window shows for this section: the session's while the section is selected.
+    public var currentMode: String { session.selectedSection == sectionID ? session.mode : state.mode }
+
+    /// The name of a mode in the mode switch: the projection page's label, else the page name as words.
+    public func label(ofMode mode: String) -> String {
+        ProjectionHost.label(ofMode: mode, metamodel: session.metamodel)
+    }
+
+    /// Shows the section in a mode, through the session so Back returns to the old one.
+    public func choose(_ mode: String) {
+        guard modes.contains(mode) else { return }
+        session.select(mode: mode)
+        state.mode = mode
     }
 
     public var hasFilters: Bool { !state.filters.isEmpty }

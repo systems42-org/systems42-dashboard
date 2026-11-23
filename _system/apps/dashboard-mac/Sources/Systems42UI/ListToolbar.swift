@@ -8,13 +8,8 @@ struct ListToolbar: ToolbarContent {
 
     var body: some ToolbarContent {
         ToolbarItemGroup {
-            // The switch shows once a section offers a second mode.
-            if model.modes.count > 1 {
-                Picker("Mode", selection: Binding(get: { model.state.mode }, set: { model.state.mode = $0 })) {
-                    ForEach(model.modes, id: \.self) { Text(FieldLabel.text($0)).tag($0) }
-                }
-                .pickerStyle(.segmented)
-            }
+            ModePicker(modes: model.modes, current: model.currentMode, label: model.label(ofMode:), choose: model.choose)
+            AgreedOnlyToggle(session: model.session)
             Button("Sort", systemImage: "arrow.up.arrow.down") { sorting.toggle() }
                 .help("Sort the list")
                 .popover(isPresented: $sorting, arrowEdge: .bottom) { SortEditor(model: model) }

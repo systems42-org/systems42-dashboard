@@ -77,6 +77,13 @@ struct LoadedWiki: Sendable {
     /// Part of the history place, so Back and Forward restore it.
     public private(set) var shownSearch: SearchRequest?
 
+    /// How the list column shows the selected section: `list`, or a projection the section offers.
+    /// Part of the history place, so Back and Forward restore it.
+    public private(set) var mode = ListModel.listMode
+
+    /// Whether the list column shows a projection and no search results: it then takes the width of list and page.
+    public var showsProjection: Bool { shownSearch == nil && selectedSection != nil && mode != ListModel.listMode }
+
     private var figures: [String: SectionFigures]
     public private(set) var orientation: Orientation?
     /// Counts up each time the loaded wiki is replaced, so models know their rows are stale.
@@ -89,6 +96,9 @@ struct LoadedWiki: Sendable {
     @ObservationIgnored fileprivate var explainerModel: MetamodelModel?
     @ObservationIgnored var tourModelStore: TourModel?
     @ObservationIgnored var searchModelStore: SearchModel?
+    @ObservationIgnored var projectionsModelStore: ProjectionsModel?
+    /// The mode the section was last shown in, so a section comes back as the reader left it.
+    private var rememberedModes: [WikiSection.ID: String] = [:]
     private var history: [Place] = []
     private var position = -1
 
@@ -101,6 +111,8 @@ struct LoadedWiki: Sendable {
         var issuesAbout: WikiSection.ID?
         /// The search whose results the list column shows, nil for a section.
         var search: SearchRequest?
+        /// How the section is shown, `list` or a projection.
+        var mode = ListModel.listMode
     }
 
     init(loaded: LoadedWiki, root: WikiRoot) {
@@ -121,6 +133,7 @@ struct LoadedWiki: Sendable {
         renderedPages = [:]
         running = [:]
         revision += 1
+        if let id = selectedSection, !offers(mode, in: id) { mode = ListModel.listMode }
     }
 
     /// The rendered body of a page, if it was rendered for the current wiki.
@@ -194,7 +207,8 @@ struct LoadedWiki: Sendable {
     /// Selects the section and page a link points at. Other targets and missing pages do nothing.
     public func open(_ target: LinkTarget) {
         guard case .page(let ref) = target, store.page(ref) != nil else { return }
-        go(to: Place(section: section(of: ref)?.id, page: ref))
+        let id = section(of: ref)?.id
+        go(to: Place(section: id, page: ref, mode: modeShown(in: id)))
     }
 
     /// The ids of the open issues that point at a page of the section, as the sidebar counts them.
@@ -205,24 +219,24 @@ struct LoadedWiki: Sendable {
     /// Shows all issues again, and records the place.
     public func clearIssueFilter() {
         guard issueFilter != nil else { return }
-        go(to: Place(section: selectedSection, page: selectedPage))
+        go(to: Place(section: selectedSection, page: selectedPage, mode: modeShown(in: selectedSection)))
     }
 
     /// Opens the issues section, filtered to the issues that point at `section`.
     public func showIssues(of section: WikiSection.ID) {
         guard let issues = metamodel.issueSection else { return }
-        go(to: Place(section: issues.id, page: nil, issuesAbout: section))
+        go(to: Place(section: issues.id, page: nil, issuesAbout: section, mode: modeShown(in: issues.id)))
     }
 
     /// Leaves the result list, back to the pages of the section. Records the place.
     public func closeSearch() {
         guard shownSearch != nil else { return }
-        go(to: Place(section: selectedSection, page: selectedPage))
+        go(to: Place(section: selectedSection, page: selectedPage, mode: modeShown(in: selectedSection)))
     }
 
     /// Shows the full result list of a search, and records the place.
     public func showSearch(_ request: SearchRequest) {
-        go(to: Place(section: selectedSection, page: nil, search: request))
+        go(to: Place(section: selectedSection, page: nil, search: request, mode: mode))
     }
 
     /// Changes the filter of the shown search. The place in the history changes with it, no new place is recorded.
@@ -236,7 +250,8 @@ struct LoadedWiki: Sendable {
     /// Without a shown search it does nothing.
     public func selectResult(_ ref: PageRef) {
         guard let search = shownSearch, store.page(ref) != nil else { return }
-        go(to: Place(section: section(of: ref)?.id, page: ref, search: search))
+        let id = section(of: ref)?.id
+        go(to: Place(section: id, page: ref, search: search, mode: modeShown(in: id)))
     }
 
     /// Shows a place without recording it in the history. Only the tour uses it. A page that does
@@ -244,7 +259,7 @@ struct LoadedWiki: Sendable {
     func showUnrecorded(section: WikiSection.ID?, page: PageRef?) {
         let section = section.flatMap { id in metamodel.sections.contains { $0.id == id } ? id : nil }
         let page = page.flatMap { store.page($0) == nil ? nil : $0 }
-        restore(Place(section: section, page: page, issuesAbout: nil))
+        restore(Place(section: section, page: page, issuesAbout: nil), remember: false)
     }
 
     /// The number of places in the history.
@@ -253,7 +268,43 @@ struct LoadedWiki: Sendable {
     /// Shows a section with no page chosen, and records the place. The one way to change section.
     public func select(section id: WikiSection.ID?) {
         guard let id else { return }
-        go(to: Place(section: id, page: nil))
+        go(to: Place(section: id, page: nil, mode: modeShown(in: id)))
+    }
+
+    /// Shows the selected section as a list or as a projection it offers, and records the place.
+    /// A mode the section does not offer, and a mode while search results show, do nothing.
+    public func select(mode newMode: String) {
+        guard shownSearch == nil, let id = selectedSection, offers(newMode, in: id) else { return }
+        go(to: Place(section: id, page: selectedPage, issuesAbout: issueFilter, mode: newMode))
+    }
+
+    /// Takes a mode the window stored for a section, without a new place. It only fills in a section that
+    /// was not shown in a mode yet, so what the reader chose in this window wins.
+    func adopt(mode stored: String, in id: WikiSection.ID) {
+        guard stored != ListModel.listMode, rememberedModes[id] == nil, offers(stored, in: id) else { return }
+        rememberedModes[id] = stored
+        guard selectedSection == id, shownSearch == nil, mode == ListModel.listMode else { return }
+        mode = stored
+        if history.indices.contains(position) { history[position].mode = stored }
+    }
+
+    /// Closes the page that shows next to a projection. Records the place.
+    public func deselectPage() {
+        guard selectedPage != nil else { return }
+        go(to: Place(section: selectedSection, page: nil, issuesAbout: issueFilter, search: shownSearch, mode: mode))
+    }
+
+    /// Whether the section offers the mode.
+    private func offers(_ mode: String, in id: WikiSection.ID) -> Bool {
+        guard let section = metamodel.sections.first(where: { $0.id == id }) else { return mode == ListModel.listMode }
+        return ProjectionHost.modes(for: section, metamodel: metamodel).contains(mode)
+    }
+
+    /// The mode a section shows when the reader goes there: the one it has now, or the one it had last.
+    private func modeShown(in id: WikiSection.ID?) -> String {
+        guard let id else { return ListModel.listMode }
+        let wanted = id == selectedSection ? mode : rememberedModes[id] ?? ListModel.listMode
+        return offers(wanted, in: id) ? wanted : ListModel.listMode
     }
 
     /// Selects a page of the wiki and records the place. A page that does not exist does nothing.
@@ -261,19 +312,19 @@ struct LoadedWiki: Sendable {
         guard store.page(ref) != nil else { return }
         let id = section(of: ref)?.id
         // Picking a page of the restricted issues list keeps the restriction.
-        go(to: Place(section: id, page: ref, issuesAbout: id == selectedSection ? issueFilter : nil))
+        go(to: Place(section: id, page: ref, issuesAbout: id == selectedSection ? issueFilter : nil, mode: modeShown(in: id)))
     }
 
     public func back() {
         guard position > 0 else { return }
         position -= 1
-        restore(history[position])
+        restore(history[position], remember: true)
     }
 
     public func forward() {
         guard position + 1 < history.count else { return }
         position += 1
-        restore(history[position])
+        restore(history[position], remember: true)
     }
 
     private func section(of ref: PageRef) -> WikiSection? {
@@ -283,14 +334,16 @@ struct LoadedWiki: Sendable {
     private func go(to place: Place) {
         // A place the tour showed without recording differs from the recorded one, so it is recorded.
         if position >= 0, history[position] == place,
-           place == Place(section: selectedSection, page: selectedPage, issuesAbout: issueFilter, search: shownSearch) { return }
+           place == Place(section: selectedSection, page: selectedPage, issuesAbout: issueFilter, search: shownSearch, mode: mode) { return }
         history = Array(history.prefix(position + 1)) + [place]
         if history.count > Self.longestHistory { history.removeFirst(history.count - Self.longestHistory) }
         position = history.count - 1
-        restore(place)
+        restore(place, remember: true)
     }
 
-    private func restore(_ place: Place) {
+    private func restore(_ place: Place, remember: Bool) {
+        if remember, let id = place.section { rememberedModes[id] = place.mode }
+        mode = place.mode
         selectedSection = place.section
         selectedPage = place.page
         issueFilter = place.issuesAbout

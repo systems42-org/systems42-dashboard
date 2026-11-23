@@ -239,9 +239,11 @@ private let requirements = "functional-requirements"
         #expect(found == found.sorted { $0.compare($1, options: .numeric) == .orderedAscending })
     }
 
-    @Test func modesHoldOnlyTheListForNow() async throws {
+    @Test func modesAreTheListAndTheProjectionsTheTypeDeclares() async throws {
         let (_, m) = try await model("basic", folder: requirements)
-        #expect(m.modes == [ListModel.listMode])
+        #expect(m.modes.first == ListModel.listMode && m.modes.count > 1)
+        let (_, terms) = try await model("basic", folder: "domain-terms")
+        #expect(terms.modes == [ListModel.listMode])
     }
 
     @Test func selectingARowGoesThroughHistory() async throws {
