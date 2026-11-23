@@ -13,6 +13,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
 ## [Unreleased]
 
 ### Fixed
+- Dashboard: the term network lists the page types behind its "More" button in alphabetical order, as the Go dashboard does. Before, the order followed the links of the terms, so the two dashboards differed.
 - Dashboard: `search_plain()` in `app.py` now strips Markdown emphasis and backticks as intended instead of matching the later `_emphasis()` regex of the same name.
 - Launcher: `./dashboard.sh uv` loads only the dashboard's own modules. Started from a folder that holds an `app.py` or `preflight.py`, it used to load those instead. Relative path settings such as `WIKI_CONFIG` still mean the folder they were given in. When the port is busy, the message names Ctrl+C for a uv start, not only `./dashboard.sh down`, which needs Docker.
 - Dashboard: a wikilink inside inline code or a fenced code block shows as written, on wiki pages and on /metamodel, instead of as an escaped link tag. A `~~~` fence renders as code instead of being joined into the paragraph around it.

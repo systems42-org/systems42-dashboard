@@ -436,3 +436,10 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - DR-007 keeps its filename although its title changed: `_system/apps/dashboard/internal/web/server_test.go` and `docs/go-dashboard-requirements-summary.md` link to it.
 - Claude's choices, to be checked: the role requirements engineer in the story, the goal [[GOAL-008-one-way-into-every-systems42-wiki]], the scope lists of FR-065, the wording of options A to C in DR-007. SOL-002 keeps its title "Three ways": Docker, uv, an app, with two apps under the third.
 - Issues: none raised. Every question was answered in grilling.
+
+## [2026-11-22] capture | Domain terms of the dashboard
+- Sources: [[SRC-049-domain-term-obsidian]] (`raw/ingested/domain-term-obsidian.md`), [[SRC-050-domain-terms-of-the-dashboard]] (`raw/ingested/domain-terms-of-the-dashboard.md`).
+- Created: 28 domain terms, [[DT-001-dashboard]] to [[DT-028-flask]], in three bounded contexts: Systems42 dashboard (14), Format and method (9), Technology (5). None has a stereotype.
+- Decided by Gernot Starke: the list of terms, including uv, Docker, Podman and Flask. Terms that the Systems42 method wiki also defines are repeated here on purpose. Parts of the metamodel get no terms of their own, the term Metamodel covers them. Andrej Karpathy is named on the LLM wiki page, not as a term.
+- Grilling: the definitions were checked against FR-046, STK-023, CON-003, CON-005 and CON-007. No contradiction was found.
+- Claude's choices, to be checked: the three bounded contexts, and Obsidian under Technology.

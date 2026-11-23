@@ -5,6 +5,34 @@ every capture (`_system/workflows/capture.md`, step 7).
 
 ## Domain terms
 
+- [[DT-001-dashboard]] Dashboard (Systems42 dashboard, draft)
+- [[DT-002-systems42-wiki]] Systems42 wiki (Systems42 dashboard, draft)
+- [[DT-003-systems42-derivative]] Systems42 derivative (Systems42 dashboard, draft)
+- [[DT-004-projection]] Projection (Systems42 dashboard, draft)
+- [[DT-005-area]] Area (Systems42 dashboard, draft)
+- [[DT-006-section]] Section (Systems42 dashboard, draft)
+- [[DT-007-release]] Release (Systems42 dashboard, draft)
+- [[DT-008-pinned-release]] Pinned release (Systems42 dashboard, draft)
+- [[DT-009-brand]] Brand (Systems42 dashboard, draft)
+- [[DT-010-session]] Session (Systems42 dashboard, draft)
+- [[DT-011-keyholder]] Keyholder (Systems42 dashboard, draft)
+- [[DT-012-view]] View (Systems42 dashboard, draft)
+- [[DT-013-reference-implementation]] Reference implementation (Systems42 dashboard, draft)
+- [[DT-014-parity]] Parity (Systems42 dashboard, draft)
+- [[DT-015-markdown]] Markdown (Format and method, draft)
+- [[DT-016-frontmatter]] Frontmatter (Format and method, draft)
+- [[DT-017-wikilink]] Wikilink (Format and method, draft)
+- [[DT-018-metamodel]] Metamodel (Format and method, draft)
+- [[DT-019-systems42]] Systems42 (Format and method, draft)
+- [[DT-020-req42]] req42 (Format and method, draft)
+- [[DT-021-arc42]] arc42 (Format and method, draft)
+- [[DT-022-llm-wiki]] LLM wiki (Format and method, draft)
+- [[DT-023-mermaid]] Mermaid (Format and method, draft)
+- [[DT-024-obsidian]] Obsidian (Technology, draft)
+- [[DT-025-docker]] Docker (Technology, draft)
+- [[DT-026-podman]] Podman (Technology, draft)
+- [[DT-027-uv]] uv (Technology, draft)
+- [[DT-028-flask]] Flask (Technology, draft)
 
 
 ## Goals
@@ -217,4 +245,6 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-046-grilling-session-on-modularizing-the-solution-strategy]] Grilling session on modularizing the solution strategy (interview)
 - [[SRC-047-install-the-app-with-homebrew]] Install the app with Homebrew (document)
 - [[SRC-048-grilling-session-on-installing-with-homebrew]] Grilling session on installing with Homebrew (interview)
+- [[SRC-049-domain-term-obsidian]] Domain term: Obsidian (document)
+- [[SRC-050-domain-terms-of-the-dashboard]] Domain terms of the dashboard (document)
 - [[SRC-049-grilling-session-on-the-mac-native-app]] Grilling session on the Mac-native app (interview)
