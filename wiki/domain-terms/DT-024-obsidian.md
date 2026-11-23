@@ -5,7 +5,7 @@ title: Obsidian
 status: draft
 created: 2026-11-22
 updated: 2026-11-22
-sources: ["[[SRC-049-domain-term-obsidian]]"]
+sources: ["[[SRC-051-domain-term-obsidian]]"]
 related: ["[[DT-015-markdown]]", "[[DT-017-wikilink]]", "[[DT-002-systems42-wiki]]", "[[DT-001-dashboard]]"]
 tags: [domain-term]
 aliases: []

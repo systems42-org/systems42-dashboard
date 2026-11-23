@@ -33,6 +33,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[DT-026-podman]] Podman (Technology, draft)
 - [[DT-027-uv]] uv (Technology, draft)
 - [[DT-028-flask]] Flask (Technology, draft)
+- [[DT-029-yoda]] Yoda (Systems42 dashboard, draft)
 
 
 ## Goals
@@ -245,6 +246,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-046-grilling-session-on-modularizing-the-solution-strategy]] Grilling session on modularizing the solution strategy (interview)
 - [[SRC-047-install-the-app-with-homebrew]] Install the app with Homebrew (document)
 - [[SRC-048-grilling-session-on-installing-with-homebrew]] Grilling session on installing with Homebrew (interview)
-- [[SRC-049-domain-term-obsidian]] Domain term: Obsidian (document)
 - [[SRC-050-domain-terms-of-the-dashboard]] Domain terms of the dashboard (document)
+- [[SRC-051-domain-term-obsidian]] Domain term: Obsidian (document)
+- [[SRC-052-closing-round-on-the-domain-terms]] Closing round on the domain terms (interview)
 - [[SRC-049-grilling-session-on-the-mac-native-app]] Grilling session on the Mac-native app (interview)
