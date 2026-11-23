@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Builds a release binary and wraps it in build/Systems42 Dashboard Native.app.
+# The app is signed ad hoc, not notarized.
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -7,8 +8,12 @@ version="$(tr -d '[:space:]' < "$here/../dashboard/VERSION")"
 name="Systems42 Dashboard Native"
 app="$here/build/$name.app"
 
-swift build --package-path "$here" -c release
-bin="$(swift build --package-path "$here" -c release --show-bin-path)/Systems42Dashboard"
+# S42_UNIVERSAL=1 builds for Apple Silicon and Intel in one binary.
+flags=(-c release)
+if [[ "${S42_UNIVERSAL:-}" == "1" ]]; then flags+=(--arch arm64 --arch x86_64); fi
+
+swift build --package-path "$here" "${flags[@]}"
+bin="$(swift build --package-path "$here" "${flags[@]}" --show-bin-path)/Systems42Dashboard"
 
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS"
@@ -36,4 +41,6 @@ cat > "$app/Contents/Info.plist" <<PLIST
 </dict>
 </plist>
 PLIST
+# An ad-hoc signature seals the bundle, so an Apple Silicon Mac starts it.
+codesign --force --sign - "$app"
 echo "Built $app"
