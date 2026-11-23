@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import Systems42Kit
+import WebKit
 
 /// What a diagram view is doing. The words of a message are the reader's: plain, no error codes.
 enum DiagramState: Equatable {
@@ -24,6 +25,8 @@ enum DiagramState: Equatable {
     @ObservationIgnored private var request = 0
     @ObservationIgnored private var shown: Shown?
     @ObservationIgnored var onSelect: ((String) -> Void)?
+    /// The window's budget. A retired web view counts against it until it is gone.
+    @ObservationIgnored var budget: DiagramBudget?
     /// Opens the web view. Tests give their own folder, or none.
     @ObservationIgnored private let folder: () -> URL?
     @ObservationIgnored private let timeout: Duration
@@ -104,6 +107,13 @@ enum DiagramState: Equatable {
             task = opening
         } else {
             let folder = folder(), timeout = timeout
+            // Retired web views that still run are not stacked: wait, within a bound, until one is gone.
+            if let budget {
+                let started = ContinuousClock.now
+                while budget.retiredAlive >= budget.limit, ContinuousClock.now - started < timeout {
+                    try? await Task.sleep(for: .milliseconds(100))
+                }
+            }
             task = Task { await DiagramPage.open(folder: folder, timeout: timeout) }
             opening = task
         }
@@ -112,6 +122,7 @@ enum DiagramState: Equatable {
         opening = nil
         guard let opened else { return nil }
         opened.onSelect = { [weak self] id in self?.onSelect?(id) }
+        opened.onRetire = { [weak self] web in self?.budget?.noteRetired(web) }
         opened.onTerminate = { [weak self, weak opened] in
             guard let self, self.page === opened else { return }
             self.page = nil
@@ -129,6 +140,47 @@ enum DiagramState: Equatable {
     static let shared = DiagramBudget()
     let limit: Int
     private var holders: [DiagramSlot] = []
+    /// Web views of retired pages, kept until their process answers again. A web view that is released
+    /// while its script runs leaves a busy process behind, so the budget holds it, counts it and releases it
+    /// once it is idle (or after `quarantineLimit`).
+    private var retired: [Quarantined] = []
+    private var watching: Task<Void, Never>?
+    /// The longest a retired web view is held.
+    static let quarantineLimit = Duration.seconds(120)
+
+    @MainActor private final class Quarantined {
+        let view: WKWebView
+        let since = ContinuousClock.now
+        var probing = false
+        var idle = false
+        init(_ view: WKWebView) { self.view = view }
+    }
+
+    func noteRetired(_ view: WKWebView) {
+        retired.append(Quarantined(view))
+        if watching == nil {
+            watching = Task { [weak self] in
+                while let self, !Task.isCancelled, self.watch() {
+                    try? await Task.sleep(for: .milliseconds(250))
+                }
+                self?.watching = nil
+            }
+        }
+    }
+
+    /// Asks each retired web view for a trivial answer, and lets go of the ones that gave it. True while some remain.
+    private func watch() -> Bool {
+        for item in retired where !item.probing {
+            item.probing = true
+            item.view.evaluateJavaScript("1") { _, _ in item.idle = true }
+        }
+        let now = ContinuousClock.now
+        retired.removeAll { $0.idle || now - $0.since > Self.quarantineLimit }
+        return !retired.isEmpty
+    }
+
+    /// Retired web views that are not gone yet.
+    var retiredAlive: Int { retired.count }
 
     init(limit: Int = DiagramLimits.mostLiveViews) {
         self.limit = limit
@@ -139,7 +191,7 @@ enum DiagramState: Equatable {
     /// Takes a place when one is free.
     func acquire(_ slot: DiagramSlot) -> Bool {
         if holders.contains(where: { $0 === slot }) { return true }
-        guard holders.count < limit else { return false }
+        guard holders.count + retiredAlive < limit else { return false }
         holders.append(slot)
         slot.isLive = true
         return true
@@ -244,6 +296,7 @@ public struct DiagramView: View {
         .onChange(of: slot.isLive) { _, live in if !live { model.close() } }
         .task(id: Run(content: content, dark: scheme == .dark, colours: frameColours, attempt: attempt, live: slot.isLive)) {
             guard slot.isLive else { return }
+            model.budget = budget
             model.onSelect = { id in if let node = content.node(id: id) { select(node) } }
             await model.show(content, dark: scheme == .dark, frameColours: frameColours)
         }

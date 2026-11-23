@@ -34,6 +34,9 @@ import WebKit
     var renderTimeout = DiagramLimits.renderTimeout
     /// False once the web content process died or a draw timed out. A page that is not alive draws nothing more.
     private(set) var isAlive = true
+    private var retired = false
+    /// Called with the web view of a page that was retired, so the budget can count it until it is gone.
+    var onRetire: ((WKWebView) -> Void)?
     /// Called once when the web content process died.
     var onTerminate: (() -> Void)?
     /// Called with the id of a clicked node that the diagram on show has.
@@ -48,31 +51,31 @@ import WebKit
     /// All diagram web views of the app share one data store, so they can share a web content process.
     /// The store is non-persistent: it keeps nothing.
     private static let dataStore = WKWebsiteDataStore.nonPersistent()
-    /// The identifier of a rule list: a fixed name, a version and a digest of the folder, so the same
-    /// installation finds its list again in every launch and a changed rule bumps `rulesVersion`.
-    static let rulesVersion = 1
-
-    static func ruleListIdentifier(for folder: URL) -> String {
-        let digest = SHA256.hash(data: Data(folder.standardizedFileURL.path.utf8)).prefix(8).map { String(format: "%02x", $0) }.joined()
-        return "org.systems42.diagram-rules.v\(rulesVersion).\(digest)"
+    /// The identifier of a rule list: a fixed name and a digest of the rules themselves, so a list that is
+    /// found by this name holds exactly these rules. Rules that change get a new name, and no old list is reused.
+    static func ruleListIdentifier(forRules json: String) -> String {
+        let digest = SHA256.hash(data: Data(json.utf8)).prefix(16).map { String(format: "%02x", $0) }.joined()
+        return "org.systems42.diagram-rules.\(digest)"
     }
 
     /// Opens the web view on the bundled page. Nil when the files are missing or the rules do not compile.
     static func open(folder: URL? = DiagramAssets.folder, timeout: Duration = DiagramLimits.renderTimeout) async -> DiagramPage? {
         guard let folder, let rules = await compiledRules(allowing: folder) else { return nil }
         let page = DiagramPage(folder: folder, rules: rules)
+        guard await page.load() else { return nil }
+        // The first load has the standard bound. `timeout` is the bound of a draw.
         page.renderTimeout = timeout
-        return await page.load() ? page : nil
+        return page
     }
 
     /// The content rule list that blocks every request but the files of the folder. Looked up first, compiled once.
     static func compiledRules(allowing folder: URL) async -> WKContentRuleList? {
         guard let json = try? DiagramBridge.ruleListJSON(allowing: folder) else { return nil }
-        let identifier = ruleListIdentifier(for: folder)
+        let identifier = ruleListIdentifier(forRules: json)
         if let known = ruleLists[identifier] { return known }
         let store = WKContentRuleListStore.default()
         let found = try? await store?.contentRuleList(forIdentifier: identifier)
-        // A stored list was compiled from the same folder and version, so it holds the same rules.
+        // The name holds a digest of the rules, so a stored list under it holds these rules.
         if let found { ruleLists[identifier] = found; return found }
         guard let compiled = try? await store?.compileContentRuleList(forIdentifier: identifier, encodedContentRuleList: json) else { return nil }
         ruleLists[identifier] = compiled
@@ -119,7 +122,7 @@ import WebKit
         guard isAlive else { return .crashed }
         guard loaded, let argument = try? DiagramBridge.argument(for: DiagramBridge.payload(for: content, dark: dark, frameColours: frameColours))
         else { return .failed }
-        let result = await raced(argument)
+        let result = await raced("return await S42Diagram.render(payload);", arguments: ["payload": argument], limit: renderTimeout)
         switch result {
         case .timeout:
             retire()
@@ -151,8 +154,11 @@ import WebKit
         }
     }
 
-    private func raced(_ argument: Any) async -> Raced {
-        let limit = renderTimeout
+    /// Runs a script and takes the first of two things: its answer (a string), or the end of the time bound.
+    /// The call is made with a completion handler that holds the race and not the web view, and nothing
+    /// awaits it. So when the page is retired and released, the web view can go away while the script
+    /// still runs, and WebKit ends its process. An `await` on the call would keep the web view alive.
+    private func raced(_ script: String, arguments: [String: Any], limit: Duration) async -> Raced {
         let web = webView
         return await withCheckedContinuation { (continuation: CheckedContinuation<Raced, Never>) in
             let race = Race(continuation)
@@ -160,15 +166,14 @@ import WebKit
                 try? await Task.sleep(for: limit)
                 race.finish(.timeout)
             }
-            Task { @MainActor in
-                do {
-                    let value = try await web.callAsyncJavaScript(
-                        "return await S42Diagram.render(payload);", arguments: ["payload": argument], in: nil, contentWorld: .page)
+            web.callAsyncJavaScript(script, arguments: arguments, in: nil, in: .page) { result in
+                switch result {
+                case .success(let value):
                     race.finish(.value(value as? String))
-                } catch {
+                case .failure(let error):
                     // An error of the script is a failed draw. Any other error means the web content is gone.
-                    let found = error as NSError
                     // (A dead process answers "result of an unsupported type".)
+                    let found = error as NSError
                     let ofScript = found.domain == WKError.errorDomain && found.code == WKError.javaScriptExceptionOccurred.rawValue
                     race.finish(ofScript ? .failed : .terminated)
                 }
@@ -176,10 +181,17 @@ import WebKit
         }
     }
 
-    /// The page cannot draw any more: the process died or was too slow. The owner opens a new one.
+    /// The page cannot draw any more: the process died or was too slow. The owner drops the page. A web view
+    /// whose script still runs is not ended by its release (the process stays busy until the script ends, WebKit
+    /// has no public call to stop it), so `onRetire` hands it to the budget, which keeps it and counts it until it answers again.
     private func retire() {
+        guard isAlive || !retired else { return }
         isAlive = false
+        retired = true
         webView.stopLoading()
+        webView.navigationDelegate = nil
+        webView.removeFromSuperview()
+        onRetire?(webView)
     }
 
     /// Forgets the nodes of the diagram on show, so no click is accepted.
@@ -189,8 +201,13 @@ import WebKit
     }
 
     /// Runs a script the tests give, with arguments. Never used with wiki text.
-    func evaluate(_ body: String, arguments: [String: Any] = [:]) async -> Any? {
-        try? await webView.callAsyncJavaScript(body, arguments: arguments, in: nil, contentWorld: .page)
+    /// The answer is read back as JSON. The wait is bounded.
+    func evaluate(_ body: String, arguments: [String: Any] = [:], limit: Duration = .seconds(30)) async -> Any? {
+        let wrapped = "const answer = await (async () => { \(body)\n })(); return JSON.stringify(answer === undefined ? null : answer);"
+        guard case .value(let text?) = await raced(wrapped, arguments: arguments, limit: limit),
+              let data = text.data(using: .utf8) else { return nil }
+        let answer = try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
+        return answer is NSNull ? nil : answer
     }
 
     fileprivate func receive(_ body: Any) {

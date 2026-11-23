@@ -20,6 +20,9 @@ public enum DiagramLimits {
     /// The most nodes and edges of a graph.
     public static let mostGraphNodes = 1_500
     public static let mostGraphEdges = 4_000
+    /// The most levels of nested subgraphs. Layout time grows faster than the depth: 400 levels took 3 s and
+    /// 1,200 took 13 s, and a draw that is too slow cannot be stopped inside the web view.
+    public static let mostSubgraphDepth = 25
     /// How long one draw may take. A diagram that needs longer shows a message, and its web view is dropped.
     public static let renderTimeout = Duration.seconds(10)
     /// The most web views that live at once in one window. The others show a placeholder with the text list.
@@ -65,7 +68,7 @@ struct DiagramContent: Equatable, Sendable {
             let split = Self.split(text)
             mermaidText = split.text
             nodes = allowsLinks ? split.nodes : []
-            tooLarge = text.utf8.count > DiagramLimits.mostMermaidBytes
+            tooLarge = text.utf8.count > DiagramLimits.mostMermaidBytes || Self.subgraphDepth(of: text) > DiagramLimits.mostSubgraphDepth
         case .graph(let graph, let layout):
             mermaidText = ""
             nodes = allowsLinks ? (layout == DiagramLayout.metamodel ? Self.types(of: graph) : Self.nodes(of: graph)) : []
@@ -96,14 +99,27 @@ struct DiagramContent: Equatable, Sendable {
         return (kept.joined(separator: "\n"), nodes)
     }
 
+    /// `click` followed by any whitespace: Mermaid takes a tab as the separator too.
+    /// The deepest nesting of `subgraph` ... `end` in the text, from a linear scan of its lines.
+    static func subgraphDepth(of text: String) -> Int {
+        var depth = 0, deepest = 0
+        for line in text.split(separator: "\n") {
+            let word = line.drop { $0 == " " || $0 == "\t" }.prefix { !$0.isWhitespace && $0 != ";" }.lowercased()
+            if word == "subgraph" { depth += 1; deepest = max(deepest, depth) } else if word == "end", depth > 0 { depth -= 1 }
+        }
+        return deepest
+    }
+
     private static func isClick(_ statement: Substring) -> Bool {
-        statement.lowercased().hasPrefix("click ")
+        let word = statement.prefix(5)
+        guard word.lowercased() == "click" else { return false }
+        return statement.dropFirst(5).first.map(\.isWhitespace) ?? false
     }
 
     /// The node of a line `click <id> "<url>"`, when the url is a page reference of the app.
     private static func node(of line: Substring) -> Node? {
-        let rest = line.dropFirst(6)
-        guard let space = rest.firstIndex(of: " "), let open = rest.firstIndex(of: "\""),
+        let rest = line.dropFirst(5).drop { $0.isWhitespace }
+        guard let space = rest.firstIndex(where: \.isWhitespace), let open = rest.firstIndex(of: "\""),
               let close = rest.lastIndex(of: "\""), open < close else { return nil }
         let id = String(rest[..<space])
         let target = String(rest[rest.index(after: open)..<close])

@@ -20,17 +20,41 @@ private func flow(_ label: String) -> DiagramContent {
     DiagramContent(.mermaid("flowchart TB\n  A[\"\(label)\"] --> B[\"other\"]"))
 }
 
-/// Kills the web content process of a web view, as a crash does. WebKit has no public call for its pid, so the tests read it by key.
+/// The process id of the web content process, when this macOS has the key. WebKit has no public call for it.
+@MainActor private func processID(of web: WKWebView) -> Int32? {
+    guard web.responds(to: NSSelectorFromString("_webProcessIdentifier")) else { return nil }
+    return (web.value(forKey: "_webProcessIdentifier") as? Int32).flatMap { $0 > 1 ? $0 : nil }
+}
+
+/// Kills the web content process of a web view, as a crash does.
 @MainActor private func kill(_ page: DiagramPage) {
-    if let pid = page.webView.value(forKey: "_webProcessIdentifier") as? Int32, pid > 1 {
+    if let pid = processID(of: page.webView) {
         Darwin.kill(pid, SIGKILL)
     } else {
-        Issue.record("no web process identifier")
+        Issue.record("this macOS has no _webProcessIdentifier, the test cannot kill the process")
     }
+}
+
+private func isGone(_ pid: Int32) -> Bool {
+    Darwin.kill(pid, 0) != 0 && errno == ESRCH
+}
+
+/// A chain of 400 boxes: the layout takes far longer than a millisecond.
+private let slowToDraw = DiagramContent(.mermaid("flowchart TB\n" + (0..<400).map { "  N\($0) --> N\($0 + 1)" }.joined(separator: "\n")))
+
+private func nested(_ depth: Int) -> String {
+    var text = "flowchart TB\n"
+    for n in 0..<depth { text += "subgraph s\(n)\n" }
+    return text + "A\n" + String(repeating: "end\n", count: depth)
 }
 
 @MainActor private func drawnText(_ page: DiagramPage?) async -> String {
     await page?.evaluate("return document.documentElement.textContent") as? String ?? ""
+}
+
+@MainActor private final class WeakView {
+    weak var view: WKWebView?
+    init(_ view: WKWebView) { self.view = view }
 }
 
 @MainActor @Suite struct DiagramRobustnessTests {
@@ -63,17 +87,26 @@ private func flow(_ label: String) -> DiagramContent {
     }
 
     @Test func aRenderThatTakesTooLongEndsWithAMessage() async throws {
-        // 1,200 nested subgraphs took 13 s in Mermaid.
-        var text = "flowchart TB\n"
-        for n in 0..<1_200 { text += "subgraph s\(n)\n" }
-        text += "A\n" + String(repeating: "end\n", count: 1_200)
-        #expect(!DiagramContent(.mermaid(text)).tooLarge)
-        let model = DiagramViewModel(timeout: .seconds(3))
-        let started = ContinuousClock.now
-        await model.show(DiagramContent(.mermaid(text)), dark: false)
+        // A bound no draw can meet: the page is retired and the message says why.
+        let model = DiagramViewModel(timeout: .milliseconds(1))
+        await model.show(slowToDraw, dark: false)
         #expect(model.state == .message(DiagramState.tookTooLong))
-        #expect(ContinuousClock.now - started < limit, "the 3 s bound held, the rest is a loaded machine")
         #expect(model.page == nil)
+        // The next show opens a new page.
+        let again = DiagramViewModel(timeout: .seconds(10))
+        await again.show(flow("FAST"), dark: false)
+        #expect(again.state == .drawn)
+    }
+
+    @Test func deeplyNestedSubgraphsAreRefusedBeforeTheyHangAProcess() {
+        // 400 nested levels took 3 s in Mermaid, 1,200 took 13 s, 2,500 ran for minutes: a draw that cannot be stopped.
+        for depth in [DiagramLimits.mostSubgraphDepth + 1, 400, 1_200, 2_500] {
+            #expect(DiagramContent(.mermaid(nested(depth))).tooLarge, "\(depth)")
+        }
+        #expect(!DiagramContent(.mermaid(nested(DiagramLimits.mostSubgraphDepth))).tooLarge)
+        // Flat subgraphs are not nesting, and `end` words in other places do not count.
+        let flat = "flowchart TB\n" + String(repeating: "subgraph a\nA\nend\n", count: 100)
+        #expect(!DiagramContent(.mermaid(flat)).tooLarge)
     }
 
     // MARK: Requests supersede each other
@@ -203,15 +236,60 @@ private func flow(_ label: String) -> DiagramContent {
 
     @Test func theRuleListKeepsItsNameAcrossLaunches() async throws {
         let folder = try #require(DiagramAssets.folder)
-        let name = DiagramPage.ruleListIdentifier(for: folder)
-        #expect(name == DiagramPage.ruleListIdentifier(for: folder))
-        #expect(name.hasPrefix("org.systems42.diagram-rules.v\(DiagramPage.rulesVersion)."))
-        #expect(DiagramPage.ruleListIdentifier(for: folder.appending(path: "x")) != name)
-        let found = try await WKContentRuleListStore.default()?.contentRuleList(forIdentifier: name)
-        _ = await DiagramPage.compiledRules(allowing: folder)
-        let after = try await WKContentRuleListStore.default()?.contentRuleList(forIdentifier: name)
-        #expect(after != nil)
-        _ = found
+        let json = try DiagramBridge.ruleListJSON(allowing: folder)
+        let name = DiagramPage.ruleListIdentifier(forRules: json)
+        #expect(name == DiagramPage.ruleListIdentifier(forRules: json))
+        #expect(name.hasPrefix("org.systems42.diagram-rules."))
+        // Other rules, another folder or a rule added, give another name: an old stored list is never reused for them.
+        let other = try DiagramBridge.ruleListJSON(allowing: folder.appending(path: "x"))
+        #expect(DiagramPage.ruleListIdentifier(forRules: other) != name)
+        #expect(DiagramPage.ruleListIdentifier(forRules: json + " ") != name)
+        // The list is stored under that name and found there.
+        #expect(await DiagramPage.compiledRules(allowing: folder) != nil)
+        let store = try #require(WKContentRuleListStore.default())
+        let stored = try? await store.contentRuleList(forIdentifier: name)
+        #expect(stored != nil)
+        // A name nobody compiled has no list: the lookup fails.
+        let missing = try? await store.contentRuleList(forIdentifier: DiagramPage.ruleListIdentifier(forRules: other))
+        #expect(missing == nil)
+    }
+
+    // MARK: A retired page ends its process
+
+    @Test func aTimedOutDrawEndsItsProcess() async throws {
+        let budget = DiagramBudget(limit: 4)
+        var pids: [Int32] = []
+        var views: [WeakView] = []
+        for _ in 0..<3 {
+            var page = await DiagramPage.open(timeout: .milliseconds(1))
+            page?.onRetire = { budget.noteRetired($0) }
+            if let pid = page.flatMap({ processID(of: $0.webView) }) { pids.append(pid) }
+            if let web = page?.webView { views.append(WeakView(web)) }
+            #expect(await page?.show(slowToDraw, dark: false) == .timedOut)
+            page = nil
+        }
+        guard pids.count == 3 else { Issue.record("no process ids on this macOS"); return }
+        // The retired pages count against the budget until their process answers, then they are released.
+        await until("the budget to let go") { budget.retiredAlive == 0 }
+        await until("the web views to be released") { views.allSatisfy { $0.view == nil } }
+        await until("the processes to end") { pids.allSatisfy(isGone) }
+        #expect(pids.allSatisfy(isGone))
+    }
+
+    @Test func aRetiredViewCountsAgainstTheBudgetUntilItAnswers() async throws {
+        let budget = DiagramBudget(limit: 1)
+        let web = WKWebView(frame: .zero)
+        budget.noteRetired(web)
+        #expect(budget.retiredAlive == 1)
+        #expect(!budget.acquire(DiagramSlot()), "a retired view that is not gone holds the place")
+        await until("the view to answer") { budget.retiredAlive == 0 }
+        #expect(budget.acquire(DiagramSlot()))
+    }
+
+    @Test func aClickWithATabIsCut() {
+        let content = DiagramContent(.mermaid("flowchart TB\n  A-->B\n  click\tB href \"index.html\"\n  C-->D; click\tC href \"index.html\"\n  CLICK\u{00A0}D \"x\""))
+        #expect(!content.mermaidText.lowercased().contains("click"))
+        #expect(content.mermaidText == "flowchart TB\n  A-->B\n  C-->D")
     }
 
     // MARK: Layers
