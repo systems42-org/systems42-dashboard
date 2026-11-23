@@ -11,7 +11,7 @@ struct TourPanel: View {
             let position = "Step \(tour.current + 1) of \(tour.steps.count)"
             VStack(alignment: .leading, spacing: 8) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("\(position): \(stop.step.title)").font(.headline)
+                    Text("\(position): \(stop.title)").font(.headline)
                     Text(stop.step.text)
                     if let projection = stop.projection {
                         Text("Projection offered here: \(projection)").foregroundStyle(.secondary)
@@ -37,7 +37,7 @@ struct TourPanel: View {
                     }
                     Spacer()
                     Button("Stop") { tour.stop() }
-                        .keyboardShortcut(.escape, modifiers: [.command, .option])
+                        .keyboardShortcut(.cancelAction)
                         .accessibilityLabel("Stop the tour")
                 }
             }

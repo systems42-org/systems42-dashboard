@@ -9,11 +9,13 @@ import Systems42Kit
     /// A step with what the wiki offers for it.
     public struct Stop: Identifiable, Equatable, Sendable {
         public let step: TourStep
+        /// The title shown for the step: the section's title, the vision page's title, or the step's own.
+        public let title: String
         /// The section that holds the step's type, nil for a step with no type.
         public let section: Section.ID?
         /// The page the step shows, nil for a step with no type.
         public let page: PageRef?
-        /// The step's projection, only when the metamodel has it.
+        /// The label of the step's projection, only when the metamodel has the projection and a label for it.
         public let projection: String?
         public var id: String { step.id }
     }
@@ -104,13 +106,9 @@ import Systems42Kit
         isActive = false
         guard let session, let before else { return }
         self.before = nil
-        if let page = before.page, session.store.page(page) != nil {
-            session.select(page: page)
-        } else if let section = before.section, session.metamodel.sections.contains(where: { $0.id == section }) {
-            session.select(section: section)
-        } else {
-            session.clearSelection()
-        }
+        // A page that is gone shows its section, a section that is gone shows nothing.
+        let pageStays = before.page.map { session.store.page($0) != nil } ?? false
+        session.showUnrecorded(section: before.section, page: pageStays ? before.page : nil)
     }
 
     /// Shows the current step again, after the reader looked around.
@@ -138,34 +136,36 @@ import Systems42Kit
 
     private func show() {
         guard let session, let stop = currentStop else { return }
-        if let page = stop.page {
-            session.select(page: page)
-        } else if let section = stop.section {
-            session.select(section: section)
-        }
+        session.showUnrecorded(section: stop.section, page: stop.page)
     }
 
     // MARK: Resolving
 
     private static func resolve(_ steps: [TourStep], in session: WikiSession) -> [Stop] {
         let metamodel = session.metamodel
-        let visionTitle = session.orientation?.title
+        let vision = session.orientation
         var stops: [Stop] = []
         for step in steps {
+            if step.showsVision {
+                guard let vision, session.store.page(vision.ref) != nil,
+                      let section = metamodel.sections.first(where: { $0.folders.contains(vision.ref.folder) }) else { continue }
+                stops.append(Stop(step: step, title: vision.title, section: section.id, page: vision.ref, projection: nil))
+                continue
+            }
             guard let typeName = step.showsType else {
-                stops.append(Stop(step: step, section: nil, page: nil, projection: nil))
+                stops.append(Stop(step: step, title: step.title ?? "", section: nil, page: nil, projection: nil))
                 continue
             }
             guard let type = metamodel.type(named: typeName),
                   let folder = type.folder.split(separator: "/").last.map(String.init),
                   let section = metamodel.sections.first(where: { $0.types.contains(typeName) }) else { continue }
             let pages = session.store.pages(in: folder)
-            // The vision page leads where the step's type holds it.
-            guard let page = pages.first(where: { $0.title == visionTitle }) ?? pages.first else { continue }
-            let projection = step.showsProjection.flatMap { name in
-                metamodel.projections.contains { $0.name == name } ? name : nil
-            }
-            stops.append(Stop(step: step, section: section.id, page: page.ref, projection: projection))
+            // An open issue leads in the issues step. The vision page is not shown twice.
+            guard let page = pages.first(where: Metamodel.isOpenIssue)
+                    ?? pages.first(where: { $0.ref != vision?.ref }) ?? pages.first else { continue }
+            let label = step.showsProjection.map { metamodel.label(ofProjection: $0) } ?? ""
+            stops.append(Stop(step: step, title: section.title, section: section.id, page: page.ref,
+                              projection: label.isEmpty ? nil : label))
         }
         return stops
     }

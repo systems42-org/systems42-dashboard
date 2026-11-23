@@ -52,7 +52,7 @@ private func folder(of type: String, in s: WikiSession) -> String? {
             let tour = TourModel(session: s)
             #expect(!tour.steps.isEmpty, "\(name)")
             for step in tour.steps {
-                #expect(step.showsType == nil ? step.id == "tour-method" : !pages(of: step, in: s).isEmpty, "\(name) \(step.id)")
+                #expect(step.showsType == nil ? (step.id == "tour-method" || step.showsVision) : !pages(of: step, in: s).isEmpty, "\(name) \(step.id)")
                 #expect(!step.text.isEmpty)
             }
         }
@@ -85,12 +85,119 @@ private func folder(of type: String, in s: WikiSession) -> String? {
         }
     }
 
-    @Test func theVisionPageComesFirstInItsStep() async throws {
+    @Test func theFirstStepShowsTheVisionPage() async throws {
         let s = try await session("basic")
         let tour = TourModel(session: s)
         tour.start()
         let ref = try #require(s.selectedPage)
-        #expect(s.store.page(ref)?.title == s.orientation?.title)
+        #expect(tour.steps[0].id == "tour-vision")
+        #expect(ref == s.orientation?.ref)
+        #expect(tour.currentStop?.title == s.orientation?.title)
+        tour.next()
+        #expect(tour.steps[1].id == "tour-goal")
+        #expect(s.selectedPage != ref)
+        #expect(s.selectedPage?.folder == ref.folder)
+    }
+
+    @Test func noVisionMeansNoVisionStep() async throws {
+        let s = try await session("arc42-views")
+        #expect(s.orientation == nil)
+        #expect(!TourModel(session: s).steps.map(\.id).contains("tour-vision"))
+    }
+
+    @Test func titlesAreTheSidebarTitlesOfTheSections() async throws {
+        let s = try await session("basic")
+        let tour = TourModel(session: s)
+        let titles = Dictionary(s.sidebar.flatMap(\.rows).map { ($0.section.id, $0.section.title) }, uniquingKeysWith: { a, _ in a })
+        var checked = 0
+        for stop in tour.stops where stop.step.showsType != nil {
+            #expect(stop.title == titles[stop.section ?? ""], "\(stop.id)")
+            checked += 1
+        }
+        #expect(checked > 3)
+        #expect(tour.stops.last?.title == "How this wiki came about")
+        #expect(TourSteps.all.filter { $0.title != nil }.map(\.id) == ["tour-method"])
+    }
+
+    @Test func theIssuesStepShowsAnOpenIssueFirst() async throws {
+        let copy = try Fixture.tempCopy("basic")
+        defer { try? FileManager.default.removeItem(at: copy.deletingLastPathComponent()) }
+        let issues = copy.appending(path: "wiki/issues")
+        try FileManager.default.createDirectory(at: issues, withIntermediateDirectories: true)
+        func issue(_ n: Int, _ status: String) -> String {
+            "---\nid: ISS-00\(n)\ntype: issue\ntitle: Issue \(n)\nstatus: \(status)\n---\n\nBody.\n"
+        }
+        try issue(1, "resolved").write(to: issues.appending(path: "ISS-001-a.md"), atomically: true, encoding: .utf8)
+        try issue(2, "open").write(to: issues.appending(path: "ISS-002-b.md"), atomically: true, encoding: .utf8)
+        let s = await WikiSession.open(try Preflight.open(copy))
+        let stop = try #require(TourModel(session: s).stops.first { $0.id == "tour-issue" })
+        #expect(stop.page?.stem == "ISS-002-b")
+        try FileManager.default.removeItem(at: issues.appending(path: "ISS-002-b.md"))
+        let after = await WikiSession.open(try Preflight.open(copy))
+        #expect(try #require(TourModel(session: after).stops.first { $0.id == "tour-issue" }).page?.stem == "ISS-001-a")
+    }
+
+    @Test func theTourDoesNotAddHistory() async throws {
+        let s = try await session("basic")
+        let a = try #require(s.store.pages(in: "functional-requirements").first?.ref)
+        let b = try #require(s.store.pages(in: "functional-requirements").dropFirst().first?.ref)
+        s.select(page: a)
+        s.select(page: b)
+        let count = s.historyCount
+        let tour = TourModel(session: s)
+        tour.start()
+        tour.next(); tour.next(); tour.next()
+        tour.previous()
+        tour.returnToStep()
+        tour.stop()
+        #expect(s.historyCount == count)
+        #expect(s.selectedPage == b)
+        s.back()
+        #expect(s.selectedPage == a)
+    }
+
+    @Test func aReadersClickDuringTheTourAddsOneEntry() async throws {
+        let s = try await session("basic")
+        let a = try #require(s.store.pages(in: "functional-requirements").first?.ref)
+        s.select(page: a)
+        let count = s.historyCount
+        let tour = TourModel(session: s)
+        tour.start()
+        tour.next()
+        let other = try #require(s.store.pages(in: "decisions").first?.ref)
+        s.select(page: other)
+        #expect(s.historyCount == count + 1)
+        tour.next()
+        #expect(s.historyCount == count + 1)
+        s.back()
+        #expect(s.selectedPage == a)
+    }
+
+    @Test func clickingThePreTourPageDuringTheTourStillShowsIt() async throws {
+        let s = try await session("basic")
+        let a = try #require(s.store.pages(in: "functional-requirements").first?.ref)
+        s.select(page: a)
+        let tour = TourModel(session: s)
+        tour.start()
+        s.select(page: a)
+        #expect(s.selectedPage == a)
+    }
+
+    @Test func twoSessionsKeepTheirOwnTours() async throws {
+        let one = try await session("basic")
+        let two = try await session("arc42-views")
+        let a = one.tour, b = two.tour
+        a.start(); b.start()
+        a.next(); a.next()
+        b.next()
+        #expect(a.current == 2)
+        #expect(b.current == 1)
+        let pageB = two.selectedPage
+        a.next()
+        #expect(two.selectedPage == pageB)
+        b.stop()
+        #expect(a.isActive)
+        #expect(!b.isActive)
     }
 
     @Test func previousAtTheStartStays() async throws {
@@ -196,12 +303,15 @@ private func folder(of type: String, in s: WikiSession) -> String? {
         let s = await WikiSession.open(try Preflight.open(copy))
         let tour = TourModel(session: s)
         tour.start()
-        tour.next()
-        tour.next()
-        let id = tour.steps[tour.current].id
+        while tour.steps[tour.current].id != "tour-requirement" { tour.next() }
+        let before = tour.current
+        // An earlier step goes: the stakeholders have no page after the reload.
+        try FileManager.default.removeItem(at: copy.appending(path: "wiki/stakeholders"))
         s.replace(with: LoadedWiki(root: try Preflight.open(copy)))
         tour.followWiki()
-        #expect(tour.steps[tour.current].id == id)
+        #expect(!tour.steps.map(\.id).contains("tour-stakeholder"))
+        #expect(tour.steps[tour.current].id == "tour-requirement")
+        #expect(tour.current == before - 1)
         #expect(tour.isActive)
     }
 
@@ -219,7 +329,7 @@ private func folder(of type: String, in s: WikiSession) -> String? {
         try FileManager.default.removeItem(at: copy.appending(path: "wiki/decisions"))
         s.replace(with: LoadedWiki(root: try Preflight.open(copy)))
         tour.followWiki()
-        #expect(!tour.steps.map(\.id).contains("tour-decisions"))
+        #expect(!tour.steps.map(\.id).contains("tour-decision"))
         #expect(tour.steps.count == ids.count - 1)
         #expect(tour.steps[tour.current].id == "tour-method")
         #expect(tour.isActive)
@@ -256,13 +366,17 @@ private func folder(of type: String, in s: WikiSession) -> String? {
         #expect(tour.isOnStep)
     }
 
-    @Test func projectionIsNamedOnlyWhenTheMetamodelHasIt() async throws {
+    @Test func aProjectionShowsByItsLabelOrNotAtAll() async throws {
         let s = try await session("arc42-views")
         let tour = TourModel(session: s)
-        tour.start()
         let named = tour.stops.compactMap(\.projection)
         #expect(!named.isEmpty)
-        for name in named { #expect(s.metamodel.projections.contains { $0.name == name }) }
+        for label in named {
+            #expect(!label.isEmpty)
+            #expect(!s.metamodel.projections.contains { $0.name == label })
+        }
+        #expect(s.metamodel.label(ofProjection: "story-map") == "story map")
+        #expect(s.metamodel.label(ofProjection: "no-such-projection") == "")
     }
 
     @Test func aGoneSessionGivesAnEmptyTour() async throws {
@@ -274,21 +388,30 @@ private func folder(of type: String, in s: WikiSession) -> String? {
         #expect(!tour.isActive)
     }
 
+    /// The rule: a step id, type name, projection name or text contains no section id (as a word) and
+    /// no folder name with a hyphen, such as `functional-requirements`. A type or projection name must not
+    /// equal a folder name, unless it is also a type name of the metamodel (`context` is both).
+    /// Ordinary words in a sentence, such as "goals", are allowed.
     @Test func tourNamesNoSectionIds() async throws {
         for name in Fixture.names {
             let s = try await session(name)
             let sectionIDs = Set(s.metamodel.sections.map(\.id))
             let folders = Set(s.metamodel.types.compactMap { $0.folder.split(separator: "/").last.map(String.init) })
+            let hyphenated = folders.filter { $0.contains("-") }
             let typeNames = Set(s.metamodel.types.map(\.name))
+            func words(_ text: String) -> [String] { text.split { !$0.isLetter && !$0.isNumber && $0 != "-" }.map(String.init) }
             for step in TourSteps.all {
-                for value in [step.id, step.showsType, step.showsProjection].compactMap({ $0 }) {
-                    #expect(!sectionIDs.contains(value), "\(name) \(step.id)")
+                let names = [step.id, step.showsType, step.showsProjection].compactMap { $0 }
+                for value in names + [step.text] {
+                    for id in sectionIDs { #expect(!words(value).contains(id), "\(name) \(step.id) \(id)") }
+                    for folder in hyphenated { #expect(!value.contains(folder), "\(name) \(step.id) \(folder)") }
                 }
                 for value in [step.showsType, step.showsProjection].compactMap({ $0 }) {
                     #expect(!folders.contains(value) || typeNames.contains(value), "\(name) \(value)")
                 }
-                let words = (step.title + " " + step.text).split { !$0.isLetter && !$0.isNumber && $0 != "-" }.map(String.init)
-                for word in words { #expect(!sectionIDs.contains(word), "\(name) \(step.id) \(word)") }
+                for value in [step.id] + (step.title.map { [$0] } ?? []) {
+                    #expect(!folders.contains(value), "\(name) \(value)")
+                }
                 #expect(!step.text.contains("wiki/"))
             }
         }

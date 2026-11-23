@@ -132,6 +132,23 @@ public struct Metamodel: Sendable {
     }
 
     /// The type with this name or alias, such as `functional-requirement` or `FR`.
+    /// Whether the page is an issue that is not closed.
+    public static func isOpenIssue(_ page: Page) -> Bool {
+        page.type == RelationRules.issueType && !RelationRules.closedIssueStatuses.contains(page.status.lowercased())
+    }
+
+    /// The readable name of a projection: its page's `label` field, else the text after the colon
+    /// in the page's first heading. Empty when the metamodel gives neither.
+    public func label(ofProjection name: String) -> String {
+        guard let page = projections.first(where: { $0.name == name }) else { return "" }
+        if case .text(let label)? = page.frontmatter["label"], !label.isEmpty { return label }
+        for line in page.body.split(separator: "\n", omittingEmptySubsequences: true) where line.hasPrefix("# ") {
+            guard let colon = line.firstIndex(of: ":") else { return "" }
+            return line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
+        }
+        return ""
+    }
+
     public func type(named name: String) -> MMType? {
         typesByName[name]
     }
