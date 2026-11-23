@@ -1,6 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
-  <!-- Peaks mark, 48 x 48 grid, margin 3, gap 4, ground radius 4. Same colours as mark-light.svg: they hold up on light and dark tab bars. -->
-  <polygon points="3,29 12.5,6 22,29" fill="#1f7a46"/>
-  <polygon points="26,29 35.5,6 45,29" fill="#1d5fb0"/>
-  <rect x="3" y="33" width="42" height="12" rx="4" fill="#b03a3a"/>
+  <!-- Chart mark reduced for 16 px: the axis and three solid columns, on a 3-unit grid (one pixel at 16 px).
+       Column colours as in mark-light.svg; the axis follows the tab bar's colour scheme. -->
+  <style>.axis { fill: #14213c; } @media (prefers-color-scheme: dark) { .axis { fill: #e8eef9; } }</style>
+  <rect class="axis" x="3" y="3" width="6" height="42" rx="3"/>
+  <rect class="axis" x="3" y="39" width="42" height="6" rx="3"/>
+  <rect x="12" y="21" width="9" height="15" fill="#1f7a46"/>
+  <rect x="24" y="6" width="9" height="30" fill="#1d5fb0"/>
+  <rect x="36" y="15" width="9" height="21" fill="#1f7a46"/>
 </svg>

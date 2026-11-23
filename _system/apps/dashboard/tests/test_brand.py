@@ -91,13 +91,14 @@ def test_systems42_intro_ends_within_two_seconds():
     assert "setTimeout(done, 2000)" in intro("systems42")
 
 
-def test_the_shipped_intro_is_the_peaks_mark():
-    """FR-032: the dashboard ships the Peaks mark and its intro. It is the
+def test_the_shipped_intro_is_the_chart_mark():
+    """FR-032: the dashboard ships the Chart mark and its intro. It is the
     default of every wiki without a brand of its own, so the look of one wiki
     (the Systems42 logo of meta, the atrium mark) never goes in here. Such a
     wiki names its own folder in `brand:` (FR-031)."""
     text = intro("systems42")
-    assert 'class="bi-ground"' in text and text.count('class="bi-peak') == 2, "the ground and two peaks"
+    assert text.count('class="bi-axis') == 2, "the axis: up, then the base"
+    assert text.count('class="bi-block') == 12, "six columns of two blocks"
     assert "systems42-logo" not in text and "bi-word" not in text
     assert sorted(p.name for p in (BRANDS / "systems42").iterdir()) == \
         ["favicon.svg", "intro.html", "mark-dark.svg", "mark-light.svg"]
@@ -141,7 +142,7 @@ if __name__ == "__main__":
     test_intro_shows_once_per_tab_and_not_under_reduced_motion()
     test_intro_ends_on_click_or_key_and_removes_itself()
     test_systems42_intro_ends_within_two_seconds()
-    test_the_shipped_intro_is_the_peaks_mark()
+    test_the_shipped_intro_is_the_chart_mark()
     test_intro_covers_the_page_with_bg_uses_tokens_and_stays_offline()
     test_intro_is_placed_before_the_hero_on_the_home_page_only()
     test_the_dashboard_holds_no_atrium_branding()

@@ -449,3 +449,20 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Created: [[DT-029-yoda]]. Updated: [[DT-011-keyholder]] (link to it).
 - Decided by Gernot Starke: the three bounded contexts stay, Obsidian stays under Technology, the Keyholder is both a term and a stakeholder, and Yoda becomes a term. No Issue was needed.
 - Renumbered: the provenance record of the Obsidian source is now [[SRC-051-domain-term-obsidian]]. Two captures that ran at the same time had both taken SRC-049. That number stays with [[SRC-049-grilling-session-on-the-mac-native-app]].
+
+## [2026-11-23] capture | The Chart mark
+- Source: `raw/logo-redesign-bar-chart.png`, now [[SRC-053-the-chart-mark]] in `raw/ingested/`. The answers are [[SRC-054-grilling-session-on-the-chart-mark]].
+- Grill gate: the mark was checked against FR-031, FR-032 and `docs/brand/README.md`. Gernot Starke answered questions 1 to 9 one at a time. No Issue was needed.
+- Decisions:
+  - Q1: the colours keep their meaning, `--area-req` and `--area-arc`. Commons red is dropped.
+  - Q2: the lockup is a fixed image for use outside the dashboard. The header stays as it is.
+  - Q3: the intro draws the axis, then grows the columns from left to right, lower block first, then fades, about 2 s.
+  - Q4: the favicon is a reduced mark with three solid columns. The full mark needs 32 px.
+  - Q5: the name is the Chart mark.
+  - Q6: the idea is "the dashboard as a chart", Requirements and Architecture filled in side by side.
+  - Q7: the lockup lives in `docs/brand/`. FR-031 is unchanged.
+  - Q8: the tiles in the source image are presentation only. The marks stay transparent.
+  - Q9: the brand files were built in the same pull request as this capture.
+- Updated: [[FR-032-example-brands-to-try]]. Created: SRC-053, SRC-054.
+- Also in the pull request: the website hero and page headers show the Chart mark, and dashboard release 0.14.2.
+- Not changed: the Mac app icon (`macos/build-app.sh`) still draws the peaks, [#172](https://github.com/systems42-org/systems42-dashboard/issues/172).
