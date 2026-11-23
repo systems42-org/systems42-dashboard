@@ -4,7 +4,7 @@ import Systems42UI
 
 @main
 struct DashboardApp: App {
-    @State private var recent = RecentFolders()
+    @State private var recent = RecentFolders.shared
     /// The folder named on the command line, read once at launch and opened once.
     @State private var launch = LaunchFolder(
         WikiFolders.fromArguments(Array(CommandLine.arguments.dropFirst()), currentDirectory: FileManager.default.currentDirectoryPath))
@@ -15,6 +15,8 @@ struct DashboardApp: App {
         // `swift run` starts a bare executable. Make it a normal app with a window and a menu bar.
         NSApplication.shared.setActivationPolicy(.regular)
         NSApplication.shared.activate()
+        // A link from outside may name a wiki that is only recent.
+        DeepLinkRouter.shared.configure(recent: { RecentFolders.shared.urls })
     }
 
     var body: some Scene {
@@ -28,16 +30,23 @@ struct DashboardApp: App {
             }
         }
         .commands {
+            HelpCommands()
+            AboutCommands()
             OpenCommands(recent: recent)
-            ReadingCommands()
+            ViewCommands()
+            GoCommands()
+            PageCommands()
             SearchCommands()
-            ProjectionCommands()
             MetamodelCommands()
             MethodCommands()
         }
         Window("The Method", id: MethodWindow.windowID) {
             MethodWindow()
         }
+        Window("Systems42 Dashboard Help", id: HelpWindow.windowID) {
+            HelpWindow()
+        }
+        AboutScene()
         WindowGroup("Metamodel", id: MetamodelWindowRoot.windowID, for: URL.self) { $folder in
             if let folder { MetamodelWindowRoot(folder: folder) }
         }
@@ -70,37 +79,5 @@ private struct Welcome: View {
                 openWindow.openWiki(folder)
                 dismissWindow(id: "welcome")
             }
-    }
-}
-
-private struct OpenCommands: Commands {
-    let recent: RecentFolders
-    @Environment(\.openWindow) private var openWindow
-
-    var body: some Commands {
-        CommandGroup(replacing: .newItem) {
-            Button("Open Folder…") {
-                if let url = FolderChooser.choose() { openWindow.openWiki(url) }
-            }
-            .keyboardShortcut("o")
-            Menu("Open Recent") {
-                let labels = WikiFolders.labels(for: recent.urls)
-                ForEach(Array(recent.urls.enumerated()), id: \.offset) { index, url in
-                    Button(labels[index]) { openWindow.openWiki(url) }
-                }
-            }
-            .disabled(recent.urls.isEmpty)
-        }
-    }
-}
-
-private struct ReadingCommands: Commands {
-    @Bindable private var reading = ReadingPreference.shared
-
-    var body: some Commands {
-        CommandGroup(after: .toolbar) {
-            Toggle("Reading View", isOn: $reading.plain)
-                .keyboardShortcut("r", modifiers: [.command, .shift])
-        }
     }
 }

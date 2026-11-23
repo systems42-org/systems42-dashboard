@@ -69,6 +69,12 @@ private struct OpensDroppedFolders: ViewModifier {
 
     func body(content: Content) -> some View {
         content.onOpenURL { url in
+            if url.scheme?.lowercased() == DeepLink.scheme {
+                // A link from outside. It selects a page of a wiki that is open or recent, nothing else.
+                DeepLinkRouter.shared.configure(openWiki: { openWindow.openWiki($0) })
+                DeepLinkRouter.shared.handle(url)
+                return
+            }
             for folder in WikiFolders.fromOpened([url]) { openWindow.openWiki(folder) }
         }
     }
