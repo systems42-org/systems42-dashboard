@@ -37,6 +37,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - Dashboard: on a functional requirement page the sources row no longer overlaps the row of pills above it.
 
 ### Added
+- Website: a "42" button in the header opens the 42 family, as on systems42.org: arc42, req42 and Systems42, each with its link. On a phone the three links are in the menu.
 - Method: the Recover loop from meta (alias archeology). The `recover` skill and `_system/workflows/recover.md` recover the abstractions of existing code into a report for Capture, and write no wiki pages. `capture.md` says how a recovery report's open gaps are handled.
 - Docs: `docs/INSTALL.md` says the app is supported on macOS and the programs for Linux and Windows come without support.
 - Dashboard: `/arc42/strategy` shows arc42 section 4 (A1): the pages in `wiki/solution-strategy/` (type `solution-strategy`, prefix `SOL`), each with its state, its successor, its `drivers:` and the decisions it summarises. A1 links there once the metamodel captures the section. Strategy pages count under *Addressed by* like the other architecture pages (DR-040, issue #101).
@@ -75,6 +76,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
   next.
 
 ### Changed
+- Website: the home page drops the card with four numbers, among them "0 install steps". The two peaks now stand free in the hero, and one line under the buttons says what the demo shows.
 - Website: dashboard.systems42.org uses the colours of the Systems42 logo on large areas. Header, hero and page headers are navy with the two peaks in mint green and sky blue, the section on getting started is mint, and headings use the dashboard's display face. On a phone the home page no longer scrolls sideways.
 - Docs: the dashboard README and the Go summary no longer name a Homebrew cask as a way to install the app. The cask file is prepared, but no tap offers it yet.
 - Dashboard release 0.14.0 (`_system/apps/dashboard/VERSION`).

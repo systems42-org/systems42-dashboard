@@ -8,7 +8,7 @@
     <g class="peak peak-mint"><polygon points="240,420 590,160 940,420"/><polygon class="facet" points="590,160 940,420 680,420"/></g>
   </svg>
   <div class="container hero-grid">
-    <div>
+    <div class="hero-copy">
       <h1>Trusted answers about requirements and architecture, right in your browser</h1>
       <p class="hero-lead">
         Systems42 Dashboard turns a Markdown requirements and architecture wiki into a fast, read-only web view. Search with typo tolerance, trace goals to requirements and building blocks, and share one live view in workshops.
@@ -18,30 +18,8 @@
         <a class="btn" href="/downloads/">Downloads &amp; Quickstart</a>
         <a class="btn" href="/docs/">Read the Docs</a>
       </div>
+      <p class="hero-note">The demo shows this dashboard's own wiki: {{ demo_stats.pages }} pages in {{ demo_stats.routes }} views, nothing to install.</p>
     </div>
-    <aside class="hero-card" aria-label="Live showcase summary">
-      <h2>Interactive Demo: {{ demo_name }}</h2>
-      <p>{{ demo_tagline }}</p>
-      <ul class="stat-list">
-        <li>
-          <span class="stat-num">{{ demo_stats.pages }}</span>
-          <span class="stat-label">Wiki pages exported</span>
-        </li>
-        <li>
-          <span class="stat-num">{{ demo_stats.routes }}</span>
-          <span class="stat-label">Browsable views</span>
-        </li>
-        <li>
-          <span class="stat-num">v{{ version }}</span>
-          <span class="stat-label">Current release</span>
-        </li>
-        <li>
-          <span class="stat-num">0</span>
-          <span class="stat-label">Install steps to try</span>
-        </li>
-      </ul>
-      <a class="btn btn-primary btn-block" href="/demo/">Open {{ demo_name }} Demo →</a>
-    </aside>
   </div>
 </section>
 
