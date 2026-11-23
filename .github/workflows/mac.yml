@@ -27,8 +27,10 @@ jobs:
       - name: Build
         run: swift build --package-path _system/apps/dashboard-mac
 
+      # One test at a time: several tests have time limits, and beside other
+      # tests a 0.5 s job took 78 s on this machine.
       - name: Test
-        run: swift test --package-path _system/apps/dashboard-mac
+        run: swift test --package-path _system/apps/dashboard-mac --no-parallel
 
       # A build to try out, not a release: signed ad hoc, not notarized.
       # After the download: xattr -dr com.apple.quarantine "Systems42 Dashboard Native.app"

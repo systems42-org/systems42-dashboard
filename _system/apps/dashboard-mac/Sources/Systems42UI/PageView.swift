@@ -26,7 +26,7 @@ struct PageView: View {
     var body: some View {
         Group {
             if let model {
-                PageContent(model: model, session: session)
+                PageContent(model: model, session: session, marks: session.search.pageMarks(for: ref))
             } else if removed {
                 Text("This page was removed.").foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -47,6 +47,7 @@ struct PageView: View {
 private struct PageContent: View {
     let model: PageModel
     let session: WikiSession
+    let marks: PageMarks
     @Environment(\.explain) private var explain
 
     /// A comfortable line length for reading.
@@ -77,6 +78,7 @@ private struct PageContent: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .environment(\.pageLinks, links)
+        .environment(\.pageMarks, marks)
     }
 
     private var links: PageLinks {

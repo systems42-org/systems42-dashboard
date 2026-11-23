@@ -73,6 +73,10 @@ struct LoadedWiki: Sendable {
     /// Back and Forward restore it. Set by `showIssues(of:)`, cleared by `clearIssueFilter()`.
     public private(set) var issueFilter: WikiSection.ID?
 
+    /// The search whose full result list the list column shows, nil when it shows a section.
+    /// Part of the history place, so Back and Forward restore it.
+    public private(set) var shownSearch: SearchRequest?
+
     private var figures: [String: SectionFigures]
     public private(set) var orientation: Orientation?
     /// Counts up each time the loaded wiki is replaced, so models know their rows are stale.
@@ -84,6 +88,7 @@ struct LoadedWiki: Sendable {
     private static let mostRenderedPages = 100
     @ObservationIgnored fileprivate var explainerModel: MetamodelModel?
     @ObservationIgnored var tourModelStore: TourModel?
+    @ObservationIgnored var searchModelStore: SearchModel?
     private var history: [Place] = []
     private var position = -1
 
@@ -94,6 +99,8 @@ struct LoadedWiki: Sendable {
         let page: PageRef?
         /// The section whose open issues the issues list is limited to, nil for all issues.
         var issuesAbout: WikiSection.ID?
+        /// The search whose results the list column shows, nil for a section.
+        var search: SearchRequest?
     }
 
     init(loaded: LoadedWiki, root: WikiRoot) {
@@ -207,6 +214,31 @@ struct LoadedWiki: Sendable {
         go(to: Place(section: issues.id, page: nil, issuesAbout: section))
     }
 
+    /// Leaves the result list, back to the pages of the section. Records the place.
+    public func closeSearch() {
+        guard shownSearch != nil else { return }
+        go(to: Place(section: selectedSection, page: selectedPage))
+    }
+
+    /// Shows the full result list of a search, and records the place.
+    public func showSearch(_ request: SearchRequest) {
+        go(to: Place(section: selectedSection, page: nil, search: request))
+    }
+
+    /// Changes the filter of the shown search. The place in the history changes with it, no new place is recorded.
+    func refineSearch(_ request: SearchRequest) {
+        guard shownSearch != nil, history.indices.contains(position) else { return }
+        history[position].search = request
+        shownSearch = request
+    }
+
+    /// Selects a page of the shown results and keeps the results, so Back returns to the list.
+    /// Without a shown search it does nothing.
+    public func selectResult(_ ref: PageRef) {
+        guard let search = shownSearch, store.page(ref) != nil else { return }
+        go(to: Place(section: section(of: ref)?.id, page: ref, search: search))
+    }
+
     /// Shows a place without recording it in the history. Only the tour uses it. A page that does
     /// not exist, or a section the wiki lacks, shows nothing.
     func showUnrecorded(section: WikiSection.ID?, page: PageRef?) {
@@ -251,7 +283,7 @@ struct LoadedWiki: Sendable {
     private func go(to place: Place) {
         // A place the tour showed without recording differs from the recorded one, so it is recorded.
         if position >= 0, history[position] == place,
-           place == Place(section: selectedSection, page: selectedPage, issuesAbout: issueFilter) { return }
+           place == Place(section: selectedSection, page: selectedPage, issuesAbout: issueFilter, search: shownSearch) { return }
         history = Array(history.prefix(position + 1)) + [place]
         if history.count > Self.longestHistory { history.removeFirst(history.count - Self.longestHistory) }
         position = history.count - 1
@@ -262,6 +294,18 @@ struct LoadedWiki: Sendable {
         selectedSection = place.section
         selectedPage = place.page
         issueFilter = place.issuesAbout
+        shownSearch = place.search
+    }
+}
+
+/// What the user asked the search for: the words and the filter. The list column shows its results.
+public struct SearchRequest: Equatable, Sendable {
+    public let query: String
+    public let filter: SearchFilter
+
+    public init(query: String, filter: SearchFilter) {
+        self.query = query
+        self.filter = filter
     }
 }
 
@@ -280,6 +324,16 @@ extension WikiSession {
         if let model = explainerModel { return model }
         let model = MetamodelModel(session: self)
         explainerModel = model
+        return model
+    }
+}
+
+extension WikiSession {
+    /// The search of this wiki. One per session, so the window and the menu share it.
+    public var search: SearchModel {
+        if let model = searchModelStore { return model }
+        let model = SearchModel(session: self)
+        searchModelStore = model
         return model
     }
 }
