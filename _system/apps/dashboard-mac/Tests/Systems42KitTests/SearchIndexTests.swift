@@ -136,8 +136,9 @@ import Systems42TestSupport
         var built: SearchEntry?
         let took = try clock.measure { built = try entry(ofBody: body) }
         #expect(built != nil)
-        // the slowest body takes about 5 s in a debug build, so 30 s leaves a factor of 6
-        #expect(took < .seconds(30), "\(piece.debugDescription): \(took)")
+        // The slowest body takes about 5 s in a debug build. The CI machine is up to 7 times
+        // slower while the other tests run beside it. A quadratic scan takes minutes.
+        #expect(took < .seconds(90), "\(piece.debugDescription): \(took)")
     }
 
     // MARK: ranking, string rules
@@ -219,7 +220,7 @@ import Systems42TestSupport
             _ = search(String(repeating: "\u{301}", count: 10_000), in: index)
             _ = search("", in: index)
         }
-        #expect(took < .seconds(2), "\(took)")
+        #expect(took < .seconds(10), "\(took)")
         #expect(search("!?.,;:-", in: index).isEmpty)
         #expect(search(String(repeating: "x", count: 10_000), in: index).isEmpty)
     }
@@ -267,7 +268,8 @@ import Systems42TestSupport
             for q in queries { total += search(q, in: index, filter: SearchFilter(), withPassages: true).count }
         }
         #expect(total > 0)
-        // about 1.2 s in a debug build on a development machine, so 8 s leaves a factor of 6
-        #expect(took < .seconds(8), "\(took)")
+        // About 1.2 s in a debug build on a development machine. The CI machine is up to
+        // 7 times slower while the other tests run beside it.
+        #expect(took < .seconds(30), "\(took)")
     }
 }
