@@ -22,6 +22,24 @@
         <a href="/downloads/"{% if active_nav == 'downloads' %} aria-current="page"{% endif %}>Downloads</a>
         <a href="https://github.com/systems42-org/systems42-dashboard" rel="noopener">GitHub</a>
         <a class="nav-demo" href="/demo/">Live Demo</a>
+        <details class="family">
+          <summary aria-label="The 42 family: arc42, req42 and Systems42">42</summary>
+          <div class="family-panel">
+            <p class="family-title">Member of the 42 family</p>
+            <a class="family-item" href="https://arc42.org" rel="noopener">
+              <span class="family-dot dot-arc" aria-hidden="true"></span><span class="family-name">arc42</span> <span class="family-url">arc42.org</span>
+              <span class="family-desc">The proven template for documenting software architecture.</span>
+            </a>
+            <a class="family-item" href="https://req42.de" rel="noopener">
+              <span class="family-dot dot-req" aria-hidden="true"></span><span class="family-name">req42</span> <span class="family-url">req42.de</span>
+              <span class="family-desc">The practical framework for requirements engineering.</span>
+            </a>
+            <a class="family-item" href="https://systems42.org" rel="noopener">
+              <span class="family-dot dot-sys" aria-hidden="true"></span><span class="family-name">systems42</span> <span class="family-url">systems42.org</span> <span class="family-here">Home of this dashboard</span>
+              <span class="family-desc">Agentic engineering based on req42 and arc42.</span>
+            </a>
+          </div>
+        </details>
       </nav>
       <details class="mobile-nav">
         <summary aria-label="Open menu">Menu</summary>
@@ -31,6 +49,10 @@
           <a href="/docs/"{% if active_nav == 'docs' %} aria-current="page"{% endif %}>Docs</a>
           <a href="/downloads/"{% if active_nav == 'downloads' %} aria-current="page"{% endif %}>Downloads</a>
           <a href="https://github.com/systems42-org/systems42-dashboard" rel="noopener">GitHub</a>
+          <p class="mobile-nav-label">Member of the 42 family</p>
+          <a href="https://systems42.org" rel="noopener">systems42.org</a>
+          <a href="https://arc42.org" rel="noopener">arc42.org</a>
+          <a href="https://req42.de" rel="noopener">req42.de</a>
         </div>
       </details>
     </div>

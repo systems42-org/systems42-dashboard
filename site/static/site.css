@@ -167,6 +167,96 @@ img { max-width: 100%; height: auto; }
   color: var(--navy);
 }
 
+/* The 42 family: arc42, req42 and Systems42, as on systems42.org. */
+.family { position: relative; margin-left: 0.5rem; }
+
+.family summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 0.38rem 0.7rem;
+  border: 2px solid var(--sky);
+  border-radius: 8px;
+  background: var(--navy-raised);
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.98rem;
+  line-height: 1.2;
+  transition: border-color 0.18s var(--ease-out);
+}
+.family summary::-webkit-details-marker { display: none; }
+.family summary:hover, .family[open] summary { border-color: var(--mint); }
+
+.family-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.7rem);
+  width: 26.5rem;
+  padding: 1.1rem 1.25rem 0.5rem;
+  background: var(--navy-raised);
+  border: 1px solid var(--navy-line);
+  border-radius: 12px;
+  box-shadow: 0 22px 44px -14px rgba(4, 9, 20, 0.7);
+}
+
+.family-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--on-navy-muted);
+}
+
+.site-nav a.family-item {
+  display: block;
+  padding: 0.8rem 0;
+  border-radius: 0;
+  border-top: 1px solid var(--navy-line);
+  color: var(--on-navy-muted);
+  font-weight: 400;
+}
+.site-nav a.family-item:first-of-type { border-top: none; }
+.site-nav a.family-item:hover { background: none; }
+.site-nav a.family-item:hover .family-name { text-decoration: underline; text-underline-offset: 0.18em; }
+
+.family-dot {
+  display: inline-block;
+  width: 0.62rem;
+  height: 0.62rem;
+  margin-right: 0.55rem;
+  border-radius: 50%;
+}
+.dot-arc { background: var(--sky); }
+.dot-req { background: var(--mint); }
+.dot-sys { background: linear-gradient(90deg, var(--mint) 0 50%, var(--sky) 50% 100%); }
+
+.family-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.12rem;
+  color: #ffffff;
+}
+.family-url { font-size: 0.9rem; }
+.family-here {
+  margin-left: 0.3rem;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  background: #143a3a;
+  color: var(--mint);
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.family-desc { display: block; margin-top: 0.3rem; font-size: 0.92rem; line-height: 1.45; }
+
+.mobile-nav-label {
+  margin: 0.5rem 0 0.1rem;
+  padding: 0.6rem 0.75rem 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
 /* Mobile menu (pure HTML details/summary, zero JS required) */
 .mobile-nav { display: none; position: relative; }
 .mobile-nav summary {
