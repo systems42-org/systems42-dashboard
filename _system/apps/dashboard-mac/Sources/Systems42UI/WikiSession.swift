@@ -20,12 +20,13 @@ struct LoadedWiki: Sendable {
             var found = SectionFigures()
             var issues = Set<String>()
             for folder in section.folders {
+                let subject = hasAgreedStatus(metamodel.type(forFolder: folder).flatMap { metamodel.lifecycles[$0.lifecycle] })
                 for page in store.pages(in: folder) {
-                    found.add(status: page.status.lowercased())
+                    found.add(status: page.status.lowercased(), keptByAgreedOnly: !subject || page.status.lowercased() == agreedStatus)
                     issues.formUnion(store.openIssues(for: page.ref).map(\.id))
                 }
             }
-            found.openIssues = issues.count
+            found.openIssueIDs = issues
             figures[section.id] = found
         }
         self.config = WikiConfig.load(root)
@@ -68,11 +69,14 @@ struct LoadedWiki: Sendable {
     public var selectedPage: PageRef?
     /// Show only agreed pages in the counts.
     public var agreedOnly = false
-    /// The section whose issues the issues section lists, set by `showIssues(of:)`.
+    /// The section whose open issues the issues list is limited to. Part of the history place, so
+    /// Back and Forward restore it. Set by `showIssues(of:)`, cleared by `clearIssueFilter()`.
     public private(set) var issueFilter: WikiSection.ID?
 
-    private let figures: [String: SectionFigures]
-    public let orientation: Orientation?
+    private var figures: [String: SectionFigures]
+    public private(set) var orientation: Orientation?
+    /// Counts up each time the loaded wiki is replaced, so models know their rows are stale.
+    public private(set) var revision = 0
     private var history: [Place] = []
     private var position = -1
 
@@ -81,6 +85,8 @@ struct LoadedWiki: Sendable {
     private struct Place: Equatable {
         let section: WikiSection.ID?
         let page: PageRef?
+        /// The section whose open issues the issues list is limited to, nil for all issues.
+        var issuesAbout: WikiSection.ID?
     }
 
     init(loaded: LoadedWiki, root: WikiRoot) {
@@ -90,6 +96,15 @@ struct LoadedWiki: Sendable {
         metamodel = loaded.metamodel
         figures = loaded.figures
         orientation = loaded.orientation
+    }
+
+    /// Swaps in a freshly read wiki. Models read through the session, so they follow on their next read.
+    func replace(with loaded: LoadedWiki) {
+        store = loaded.store
+        metamodel = loaded.metamodel
+        figures = loaded.figures
+        orientation = loaded.orientation
+        revision += 1
     }
 
     /// Reads the wiki on the calling thread. The app uses `open(_:)` instead.
@@ -123,14 +138,14 @@ struct LoadedWiki: Sendable {
         let all = figures[section.id] ?? SectionFigures()
         let lifecycle = metamodel.lifecycle(of: section)
         let ordered = all.ordered(by: lifecycle)
-        let shown = agreedOnly ? ordered.filter { $0.status == agreedStatus } : ordered
+        let shown = agreedOnly ? all.keptByAgreedOnly(in: ordered) : ordered
         return SidebarRow(
             section: section,
             count: shown.reduce(0) { $0 + $1.count },
             byStatus: shown,
             openIssues: all.openIssues,
             agreedShare: all.count == 0 ? 0 : Double(all.agreed) / Double(all.count),
-            showsMaturity: lifecycle?.contains(agreedStatus) == true
+            showsMaturity: hasAgreedStatus(lifecycle)
         )
     }
 
@@ -140,17 +155,35 @@ struct LoadedWiki: Sendable {
         go(to: Place(section: section(of: ref)?.id, page: ref))
     }
 
+    /// The ids of the open issues that point at a page of the section, as the sidebar counts them.
+    func openIssueIDs(of section: WikiSection.ID) -> Set<String> {
+        figures[section]?.openIssueIDs ?? []
+    }
+
+    /// Shows all issues again, and records the place.
+    public func clearIssueFilter() {
+        guard issueFilter != nil else { return }
+        go(to: Place(section: selectedSection, page: selectedPage))
+    }
+
     /// Opens the issues section, filtered to the issues that point at `section`.
     public func showIssues(of section: WikiSection.ID) {
         guard let issues = metamodel.issueSection else { return }
-        issueFilter = section
-        go(to: Place(section: issues.id, page: nil))
+        go(to: Place(section: issues.id, page: nil, issuesAbout: section))
     }
 
     /// Shows a section with no page chosen, and records the place. The one way to change section.
     public func select(section id: WikiSection.ID?) {
         guard let id else { return }
         go(to: Place(section: id, page: nil))
+    }
+
+    /// Selects a page of the wiki and records the place. A page that does not exist does nothing.
+    public func select(page ref: PageRef) {
+        guard store.page(ref) != nil else { return }
+        let id = section(of: ref)?.id
+        // Picking a page of the restricted issues list keeps the restriction.
+        go(to: Place(section: id, page: ref, issuesAbout: id == selectedSection ? issueFilter : nil))
     }
 
     public func back() {
@@ -180,5 +213,6 @@ struct LoadedWiki: Sendable {
     private func restore(_ place: Place) {
         selectedSection = place.section
         selectedPage = place.page
+        issueFilter = place.issuesAbout
     }
 }

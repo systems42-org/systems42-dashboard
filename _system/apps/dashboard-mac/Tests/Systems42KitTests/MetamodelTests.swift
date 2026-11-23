@@ -161,8 +161,9 @@ private func unmarked(_ text: String) -> String {
 
     @Test func requirementPreset() throws {
         let model = try loadMetamodel(fixture: "basic")
-        #expect(model.sortPresets(for: "functional-requirement").first == ["priority", "release", "order"])
-        #expect(model.sortPresets(for: "issue").first == ["status", "severity"])
+        #expect(model.sortPresets(for: "functional-requirement").first?.keys.map(\.field) == ["priority", "release", "order"])
+        #expect(model.sortPresets(for: "issue").first?.keys.map(\.field) == ["status", "severity"])
+        #expect(model.sortPresets(for: "decision-record").first == SortPreset(label: "Newest first", keys: [SortKey(field: "decided", ascending: false)]))
         #expect(model.sortPresets(for: "constraint").isEmpty)
         #expect(model.sortPresets(for: "nonsense").isEmpty)
     }

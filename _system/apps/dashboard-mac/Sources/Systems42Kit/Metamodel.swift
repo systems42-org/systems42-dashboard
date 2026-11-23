@@ -43,6 +43,8 @@ public struct Metamodel: Sendable {
     public let sections: [Section]
     /// Lifecycle name to its statuses in order, from `meta-metamodel`.
     public let lifecycles: [String: [String]]
+    /// The names of the fields every page has, in the order `meta-metamodel` declares them.
+    public let universalFields: [String]
     public let version: VersionState
 
     let relationRules: RelationRules
@@ -91,6 +93,7 @@ public struct Metamodel: Sendable {
             anchors: anchors,
             sections: catalog.sections,
             lifecycles: readLifecycles(pages(of: "meta-metamodel")),
+            universalFields: readUniversalFields(pages(of: "meta-metamodel")),
             version: readVersion(root: url),
             relationRules: RelationRules(types: typePages, relations: pages(of: "relation")),
             typesByName: byName,
@@ -125,6 +128,11 @@ public struct Metamodel: Sendable {
     /// The anchor with this name, title or alias, ignoring case.
     public func anchor(_ nameOrAlias: String) -> Anchor? {
         anchorsByName[nameOrAlias.lowercased()]
+    }
+
+    private static func readUniversalFields(_ pages: [MetaPage]) -> [String] {
+        var seen = Set<String>()
+        return pages.flatMap { $0.entry.entries("universal_fields") }.compactMap { $0.scalar("name") }.filter { seen.insert($0).inserted }
     }
 
     private static func readLifecycles(_ pages: [MetaPage]) -> [String: [String]] {

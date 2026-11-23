@@ -30,16 +30,34 @@ public struct SidebarRow: Identifiable {
 /// no requirement defines "agreed" otherwise.
 let agreedStatus = "accepted"
 
+/// Whether the lifecycle has an agreed status. Only pages on such a lifecycle can be agreed, so only
+/// they are hidden by "agreed only" and only their section shows a maturity bar. Issues and sources
+/// follow their own lifecycle and are never hidden.
+func hasAgreedStatus(_ lifecycle: [String]?) -> Bool {
+    lifecycle?.contains(agreedStatus) == true
+}
+
 /// What the sidebar shows for one section, counted over all its pages.
 struct SectionFigures: Sendable {
     /// Page counts per status, in the order the statuses first appear.
     private(set) var byStatus: [(status: String, count: Int)] = []
-    var openIssues = 0
+    /// The ids of the open issues that point at a page of the section, each issue once.
+    var openIssueIDs = Set<String>()
+    var openIssues: Int { openIssueIDs.count }
 
     var count: Int { byStatus.reduce(0) { $0 + $1.count } }
     var agreed: Int { byStatus.first { $0.status == agreedStatus }?.count ?? 0 }
 
-    mutating func add(status: String) {
+    /// Page counts per status of the pages that "agreed only" keeps.
+    private var kept: [String: Int] = [:]
+
+    /// The counts of `ordered` as "agreed only" shows them: pages of a lifecycle without an agreed status stay.
+    func keptByAgreedOnly(in ordered: [(status: String, count: Int)]) -> [(status: String, count: Int)] {
+        ordered.compactMap { entry in kept[entry.status].flatMap { $0 > 0 ? (status: entry.status, count: $0) : nil } }
+    }
+
+    mutating func add(status: String, keptByAgreedOnly: Bool) {
+        if keptByAgreedOnly { kept[status, default: 0] += 1 }
         if let at = byStatus.firstIndex(where: { $0.status == status }) {
             byStatus[at].count += 1
         } else {

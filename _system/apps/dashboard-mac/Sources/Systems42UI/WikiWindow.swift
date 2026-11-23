@@ -1,10 +1,11 @@
 import SwiftUI
 import Systems42Kit
 
-/// One window per wiki: sections, list, page. List and page are placeholders for now.
+/// One window per wiki: sections, list, page. The page column is a placeholder for now.
 public struct WikiWindow: View {
     @Bindable var session: WikiSession
     @SceneStorage("selectedSection") private var storedSection = ""
+    @SceneStorage("listStates") private var storedListStates = ""
 
     init(session: WikiSession) {
         self.session = session
@@ -15,8 +16,8 @@ public struct WikiWindow: View {
             Sidebar(session: session)
                 .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 320)
         } content: {
-            ListPlaceholder(session: session)
-                .navigationSplitViewColumnWidth(min: 240, ideal: 300, max: 480)
+            ListColumn(session: session, storedStates: $storedListStates)
+                .navigationSplitViewColumnWidth(min: 240, ideal: 260, max: 480)
         } detail: {
             PagePlaceholder(session: session)
         }
@@ -28,18 +29,6 @@ public struct WikiWindow: View {
             }
         }
         .onChange(of: session.selectedSection) { _, id in storedSection = id ?? "" }
-    }
-}
-
-private struct ListPlaceholder: View {
-    let session: WikiSession
-
-    var body: some View {
-        if let id = session.selectedSection, let section = session.metamodel.sections.first(where: { $0.id == id }) {
-            Text("The pages of \(section.title) will be listed here.").foregroundStyle(.secondary).padding()
-        } else {
-            Text("Choose a section.").foregroundStyle(.secondary)
-        }
     }
 }
 
