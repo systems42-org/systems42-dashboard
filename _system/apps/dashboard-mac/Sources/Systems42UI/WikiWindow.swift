@@ -30,6 +30,7 @@ public struct WikiWindow: View {
         .toolbar { ToolbarItem { SearchField(model: session.search) } }
         .focusedSceneValue(\.wikiSearch, session.search)
         .onChange(of: session.shownSearch) { _, _ in session.search.followSession() }
+        .onChange(of: session.selectedPage) { _, _ in session.search.followSelection() }
         .onChange(of: session.revision) { _, _ in session.search.followWiki() }
         .environment(\.explain, ExplainAction { target in
             ExplainAction.apply(target, to: session.explainer)

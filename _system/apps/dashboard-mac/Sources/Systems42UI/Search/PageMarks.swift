@@ -38,15 +38,15 @@ public struct PageMarks: Equatable, Sendable {
             current = ""
         }
         for ch in String(String.UnicodeScalarView(query.unicodeScalars.prefix(SearchLimit.longestQuery))) {
-            if ch.isLetter || ch.isNumber { current += ch.lowercased() } else { flush() }
+            if isWordCharacter(ch) { current += ch.lowercased() } else { flush() }
         }
         flush()
         return Array(out.prefix(SearchLimit.mostQueryWords))
     }
 
-    private static func isWordScalar(_ u: Unicode.Scalar) -> Bool {
-        u.properties.isAlphabetic || u.properties.numericType != nil
-    }
+    /// The one rule for what belongs to a word, for the query, the page text and the shown text.
+    /// It works on characters, so a letter with a separate accent is one word character.
+    static func isWordCharacter(_ c: Character) -> Bool { c.isLetter || c.isNumber }
 
     /// Reads all words of `text` once. A cancelled run gives no marks.
     public static func compute(text: String, query: String, matchedInPassage: [String]) -> PageMarks {
@@ -56,23 +56,24 @@ public struct PageMarks: Equatable, Sendable {
         guard !used.isEmpty else { return PageMarks(words: used, marked: []) }
         var decided: [String: Bool] = [:]
         var marked = Set<String>()
-        var word = String.UnicodeScalarView()
+        var word = ""
+        var length = 0
         var read = 0
         func flush() {
-            defer { word = String.UnicodeScalarView() }
-            let length = word.count
+            defer { word = ""; length = 0 }
             guard length > 0, length <= longestWord else { return }
-            let low = String(word).lowercased()
+            let low = word.lowercased()
             if decided[low] == nil {
                 let hit = used.contains { matchKind(query: $0, word: low) != nil }
                 decided[low] = hit
                 if hit { marked.insert(low) }
             }
         }
-        for u in text.unicodeScalars {
-            if isWordScalar(u) {
-                if word.count <= longestWord { word.append(u) }
-            } else if !word.isEmpty {
+        for ch in text {
+            if isWordCharacter(ch) {
+                length += 1
+                if length <= longestWord { word.append(ch) }
+            } else if length > 0 {
                 flush()
                 read += 1
                 if read % checkEvery == 0, Task.isCancelled { return PageMarks(words: used, marked: []) }
@@ -100,7 +101,7 @@ public struct PageMarks: Equatable, Sendable {
         }
         for index in characters.indices {
             let ch = characters[index]
-            if ch.isLetter || ch.isNumber {
+            if Self.isWordCharacter(ch) {
                 if start == nil { start = index }
                 if word.count <= Self.longestWord { word.append(ch) }
             } else {

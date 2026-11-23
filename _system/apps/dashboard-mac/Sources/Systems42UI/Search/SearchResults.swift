@@ -28,7 +28,8 @@ struct SearchResults: View {
             }
             .listStyle(.inset)
             .focused($listFocused)
-            .onChange(of: model.listFocusRequests) { listFocused = true }
+            .onChange(of: model.listFocusRequests) { if model.takeListFocus() { listFocused = true } }
+            .onAppear { if model.takeListFocus() { listFocused = true } }
             .overlay { SearchState(model: model) }
         }
     }

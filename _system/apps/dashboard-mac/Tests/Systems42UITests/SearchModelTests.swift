@@ -6,19 +6,55 @@ import Systems42TestSupport
 @testable import Systems42UI
 
 /// Lets a test hold a backend call until it says go, so "an older result is dropped" needs no sleeping.
+/// A held call ends after 30 seconds, and by default when its task is cancelled, so a failing test fails
+/// and does not hang. The stale-result tests hold a run that the model has already cancelled (it was
+/// superseded): they pass `endsOnCancel: false`, so the run is still held when the test releases it.
 private actor SearchGate {
+    private let endsOnCancel: Bool
     private var open = false
-    private var waiting: [CheckedContinuation<Void, Never>] = []
+    private var waiting: [Int: CheckedContinuation<Void, Never>] = [:]
+    private var next = 0
+
+    init(endsOnCancel: Bool = true) { self.endsOnCancel = endsOnCancel }
 
     func pass() async {
         if open { return }
-        await withCheckedContinuation { waiting.append($0) }
+        next += 1
+        let id = next
+        Task { [self] in
+            try? await Task.sleep(for: .seconds(30))
+            stop(id)
+        }
+        await withTaskCancellationHandler {
+            await withCheckedContinuation { waiting[id] = $0 }
+        } onCancel: {
+            Task { await self.cancelled(id) }
+        }
+    }
+
+    private func cancelled(_ id: Int) {
+        if endsOnCancel { stop(id) }
+    }
+
+    private func stop(_ id: Int) {
+        waiting.removeValue(forKey: id)?.resume()
     }
 
     func release() {
         open = true
-        for w in waiting { w.resume() }
-        waiting = []
+        for w in waiting.values { w.resume() }
+        waiting = [:]
+    }
+}
+
+/// Runs `body` and records an issue when it takes longer than 30 seconds. `body` must end when cancelled.
+private func bounded(_ what: String, _ body: @escaping @Sendable () async -> Void) async {
+    await withTaskGroup(of: Bool.self) { group in
+        group.addTask { await body(); return true }
+        group.addTask { try? await Task.sleep(for: .seconds(30)); return false }
+        let finished = await group.next() ?? false
+        if !finished { Issue.record("timed out: \(what)") }
+        group.cancelAll()
     }
 }
 
@@ -365,15 +401,22 @@ private func coreIndex() throws -> SearchIndex {
 
     @Test func returnMovesTheFocusToTheList() async throws {
         let (_, m) = try await opened()
+        #expect(m.takeListFocus() == false)
         let before = m.listFocusRequests
         m.query = "keyholder"
         m.submit()
         #expect(m.listFocusRequests == before + 1)
+        // a list view made in the same update sees the pending request once, when it appears
+        #expect(m.takeListFocus() == true)
+        #expect(m.takeListFocus() == false)
         m.query = ""
         m.commit()                                          // nothing to show, no focus move
         #expect(m.listFocusRequests == before + 1)
+        #expect(m.takeListFocus() == false)
+        m.query = "keyholder"
+        m.commit()
+        #expect(m.takeListFocus() == true)
     }
-
     // MARK: pages with the same id, tours and reloads
 
     @Test func twoPagesWithOneIdAreTwoResults() async throws {
@@ -398,6 +441,8 @@ private func coreIndex() throws -> SearchIndex {
 
     @Test func aTourStartedWhileResultsShowClosesThem() async throws {
         let (s, m) = try await opened()
+        let section = try #require(s.metamodel.sections.first?.id)
+        s.select(section: section)
         _ = await found(m, "keyholder")
         #expect(s.shownSearch != nil)
         let history = s.historyCount
@@ -408,10 +453,13 @@ private func coreIndex() throws -> SearchIndex {
         m.followSession()
         #expect(m.hits.isEmpty)
         s.tour.stop()
-        s.back()                                            // the history is as before the tour
+        // the tour recorded nothing: Back leads to the section place before the search, Forward to the search
+        s.back()
+        #expect(s.selectedSection == section && s.shownSearch == nil)
+        s.forward()
+        #expect(s.shownSearch?.query == "keyholder")
         #expect(s.historyCount == history)
     }
-
     @Test func aReloadThatRemovesTheOpenedPage() async throws {
         let copy = try Fixture.tempCopy("search")
         defer { try? FileManager.default.removeItem(at: copy.deletingLastPathComponent()) }
@@ -433,6 +481,75 @@ private func coreIndex() throws -> SearchIndex {
         #expect(m.related.allSatisfy { $0.id != "STK-023" })
         #expect(s.shownSearch?.query == "keyholder")
         #expect(m.pageMarks(for: ref).isEmpty)
+    }
+
+    @Test func aSuggestionIsMarkedWithTheQueryItWasComputedFor() async throws {
+        let s = await WikiSession.open(try Preflight.open(Fixture.url("search")))
+        openSessions.append(s)
+        let held = SearchGate(endsOnCancel: false)
+        var backend = SearchBackend.live
+        let live = backend.run
+        backend.run = { job in
+            if job.query == "navigation" { await held.pass() }
+            return await live(job)
+        }
+        let m = SearchModel(session: s, backend: backend)
+        await m.settle()
+        m.query = "facilitator"
+        await m.settle()
+        let hit = try #require(m.quick.first { $0.id == "STK-023" })
+        m.query = "navigation"                  // typed ahead, its suggestions are held
+        let before = m.arrivals
+        m.open(hit)
+        await bounded("marks") { await m.finished(atLeast: before + 1) }
+        #expect(m.pageMarks(for: try #require(hit.ref)).matches("facilitator"))
+        #expect(!m.pageMarks(for: try #require(hit.ref)).matches("navigation"))
+        await held.release()
+    }
+
+    @Test func marksEndWithTheirPage() async throws {
+        let (s, m) = try await opened()
+        m.query = "facilitator"
+        await m.settle()
+        let hit = try #require(m.quick.first { $0.id == "STK-023" })
+        let ref = try #require(hit.ref)
+        m.open(hit)
+        m.followSelection()
+        await m.settle()
+        #expect(m.pageMarks(for: ref).matches("facilitator"))
+        s.select(section: try #require(s.metamodel.sections.first?.id))
+        m.followSelection()
+        s.open(.page(ref))                              // the same page again, no search behind it
+        m.followSelection()
+        await m.settle()
+        #expect(m.pageMarks(for: ref).isEmpty)
+    }
+
+    @Test func aResultPageGetsItsMarksBackOnForward() async throws {
+        let (s, m) = try await opened()
+        _ = await found(m, "facilitator")
+        let hit = try #require(m.hits.first { $0.id == "STK-023" })
+        let ref = try #require(hit.ref)
+        m.open(hit, keepingResults: true)
+        m.followSelection()
+        await m.settle()
+        s.back()
+        m.followSelection()
+        #expect(m.pageMarks(for: ref).isEmpty)
+        s.forward()
+        m.followSelection()
+        await m.settle()
+        #expect(m.pageMarks(for: ref).matches("facilitator"))
+    }
+
+    @Test func aWordWithASeparateAccentIsMarked() {
+        let word = "re\u{301}sume\u{301}"            // decomposed: e and U+0301
+        let text = "A \(word) and a plain one."
+        let marks = PageMarks.compute(text: text, query: word, matchedInPassage: [])
+        #expect(marks.matches(word))
+        let marked = marks.apply(to: AttributedString(text))
+        let words = marked.runs.filter { $0.backgroundColor != nil }.map { String(marked[$0.range].characters) }
+        #expect(words == [word])
     }
 
     // MARK: reasons for the screen reader
@@ -479,7 +596,7 @@ private func coreIndex() throws -> SearchIndex {
     @Test func aMarkResultOfAnOlderPageIsDropped() async throws {
         let s = await WikiSession.open(try Preflight.open(Fixture.url("search")))
         openSessions.append(s)
-        let held = SearchGate()
+        let held = SearchGate(endsOnCancel: false)
         var backend = SearchBackend.live
         let live = backend.mark
         backend.mark = { text, query, passage in
@@ -494,12 +611,12 @@ private func coreIndex() throws -> SearchIndex {
         m.open(first)                                   // marks held
         let before = m.arrivals
         m.query = "navigation"
-        await m.finished(atLeast: before + 1)           // not settle(): the held marks would block it
+        await bounded("arrival") { await m.finished(atLeast: before + 1) }           // not settle(): the held marks would block it
         let second = try #require(m.quick.first { $0.id == "DT-002" })
         m.open(second)
-        await m.finished(atLeast: before + 2)
+        await bounded("arrival") { await m.finished(atLeast: before + 2) }
         await held.release()
-        await m.finished(atLeast: before + 3)
+        await bounded("arrival") { await m.finished(atLeast: before + 3) }
         #expect(m.pageMarks(for: try #require(first.ref)).isEmpty)
         #expect(m.pageMarks(for: try #require(second.ref)).matches("navigation"))
     }
@@ -573,7 +690,7 @@ private func coreIndex() throws -> SearchIndex {
     @Test func aResultOfAnOlderQueryIsDropped() async throws {
         let s = await WikiSession.open(try Preflight.open(Fixture.url("search")))
         openSessions.append(s)
-        let slow = SearchGate()
+        let slow = SearchGate(endsOnCancel: false)
         var backend = SearchBackend.live
         let live = backend.run
         backend.run = { job in
@@ -588,14 +705,14 @@ private func coreIndex() throws -> SearchIndex {
         #expect(m.quick.first?.id == "DT-002")
         let before = m.arrivals
         await slow.release()
-        await m.finished(atLeast: before + 1)   // the held run came back and was judged
+        await bounded("arrival") { await m.finished(atLeast: before + 1) }   // the held run came back and was judged
         #expect(m.quick.first?.id == "DT-002")
     }
 
     @Test func aFullListOfAnOlderQueryIsDropped() async throws {
         let s = await WikiSession.open(try Preflight.open(Fixture.url("search")))
         openSessions.append(s)
-        let slow = SearchGate()
+        let slow = SearchGate(endsOnCancel: false)
         var backend = SearchBackend.live
         let live = backend.run
         backend.run = { job in
@@ -613,7 +730,7 @@ private func coreIndex() throws -> SearchIndex {
         #expect(m.hits.first?.id == "DT-002")
         let before = m.arrivals
         await slow.release()
-        await m.finished(atLeast: before + 1)
+        await bounded("arrival") { await m.finished(atLeast: before + 1) }
         #expect(m.hits.first?.id == "DT-002")
         #expect(m.facets.isEmpty == false && m.related.allSatisfy { $0.note != "linked from STK-023" })
     }
@@ -621,7 +738,7 @@ private func coreIndex() throws -> SearchIndex {
     @Test func aFullListOfAnOlderFilterIsDropped() async throws {
         let s = await WikiSession.open(try Preflight.open(Fixture.url("search")))
         openSessions.append(s)
-        let slow = SearchGate()
+        let slow = SearchGate(endsOnCancel: false)
         var backend = SearchBackend.live
         let live = backend.run
         backend.run = { job in
@@ -638,7 +755,7 @@ private func coreIndex() throws -> SearchIndex {
         #expect(m.hits.count == 3 && m.hits.allSatisfy { $0.status == "accepted" })
         let before = m.arrivals
         await slow.release()
-        await m.finished(atLeast: before + 1)
+        await bounded("arrival") { await m.finished(atLeast: before + 1) }
         #expect(m.hits.count == 3 && m.hits.allSatisfy { $0.status == "accepted" })
         #expect(s.shownSearch?.filter.statuses == ["accepted"])
     }
@@ -652,17 +769,17 @@ private func coreIndex() throws -> SearchIndex {
         backend.run = { job in
             guard job.query == "keyholder" else { return SearchOutcome() }
             await started.release()
-            try? await Task.sleep(for: .seconds(60))     // returns at once when the task is cancelled
+            try? await Task.sleep(for: .seconds(30))     // returns at once when the task is cancelled
             if Task.isCancelled { _ = await cancelled.next() }
             return SearchOutcome()
         }
         let m = SearchModel(session: s, backend: backend)
         await m.settle()
         m.query = "keyholder"
-        await started.pass()
+        await bounded("started") { await started.pass() }
         m.query = "navigation"
         await m.settle()
-        while await cancelled.value == 0 { await Task.yield() }
+        await bounded("cancel") { while await cancelled.value == 0, !Task.isCancelled { await Task.yield() } }
         #expect(await cancelled.value == 1)
     }
     @Test func aResultOfAnOlderWikiIsDropped() async throws {
@@ -675,7 +792,7 @@ private func coreIndex() throws -> SearchIndex {
         try page("Zeppelin pilot").write(to: old, atomically: true, encoding: .utf8)
         let s = await WikiSession.open(try Preflight.open(copy))
         openSessions.append(s)
-        let first = SearchGate()
+        let first = SearchGate(endsOnCancel: false)
         let calls = SearchCounter()
         var backend = SearchBackend.live
         backend.build = { store, metamodel in
@@ -693,7 +810,7 @@ private func coreIndex() throws -> SearchIndex {
         #expect(m.quick.first?.id == "STK-099")
         let before = m.arrivals
         await first.release()
-        await m.finished(atLeast: before + 1)                   // build 1 came back and was judged
+        await bounded("arrival") { await m.finished(atLeast: before + 1) }                   // build 1 came back and was judged
         #expect(m.quick.first?.id == "STK-099")
         m.query = "zeppelin"
         await m.settle()

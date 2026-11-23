@@ -222,6 +222,7 @@ struct SearchBackend: Sendable {
     public private(set) var focusRequests = 0
     /// Counts up when the keyboard focus should move to the result list, after Return shows it.
     public private(set) var listFocusRequests = 0
+    @ObservationIgnored private var listFocusHandled = 0
 
     @ObservationIgnored weak var session: WikiSession?
     @ObservationIgnored private let backend: SearchBackend
@@ -233,8 +234,12 @@ struct SearchBackend: Sendable {
     @ObservationIgnored private let work = SearchWork()
     /// How many results arrived, kept or dropped. A test waits on it, see `finished(atLeast:)`.
     @ObservationIgnored private(set) var arrivals = 0
-    @ObservationIgnored private var arrivalWaiters: [(count: Int, continuation: CheckedContinuation<Void, Never>)] = []
+    @ObservationIgnored private var arrivalWaiters: [(id: Int, count: Int, continuation: CheckedContinuation<Void, Never>)] = []
+    @ObservationIgnored private var nextWaiter = 0
     /// The marks of the page opened from a result, and what they are for.
+    /// The query the suggestions in `quick` were computed for. It can be behind the typed text.
+    @ObservationIgnored private var quickQuery = ""
+    @ObservationIgnored private var markTarget: PageRef?
     private var markState: (ref: PageRef, revision: Int, marks: PageMarks)?
     @ObservationIgnored private var markToken = 0
     @ObservationIgnored private var buildToken = 0
@@ -341,14 +346,14 @@ struct SearchBackend: Sendable {
             return
         }
         let job = SearchJob(index: index, query: query, filter: SearchFilter(), full: false)
-        let revision = indexRevision
+        let revision = indexRevision, asked = query
         work.start(.quick, Task { [weak self, backend] in
             let outcome = await backend.run(job)
-            self?.finishQuick(outcome, token: token, revision: revision)
+            self?.finishQuick(outcome, token: token, revision: revision, asked: asked)
         })
     }
 
-    private func finishQuick(_ outcome: SearchOutcome, token: Int, revision: Int) {
+    private func finishQuick(_ outcome: SearchOutcome, token: Int, revision: Int, asked: String) {
         arrived()
         guard token == quickToken else { return }
         work.finish(.quick)
@@ -357,6 +362,7 @@ struct SearchBackend: Sendable {
             return
         }
         quick = outcome.hits
+        quickQuery = asked
         if let h = highlighted, !quick.indices.contains(h) { highlighted = nil }
     }
 
@@ -400,9 +406,21 @@ struct SearchBackend: Sendable {
 
     /// Returns once at least `count` results have arrived, kept or dropped. For tests that hold a
     /// run and need to know it came back and was judged.
+    /// A cancelled caller returns at once.
     func finished(atLeast count: Int) async {
         if arrivals >= count { return }
-        await withCheckedContinuation { arrivalWaiters.append((count, $0)) }
+        nextWaiter += 1
+        let id = nextWaiter
+        await withTaskCancellationHandler {
+            await withCheckedContinuation { arrivalWaiters.append((id, count, $0)) }
+        } onCancel: {
+            Task { @MainActor in self.stopWaiting(id) }
+        }
+    }
+
+    private func stopWaiting(_ id: Int) {
+        guard let at = arrivalWaiters.firstIndex(where: { $0.id == id }) else { return }
+        arrivalWaiters.remove(at: at).continuation.resume()
     }
 
     // MARK: Actions
@@ -434,7 +452,7 @@ struct SearchBackend: Sendable {
         guard let ref = hit.ref, let session else { return }
         suggestionsOpen = false
         highlighted = nil
-        prepareMarks(of: ref, query: keepingResults ? (shown?.query ?? query) : query, passage: hit.passage?.marked ?? [])
+        prepareMarks(of: ref, query: keepingResults ? (shown?.query ?? query) : quickQuery, passage: hit.passage?.marked ?? [])
         if keepingResults { session.selectResult(ref) } else { session.open(.page(ref)) }
     }
 
@@ -462,6 +480,14 @@ struct SearchBackend: Sendable {
     public func focusField() {
         focusRequests += 1
         suggestionsOpen = !Self.trimmed(query).isEmpty && !quick.isEmpty
+    }
+
+    /// True once for each request to focus the list. A new list view calls it when it appears, because
+    /// its `onChange` does not fire for the value it first sees.
+    public func takeListFocus() -> Bool {
+        guard listFocusHandled < listFocusRequests else { return false }
+        listFocusHandled = listFocusRequests
+        return true
     }
 
     /// Makes the model show what the session shows: call it when the session's `shownSearch` changed,
@@ -550,6 +576,7 @@ struct SearchBackend: Sendable {
         markToken += 1
         let token = markToken
         markState = nil
+        markTarget = ref
         guard let session, let page = session.store.page(ref), !PageMarks.words(of: query).isEmpty else {
             work.cancel(.mark)
             return
@@ -567,6 +594,24 @@ struct SearchBackend: Sendable {
         work.finish(.mark)
         guard revision == session?.revision else { return }
         markState = (ref, revision, marks)
+    }
+
+    /// Call when the session's selected page changed. Marks belong to the page they were found for,
+    /// opened from a suggestion or a result: any other page drops them. A page of the shown results
+    /// that gets selected again (Forward) gets its marks again.
+    public func followSelection() {
+        guard let session else { return }
+        let selected = session.selectedPage
+        if markTarget != nil, markTarget != selected {
+            markTarget = nil
+            markState = nil
+            markToken += 1
+            work.cancel(.mark)
+        }
+        if markTarget == nil, let selected, let shown, session.shownSearch == shown {
+            let hit = (hits + related).first { $0.ref == selected }
+            prepareMarks(of: selected, query: shown.query, passage: hit?.passage?.marked ?? [])
+        }
     }
 
     /// The words to mark in the selected page when it was opened from a suggestion or a result.
