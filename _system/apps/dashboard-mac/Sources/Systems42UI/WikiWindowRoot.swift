@@ -21,12 +21,12 @@ public struct WikiWindowRoot: View {
             case .session(let session)?:
                 if let missing = session.missingParts {
                     // The folder was moved or removed while the window was open.
-                    chooseAgain(PreflightFailure(folder: folder, missing: missing))
+                    chooseAgain(PreflightFailure(folder: folder, missing: missing), heading: "The folder is gone or incomplete")
                 } else {
                     WikiWindow(session: session)
                 }
             case .failed(let failure)?:
-                chooseAgain(failure)
+                chooseAgain(failure, heading: "This folder is not a Systems42 wiki")
             }
         }
         .opensDroppedFolders()
@@ -53,11 +53,11 @@ public struct WikiWindowRoot: View {
         }
     }
 
-    private func chooseAgain(_ failure: PreflightFailure) -> some View {
-        PreflightFailureView(failure: failure) {
+    private func chooseAgain(_ failure: PreflightFailure, heading: String) -> some View {
+        PreflightFailureView(failure: failure, chooseAnother: {
             guard let other = FolderChooser.choose() else { return }
             openWindow.openWiki(other)
             dismiss()
-        }
+        }, heading: heading)
     }
 }

@@ -69,6 +69,18 @@ private func waitUntil(_ condition: @MainActor () -> Bool) async -> Bool {
     return await condition()
 }
 
+/// Holds a caller until `open()`, or for 30 seconds.
+@MainActor private final class RefreshGate {
+    private var opened = false
+
+    func wait() async {
+        let end = ContinuousClock.now + .seconds(30)
+        while !opened && ContinuousClock.now < end { try? await Task.sleep(for: .milliseconds(10)) }
+    }
+
+    func open() { opened = true }
+}
+
 private func newTerm(_ number: Int) -> String {
     """
     ---
@@ -219,17 +231,44 @@ private func newTerm(_ number: Int) -> String {
         #expect(try await equalsFreshLoad(s, c.root))
     }
 
+    /// Edits "Book" to "Boot" and sets the modification time back, to the nanosecond.
+    /// A reader of size and time alone sees no change then.
+    private func editKeepingSizeAndTime(_ c: Copy, _ path: String) throws {
+        var info = stat()
+        #expect(stat(c.url(path).path, &info) == 0)
+        try c.edit(path) { $0.replacingOccurrences(of: "title: Book", with: "title: Boot") }
+        var times = [info.st_atimespec, info.st_mtimespec]
+        #expect(utimensat(AT_FDCWD, c.url(path).path, &times, 0) == 0)
+        var after = stat()
+        #expect(stat(c.url(path).path, &after) == 0)
+        #expect(after.st_mtimespec.tv_sec == info.st_mtimespec.tv_sec && after.st_mtimespec.tv_nsec == info.st_mtimespec.tv_nsec)
+        #expect(after.st_size == info.st_size)
+    }
+
     @Test func aChangeWithSameSizeAndTimeIsStillSeen() async throws {
         let c = try Copy()
         defer { c.remove() }
         let s = try await open(c.root)
         let path = "wiki/domain-terms/DT-001-book.md"
-        let file = c.url(path)
-        let time = try #require(FileManager.default.attributesOfItem(atPath: file.path)[.modificationDate] as? Date)
-        try c.edit(path) { $0.replacingOccurrences(of: "title: Book", with: "title: Boot") }
-        try FileManager.default.setAttributes([.modificationDate: time], ofItemAtPath: file.path)
-        await s.refresh(changed: [file])
-        #expect(s.store.page(PageRef(folder: "domain-terms", stem: "DT-001-book"))?.title == "Boot")
+        let ref = PageRef(folder: "domain-terms", stem: "DT-001-book")
+        try editKeepingSizeAndTime(c, path)
+        // Without the path, the old page is reused: the rule the test depends on.
+        let blind = WikiStore(root: s.root, reusing: s.store, changed: [])
+        #expect(blind.page(ref)?.title == "Book")
+        await s.refresh(changed: [c.url(path)])
+        #expect(s.store.page(ref)?.title == "Boot")
+    }
+
+    @Test func noNamedFileMeansEverythingMayHaveChanged() async throws {
+        let c = try Copy()
+        defer { c.remove() }
+        let s = try await open(c.root)
+        let ref = PageRef(folder: "domain-terms", stem: "DT-001-book")
+        try editKeepingSizeAndTime(c, "wiki/domain-terms/DT-001-book.md")
+        let before = s.revision
+        await s.refresh(changed: [])
+        #expect(s.revision == before + 1)
+        #expect(s.store.page(ref)?.title == "Boot")
     }
 
     @Test func aChangeDuringARefreshRunsOneMore() async throws {
@@ -239,16 +278,32 @@ private func newTerm(_ number: Int) -> String {
         let first = c.url("wiki/domain-terms/DT-005-a.md"), second = c.url("wiki/domain-terms/DT-006-b.md")
         let third = c.url("wiki/domain-terms/DT-007-c.md")
         let before = s.revision
+        // The first refresh waits in the hook, so the others arrive while it runs. The wait ends after 30 seconds.
+        let gate = RefreshGate()
+        var batches: [[URL]] = []
+        s.beforeReading = { urls in
+            batches.append(urls)
+            if batches.count == 1 { await gate.wait() }
+        }
         try newTerm(5).write(to: first, atomically: true, encoding: .utf8)
-        async let a: Void = s.refresh(changed: [first])
+        let a = Task { await s.refresh(changed: [first]) }
+        #expect(await waitUntil { batches.count == 1 })
         try newTerm(6).write(to: second, atomically: true, encoding: .utf8)
-        async let b: Void = s.refresh(changed: [second])
         try newTerm(7).write(to: third, atomically: true, encoding: .utf8)
-        async let d: Void = s.refresh(changed: [third])
-        _ = await (a, b, d)
-        // Never more than the running refresh and one that follows it.
-        #expect(s.revision - before <= 2)
-        #expect(s.revision > before)
+        let b = Task { await s.refresh(changed: [second]) }
+        let d = Task { await s.refresh(changed: [third]) }
+        // Both calls wait: nothing ran beside the first refresh.
+        try await Task.sleep(for: .milliseconds(200))
+        #expect(batches.count == 1 && s.revision == before)
+        gate.open()
+        await a.value
+        await b.value
+        await d.value
+        // The running refresh and exactly one follow-up that holds both later changes.
+        #expect(batches.count == 2)
+        guard batches.count == 2 else { return }
+        #expect(Set(batches[1].map(\.lastPathComponent)) == [second.lastPathComponent, third.lastPathComponent])
+        #expect(s.revision == before + 2)
         #expect(count(s, folder: "domain-terms") == 7)
         #expect(try await equalsFreshLoad(s, c.root))
     }

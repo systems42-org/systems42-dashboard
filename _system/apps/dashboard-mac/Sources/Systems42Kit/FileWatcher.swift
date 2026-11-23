@@ -107,7 +107,7 @@ public final class FileWatcher: Sendable {
     /// What the callback and the debounce share. Every field is immutable or behind the lock,
     /// so the compiler accepts it as `Sendable` without an exception. It knows no watcher,
     /// so a stream that still holds it never keeps the owner of the watcher alive.
-    private final class Sink: Sendable {
+    final class Sink: Sendable {
         let rootReal: String
         let rootURL: URL
         let debounce: Duration

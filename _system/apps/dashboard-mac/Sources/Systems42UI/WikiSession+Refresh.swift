@@ -37,14 +37,16 @@ extension WikiSession {
     /// Two refreshes never run at once. A call during a refresh adds its files to one waiting set,
     /// and one more refresh reads that set after the running one. The call returns when the
     /// state it asked for is shown.
+    ///
+    /// An empty list means that something changed and nobody knows what: the whole folder is read again.
     public func refresh(changed: [URL]) async {
-        changesWaiting.formUnion(changed)
+        changesWaiting.formUnion(changed.isEmpty ? [root.url] : changed)
         if let running = refreshing {
             await running.value
             return
         }
         let loop = Task { [weak self] in
-            while let self, let batch = await self.nextBatch() {
+            while let self, let batch = self.nextBatch() {
                 await self.refreshOnce(batch)
             }
         }
@@ -64,6 +66,7 @@ extension WikiSession {
 
     private func refreshOnce(_ changed: [URL]) async {
         let root = self.root, previous = self.store
+        if let hold = beforeReading { await hold(changed) }
         let result = await Task.detached(priority: .userInitiated) { () -> Refreshed in
             let missing = Preflight.missing(in: root.url)
             if !missing.isEmpty { return .gone(missing) }

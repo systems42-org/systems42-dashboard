@@ -150,7 +150,7 @@ private let term = "wiki/domain-terms/DT-001-book.md"
         try "x".write(to: outside.appending(path: "away.md"), atomically: true, encoding: .utf8)
         try await Task.sleep(for: .seconds(2))
         #expect(!w.calls.names.contains("away.md"))
-        #expect(w.calls.all.count >= before)
+        #expect(w.calls.all.count == before)
     }
 
     @Test func removingTheRootIsReported() async throws {
@@ -175,5 +175,44 @@ private let term = "wiki/domain-terms/DT-001-book.md"
         print("write to change: \(took)")
         #expect(arrived)
         #expect(took < limit)
+    }
+
+    // MARK: The sink, driven without FSEvents
+
+    private func sink(_ calls: Calls, debounce: Duration = .milliseconds(100)) -> (FileWatcher.Sink, URL) {
+        let root = URL(fileURLWithPath: "/tmp/s42-sink-root")
+        return (FileWatcher.Sink(rootReal: root.path, rootURL: root, debounce: debounce, maxWait: .seconds(1), onChange: { calls.add($0) }), root)
+    }
+
+    @Test func eventsOutsideTheRootAndInGitAreDropped() async throws {
+        let calls = Calls()
+        let (sink, root) = sink(calls)
+        sink.receive([
+            (path: "/tmp/elsewhere/wiki/x.md", flags: 0),
+            // As long as the root, so cutting off the root's length leaves a path that looks fine.
+            (path: "/" + String(repeating: "x", count: root.path.count - 1) + "/wiki/domain-terms/DT-9-out.md", flags: 0),
+            (path: "/tmp/s42-sink-root-other/wiki/x.md", flags: 0),
+            (path: root.path + "/.git/x.md", flags: 0),
+            (path: root.path + "/wiki/.git/x.md", flags: 0),
+        ])
+        try await Task.sleep(for: .milliseconds(600))
+        #expect(calls.all.isEmpty)
+        sink.receive([(path: root.path + "/wiki/domain-terms/DT-1-a.md", flags: 0)])
+        #expect(await wait { calls.names == ["DT-1-a.md"] })
+    }
+
+    @Test func aClosedSinkDeliversNothing() async throws {
+        let calls = Calls()
+        let (sink, root) = sink(calls)
+        sink.receive([(path: root.path + "/wiki/domain-terms/DT-1-a.md", flags: 0)])
+        sink.close()
+        try await Task.sleep(for: .milliseconds(600))
+        #expect(calls.all.isEmpty, "what waited was delivered after close")
+        sink.receive([(path: root.path + "/wiki/domain-terms/DT-2-b.md", flags: 0)])
+        try await Task.sleep(for: .milliseconds(600))
+        #expect(calls.all.isEmpty, "an event after close was delivered")
+        sink.reopen()
+        sink.receive([(path: root.path + "/wiki/domain-terms/DT-3-c.md", flags: 0)])
+        #expect(await wait { calls.names == ["DT-3-c.md"] })
     }
 }

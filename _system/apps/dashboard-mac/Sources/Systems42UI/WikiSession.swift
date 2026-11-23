@@ -106,6 +106,8 @@ struct LoadedWiki: Sendable {
     /// What the folder watcher and the refresh need. See `WikiSession+Refresh.swift`.
     @ObservationIgnored var watcher: FileWatcher?
     @ObservationIgnored var refreshing: Task<Void, Never>?
+    /// Tests set it to hold a refresh before it reads.
+    @ObservationIgnored var beforeReading: (@MainActor ([URL]) async -> Void)?
     @ObservationIgnored var changesWaiting: Set<URL> = []
     /// The parts of a wiki folder that are gone, nil while the folder is whole. The window then
     /// shows the same view as for a folder that is not a wiki.

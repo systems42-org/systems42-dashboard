@@ -246,7 +246,7 @@ import Foundation
 }
 
 /// The diagram web views of the whole app, in every window.
-@MainActor final class DiagramBudget: PageBudget<DiagramPage> {
+@MainActor class DiagramBudget: PageBudget<DiagramPage> {
     static let shared = DiagramBudget()
 
     override init(mostBusy: Int = DiagramLimits.mostBusyPages, mostPages: Int = DiagramLimits.mostPages) {
