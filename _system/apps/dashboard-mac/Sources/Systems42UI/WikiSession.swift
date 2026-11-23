@@ -77,6 +77,11 @@ struct LoadedWiki: Sendable {
     public private(set) var orientation: Orientation?
     /// Counts up each time the loaded wiki is replaced, so models know their rows are stale.
     public private(set) var revision = 0
+    /// Rendered page bodies of the current revision. A replaced wiki empties it.
+    @ObservationIgnored private var renderedPages: [PageRef: RenderedBody] = [:]
+    /// Renders that are running, so a page is rendered once however many models ask for it.
+    @ObservationIgnored private var running: [PageRef: Task<RenderedBody, Never>] = [:]
+    private static let mostRenderedPages = 100
     private var history: [Place] = []
     private var position = -1
 
@@ -104,7 +109,35 @@ struct LoadedWiki: Sendable {
         metamodel = loaded.metamodel
         figures = loaded.figures
         orientation = loaded.orientation
+        renderedPages = [:]
+        running = [:]
         revision += 1
+    }
+
+    /// The rendered body of a page, if it was rendered for the current wiki.
+    func renderedPage(of ref: PageRef) -> RenderedBody? {
+        renderedPages[ref]
+    }
+
+    /// Keeps a rendered body. A result of an older revision is dropped.
+    func keep(_ body: RenderedBody, of ref: PageRef, revision: Int) {
+        guard revision == self.revision else { return }
+        if renderedPages.count >= Self.mostRenderedPages { renderedPages = [:] }
+        renderedPages[ref] = body
+        running[ref] = nil
+    }
+
+    /// The render of a page. A second ask while it runs gets the same task, so `render` runs once.
+    /// The task runs off the main actor and also makes the plain form.
+    func rendering(of page: Page, using render: @escaping PageRender) -> Task<RenderedBody, Never> {
+        if let task = running[page.ref] { return task }
+        let body = page.body, store = self.store
+        let task = Task.detached(priority: .userInitiated) {
+            let normal = await render(body, store)
+            return RenderedBody(normal: normal, plain: plainReading(normal))
+        }
+        running[page.ref] = task
+        return task
     }
 
     /// Reads the wiki on the calling thread. The app uses `open(_:)` instead.
@@ -216,3 +249,12 @@ struct LoadedWiki: Sendable {
         issueFilter = place.issuesAbout
     }
 }
+
+/// A page body rendered both ways: with links, and for plain reading (FR-049).
+struct RenderedBody: Equatable, Sendable {
+    let normal: RenderedPage
+    let plain: RenderedPage
+}
+
+/// Makes the blocks of a page body. It runs off the main actor.
+public typealias PageRender = @Sendable (_ body: String, _ store: WikiStore) async -> RenderedPage

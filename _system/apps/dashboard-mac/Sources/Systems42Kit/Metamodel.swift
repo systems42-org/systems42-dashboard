@@ -258,3 +258,26 @@ enum MetaText {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
+
+extension MMConstruct {
+    private static let fieldKey = "field", inverseKey = "inverse"
+
+    private func text(_ key: String) -> String? {
+        guard case .text(let value)? = frontmatter[key] else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    /// The frontmatter field that stores a relation, when the page declares one.
+    public var storedField: String? { text(Self.fieldKey) }
+
+    /// The name of the relation seen from the other end, such as "children" for a parent link.
+    public var inverse: String? { text(Self.inverseKey) }
+}
+
+extension Metamodel {
+    /// The relation stored in a frontmatter field, found by its declared field, else by its name.
+    public func relation(storedIn field: String) -> MMConstruct? {
+        relations.first { $0.storedField == field } ?? relations.first { $0.name == field }
+    }
+}

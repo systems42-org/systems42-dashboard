@@ -8,7 +8,7 @@ import Systems42Kit
     /// The mode that shows plain rows. Projection modes come with later issues.
     public static let listMode = "list"
     public static let statusField = PageKey.status
-    private static let enumKind = "enum"
+    static let enumKind = "enum"
 
     public let sectionID: WikiSection.ID
     public var state: ListState

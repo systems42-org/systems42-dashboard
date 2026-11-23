@@ -1,7 +1,7 @@
 import SwiftUI
 import Systems42Kit
 
-/// One window per wiki: sections, list, page. The page column is a placeholder for now.
+/// One window per wiki: sections, list, page. The page column shows the selected page, or the vision while none is selected.
 public struct WikiWindow: View {
     @Bindable var session: WikiSession
     @SceneStorage("selectedSection") private var storedSection = ""
@@ -37,7 +37,7 @@ private struct PagePlaceholder: View {
 
     var body: some View {
         if let ref = session.selectedPage {
-            Text(ref.stem).foregroundStyle(.secondary)
+            PageColumn(session: session, ref: ref)
         } else {
             VStack(alignment: .leading, spacing: 10) {
                 if let orientation = session.orientation {

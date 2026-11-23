@@ -20,6 +20,16 @@ import Systems42TestSupport
     }
 }
 
+@Suite struct RelationLookupTests {
+    @Test func aRelationIsFoundByItsStoredField() throws {
+        let m = Metamodel.load(try Preflight.open(Fixture.url("basic")))
+        let parent = try #require(m.relation(storedIn: "parent"))
+        #expect(parent.storedField == "parent")
+        #expect(parent.inverse == "children")
+        #expect(m.relation(storedIn: "no-such-field") == nil)
+    }
+}
+
 @Suite struct LifecycleTests {
     @Test func lifecyclesComeFromTheMetamodel() throws {
         let m = Metamodel.load(try Preflight.open(Fixture.url("basic")))

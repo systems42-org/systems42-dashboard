@@ -25,7 +25,10 @@ struct DashboardApp: App {
                     .frame(minWidth: 900, minHeight: 500)
             }
         }
-        .commands { OpenCommands(recent: recent) }
+        .commands {
+            OpenCommands(recent: recent)
+            ReadingCommands()
+        }
     }
 }
 
@@ -75,6 +78,17 @@ private struct OpenCommands: Commands {
                 }
             }
             .disabled(recent.urls.isEmpty)
+        }
+    }
+}
+
+private struct ReadingCommands: Commands {
+    @Bindable private var reading = ReadingPreference.shared
+
+    var body: some Commands {
+        CommandGroup(after: .toolbar) {
+            Toggle("Reading View", isOn: $reading.plain)
+                .keyboardShortcut("r", modifiers: [.command, .shift])
         }
     }
 }
