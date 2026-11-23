@@ -180,9 +180,9 @@ private func hostileWiki() throws -> TempWiki {
 }
 
 @Suite struct LongTextTests {
-    /// The measured time in debug is 0.9 to 1.7 s. The bound has a factor 5 of headroom
-    /// over the slowest run measured (about 1.7 s for all projections of the wiki below).
-    static let bound: Duration = .seconds(9)
+    /// The measured time in debug is 0.9 to 1.7 s. The CI machine is up to 7 times slower
+    /// while the other tests run beside it. The regular expressions this guards against took up to 62 s.
+    static let bound: Duration = .seconds(30)
 
     private func longWiki(_ text: String) throws -> TempWiki {
         let wiki = try TempWiki()
