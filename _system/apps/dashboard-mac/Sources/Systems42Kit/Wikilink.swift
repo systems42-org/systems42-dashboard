@@ -29,8 +29,19 @@ public struct Wikilink: Hashable, Sendable {
     /// Every link in `text`, in order. Same rules as the dashboard: the target
     /// holds no `]`, `|` or `#`, the heading no `]` or `|`, the label no `]`.
     public static func all(in text: String) -> [Wikilink] {
+        matches(in: text).map(\.link)
+    }
+
+    /// A link and where it stands: the UTF-8 offsets of `[[` up to and including `]]`.
+    public struct Match: Equatable, Sendable {
+        public let link: Wikilink
+        public let utf8Range: Range<Int>
+    }
+
+    /// Like `all(in:)`, with the position of each link.
+    public static func matches(in text: String) -> [Match] {
         let bytes = Array(text.utf8)
-        var links: [Wikilink] = []
+        var links: [Match] = []
         var i = 0
         var nextClose = -1
         while i + 1 < bytes.count {
@@ -41,7 +52,7 @@ public struct Wikilink: Hashable, Sendable {
             guard nextClose + 1 < bytes.count else { break }  // no `]]` left anywhere
             if bytes[nextClose + 1] == close, nextClose - i - 2 <= longestLink,
                let link = parse(bytes[(i + 2)..<nextClose]) {
-                links.append(link)
+                links.append(Match(link: link, utf8Range: i..<(nextClose + 2)))
                 i = nextClose + 2
             } else {
                 i += 1
@@ -52,13 +63,13 @@ public struct Wikilink: Hashable, Sendable {
 
     private static func parse(_ inner: ArraySlice<UInt8>) -> Wikilink? {
         let split = inner.firstIndex { $0 == pipe || $0 == hash } ?? inner.endIndex
-        let target = text(inner[..<split])
+        let target = text(withoutEscape(inner[..<split], before: inner[split...].first))
         guard !target.isEmpty else { return nil }
         var heading: String?
         var rest = inner[split...]
         if rest.first == hash {
             let end = rest.firstIndex(of: pipe) ?? rest.endIndex
-            let word = text(rest.dropFirst()[..<end])
+            let word = text(withoutEscape(rest.dropFirst()[..<end], before: rest[end...].first))
             guard !rest.dropFirst()[..<end].isEmpty else { return nil }
             heading = word
             rest = rest[end...]
@@ -69,6 +80,11 @@ public struct Wikilink: Hashable, Sendable {
             label = text(rest.dropFirst())
         }
         return Wikilink(target: target, label: label?.isEmpty == false ? label : nil, heading: heading)
+    }
+
+    /// `[[a\|b]]`, as a table cell needs it: the backslash is no part of the target.
+    private static func withoutEscape(_ bytes: ArraySlice<UInt8>, before next: UInt8?) -> ArraySlice<UInt8> {
+        next == pipe && bytes.last == UInt8(ascii: "\\") ? bytes.dropLast() : bytes
     }
 
     private static func text(_ bytes: ArraySlice<UInt8>) -> String {
