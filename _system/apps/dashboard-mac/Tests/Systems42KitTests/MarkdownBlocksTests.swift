@@ -176,7 +176,9 @@ private func plain(_ blocks: [Block]) -> String { text(allInlines(blocks).filter
             }
         }
         #expect(count > 50)
-        #expect(ContinuousClock.now - start < .seconds(1))
+        // Up to 2.3 s on the CI machine while the other tests run beside it.
+        // The bound only has to catch a parser that hangs.
+        #expect(ContinuousClock.now - start < .seconds(10))
     }
 
     // MARK: cases the brief misses
