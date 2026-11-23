@@ -10,7 +10,9 @@ You drop sources into a folder. You tell the AI to "capture" them. It reads each
 one and builds interlinked pages — domain terms, stakeholders, functional
 requirements (including use cases), quality requirements, constraints — and flags every open
 question as an **Issue**. Nothing is re-derived from scratch later: the knowledge
-is compiled once and kept current as you add more. You browse it in Obsidian.
+is compiled once and kept current as you add more. You browse it in Obsidian:
+"Obsidian is the IDE; the LLM is the programmer; the wiki is the codebase"
+([Karpathy, *LLM Wiki*](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)).
 
 ## One-time setup (~5 minutes)
 

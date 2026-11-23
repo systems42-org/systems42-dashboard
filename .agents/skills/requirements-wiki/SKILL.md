@@ -6,7 +6,7 @@ description: >
   source (interview, transcript, spec, ticket) into requirements knowledge, inspect
   (audit) the wiki for contradictions/gaps/stale claims, report on requirements (open
   issues, coverage, stakeholder matrix, quality scenarios, traceability), or
-  bootstrap a new requirements vault. Triggers: "capture this into the wiki", "ingest this",
+  bootstrap a new requirements vault, or recover requirements and architecture from existing code (archeology). Triggers: "capture this into the wiki", "ingest this",
   "inspect the wiki", "audit the requirements", "what open issues do we have", "requirements
   coverage", mentions of glossary/ubiquitous language, stakeholders/personas, use
   cases, epics/features/stories, quality requirements, constraints, building blocks, traceability from requirements to architecture. Content types:
@@ -67,6 +67,9 @@ that only imports it (`@AGENTS.md`), and `_system/`.
 - **Implement** — use `.agents/skills/implement/SKILL.md` and
   `_system/workflows/implement.md` for the approved-plan, evidence-based delivery
   loop and human-reviewed PR.
+- **Recover** (alias archeology) — use `.agents/skills/recover/SKILL.md` and
+  `_system/workflows/recover.md` to recover abstractions of existing code,
+  top-down to a limited depth, into a report for Capture. Writes no pages.
 - **Report** — derive a view (open issues, coverage, stakeholder matrix, quality
   scenarios, glossary, traceability). File lasting reports back as wiki pages.
 

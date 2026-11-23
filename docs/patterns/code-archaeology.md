@@ -3,6 +3,9 @@
 Something exists and works, but no requirement says what it should do. The agent
 reads the code, describes what it does today, and that description is captured.
 
+The [Recover loop](../../_system/workflows/recover.md) (`recover` skill) does
+this for a whole scope, top-down to a limited depth, and writes the report.
+
 ## When it fits
 
 - A system was built before its requirements were written down.

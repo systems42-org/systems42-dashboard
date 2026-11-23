@@ -111,6 +111,10 @@ language, but every page you write below is captured **in English.**
    leaves unanswered is enough to fall back to Issues, so a capture never
    blocks on an open question.
 
+   A **recovery report** from [[ACT-005-recover|Recover]] arrives with its gaps
+   marked answered or open. Ask its open gaps in this round, or file them as
+   Issues; the report itself is not edited.
+
    Never silently overwrite a conflicting claim, and never pick a side on your
    own. An answered question is the human deciding; an unasked one is you
    guessing.
