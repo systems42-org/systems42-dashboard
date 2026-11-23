@@ -118,10 +118,10 @@ public struct SearchCommands: Commands {
     public var body: some Commands {
         CommandGroup(after: .textEditing) {
             Button("Search the Wiki") { search?.focusField() }
-                .keyboardShortcut("k")
+                .shortcut(Shortcuts.search)
                 .disabled(search == nil)
             Button("Find in the Wiki") { search?.focusField() }
-                .keyboardShortcut("f")
+                .shortcut(Shortcuts.find)
                 .disabled(search == nil)
         }
     }

@@ -12,7 +12,7 @@ struct AnchorEntryView: View {
             FactsView(facts: entry.facts)
             LinkGroupsView(model: model, groups: entry.groups)
             if let reference = entry.reference {
-                Button(reference.absoluteString) { OutgoingLinks.open(reference) }.buttonStyle(.link)
+                Button(reference.absoluteString) { OutgoingLinks.openFromContent(reference) }.buttonStyle(.link)
             }
             EntryBody(model: model, store: store, entry: entry)
         }

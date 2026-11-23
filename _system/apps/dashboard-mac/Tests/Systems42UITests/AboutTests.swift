@@ -72,5 +72,12 @@ import Systems42TestSupport
         let page = renderPage(HelpText.markdown, resolve: { _ in .missing }, title: { _ in nil })
         #expect(page.blocks.count > 5)
         #expect(page.problems.isEmpty)
+        #expect(!HelpText.markdown.contains("{{"))
+        #expect(!HelpText.markdown.contains("](/"))
+        for heading in ["Reading this dashboard", "Brand.", "Menu (≡)", "Who's here", "facilitator", "Docker", "Ctrl K", "intro"] {
+            #expect(!HelpText.markdown.contains(heading), "\(heading)")
+        }
+        #expect(HelpText.markdown.contains("Help > Metamodel, The Method and Guided Tour"))
+        #expect(HelpText.markdown.contains("## The LLM wiki"))
     }
 }

@@ -50,6 +50,7 @@ public struct WikiWindowRoot: View {
                 opened(folder)
                 DeepLinkRouter.shared.sessionOpened(session)
             }
+            if case .failed = loaded { DeepLinkRouter.shared.openFailed(folder) }
             result = loaded
         }
     }

@@ -7,8 +7,8 @@ import Systems42Kit
 @MainActor public struct PageActions {
     public let id: String
     public let title: String
-    /// The `systems42://` link to the page.
-    public let link: URL
+    /// The `systems42://` link to the page. Nil when no name of the wiki makes a link the app accepts.
+    public let link: URL?
     /// The page file in the wiki folder.
     public let file: URL
     private let root: WikiRoot
@@ -18,7 +18,8 @@ import Systems42Kit
         guard let page = session.store.page(ref) else { return nil }
         id = page.id
         title = page.title
-        link = DeepLink.url(wiki: session.title, pageID: page.id)
+        // The system name first, then the folder name. A link that would not parse back is not handed out.
+        link = [session.title, session.root.url.lastPathComponent].lazy.compactMap { DeepLink.url(wiki: $0, pageID: page.id) }.first
         file = session.root.url.appending(path: "wiki").appending(path: ref.folder).appending(path: "\(ref.stem).md")
         root = session.root
     }
@@ -36,7 +37,15 @@ import Systems42Kit
 
     public var obsidian: URL? { Self.obsidianURL(forFile: file) }
 
-    public func copyLink(to board: NSPasteboard = .general) { put(link.absoluteString, on: board) }
+    /// Why there is no link, nil when there is one.
+    public var linkProblem: String? {
+        link == nil ? "Neither the name of the wiki nor the id of the page makes a link the app accepts." : nil
+    }
+
+    public func copyLink(to board: NSPasteboard = .general) {
+        guard let link else { return }
+        put(link.absoluteString, on: board)
+    }
 
     public func copyID(to board: NSPasteboard = .general) { put(id, on: board) }
 
@@ -58,8 +67,8 @@ import Systems42Kit
 
     /// Opens the system share menu for the link and the title, below the toolbar of the key window.
     public func share() {
-        guard let view = NSApplication.shared.keyWindow?.contentView else { return }
-        let picker = NSSharingServicePicker(items: [title as NSString, link as NSURL])
+        guard let link, let view = NSApplication.shared.keyWindow?.contentView else { return }
+        let picker = NSSharingServicePicker(items: [Untrusted.clean(title, longest: 200) as NSString, link as NSURL])
         picker.show(relativeTo: NSRect(x: view.bounds.maxX - 40, y: view.bounds.maxY - 1, width: 1, height: 1), of: view, preferredEdge: .minY)
     }
 }

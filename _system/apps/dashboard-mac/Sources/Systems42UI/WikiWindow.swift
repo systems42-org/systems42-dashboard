@@ -7,8 +7,6 @@ public struct WikiWindow: View {
     @SceneStorage("selectedSection") private var storedSection = ""
     @SceneStorage("listStates") private var storedListStates = ""
     @Environment(\.openWindow) private var openWindow
-    /// The accent and mark the wiki's brand folder gives. Read again with each revision of the wiki.
-    @State private var brand = Brand.none
 
     init(session: WikiSession) {
         self.session = session
@@ -27,7 +25,6 @@ public struct WikiWindow: View {
                 // A projection takes the width of the list and the page. The page opens beside it.
                 NavigationSplitView {
                     Sidebar(session: session)
-                        .tint(brand.accent)
                         .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 320)
                 } detail: {
                     ProjectionColumn(session: session)
@@ -35,7 +32,6 @@ public struct WikiWindow: View {
             } else {
                 NavigationSplitView {
                     Sidebar(session: session)
-                        .tint(brand.accent)
                         .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 320)
                 } content: {
                     ListColumn(session: session, storedStates: $storedListStates)
@@ -51,7 +47,6 @@ public struct WikiWindow: View {
             ToolbarItem { PageActionsMenu(session: session) }
             ToolbarItem { SearchField(model: session.search) }
         }
-        .task(id: session.revision) { brand = Brand.load(session.root, config: session.config) }
         .focusedSceneValue(\.wikiSearch, session.search)
         .onChange(of: session.shownSearch) { _, _ in session.search.followSession() }
         .onChange(of: session.selectedPage) { _, _ in session.search.followSelection() }

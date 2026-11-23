@@ -5,12 +5,6 @@ import Systems42UI
 // where tests reach them without a window. The Search, Metamodel and Method commands use things that
 // stay inside Systems42UI, so they stay there: SearchCommands, MetamodelCommands, MethodCommands.
 
-private extension View {
-    func shortcut(_ shortcut: Shortcut) -> some View {
-        keyboardShortcut(shortcut.key, modifiers: shortcut.modifiers)
-    }
-}
-
 /// File > Open Folder and Open Recent. Close is the system's.
 struct OpenCommands: Commands {
     let recent: RecentFolders

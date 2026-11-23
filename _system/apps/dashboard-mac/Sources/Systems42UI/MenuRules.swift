@@ -62,8 +62,10 @@ public struct SectionShortcut: Equatable, Sendable {
         case .forward: return session.canGoForward
         case .showInList: return session.showsProjection
         case .agreedOnly: return true
-        case .copyLink, .copyID, .openInObsidian, .revealInFinder, .share:
+        case .copyID, .openInObsidian, .revealInFinder:
             return pageActions(session) != nil
+        case .copyLink, .share:
+            return pageActions(session)?.link != nil
         }
     }
 

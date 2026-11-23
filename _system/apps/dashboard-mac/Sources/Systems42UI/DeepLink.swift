@@ -1,6 +1,37 @@
 import AppKit
 import Foundation
+import Observation
 import Systems42Kit
+
+/// Text that came from a link or a wiki file, made fit for a message. It never shows more than
+/// `longestShown` characters and no control, format or separator character.
+enum Untrusted {
+    static let longestShown = 40
+
+    /// Control (C0, C1, DEL), format (bidi overrides, zero-width marks) and line or paragraph separators.
+    static func isUnsafe(_ scalar: Unicode.Scalar) -> Bool {
+        switch scalar.properties.generalCategory {
+        case .control, .format, .lineSeparator, .paragraphSeparator: true
+        default: false
+        }
+    }
+
+    static func hasUnsafe(_ text: String) -> Bool { text.unicodeScalars.contains(where: isUnsafe) }
+
+    /// The text without unsafe characters, cut to `longest` characters with an ellipsis.
+    static func clean(_ text: String, longest: Int = longestShown) -> String {
+        var scalars = String.UnicodeScalarView()
+        scalars.append(contentsOf: text.unicodeScalars.filter { !isUnsafe($0) })
+        let plain = String(scalars)
+        return plain.count > longest ? String(plain.prefix(longest)) + "…" : plain
+    }
+
+    /// `"text"` in straight quotes, so a sentence inside it reads as a quotation.
+    static func quoted(_ text: String) -> String { "\"\(clean(text))\"" }
+
+    /// A path with the home folder written as `~`.
+    static func path(_ url: URL) -> String { clean((url.path as NSString).abbreviatingWithTildeInPath, longest: 60) }
+}
 
 /// A link to a page from outside the app: `systems42://<wiki>/<page id>`.
 ///
@@ -43,9 +74,12 @@ public struct DeepLink: Equatable, Sendable {
         }
     }
 
-    public static func url(wiki: String, pageID: String) -> URL {
-        let text = "\(scheme)://\(encode(wiki))/\(encode(pageID))"
-        return URL(string: text) ?? URL(string: "\(scheme):")!
+    /// The link to a page, or nil when the app would refuse it: a part too long, blank, or holding
+    /// an unsafe character. A link this returns parses back to the same wiki and page.
+    public static func url(wiki: String, pageID: String) -> URL? {
+        guard let url = URL(string: "\(scheme)://\(encode(wiki))/\(encode(pageID))"),
+              DeepLink(url) == DeepLink(wiki: wiki, pageID: pageID) else { return nil }
+        return url
     }
 
     private static let unreserved = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
@@ -54,11 +88,12 @@ public struct DeepLink: Equatable, Sendable {
         text.addingPercentEncoding(withAllowedCharacters: unreserved) ?? ""
     }
 
-    /// One percent-decoding. Nil for a bad escape, an empty or blank result, a control character or a result too long.
+    /// One percent-decoding. Nil for a bad escape, a blank or too long result, or any control (C0, C1),
+    /// format (bidi, zero-width) or line or paragraph separator character.
     private static func decode(_ part: Substring) -> String? {
         guard let text = String(part).removingPercentEncoding, text.count <= longestPart,
               !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              !text.unicodeScalars.contains(where: { $0.value < 0x20 || $0.value == 0x7F }) else { return nil }
+              !Untrusted.hasUnsafe(text) else { return nil }
         return text
     }
 }
@@ -74,34 +109,53 @@ public struct DeepLinkNotice {
     public let button: Button?
 }
 
+/// The one notice on screen. A window shows it as a banner. While one shows, links are dropped.
+@MainActor @Observable public final class NoticeBoard {
+    public private(set) var current: DeepLinkNotice?
+
+    func show(_ notice: DeepLinkNotice) { current = notice }
+    public func dismiss() { current = nil }
+}
+
 /// Finds the wiki and the page a link names. It selects a page, or tells the reader why not. It opens a
 /// wiki only when the reader presses the button of the message. A name that fits two wikis picks none.
+///
+/// Limits against a flood of links: an identical link within `sameEvent` counts once, a link that arrives
+/// while a notice shows is dropped, and at most `handledPerWindow` links are handled per `window`. The
+/// rest are dropped without a word. The app comes to the front once per handled link.
 @MainActor public final class DeepLinkRouter {
     public static let shared = DeepLinkRouter()
 
-    /// How long an identical link counts as one event. Several windows may each be told of one click.
     static let sameEvent: TimeInterval = 1
+    static let handledPerWindow = 3
+    static let window: TimeInterval = 10
+    /// How long the reader has to finish opening a wiki after pressing the button.
+    static let pendingLifetime: TimeInterval = 30
 
+    public let board = NoticeBoard()
     var sessions: @MainActor () -> [WikiSession]
     var recent: @MainActor () -> [URL]
     var openWiki: @MainActor (URL) -> Void
-    var present: @MainActor (DeepLinkNotice) -> Void
+    var activate: @MainActor () -> Void
     var now: @MainActor () -> Date
 
-    private var pending: (folder: URL, pageID: String?)?
+    private var pending: (folder: URL, pageID: String?, since: Date)?
     private var last: (url: URL, at: Date)?
+    private var handled: [Date] = []
+    private(set) var nameReads = 0
+    private var names: [URL: (modified: Date?, name: String)] = [:]
 
     init(
         sessions: @escaping @MainActor () -> [WikiSession] = { OpenSessions.shared.all() },
         recent: @escaping @MainActor () -> [URL] = { [] },
         openWiki: @escaping @MainActor (URL) -> Void = { _ in },
-        present: @escaping @MainActor (DeepLinkNotice) -> Void = { DeepLinkRouter.show($0) },
+        activate: @escaping @MainActor () -> Void = { NSApplication.shared.activate() },
         now: @escaping @MainActor () -> Date = { Date() }
     ) {
         self.sessions = sessions
         self.recent = recent
         self.openWiki = openWiki
-        self.present = present
+        self.activate = activate
         self.now = now
     }
 
@@ -114,20 +168,26 @@ public struct DeepLinkNotice {
         let moment = now()
         if let last, last.url == url, moment.timeIntervalSince(last.at) < Self.sameEvent { return }
         last = (url, moment)
+        guard board.current == nil else { return }
+        handled.removeAll { moment.timeIntervalSince($0) >= Self.window }
+        guard handled.count < Self.handledPerWindow else { return }
+        handled.append(moment)
         pending = nil
+        activate()
         guard let link = DeepLink(url) else {
             tell("This link is not a Systems42 page link.")
             return
         }
+        let shown = Untrusted.quoted(link.wiki)
         var open: [URL: WikiSession] = [:]
         let matches = candidates(open: &open).filter { $0.name == link.wiki || $0.folder.lastPathComponent == link.wiki }
         guard let match = matches.first else {
-            tell("No open or recent wiki is named \u{201C}\(link.wiki)\u{201D}.")
+            tell("No open or recent wiki is named \(shown).")
             return
         }
         guard matches.count == 1 else {
-            let places = matches.map { $0.folder.path }.joined(separator: ", ")
-            tell("More than one wiki is named \u{201C}\(link.wiki)\u{201D}: \(places). Nothing was opened.")
+            let places = matches.prefix(3).map { Untrusted.path($0.folder) }.joined(separator: ", ")
+            tell("More than one wiki is named \(shown): \(places). Nothing was opened.")
             return
         }
         if let session = open[match.folder] {
@@ -135,26 +195,40 @@ public struct DeepLinkNotice {
             return
         }
         let folder = match.folder, pageID = link.pageID
-        present(DeepLinkNotice(
-            text: "The wiki \u{201C}\(match.name)\u{201D} is not open. A link does not open it by itself.",
-            button: .init(title: "Open \(match.name)") { [weak self] in
-                self?.pending = (folder, pageID)
-                self?.openWiki(folder)
+        let name = Untrusted.clean(match.name)
+        board.show(DeepLinkNotice(
+            text: "The wiki \"\(name)\" is not open. A link does not open it by itself.",
+            button: .init(title: "Open \(name)") { [weak self] in
+                guard let self else { return }
+                pending = (folder, pageID, now())
+                openWiki(folder)
             }))
     }
 
-    /// A wiki finished opening. A link that waited for it selects its page now, once.
+    /// A wiki finished opening. A link that waited for exactly this folder selects its page now, once.
+    /// Another wiki that finishes meanwhile is not the one the reader agreed to.
     public func sessionOpened(_ session: WikiSession) {
-        guard let waiting = pending, WikiFolders.standardized(waiting.folder) == WikiFolders.standardized(session.root.url) else { return }
+        guard let waiting = pending else { return }
+        guard now().timeIntervalSince(waiting.since) < Self.pendingLifetime else {
+            pending = nil
+            return
+        }
+        guard WikiFolders.standardized(waiting.folder) == WikiFolders.standardized(session.root.url) else { return }
         pending = nil
         select(waiting.pageID, in: session)
+    }
+
+    /// A wiki could not be opened. The link that waited for it is dropped.
+    public func openFailed(_ folder: URL) {
+        guard let waiting = pending, WikiFolders.standardized(waiting.folder) == WikiFolders.standardized(folder) else { return }
+        pending = nil
     }
 
     private func select(_ pageID: String?, in session: WikiSession) {
         if let pageID {
             // The id is looked up and nothing else: a path, or a stem that is no id, finds no page.
             guard let page = session.store.page(id: pageID) else {
-                tell("The wiki \u{201C}\(session.title)\u{201D} has no page \u{201C}\(pageID)\u{201D}.")
+                tell("The wiki \(Untrusted.quoted(session.title)) has no page \(Untrusted.quoted(pageID)).")
                 return
             }
             session.select(page: page.ref)
@@ -164,7 +238,7 @@ public struct DeepLinkNotice {
     }
 
     private func tell(_ text: String) {
-        present(DeepLinkNotice(text: text, button: nil))
+        board.show(DeepLinkNotice(text: text, button: nil))
     }
 
     private struct Candidate {
@@ -173,6 +247,7 @@ public struct DeepLinkNotice {
     }
 
     /// The wikis a link may name: the open ones, then the recent ones that are wikis and not open.
+    /// The name of a recent wiki is read from `wiki.yaml` once per change of that file.
     private func candidates(open: inout [URL: WikiSession]) -> [Candidate] {
         var found: [Candidate] = []
         for session in sessions() {
@@ -185,24 +260,14 @@ public struct DeepLinkNotice {
             let folder = WikiFolders.standardized(url)
             guard open[folder] == nil, !found.contains(where: { $0.folder == folder }),
                   let root = try? Preflight.open(folder) else { continue }
-            found.append(Candidate(name: WikiConfig.load(root).systemName, folder: folder))
+            let modified = (try? folder.appending(path: "_system/wiki.yaml").resourceValues(forKeys: [.contentModificationDateKey]))?
+                .contentModificationDate
+            if names[folder]?.modified != modified || names[folder] == nil {
+                nameReads += 1
+                names[folder] = (modified, WikiConfig.load(root).systemName)
+            }
+            found.append(Candidate(name: names[folder]?.name ?? folder.lastPathComponent, folder: folder))
         }
         return found
-    }
-
-    /// The window of a message: a modal alert, so it needs no window of its own to hang on.
-    private static func show(_ notice: DeepLinkNotice) {
-        Task { @MainActor in
-            let alert = NSAlert()
-            alert.messageText = notice.text
-            if let button = notice.button {
-                alert.addButton(withTitle: button.title)
-                alert.addButton(withTitle: "Cancel")
-            } else {
-                alert.addButton(withTitle: "OK")
-            }
-            NSApplication.shared.activate()
-            if alert.runModal() == .alertFirstButtonReturn { notice.button?.run() }
-        }
     }
 }

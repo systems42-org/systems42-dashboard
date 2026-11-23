@@ -123,7 +123,7 @@ private struct PageContent: View {
             open: { action in
                 switch action {
                 case .page(let ref): session.open(.page(ref))
-                case .web(let url): OutgoingLinks.open(url)
+                case .web(let url): OutgoingLinks.openFromContent(url)
                 case .anchor(let name): explain(.link(.anchor(name)))
                 case .metamodel(let name): explain(.link(.metamodel(name)))
                 }

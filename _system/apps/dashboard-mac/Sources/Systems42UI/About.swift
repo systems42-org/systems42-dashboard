@@ -18,7 +18,8 @@ public struct AboutModel: Equatable {
         public let metamodelNotice: String?
         public let supportedVersions: [String]
         public let refreshed: Date
-        public let brand: Brand
+        /// The brand `wiki.yaml` names. Shown as text: how the app shows a brand is not decided.
+        public let brand: String
     }
 
     public let appVersion: String
@@ -40,7 +41,7 @@ public struct AboutModel: Equatable {
             metamodelNotice: MetamodelModel.notice(for: session.metamodel.version)?.line,
             supportedVersions: Metamodel.supportedVersions,
             refreshed: session.refreshedAt,
-            brand: Brand.load(session.root, config: session.config))
+            brand: session.config.brand)
     }
 
     static func metamodelLine(_ state: VersionState) -> String {
@@ -77,7 +78,7 @@ struct AboutView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 14) {
-                BrandMark(url: model.wiki?.brand.mark)
+                Image(nsImage: NSApplication.shared.applicationIconImage).resizable().frame(width: 56, height: 56)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(AppInfo.windowTitle).font(.title2.bold())
                     Text("Version \(model.appVersion)").foregroundStyle(.secondary)
@@ -89,6 +90,7 @@ struct AboutView: View {
                 Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 4) {
                     row("Folder", wiki.folder.path)
                     row("Dashboard release", wiki.release ?? "not named")
+                    row("Brand", wiki.brand)
                     row("Metamodel", wiki.metamodel)
                     row("Supported", wiki.supportedVersions.joined(separator: ", "))
                     row("Read", wiki.refreshed.formatted(date: .abbreviated, time: .standard))
@@ -100,26 +102,12 @@ struct AboutView: View {
         .textSelection(.enabled)
         .padding(20)
         .frame(width: 440, alignment: .leading)
-        .tint(model.wiki?.brand.accent)
     }
 
     private func row(_ label: String, _ value: String) -> some View {
         GridRow {
             Text(label).foregroundStyle(.secondary).gridColumnAlignment(.trailing)
             Text(verbatim: value).lineLimit(2).truncationMode(.middle)
-        }
-    }
-}
-
-/// The mark of a brand, or the icon of the app. The mark was checked in `Brand`: a PNG or JPEG of bounded size.
-private struct BrandMark: View {
-    let url: URL?
-
-    var body: some View {
-        if let url, let image = NSImage(contentsOf: url) {
-            Image(nsImage: image).resizable().scaledToFit().frame(width: 56, height: 56)
-        } else {
-            Image(nsImage: NSApplication.shared.applicationIconImage).resizable().frame(width: 56, height: 56)
         }
     }
 }

@@ -30,6 +30,13 @@ public struct Shortcut: Sendable {
     }
 }
 
+extension View {
+    /// Attaches a shortcut of the list.
+    public func shortcut(_ shortcut: Shortcut) -> some View {
+        keyboardShortcut(shortcut.key, modifiers: shortcut.modifiers)
+    }
+}
+
 public enum Shortcuts {
     public static let openFolder = Shortcut("Open Folder", "o")
     public static let readingView = Shortcut("Reading View", "r", [.command, .shift])

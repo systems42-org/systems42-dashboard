@@ -11,20 +11,21 @@ import Systems42TestSupport
     private func parse(_ text: String) -> DeepLink? { URL(string: text).flatMap { DeepLink($0) } }
 
     @Test func deepLinkRoundTrip() throws {
-        let link = try #require(DeepLink(DeepLink.url(wiki: "Library", pageID: "FR-002")))
-        #expect(link == DeepLink(wiki: "Library", pageID: "FR-002"))
+        let url = try #require(DeepLink.url(wiki: "Library", pageID: "FR-002"))
+        #expect(DeepLink(url) == DeepLink(wiki: "Library", pageID: "FR-002"))
     }
 
     @Test func aNameWithASpaceAndAnUmlautSurvives() throws {
         for name in ["Meine Bücherei", "a/b", "q?x#y", "100%", "a+b&c=d", "日本"] {
-            let link = try #require(DeepLink(DeepLink.url(wiki: name, pageID: "GOAL 1/é")), "\(name)")
+            let url = try #require(DeepLink.url(wiki: name, pageID: "GOAL 1/é"), "\(name)")
+            let link = try #require(DeepLink(url), "\(name)")
             #expect(link.wiki == name)
             #expect(link.pageID == "GOAL 1/é")
         }
     }
 
     @Test func theLinkIsPlainAscii() {
-        let text = DeepLink.url(wiki: "Meine Bücherei", pageID: "FR-1").absoluteString
+        let text = DeepLink.url(wiki: "Meine Bücherei", pageID: "FR-1")?.absoluteString
         #expect(text == "systems42://Meine%20B%C3%BCcherei/FR-1")
     }
 
@@ -78,10 +79,8 @@ import Systems42TestSupport
 
     // MARK: The router
 
-    private struct Rig {
-        let router: DeepLinkRouter
-        let notices: Box<[DeepLinkNotice]>
-        let opened: Box<[URL]>
+    private func link(_ wiki: String, _ id: String) -> URL {
+        DeepLink.url(wiki: wiki, pageID: id) ?? URL(string: "systems42://")!
     }
 
     private final class Box<Value> {
@@ -89,12 +88,19 @@ import Systems42TestSupport
         init(_ value: Value) { self.value = value }
     }
 
+    @MainActor private struct Rig {
+        let router: DeepLinkRouter
+        let opened: Box<[URL]>
+        let activations: Box<Int>
+        var notice: DeepLinkNotice? { router.board.current }
+    }
+
     private func rig(sessions: [WikiSession], recent: [URL] = [], now: @escaping @MainActor () -> Date = { Date() }) -> Rig {
-        let notices = Box<[DeepLinkNotice]>([])
         let opened = Box<[URL]>([])
+        let activations = Box(0)
         let router = DeepLinkRouter(sessions: { sessions }, recent: { recent }, openWiki: { opened.value.append($0) },
-                                    present: { notices.value.append($0) }, now: now)
-        return Rig(router: router, notices: notices, opened: opened)
+                                    activate: { activations.value += 1 }, now: now)
+        return Rig(router: router, opened: opened, activations: activations)
     }
 
     private func session(_ fixture: String) async throws -> WikiSession {
@@ -109,9 +115,9 @@ import Systems42TestSupport
         let s = try await session("basic")
         let page = try firstPage(s)
         let r = rig(sessions: [s])
-        r.router.handle(DeepLink.url(wiki: s.title, pageID: page.id))
+        r.router.handle(link(s.title, page.id))
         #expect(s.selectedPage == page.ref)
-        #expect(r.notices.value.isEmpty)
+        #expect(r.notice == nil)
         #expect(r.opened.value == [s.root.url])
     }
 
@@ -119,7 +125,7 @@ import Systems42TestSupport
         let s = try await session("basic")
         let page = try firstPage(s)
         let r = rig(sessions: [s])
-        r.router.handle(DeepLink.url(wiki: s.root.url.lastPathComponent, pageID: page.id))
+        r.router.handle(link(s.root.url.lastPathComponent, page.id))
         #expect(s.selectedPage == page.ref)
     }
 
@@ -128,10 +134,10 @@ import Systems42TestSupport
         let before = try firstPage(s)
         s.select(page: before.ref)
         let r = rig(sessions: [s])
-        r.router.handle(DeepLink.url(wiki: s.title, pageID: "FR-999-nothing"))
+        r.router.handle(link(s.title, "FR-999-nothing"))
         #expect(s.selectedPage == before.ref)
-        #expect(r.notices.value.count == 1)
-        #expect(r.notices.value.first?.button == nil)
+        #expect(r.notice != nil)
+        #expect(r.notice?.button == nil)
         #expect(r.opened.value.isEmpty)
     }
 
@@ -144,22 +150,22 @@ import Systems42TestSupport
         r.router.handle(url)
         #expect(s.selectedPage == nil)
         #expect(s.selectedSection == nil)
-        #expect(r.notices.value.count == 1)
+        #expect(r.notice != nil)
     }
 
     @Test func anUnknownWikiShowsAMessageAndChangesNothing() async throws {
         let s = try await session("basic")
         let r = rig(sessions: [s])
-        r.router.handle(DeepLink.url(wiki: "No Such Wiki", pageID: "FR-1"))
+        r.router.handle(link("No Such Wiki", "FR-1"))
         #expect(s.selectedPage == nil)
-        #expect(r.notices.value.count == 1)
+        #expect(r.notice != nil)
         #expect(r.opened.value.isEmpty)
     }
 
     @Test func aMalformedLinkShowsAMessage() async throws {
         let r = rig(sessions: [])
         r.router.handle(URL(string: "systems42://")!)
-        #expect(r.notices.value.count == 1)
+        #expect(r.notice != nil)
     }
 
     @Test func aClosedRecentWikiOffersToOpenAndDoesNotOpenByItself() async throws {
@@ -167,9 +173,9 @@ import Systems42TestSupport
         let closed = Fixture.url("search")
         let name = WikiConfig.load(try Preflight.open(closed)).systemName
         let r = rig(sessions: [open], recent: [closed])
-        r.router.handle(DeepLink.url(wiki: name, pageID: "FR-1"))
+        r.router.handle(link(name, "FR-1"))
         #expect(r.opened.value.isEmpty)
-        let notice = try #require(r.notices.value.first)
+        let notice = try #require(r.notice)
         #expect(notice.button?.title == "Open \(name)")
         notice.button?.run()
         #expect(r.opened.value == [WikiFolders.standardized(closed)])
@@ -179,8 +185,8 @@ import Systems42TestSupport
         let closed = try await session("search")
         let page = try #require(closed.store.pages(in: "functional-requirements").first)
         let r = rig(sessions: [], recent: [closed.root.url])
-        r.router.handle(DeepLink.url(wiki: closed.title, pageID: page.id))
-        r.notices.value.first?.button?.run()
+        r.router.handle(link(closed.title, page.id))
+        r.notice?.button?.run()
         #expect(closed.selectedPage == nil)
         r.router.sessionOpened(closed)
         #expect(closed.selectedPage == page.ref)
@@ -195,8 +201,8 @@ import Systems42TestSupport
         try FileManager.default.createDirectory(at: plain, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: plain) }
         let r = rig(sessions: [], recent: [plain])
-        r.router.handle(DeepLink.url(wiki: plain.lastPathComponent, pageID: "FR-1"))
-        #expect(r.notices.value.first?.button == nil)
+        r.router.handle(link(plain.lastPathComponent, "FR-1"))
+        #expect(r.notice?.button == nil)
         #expect(r.opened.value.isEmpty)
     }
 
@@ -206,33 +212,222 @@ import Systems42TestSupport
         defer { try? FileManager.default.removeItem(at: copy.deletingLastPathComponent()) }
         let page = try firstPage(s)
         let r = rig(sessions: [s], recent: [copy])
-        r.router.handle(DeepLink.url(wiki: s.title, pageID: page.id))
+        r.router.handle(link(s.title, page.id))
         #expect(s.selectedPage == nil)
         #expect(r.opened.value.isEmpty)
-        #expect(r.notices.value.count == 1)
-        #expect(r.notices.value.first?.button == nil)
+        #expect(r.notice != nil)
+        #expect(r.notice?.button == nil)
     }
 
     @Test func theSameLinkTwiceInOneEventActsOnce() async throws {
         let s = try await session("basic")
+        let r = rig(sessions: [s], now: { Date(timeIntervalSince1970: 1000) })
+        let url = link(s.title, "FR-999-nothing")
+        r.router.handle(url)
+        r.router.handle(url)
+        #expect(r.activations.value == 1)
+        #expect(r.notice != nil)
+    }
+
+    // MARK: Floods
+
+    @Test func aLinkWhileANoticeShowsIsDroppedAndAfterTheNoticeItActs() async throws {
+        let s = try await session("basic")
         let page = try firstPage(s)
         let r = rig(sessions: [s], now: { Date(timeIntervalSince1970: 1000) })
-        let url = DeepLink.url(wiki: s.title, pageID: "FR-999-nothing")
-        r.router.handle(url)
-        r.router.handle(url)
-        #expect(r.notices.value.count == 1)
-        r.router.handle(DeepLink.url(wiki: s.title, pageID: page.id))
+        r.router.handle(link(s.title, "FR-999-nothing"))
+        let first = r.notice?.text
+        r.router.handle(link(s.title, page.id))
+        r.router.handle(link("Nowhere", "x"))
+        #expect(s.selectedPage == nil)
+        #expect(r.notice?.text == first)
+        #expect(r.activations.value == 1)
+        r.router.board.dismiss()
+        r.router.handle(link(s.title, page.id))
         #expect(s.selectedPage == page.ref)
     }
 
-    @Test func aLinkLaterActsAgain() async throws {
+    @Test func aThousandDistinctLinksGiveOneNoticeAndFewHandled() async throws {
         let s = try await session("basic")
+        let r = rig(sessions: [s], now: { Date(timeIntervalSince1970: 1000) })
+        var shown = Set<String>()
+        for i in 0..<1000 {
+            r.router.handle(link(s.title, "FR-\(i)-nothing"))
+            if let text = r.notice?.text { shown.insert(text) }
+        }
+        #expect(shown.count == 1)
+        #expect(r.activations.value == 1)
+    }
+
+    @Test func aThousandLinksToPagesHandleAtMostTheLimitAndKeepTheHistoryShort() async throws {
+        let s = try await session("basic")
+        let ids = s.store.pages(in: "functional-requirements").map(\.id)
+        #expect(ids.count >= 2)
+        let r = rig(sessions: [s], now: { Date(timeIntervalSince1970: 1000) })
+        for i in 0..<1000 {
+            r.router.handle(link(i % 2 == 0 ? s.title : s.root.url.lastPathComponent, ids[i % ids.count]))
+            r.router.board.dismiss()
+        }
+        #expect(r.activations.value <= DeepLinkRouter.handledPerWindow)
+        #expect(s.historyCount <= DeepLinkRouter.handledPerWindow)
+        #expect(r.opened.value.count <= DeepLinkRouter.handledPerWindow)
+    }
+
+    @Test func theLimitIsPerWindowOfTime() async throws {
+        let s = try await session("basic")
+        let ids = s.store.pages(in: "functional-requirements").map(\.id)
         let clock = Box(Date(timeIntervalSince1970: 1000))
         let r = rig(sessions: [s], now: { clock.value })
-        let url = DeepLink.url(wiki: s.title, pageID: "FR-999-nothing")
-        r.router.handle(url)
-        clock.value = Date(timeIntervalSince1970: 2000)
-        r.router.handle(url)
-        #expect(r.notices.value.count == 2)
+        for i in 0..<DeepLinkRouter.handledPerWindow + 2 { r.router.handle(link(s.title, ids[i % ids.count])) }
+        #expect(r.activations.value == DeepLinkRouter.handledPerWindow)
+        clock.value = clock.value.addingTimeInterval(DeepLinkRouter.window + 1)
+        r.router.handle(link(s.title, ids[0] + "-x"))
+        #expect(r.activations.value == DeepLinkRouter.handledPerWindow + 1)
+    }
+
+    // MARK: Text from a link
+
+    @Test func partsWithControlFormatOrSeparatorCharactersAreRefused() {
+        let bad = ["%00", "%0A", "%0D", "%1B", "%7F", "%C2%80", "%C2%85", "%C2%9F",   // C0, DEL, C1 including NEL
+                   "%E2%80%AE", "%E2%80%AD", "%E2%81%A6", "%E2%80%8B", "%E2%80%8E", "%EF%BB%BF", "%C2%AD", // Cf: bidi, zero width, BOM, soft hyphen
+                   "%E2%80%A8", "%E2%80%A9"]                                          // line and paragraph separator
+        for escape in bad {
+            #expect(parse("systems42://Lib\(escape)rary/FR-1") == nil, "wiki \(escape)")
+            #expect(parse("systems42://Library/FR\(escape)-1") == nil, "id \(escape)")
+        }
+    }
+
+    @Test func aNameFromALinkIsShownShortAndQuoted() async throws {
+        let s = try await session("basic")
+        let sentence = String(repeating: "Please press the button to win a prize. ", count: 5)
+        let name = String(sentence.prefix(DeepLink.longestPart))
+        let r = rig(sessions: [s])
+        r.router.handle(link(name, "FR-1"))
+        let text = try #require(r.notice?.text)
+        #expect(text.hasPrefix("No open or recent wiki is named \""))
+        #expect(text.contains("…\""))
+        #expect(!text.contains(String(name.prefix(Untrusted.longestShown + 5))))
+        #expect(text.count < 100)
+    }
+
+    @Test func aPageIdFromALinkIsShownShortToo() async throws {
+        let s = try await session("basic")
+        let r = rig(sessions: [s])
+        r.router.handle(link(s.title, String(repeating: "x", count: 150)))
+        let text = try #require(r.notice?.text)
+        #expect(text.contains("…\""))
+        #expect(!text.contains(String(repeating: "x", count: Untrusted.longestShown + 1)))
+    }
+
+    @Test func untrustedTextLosesUnsafeCharactersAndIsCut() {
+        #expect(Untrusted.clean("a\u{202E}b\nc\u{200B}d\u{0085}e\u{2028}f") == "abcdef")
+        #expect(Untrusted.clean(String(repeating: "y", count: 41)) == String(repeating: "y", count: 40) + "…")
+        #expect(Untrusted.clean(String(repeating: "y", count: 40)) == String(repeating: "y", count: 40))
+        #expect(Untrusted.quoted("a\nb") == "\"ab\"")
+    }
+
+    @Test func theNameOfTheOpenButtonIsBounded() async throws {
+        let copy = try Fixture.tempCopy("basic")
+        defer { try? FileManager.default.removeItem(at: copy.deletingLastPathComponent()) }
+        let long = String(repeating: "N", count: 120)
+        try "system_name: \"\(long)\"\n".write(to: copy.appending(path: "_system/wiki.yaml"), atomically: true, encoding: .utf8)
+        let r = rig(sessions: [], recent: [copy])
+        r.router.handle(link(long, "FR-1"))
+        let title = try #require(r.notice?.button?.title)
+        #expect(title.count <= "Open ".count + Untrusted.longestShown + 1)
+    }
+
+    @Test func foldersInAMessageUseTilde() {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let inHome = home.appending(path: "s42-test-\(UUID().uuidString)")
+        #expect(Untrusted.path(inHome).hasPrefix("~/"))
+        #expect(!Untrusted.path(inHome).contains(home.path))
+    }
+
+    // MARK: Links we hand out
+
+    @Test func urlIsNilWhenTheAppWouldRefuseIt() {
+        #expect(DeepLink.url(wiki: String(repeating: "漢", count: 150), pageID: "FR-1") == nil)
+        #expect(DeepLink.url(wiki: "a\nb", pageID: "FR-1") == nil)
+        #expect(DeepLink.url(wiki: "  ", pageID: "FR-1") == nil)
+        #expect(DeepLink.url(wiki: "ok", pageID: "") == nil)
+        #expect(DeepLink.url(wiki: "ok", pageID: "a\u{202E}b") == nil)
+        #expect(DeepLink.url(wiki: "ok", pageID: String(repeating: "i", count: 201)) == nil)
+        #expect(DeepLink.url(wiki: "ok", pageID: "FR-1") != nil)
+    }
+
+    // MARK: The wiki that is opened
+
+    @Test func aLinkWaitsForTheFolderTheReaderAgreedTo() async throws {
+        let a = try await session("search")
+        let b = try await session("arc42")
+        let page = try #require(a.store.pages(in: "functional-requirements").first)
+        let r = rig(sessions: [], recent: [a.root.url])
+        r.router.handle(link(a.title, page.id))
+        r.notice?.button?.run()
+        r.router.sessionOpened(b)
+        #expect(a.selectedPage == nil)
+        #expect(b.selectedPage == nil)
+        r.router.sessionOpened(a)
+        #expect(a.selectedPage == page.ref)
+    }
+
+    @Test func aFailedOpenDropsTheWaitingLink() async throws {
+        let a = try await session("search")
+        let page = try #require(a.store.pages(in: "functional-requirements").first)
+        let r = rig(sessions: [], recent: [a.root.url])
+        r.router.handle(link(a.title, page.id))
+        r.notice?.button?.run()
+        r.router.openFailed(a.root.url)
+        r.router.sessionOpened(a)
+        #expect(a.selectedPage == nil)
+    }
+
+    @Test func aFailureOfAnotherFolderKeepsTheWaitingLink() async throws {
+        let a = try await session("search")
+        let b = try await session("arc42")
+        let page = try #require(a.store.pages(in: "functional-requirements").first)
+        let r = rig(sessions: [], recent: [a.root.url])
+        r.router.handle(link(a.title, page.id))
+        r.notice?.button?.run()
+        r.router.openFailed(b.root.url)
+        r.router.sessionOpened(a)
+        #expect(a.selectedPage == page.ref)
+    }
+
+    @Test func aWaitingLinkExpires() async throws {
+        let a = try await session("search")
+        let page = try #require(a.store.pages(in: "functional-requirements").first)
+        let clock = Box(Date(timeIntervalSince1970: 1000))
+        let r = rig(sessions: [], recent: [a.root.url], now: { clock.value })
+        r.router.handle(link(a.title, page.id))
+        r.notice?.button?.run()
+        clock.value = clock.value.addingTimeInterval(DeepLinkRouter.pendingLifetime + 1)
+        r.router.sessionOpened(a)
+        #expect(a.selectedPage == nil)
+    }
+
+    // MARK: Names of recent wikis
+
+    @Test func theNameOfARecentWikiIsReadOncePerChangeOfItsFile() async throws {
+        let copy = try Fixture.tempCopy("basic")
+        defer { try? FileManager.default.removeItem(at: copy.deletingLastPathComponent()) }
+        let file = copy.appending(path: "_system/wiki.yaml")
+        try "system_name: \"First\"\n".write(to: file, atomically: true, encoding: .utf8)
+        let clock = Box(Date(timeIntervalSince1970: 1000))
+        let r = rig(sessions: [], recent: [copy], now: { clock.value })
+        r.router.handle(link("First", "x"))
+        #expect(r.notice?.button != nil)
+        r.router.board.dismiss()
+        clock.value = clock.value.addingTimeInterval(DeepLinkRouter.window + 1)
+        r.router.handle(link("First", "y"))
+        #expect(r.router.nameReads == 1)
+        r.router.board.dismiss()
+        try "system_name: \"Second\"\n".write(to: file, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.modificationDate: Date().addingTimeInterval(500)], ofItemAtPath: file.path)
+        clock.value = clock.value.addingTimeInterval(DeepLinkRouter.window + 1)
+        r.router.handle(link("Second", "x"))
+        #expect(r.router.nameReads == 2)
+        #expect(r.notice?.button?.title == "Open Second")
     }
 }

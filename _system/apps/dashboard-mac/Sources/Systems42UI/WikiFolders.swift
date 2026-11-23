@@ -68,7 +68,9 @@ private struct OpensDroppedFolders: ViewModifier {
     @Environment(\.openWindow) private var openWindow
 
     func body(content: Content) -> some View {
-        content.onOpenURL { url in
+        content
+            .overlay(alignment: .top) { NoticeBanner(board: DeepLinkRouter.shared.board) }
+            .onOpenURL { url in
             if url.scheme?.lowercased() == DeepLink.scheme {
                 // A link from outside. It selects a page of a wiki that is open or recent, nothing else.
                 DeepLinkRouter.shared.configure(openWiki: { openWindow.openWiki($0) })

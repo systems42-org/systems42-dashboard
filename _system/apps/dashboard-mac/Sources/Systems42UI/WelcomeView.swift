@@ -17,7 +17,7 @@ public struct WelcomeView: View {
             Button("Open Folder…") {
                 if let url = FolderChooser.choose() { open(url) }
             }
-            .keyboardShortcut("o")
+            .shortcut(Shortcuts.openFolder)
             if !recent.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Recent").font(.headline)
