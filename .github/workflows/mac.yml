@@ -29,3 +29,17 @@ jobs:
 
       - name: Test
         run: swift test --package-path _system/apps/dashboard-mac
+
+      # A build to try out, not a release: signed ad hoc, not notarized.
+      # After the download: xattr -dr com.apple.quarantine "Systems42 Dashboard Native.app"
+      - name: Build the app
+        run: |
+          S42_UNIVERSAL=1 _system/apps/dashboard-mac/scripts/build-app.sh
+          cd _system/apps/dashboard-mac/build
+          ditto -c -k --keepParent "Systems42 Dashboard Native.app" systems42-dashboard-native.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: systems42-dashboard-native
+          path: _system/apps/dashboard-mac/build/systems42-dashboard-native.zip
+          retention-days: 14
