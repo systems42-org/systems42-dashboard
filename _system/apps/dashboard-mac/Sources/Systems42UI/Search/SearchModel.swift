@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import os
 import Systems42Kit
 
 /// The filters of the full result list (FR-009), in the order they show.
@@ -23,8 +24,86 @@ enum SearchFilterFields {
 enum SearchLimits {
     /// The most suggestions under the field.
     static let mostSuggestions = 8
-    /// The longest query text the page marks look at.
-    static let longestQuery = 200
+}
+
+extension SearchFilter {
+    /// The filter without one of its fields: how a field's counts are taken (search.html `apply()`).
+    func without(_ field: String) -> SearchFilter {
+        var f = self
+        switch field {
+        case "type": f.types = []
+        case "status": f.statuses = []
+        case "priority": f.priorities = []
+        case "tag": f.tags = []
+        default: break
+        }
+        return f
+    }
+
+    func isOn(_ field: String) -> Bool {
+        switch field {
+        case "type": !types.isEmpty
+        case "status": !statuses.isEmpty
+        case "priority": !priorities.isEmpty
+        case "tag": !tags.isEmpty
+        default: false
+        }
+    }
+}
+
+/// The running steps of a model, so a newer step cancels the older one and a model that goes away
+/// cancels all of them. The tasks only hold the model weakly: a cancel just saves work.
+final class SearchWork: Sendable {
+    enum Slot { case build, quick, full, mark }
+    private struct Slots: Sendable { var build, quick, full, mark: Task<Void, Never>? }
+    private let slots = OSAllocatedUnfairLock(initialState: Slots())
+
+    func start(_ slot: Slot, _ task: Task<Void, Never>) {
+        let old = slots.withLock { s -> Task<Void, Never>? in
+            switch slot {
+            case .build: defer { s.build = task }; return s.build
+            case .quick: defer { s.quick = task }; return s.quick
+            case .full: defer { s.full = task }; return s.full
+            case .mark: defer { s.mark = task }; return s.mark
+            }
+        }
+        old?.cancel()
+    }
+
+    /// Cancels the step in the slot and leaves it empty.
+    func cancel(_ slot: Slot) {
+        let old = slots.withLock { s -> Task<Void, Never>? in
+            switch slot {
+            case .build: defer { s.build = nil }; return s.build
+            case .quick: defer { s.quick = nil }; return s.quick
+            case .full: defer { s.full = nil }; return s.full
+            case .mark: defer { s.mark = nil }; return s.mark
+            }
+        }
+        old?.cancel()
+    }
+
+    /// Empties the slot of a step that has finished.
+    func finish(_ slot: Slot) {
+        slots.withLock { s in
+            switch slot {
+            case .build: s.build = nil
+            case .quick: s.quick = nil
+            case .full: s.full = nil
+            case .mark: s.mark = nil
+            }
+        }
+    }
+
+    var running: Task<Void, Never>? {
+        slots.withLock { $0.build ?? $0.quick ?? $0.full ?? $0.mark }
+    }
+
+    deinit {
+        slots.withLock { s in
+            for task in [s.build, s.quick, s.full, s.mark] { task?.cancel() }
+        }
+    }
 }
 
 /// A value a filter offers, with how many of the shown hits have it.
@@ -57,14 +136,19 @@ struct SearchOutcome: Sendable {
 struct SearchBackend: Sendable {
     var build: @Sendable (WikiStore, Metamodel) async -> SearchIndex
     var run: @Sendable (SearchJob) async -> SearchOutcome
+    /// The marks of a page text: text, query, words the passage marked.
+    var mark: @Sendable (String, String, [String]) async -> PageMarks
+
+    /// Runs `work` on a detached task that is cancelled with the calling task.
+    private static func detached<T: Sendable>(_ work: @escaping @Sendable () -> T) async -> T {
+        let task = Task.detached(priority: .userInitiated) { work() }
+        return await withTaskCancellationHandler { await task.value } onCancel: { task.cancel() }
+    }
 
     static let live = SearchBackend(
-        build: { store, metamodel in
-            await Task.detached(priority: .userInitiated) { SearchIndex(store: store, metamodel: metamodel) }.value
-        },
-        run: { job in
-            await Task.detached(priority: .userInitiated) { perform(job) }.value
-        }
+        build: { store, metamodel in await detached { SearchIndex(store: store, metamodel: metamodel) } },
+        run: { job in await detached { perform(job) } },
+        mark: { text, query, passage in await detached { PageMarks.compute(text: text, query: query, matchedInPassage: passage) } }
     )
 
     static func perform(_ job: SearchJob) -> SearchOutcome {
@@ -74,30 +158,41 @@ struct SearchBackend: Sendable {
         }
         let found = search(job.query, in: job.index, filter: job.filter, withPassages: true)
         let hits = found.filter { $0.group == .hit }
-        return SearchOutcome(hits: hits, related: found.filter { $0.group == .related }, facets: facets(of: hits, in: job.index))
+        return SearchOutcome(hits: hits, related: found.filter { $0.group == .related }, facets: facets(of: hits, for: job))
     }
 
-    /// How many of the hits have each value of each filter field. The most frequent value first.
-    private static func facets(of hits: [SearchHit], in index: SearchIndex) -> [(field: String, values: [(String, Int)])] {
-        var byID: [String: SearchEntry] = [:]
-        for entry in index.entries where byID[entry.id] == nil { byID[entry.id] = entry }
-        return SearchFilterFields.all.map { field in
+    /// How many hits have each value of each filter field, the most frequent value first.
+    /// Like the web dashboard (search.html `apply()`), a field's counts are taken over the hits that
+    /// pass all the other filters, not its own: choosing one type leaves the other types their counts.
+    /// Hits are looked up by page, not by id: a wiki does not promise unique ids.
+    private static func facets(of hits: [SearchHit], for job: SearchJob) -> [(field: String, values: [(String, Int)])] {
+        var byRef: [PageRef: SearchEntry] = [:]
+        for entry in job.index.entries {
+            if let ref = entry.ref, byRef[ref] == nil { byRef[ref] = entry }
+        }
+        var out: [(field: String, values: [(String, Int)])] = []
+        for field in SearchFilterFields.all {
+            var base = hits
+            if job.filter.isOn(field.name) {
+                if Task.isCancelled { return out }
+                base = search(job.query, in: job.index, filter: job.filter.without(field.name), withPassages: false, withRelated: false)
+            }
             var counts: [String: Int] = [:]
-            for hit in hits {
-                guard let entry = byID[hit.id] else { continue }
+            for hit in base {
                 let values: [String]
                 switch field.name {
-                case "type": values = [entry.type]
-                case "status": values = entry.status.isEmpty ? [] : [entry.status.lowercased()]
-                default: values = field.entryKey.flatMap { entry.fields[$0] } ?? []
+                case "type": values = [hit.type]
+                case "status": values = hit.status.isEmpty ? [] : [hit.status.lowercased()]
+                default: values = hit.ref.flatMap { byRef[$0] }.flatMap { entry in field.entryKey.flatMap { entry.fields[$0] } } ?? []
                 }
                 for value in Set(values) { counts[value, default: 0] += 1 }
             }
             let sorted = counts.sorted { a, b in
                 a.value != b.value ? a.value > b.value : a.key.utf8.lexicographicallyPrecedes(b.key.utf8)
             }
-            return (field: field.name, values: sorted.map { ($0.key, $0.value) })
+            out.append((field: field.name, values: sorted.map { ($0.key, $0.value) }))
         }
+        return out
     }
 }
 
@@ -125,6 +220,8 @@ struct SearchBackend: Sendable {
     public private(set) var highlighted: Int?
     /// Counts up when something asks the field to take the keyboard focus.
     public private(set) var focusRequests = 0
+    /// Counts up when the keyboard focus should move to the result list, after Return shows it.
+    public private(set) var listFocusRequests = 0
 
     @ObservationIgnored weak var session: WikiSession?
     @ObservationIgnored private let backend: SearchBackend
@@ -133,9 +230,13 @@ struct SearchBackend: Sendable {
     /// What `hits` is for, nil when no result list is shown.
     @ObservationIgnored private var shown: SearchRequest?
     @ObservationIgnored private var restoring = false
-    @ObservationIgnored private var buildTask: Task<Void, Never>?
-    @ObservationIgnored private var quickTask: Task<Void, Never>?
-    @ObservationIgnored private var hitsTask: Task<Void, Never>?
+    @ObservationIgnored private let work = SearchWork()
+    /// How many results arrived, kept or dropped. A test waits on it, see `finished(atLeast:)`.
+    @ObservationIgnored private(set) var arrivals = 0
+    @ObservationIgnored private var arrivalWaiters: [(count: Int, continuation: CheckedContinuation<Void, Never>)] = []
+    /// The marks of the page opened from a result, and what they are for.
+    private var markState: (ref: PageRef, revision: Int, marks: PageMarks)?
+    @ObservationIgnored private var markToken = 0
     @ObservationIgnored private var buildToken = 0
     @ObservationIgnored private var quickToken = 0
     @ObservationIgnored private var hitsToken = 0
@@ -161,15 +262,16 @@ struct SearchBackend: Sendable {
         clearResults()
         buildToken += 1
         let token = buildToken
-        buildTask = Task { [weak self, backend] in
+        work.start(.build, Task { [weak self, backend] in
             let built = await backend.build(store, metamodel)
             self?.finishBuild(built, token: token)
-        }
+        })
     }
 
     private func finishBuild(_ built: SearchIndex, token: Int) {
+        arrived()
         guard token == buildToken else { return }
-        buildTask = nil
+        work.finish(.build)
         guard session?.revision == indexRevision else {
             startBuild()
             return
@@ -193,8 +295,8 @@ struct SearchBackend: Sendable {
     private func clearResults() {
         quickToken += 1
         hitsToken += 1
-        quickTask = nil
-        hitsTask = nil
+        work.cancel(.quick)
+        work.cancel(.full)
         quick = []
         hits = []
         related = []
@@ -204,7 +306,7 @@ struct SearchBackend: Sendable {
 
     /// Waits until the index is built and no search is running. Tests use it, nothing sleeps.
     public func settle() async {
-        while let task = buildTask ?? quickTask ?? hitsTask { await task.value }
+        while let task = work.running { await task.value }
     }
 
     // MARK: Searching
@@ -233,22 +335,23 @@ struct SearchBackend: Sendable {
     private func runQuick() {
         quickToken += 1
         let token = quickToken
-        quickTask = nil
+        work.cancel(.quick)
         guard !Self.trimmed(query).isEmpty, let index else {
             quick = []
             return
         }
         let job = SearchJob(index: index, query: query, filter: SearchFilter(), full: false)
         let revision = indexRevision
-        quickTask = Task { [weak self, backend] in
+        work.start(.quick, Task { [weak self, backend] in
             let outcome = await backend.run(job)
             self?.finishQuick(outcome, token: token, revision: revision)
-        }
+        })
     }
 
     private func finishQuick(_ outcome: SearchOutcome, token: Int, revision: Int) {
+        arrived()
         guard token == quickToken else { return }
-        quickTask = nil
+        work.finish(.quick)
         guard revision == session?.revision else {
             ensureCurrent()
             return
@@ -260,7 +363,7 @@ struct SearchBackend: Sendable {
     private func runFull() {
         hitsToken += 1
         let token = hitsToken
-        hitsTask = nil
+        work.cancel(.full)
         guard let shown, let index else {
             hits = []
             related = []
@@ -269,15 +372,16 @@ struct SearchBackend: Sendable {
         }
         let job = SearchJob(index: index, query: shown.query, filter: shown.filter, full: true)
         let revision = indexRevision
-        hitsTask = Task { [weak self, backend] in
+        work.start(.full, Task { [weak self, backend] in
             let outcome = await backend.run(job)
             self?.finishFull(outcome, token: token, revision: revision)
-        }
+        })
     }
 
     private func finishFull(_ outcome: SearchOutcome, token: Int, revision: Int) {
+        arrived()
         guard token == hitsToken else { return }
-        hitsTask = nil
+        work.finish(.full)
         guard revision == session?.revision else {
             ensureCurrent()
             return
@@ -285,6 +389,20 @@ struct SearchBackend: Sendable {
         hits = outcome.hits
         related = outcome.related
         facets = outcome.facets
+    }
+
+    private func arrived() {
+        arrivals += 1
+        let ready = arrivalWaiters.filter { $0.count <= arrivals }
+        arrivalWaiters.removeAll { $0.count <= arrivals }
+        for waiter in ready { waiter.continuation.resume() }
+    }
+
+    /// Returns once at least `count` results have arrived, kept or dropped. For tests that hold a
+    /// run and need to know it came back and was judged.
+    func finished(atLeast count: Int) async {
+        if arrivals >= count { return }
+        await withCheckedContinuation { arrivalWaiters.append((count, $0)) }
     }
 
     // MARK: Actions
@@ -299,6 +417,7 @@ struct SearchBackend: Sendable {
         highlighted = nil
         session?.showSearch(request)
         runFull()
+        listFocusRequests += 1
     }
 
     /// Return in the field: opens the page the arrow keys are on, else shows the full list.
@@ -315,18 +434,22 @@ struct SearchBackend: Sendable {
         guard let ref = hit.ref, let session else { return }
         suggestionsOpen = false
         highlighted = nil
+        prepareMarks(of: ref, query: keepingResults ? (shown?.query ?? query) : query, passage: hit.passage?.marked ?? [])
         if keepingResults { session.selectResult(ref) } else { session.open(.page(ref)) }
     }
 
-    /// Up and down in the suggestions. It wraps at both ends.
-    public func moveHighlight(by step: Int) {
+    /// Up and down in the suggestions. It wraps at both ends. False, and nothing done, while no
+    /// suggestions are open, so the key goes on to the system.
+    @discardableResult
+    public func moveHighlight(by step: Int) -> Bool {
         let count = quick.count
-        guard count > 0 else { return }
+        guard suggestionsOpen, count > 0 else { return false }
         if let h = highlighted {
             highlighted = ((h + step) % count + count) % count
         } else {
             highlighted = step > 0 ? 0 : count - 1
         }
+        return true
     }
 
     /// Escape: closes the suggestions.
@@ -419,12 +542,38 @@ struct SearchBackend: Sendable {
         }
     }
 
-    // MARK: Marks in the shown page
+    // MARK: Marks in the opened page
 
-    /// The words to mark in a page opened from the shown results. Empty when the page is no result of them.
+    /// Starts finding the words to mark in a page. The page shows unmarked until they arrive. A newer
+    /// call, or a newer wiki, drops an older result.
+    private func prepareMarks(of ref: PageRef, query: String, passage: [String]) {
+        markToken += 1
+        let token = markToken
+        markState = nil
+        guard let session, let page = session.store.page(ref), !PageMarks.words(of: query).isEmpty else {
+            work.cancel(.mark)
+            return
+        }
+        let revision = session.revision, text = page.body
+        work.start(.mark, Task { [weak self, backend] in
+            let marks = await backend.mark(text, query, passage)
+            self?.finishMarks(marks, ref: ref, revision: revision, token: token)
+        })
+    }
+
+    private func finishMarks(_ marks: PageMarks, ref: PageRef, revision: Int, token: Int) {
+        arrived()
+        guard token == markToken else { return }
+        work.finish(.mark)
+        guard revision == session?.revision else { return }
+        markState = (ref, revision, marks)
+    }
+
+    /// The words to mark in the selected page when it was opened from a suggestion or a result.
+    /// Nothing for any other page, and nothing while the marks are still being found.
     public func pageMarks(for ref: PageRef) -> PageMarks {
-        guard let shown, session?.shownSearch == shown,
-              let hit = (hits + related).first(where: { $0.ref == ref }) else { return PageMarks(words: [], matchedInPassage: []) }
-        return PageMarks(words: PageMarks.words(of: shown.query), matchedInPassage: hit.passage?.marked ?? [])
+        guard let markState, markState.ref == ref, markState.revision == session?.revision,
+              session?.selectedPage == ref else { return .none }
+        return markState.marks
     }
 }

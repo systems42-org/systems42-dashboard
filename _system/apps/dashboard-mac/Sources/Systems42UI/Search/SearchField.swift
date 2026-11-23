@@ -16,8 +16,8 @@ struct SearchField: View {
                 .accessibilityLabel("Search the wiki")
                 .accessibilityHint("Type to see suggestions. Down arrow chooses one, Return opens it or shows all results, Escape closes the suggestions.")
                 .onSubmit { model.submit() }
-                .onKeyPress(.downArrow) { model.moveHighlight(by: 1); return .handled }
-                .onKeyPress(.upArrow) { model.moveHighlight(by: -1); return .handled }
+                .onKeyPress(.downArrow) { model.moveHighlight(by: 1) ? .handled : .ignored }
+                .onKeyPress(.upArrow) { model.moveHighlight(by: -1) ? .handled : .ignored }
                 .onExitCommand { model.dismissSuggestions() }
             if !model.query.isEmpty {
                 Button("Clear search", systemImage: "xmark.circle.fill") { model.query = "" }
@@ -47,7 +47,7 @@ struct SuggestionList: View {
                 } else if model.quick.isEmpty {
                     Text("No page matches.").foregroundStyle(.secondary).padding(8)
                 } else {
-                    ForEach(Array(model.quick.enumerated()), id: \.element.id) { position, hit in
+                    ForEach(Array(model.quick.enumerated()), id: \.element.ref) { position, hit in
                         Button { model.open(hit) } label: {
                             SuggestionRow(hit: hit)
                                 .padding(.horizontal, 8)

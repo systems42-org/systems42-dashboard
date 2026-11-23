@@ -5,6 +5,7 @@ import Systems42Kit
 struct SearchResults: View {
     let session: WikiSession
     @Bindable var model: SearchModel
+    @FocusState private var listFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -16,16 +17,18 @@ struct SearchResults: View {
             })) {
                 if !model.hits.isEmpty {
                     Section("Hits") {
-                        ForEach(model.hits) { hit in SearchResultRow(hit: hit) }
+                        ForEach(model.hits, id: \.ref) { hit in SearchResultRow(hit: hit) }
                     }
                 }
                 if !model.related.isEmpty {
                     Section("Related pages") {
-                        ForEach(model.related) { hit in SearchResultRow(hit: hit) }
+                        ForEach(model.related, id: \.ref) { hit in SearchResultRow(hit: hit) }
                     }
                 }
             }
             .listStyle(.inset)
+            .focused($listFocused)
+            .onChange(of: model.listFocusRequests) { listFocused = true }
             .overlay { SearchState(model: model) }
         }
     }
@@ -139,7 +142,7 @@ private struct SearchState: View {
 
 /// The marks of the query words in the page column.
 private struct PageMarksKey: EnvironmentKey {
-    static let defaultValue = PageMarks(words: [], matchedInPassage: [])
+    static let defaultValue = PageMarks.none
 }
 
 extension EnvironmentValues {

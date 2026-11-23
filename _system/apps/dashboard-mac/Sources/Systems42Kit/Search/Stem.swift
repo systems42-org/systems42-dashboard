@@ -32,6 +32,13 @@ struct WordMatch: Sendable {
     let cost: Int
 }
 
+/// The limits of a query, so a caller that works on the query words (the marks in a shown page)
+/// looks at no more than the ranker does.
+public enum SearchLimit {
+    public static let longestQuery = Search.longestQuery
+    public static let mostQueryWords = Search.mostQueryWords
+}
+
 /// The text rules of the ranker. A namespace, so the helpers do not clutter the module.
 enum Search {
     // JS WORD_RE, ID_RE, SUFFIXES
