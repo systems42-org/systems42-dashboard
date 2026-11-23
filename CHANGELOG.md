@@ -75,6 +75,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
   next.
 
 ### Changed
+- Website: dashboard.systems42.org uses the colours of the Systems42 logo on large areas. Header, hero and page headers are navy with the two peaks in mint green and sky blue, the section on getting started is mint, and headings use the dashboard's display face. On a phone the home page no longer scrolls sideways.
 - Docs: the dashboard README and the Go summary no longer name a Homebrew cask as a way to install the app. The cask file is prepared, but no tap offers it yet.
 - Dashboard release 0.14.0 (`_system/apps/dashboard/VERSION`).
 - `make` lists its targets in two groups: those for every Systems42 wiki and those for the dashboard's repository only.
