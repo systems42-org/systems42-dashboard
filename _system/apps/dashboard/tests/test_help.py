@@ -28,7 +28,7 @@ def test_help_renders_both_parts_and_the_diagram():
     body = r.get_data(as_text=True)
     assert "Reading this dashboard" in body and "The Systems42 model in brief" in body
     assert "systems42-sections.svg" in body
-    for word in ("View", "facilitator", "Maturity", "valley", "Commons", "req42", "arc42"):
+    for word in ("View", "facilitator", "Maturity", "middle column", "Commons", "req42", "arc42"):
         assert word in body, word
     assert (ROOT / "static" / "systems42-sections.svg").stat().st_size > 1000
     assert "docs/GETTING-STARTED.md" in body

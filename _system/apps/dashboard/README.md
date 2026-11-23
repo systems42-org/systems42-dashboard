@@ -126,7 +126,7 @@ a five-entry nav (Requirements · Architecture · Domain Terms · Decisions · I
 current entry marked, a search box and the ≡ menu. Pressing <kbd>⌘K</kbd>
 (<kbd>Ctrl K</kbd> elsewhere) anywhere focuses the search box; submitting it
 lands on `/search`, the full-text view. The nav carries content only: the
-two peaks, then Domain Terms, Decisions and Issues from Commons. Every label
+two areas, then Domain Terms, Decisions and Issues from Commons. Every label
 comes from `catalog.py`, which reads the section titles from the metamodel,
 so a section has one name everywhere (FR-017, FR-044).
 Breadcrumbs under the bar read `Home › Area › Section › Page`, following
@@ -194,9 +194,10 @@ the generic list at `/section/<id>`, a generic tile and its area's colours.
 The home page (`/`) opens with the vault name and the first sentence of the
 vision, the goal page with `stereotype: vision`. Without a vision it shows the
 tagline (FR-018). Below it come two
-peaks, **Requirements** and **Architecture**, and between them the *valley*:
-vault status, latest changes, open issues and links to the decisions and to
-Help. **Commons** runs full-width underneath. Each peak links to its area page.
+areas, **Requirements** and **Architecture**, and between them the *middle
+column*: vault status, latest changes, open issues and links to the decisions
+and to Help. **Commons** runs full-width underneath. Each area links to its
+area page.
 Each area tile lists its sections with the count their section tile shows.
 
 The area pages `/req42`, `/arc42` and `/commons` show one tile per section,
@@ -268,7 +269,7 @@ delete it.
 `/help` renders `help.md` together with the Systems42 sections diagram
 (`static/systems42-sections.svg`, shown as an image so it works offline). It
 explains how to read the dashboard and the area model; it is linked from the
-≡ menu and the valley on the home page.
+≡ menu and the middle column on the home page.
 
 ## About page
 

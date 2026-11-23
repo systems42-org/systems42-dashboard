@@ -31,7 +31,7 @@ func (a Area) ToMap() map[string]any {
 var Areas = []Area{
 	{Key: "requirements", Label: "Requirements", Subtitle: "goals, needs, constraints", Href: "/req42", Colors: []string{"req"}},
 	{Key: "architecture", Label: "Architecture", Subtitle: "structure, interfaces, views", Href: "/arc42", Colors: []string{"arc"}},
-	{Key: "commons", Label: "Commons", Subtitle: "shared by both peaks", Href: "/commons", Colors: []string{"req", "arc"}},
+	{Key: "commons", Label: "Commons", Subtitle: "shared by both areas", Href: "/commons", Colors: []string{"req", "arc"}},
 }
 
 // AreaByKey indexes Areas by Key.
