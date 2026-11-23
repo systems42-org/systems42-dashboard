@@ -67,6 +67,7 @@ private struct PageContent: View {
                 } else {
                     BlockList(blocks: model.blocks)
                 }
+                PageDiagram(session: session, ref: model.page.ref)
                 Divider()
                 RelationsPanel(outgoing: model.outgoing, incoming: model.incoming, definition: model.definition(of:))
                 IssuesPanel(issues: model.openIssues)

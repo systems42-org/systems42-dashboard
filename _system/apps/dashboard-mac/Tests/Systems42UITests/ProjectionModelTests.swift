@@ -30,11 +30,11 @@ private func loaded(_ s: WikiSession, agreedOnly: Bool = false) async throws -> 
         let s = try await session("basic")
         let requirements = ProjectionHost.modes(for: try section(containing: "functional-requirements", in: s), metamodel: s.metamodel)
         #expect(requirements == ["list", "story-map", "backlog-ranking", "goal-coverage"])
-        // The domain terms type declares two projections, both drawn as graphs by a later issue.
+        // The domain terms type declares two projections, both drawn as graphs in the web view.
         let terms = ProjectionHost.modes(for: try section(containing: "domain-terms", in: s), metamodel: s.metamodel)
-        #expect(terms == ["list"])
+        #expect(terms == ["list", "terminology-graph", "entity-diagram"])
         let goals = ProjectionHost.modes(for: try section(containing: "goals", in: s), metamodel: s.metamodel)
-        #expect(goals == ["list", "goal-coverage"])
+        #expect(goals == ["list", "goal-tree", "goal-coverage"])
     }
 
     @Test func aTailoredWikiOffersOnlyWhatItDeclares() async throws {
@@ -368,7 +368,9 @@ private func loaded(_ s: WikiSession, agreedOnly: Bool = false) async throws -> 
     }
 
     @Test func aModeTheAppDoesNotDrawIsNotAProjection() async throws {
-        #expect(ProjectionHost.nativeProjections == ["story-map", "goal-coverage", "backlog-ranking"])
+        #expect(ProjectionHost.nativeProjections == ["story-map", "goal-coverage", "backlog-ranking"] + GraphModes.all)
+        // The projections of a type that have no drawing, such as a list of what governs a block, are no mode.
+        #expect(!ProjectionHost.nativeProjections.contains("governed-by") && !ProjectionHost.nativeProjections.contains("sequence-diagram"))
         let s = try await session("basic")
         #expect(!s.showsProjection)
         s.select(section: try section(containing: "functional-requirements", in: s).id)

@@ -10,6 +10,8 @@ struct DashboardApp: App {
         WikiFolders.fromArguments(Array(CommandLine.arguments.dropFirst()), currentDirectory: FileManager.default.currentDirectoryPath))
 
     init() {
+        // A check for the build script and CI: no window, no menu.
+        if let status = DiagramAssetCheck.handle(Array(CommandLine.arguments.dropFirst())) { exit(status) }
         // `swift run` starts a bare executable. Make it a normal app with a window and a menu bar.
         NSApplication.shared.setActivationPolicy(.regular)
         NSApplication.shared.activate()

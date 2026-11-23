@@ -240,6 +240,9 @@ struct ProjectionData: Sendable {
     let outline: [OutlineNode]
     let matrix: MatrixModel
     let backlog: [BacklogRow]
+    /// The graph diagrams a section offers, by the name of their projection page. Each is what
+    /// `Projections.mermaid` gives for it, unchanged. A wiki without the page, or with nothing to draw, has no entry.
+    let diagrams: [String: DiagramSource]
     /// The snapshot the models came from, for the detail of one requirement.
     let projections: Projections
 
@@ -254,7 +257,7 @@ struct ProjectionData: Sendable {
         return ProjectionData(
             revision: revision, agreedOnly: agreedOnly, storyMap: StoryMapModel(projections.storyMap()),
             outline: OutlineNode.roots(projections.hierarchy()), matrix: MatrixModel(projections.goalMatrix()),
-            backlog: backlog, projections: projections
+            backlog: backlog, diagrams: GraphModes.diagrams(projections: projections, metamodel: metamodel), projections: projections
         )
     }
 }

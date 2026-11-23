@@ -66,6 +66,9 @@ import Systems42Kit
     /// Says that a click found no entry, nil otherwise.
     public private(set) var noEntryText: String?
     public var mode = Mode.entries
+    /// The graph mode's data: framework blocks as groups, types as nodes, relations as edges. Nil until loaded.
+    public private(set) var drawnGraph: Graph?
+    @ObservationIgnored private var graphRevision: Int?
 
     private var chosenEntryID: String?
     private var chosenSection: WikiSection.ID?
@@ -106,6 +109,20 @@ import Systems42Kit
 
     /// The revision of the loaded wiki. It changes when the wiki is replaced.
     public var revision: Int { session?.revision ?? 0 }
+
+    /// Computes the graph of the loaded metamodel off the main thread, once per revision. A result of an older revision is dropped.
+    public func loadGraph() async {
+        guard let session else { return }
+        let revision = session.revision
+        guard graphRevision != revision else { return }
+        let store = session.store, metamodel = session.metamodel
+        let graph = await Task.detached(priority: .userInitiated) {
+            Projections(store: store, metamodel: metamodel, agreedOnly: false).graph("metamodel-graph")
+        }.value
+        guard !Task.isCancelled, self.session?.revision == revision else { return }
+        drawnGraph = graph
+        graphRevision = revision
+    }
 
     // MARK: Entries
 

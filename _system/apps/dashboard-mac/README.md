@@ -26,6 +26,16 @@ The version comes from `_system/apps/dashboard/VERSION`. The app is not signed.
 Yams and swift-markdown are pinned to exact versions in `Package.swift`, and
 `Package.resolved` is committed.
 
+## Diagrams
+
+Graph diagrams (context, building blocks, deployment, data model, goal tree, term network, metamodel
+graph, Mermaid blocks in pages) are drawn by the libraries the web dashboard ships, in a web view that
+loads nothing from the network. The page and the libraries are in `Sources/Systems42UI/Resources/diagram/`.
+`scripts/sync-diagram-assets.sh` copies the libraries from `_system/apps/dashboard/static/` and pins their
+checksums in `CHECKSUMS`. `scripts/sync-diagram-assets.sh --check` compares the copies with the dashboard.
+`Systems42Dashboard --check-diagram-assets` prints whether the files are found, and exits 0 or 1.
+`build-app.sh` copies the resource bundle to `Contents/Resources/` before it signs the app.
+
 ## Fixtures
 
 Tests read only `Tests/Fixtures/` and `Tests/Golden/`, never the live `wiki/`.

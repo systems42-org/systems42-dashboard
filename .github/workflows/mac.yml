@@ -38,6 +38,9 @@ jobs:
         run: |
           S42_UNIVERSAL=1 _system/apps/dashboard-mac/scripts/build-app.sh
           cd _system/apps/dashboard-mac/build
+          # The diagram files must sit inside the app and the signature must hold.
+          "Systems42 Dashboard Native.app/Contents/MacOS/Systems42Dashboard" --check-diagram-assets
+          codesign --verify --deep --strict "Systems42 Dashboard Native.app"
           ditto -c -k --keepParent "Systems42 Dashboard Native.app" systems42-dashboard-native.zip
 
       - uses: actions/upload-artifact@v4

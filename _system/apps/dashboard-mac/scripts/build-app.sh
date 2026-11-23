@@ -13,11 +13,15 @@ flags=(-c release)
 if [[ "${S42_UNIVERSAL:-}" == "1" ]]; then flags+=(--arch arm64 --arch x86_64); fi
 
 swift build --package-path "$here" "${flags[@]}"
-bin="$(swift build --package-path "$here" "${flags[@]}" --show-bin-path)/Systems42Dashboard"
+bindir="$(swift build --package-path "$here" "${flags[@]}" --show-bin-path)"
+bin="$bindir/Systems42Dashboard"
 
 rm -rf "$app"
-mkdir -p "$app/Contents/MacOS"
+mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$bin" "$app/Contents/MacOS/Systems42Dashboard"
+# The diagram page and its libraries. Only Contents/Resources may hold them: a file at the root of
+# the .app breaks the signature. DiagramAssets looks there first.
+cp -R "$bindir/Systems42Dashboard_Systems42UI.bundle" "$app/Contents/Resources/"
 cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -42,5 +46,5 @@ cat > "$app/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 # An ad-hoc signature seals the bundle, so an Apple Silicon Mac starts it.
-codesign --force --sign - "$app"
+codesign --force --deep --sign - "$app"
 echo "Built $app"

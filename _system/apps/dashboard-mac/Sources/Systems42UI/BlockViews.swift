@@ -23,7 +23,7 @@ struct BlockView: View {
 
     /// What a block is drawn as. One name per case, so a test can check that none is missing.
     enum Kind: Hashable {
-        case heading, paragraph, orderedList, bulletList, table, codeListing, callout, quote, rule, sourceListing
+        case heading, paragraph, orderedList, bulletList, table, codeListing, callout, quote, rule, diagram
     }
 
     static func kind(of block: Block) -> Kind {
@@ -36,8 +36,7 @@ struct BlockView: View {
         case .callout: .callout
         case .quote: .quote
         case .rule: .rule
-        // Diagrams are drawn by a later issue. Until then the reader sees the source.
-        case .diagram: .sourceListing
+        case .diagram: .diagram
         }
     }
 
@@ -65,10 +64,8 @@ struct BlockView: View {
         case .rule:
             Divider().padding(.vertical, 4)
         case .diagram(let language, let text):
-            VStack(alignment: .leading, spacing: 4) {
-                Text(verbatim: "\(language) source").font(.caption).foregroundStyle(.secondary)
-                CodeBlock(text: text)
-            }
+            // The text is the author's own: no node of it opens a page. When it cannot be drawn the reader sees the source.
+            DiagramView(.mermaid(text), label: "\(language) diagram", allowsLinks: false, title: { $0 }, fallbackText: text, select: { _ in })
         }
     }
 

@@ -180,7 +180,7 @@ private struct EntryColumn: View {
             } else if model.showsVersionNotice, let notice = model.versionNotice {
                 VersionExplanationView(notice: notice)
             } else if model.mode == .graph && model.selectedKind == MetamodelModel.types {
-                GraphOutlineView(outline: model.graphOutline)
+                GraphModeView(model: model)
             } else if let entry = model.selectedEntry {
                 switch entry.kind {
                 case MetamodelModel.types: TypeEntryView(model: model, store: session.store, entry: entry)
@@ -194,7 +194,33 @@ private struct EntryColumn: View {
     }
 }
 
-/// The Graph mode as data: types grouped by section, relations as lines. A web view draws it later (issue 128).
+/// The Graph mode: the drawn graph, and the outline as its text form. A click on a type opens its entry.
+private struct GraphModeView: View {
+    let model: MetamodelModel
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if let graph = model.drawnGraph {
+                DiagramView(.graph(graph, layout: DiagramLayout.metamodel), label: "Graph of the content types and their relations",
+                            allowsLinks: true,
+                            title: { id in graph.nodes.first { $0.id == id }?.data["label"]?.string ?? id },
+                            fallbackText: nil,
+                            select: { id in model.show(link: MetamodelModel.Link(kind: MetamodelModel.types, name: id, title: id)) })
+                    .padding(10)
+            } else {
+                ProgressView().controlSize(.small).frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            Divider()
+            DisclosureGroup("Text form") {
+                GraphOutlineView(outline: model.graphOutline).frame(height: 220)
+            }
+            .padding(10)
+        }
+        .task(id: model.revision) { await model.loadGraph() }
+    }
+}
+
+/// The Graph mode as text: types grouped by section, relations as lines.
 private struct GraphOutlineView: View {
     let outline: MetamodelModel.GraphOutline
 
