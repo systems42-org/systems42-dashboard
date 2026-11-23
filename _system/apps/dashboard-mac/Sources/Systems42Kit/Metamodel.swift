@@ -1,7 +1,7 @@
 import Foundation
 
 /// One field a type page declares for its pages.
-public struct MMField: Sendable {
+public struct MMField: Equatable, Sendable {
     public let name, kind: String
     public let doc: String?
     public let values: [String]
@@ -254,46 +254,79 @@ extension MMFramework {
 
 /// Text taken from the body of a metamodel or anchor page.
 enum MetaText {
-    private static let heading = "(?m)^#\\s+.*$"
-    private static let blankLine = "\\n\\s*\\n"
     private static let noParagraph = ["-", "*", "|", "#"]
+    private static let notDefinition = noParagraph + [">", "<!--"]
+
+    private static func lines(_ text: String) -> [String] {
+        text.components(separatedBy: "\n")
+    }
+
+    private static func isBlank(_ line: String) -> Bool {
+        line.allSatisfy(\.isWhitespace)
+    }
+
+    /// A level one heading: `#` and a space or tab.
+    private static func isHeading(_ line: String) -> Bool {
+        guard line.hasPrefix("#") else { return false }
+        let second = line.dropFirst().first
+        return second == " " || second == "\t"
+    }
+
+    /// The lines without the first level one heading, trimmed at both ends.
+    private static func withoutHeading(lines: [String]) -> [String] {
+        var kept = lines
+        if let index = kept.firstIndex(where: isHeading) { kept.remove(at: index) }
+        let start = kept.firstIndex { !isBlank($0) } ?? kept.endIndex
+        let end = kept.lastIndex { !isBlank($0) }.map { $0 + 1 } ?? start
+        return Array(kept[start..<end])
+    }
 
     /// The body without its first level one heading.
     static func withoutHeading(_ body: String) -> String {
-        guard let range = body.range(of: heading, options: .regularExpression) else { return body }
-        return String(body[..<range.lowerBound] + body[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+        let lines = lines(body)
+        guard lines.contains(where: isHeading) else { return body }
+        return withoutHeading(lines: lines).joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// The paragraphs of the lines, one scan, each as its lines. Blank lines separate them.
+    private static func paragraphs(_ lines: [String], _ visit: ([String]) -> Bool) {
+        var current: [String] = []
+        for line in lines {
+            if isBlank(line) {
+                if !current.isEmpty, !visit(current) { return }
+                current = []
+            } else {
+                current.append(line)
+            }
+        }
+        if !current.isEmpty { _ = visit(current) }
     }
 
     /// The first paragraph of the body, after the heading, as one line. Empty when it is a list, table or heading.
     static func summary(of body: String) -> String {
-        let text = withoutHeading(body)
-        let head = firstParagraph(text) ?? ""
-        let trimmed = head.drop { $0.isWhitespace }
-        if noParagraph.contains(where: trimmed.hasPrefix) { return "" }
-        return oneLine(head)
+        var result = ""
+        paragraphs(withoutHeading(lines: lines(body))) { paragraph in
+            let head = paragraph[0].drop { $0.isWhitespace }
+            result = noParagraph.contains(where: head.hasPrefix) ? "" : oneLine(paragraph)
+            return false
+        }
+        return result
     }
 
     /// The first paragraph that is not a quote, list, table, heading or comment.
     static func definition(of body: String) -> String {
-        var rest = withoutHeading(body)
-        while let paragraph = firstParagraph(rest) {
-            let head = paragraph.drop { $0.isWhitespace }
-            if !head.isEmpty, !(noParagraph + [">", "<!--"]).contains(where: head.hasPrefix) { return oneLine(paragraph) }
-            guard let split = rest.range(of: blankLine, options: .regularExpression) else { break }
-            rest = String(rest[split.upperBound...])
+        var result = ""
+        paragraphs(withoutHeading(lines: lines(body))) { paragraph in
+            let head = paragraph[0].drop { $0.isWhitespace }
+            if notDefinition.contains(where: head.hasPrefix) { return true }
+            result = oneLine(paragraph)
+            return false
         }
-        return ""
+        return result
     }
 
-    private static func firstParagraph(_ text: String) -> String? {
-        guard !text.isEmpty else { return nil }
-        guard let split = text.range(of: blankLine, options: .regularExpression) else { return text }
-        return String(text[..<split.lowerBound])
-    }
-
-    private static func oneLine(_ text: String) -> String {
-        text.split(separator: "\n", omittingEmptySubsequences: false)
-            .map { $0.trimmingCharacters(in: .whitespaces) }.joined(separator: " ")
+    private static func oneLine(_ lines: [String]) -> String {
+        lines.map { $0.trimmingCharacters(in: .whitespaces) }.joined(separator: " ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

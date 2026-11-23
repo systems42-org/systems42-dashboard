@@ -250,3 +250,20 @@ func setVersion(_ url: URL, _ line: String?) throws {
     let lines = text.components(separatedBy: "\n").map { $0.hasPrefix("version:") ? line : $0 }
     try lines.compactMap { $0 }.joined(separator: "\n").write(to: page, atomically: true, encoding: .utf8)
 }
+
+@Suite struct MetaTextTests {
+    @Test func aHugeBodyIsScannedOnce() {
+        let quotes = String(repeating: "> quote\n\n", count: 200_000)
+        let body = "# Title\n\n" + quotes + "The definition.\nOn two lines.\n\nLater."
+        #expect(MetaText.definition(of: body) == "The definition. On two lines.")
+    }
+
+    @Test func definitionSkipsListsQuotesAndComments() {
+        let body = "# T\n\n<!-- c\n  still -->\n\n- a\n\n> q\n\nReal one.\n\nSecond."
+        #expect(MetaText.definition(of: body) == "Real one.")
+        #expect(MetaText.summary(of: "# T\n\n- a\n\nx") == "")
+        #expect(MetaText.summary(of: "# T\n\nFirst para.\n\nSecond.") == "First para.")
+        #expect(MetaText.withoutHeading("# T\n\nText") == "Text")
+        #expect(MetaText.withoutHeading("Text\n\n## Sub") == "Text\n\n## Sub")
+    }
+}

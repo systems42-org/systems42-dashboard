@@ -4,21 +4,34 @@ import Systems42Kit
 
 /// The open wiki sessions by folder, so the Metamodel window finds the session of its wiki
 /// and shares its metamodel instead of reading it a second time.
-@MainActor enum OpenSessions {
+/// A wiki folder has one window (`openWiki` opens a window per folder value), so one session per folder.
+/// If one registers twice, the latest wins. Sessions are held weakly, and the table is observable,
+/// so a window that was restored before its wiki opened shows the wiki once it is registered.
+@MainActor @Observable final class OpenSessions {
     private final class Box {
         weak var session: WikiSession?
         init(_ session: WikiSession) { self.session = session }
     }
 
-    private static var table: [URL: Box] = [:]
+    static let shared = OpenSessions()
 
-    static func register(_ session: WikiSession) {
+    private var table: [URL: Box] = [:]
+
+    private static func key(_ folder: URL) -> URL { WikiFolders.standardized(folder) }
+
+    func register(_ session: WikiSession) {
         table = table.filter { $0.value.session != nil }
-        table[session.root.url] = Box(session)
+        table[Self.key(session.root.url)] = Box(session)
     }
 
-    static func session(for folder: URL) -> WikiSession? {
-        table[folder]?.session
+    /// Forgets the session, unless a newer one took its place.
+    func unregister(_ session: WikiSession) {
+        let key = Self.key(session.root.url)
+        if table[key]?.session === session { table[key] = nil }
+    }
+
+    func session(for folder: URL) -> WikiSession? {
+        table[Self.key(folder)]?.session
     }
 }
 
@@ -44,12 +57,15 @@ public struct MetamodelWindowRoot: View {
     }
 
     public var body: some View {
-        if let session = OpenSessions.session(for: folder) {
-            MetamodelWindow(session: session)
-                .focusedSceneValue(\.wikiFolder, folder)
-        } else {
-            Text("This wiki is closed.").foregroundStyle(.secondary).frame(minWidth: 400, minHeight: 200)
+        // The session is looked up on every read, so this view never keeps a closed wiki alive.
+        Group {
+            if let session = OpenSessions.shared.session(for: folder) {
+                MetamodelWindow(session: session, folder: folder)
+            } else {
+                Text("This wiki is not open.").foregroundStyle(.secondary).frame(minWidth: 400, minHeight: 200)
+            }
         }
+        .focusedSceneValue(\.wikiFolder, folder)
     }
 }
 
@@ -74,10 +90,13 @@ public struct MetamodelCommands: Commands {
 /// Three columns: the kinds of construct, the entries of a kind, the entry (FR-010, FR-035).
 struct MetamodelWindow: View {
     let session: WikiSession
+    let folder: URL
     @Bindable private var model: MetamodelModel
+    @Environment(\.openWindow) private var openWindow
 
-    init(session: WikiSession) {
+    init(session: WikiSession, folder: URL) {
         self.session = session
+        self.folder = folder
         model = session.explainer
     }
 
@@ -101,6 +120,11 @@ struct MetamodelWindow: View {
             }
         }
         .environment(\.explain, ExplainAction { ExplainAction.apply($0, to: model) })
+        .environment(\.openWikiPage, OpenWikiPage { [weak session] ref in
+            guard let session else { return }
+            session.open(.page(ref))
+            openWindow.openWiki(session.root.url)
+        })
         .navigationTitle("Metamodel · \(session.title)")
         .frame(minWidth: 860, minHeight: 480)
     }
@@ -151,7 +175,9 @@ private struct EntryColumn: View {
 
     var body: some View {
         Group {
-            if model.showsVersionNotice, let notice = model.versionNotice {
+            if let text = model.noEntryText {
+                Text(verbatim: text).padding(20).frame(maxWidth: 560, maxHeight: .infinity, alignment: .topLeading)
+            } else if model.showsVersionNotice, let notice = model.versionNotice {
                 VersionExplanationView(notice: notice)
             } else if model.mode == .graph && model.selectedKind == MetamodelModel.types {
                 GraphOutlineView(outline: model.graphOutline)
@@ -258,29 +284,69 @@ struct LinkGroupsView: View {
     }
 }
 
-/// The body of a metamodel page, as formatted text. Its links lead to other entries.
+/// Opens a page in the wiki window of the same wiki.
+struct OpenWikiPage {
+    var run: @MainActor (PageRef) -> Void = { _ in }
+}
+
+private struct OpenWikiPageKey: EnvironmentKey {
+    static let defaultValue = OpenWikiPage()
+}
+
+extension EnvironmentValues {
+    var openWikiPage: OpenWikiPage {
+        get { self[OpenWikiPageKey.self] }
+        set { self[OpenWikiPageKey.self] = newValue }
+    }
+}
+
+/// The blocks of one entry body. A result for an entry that is no longer shown is dropped.
+@MainActor @Observable final class EntryBodyModel {
+    typealias Render = @Sendable (_ body: String, _ store: WikiStore) async -> RenderedPage
+
+    private(set) var key = ""
+    private(set) var blocks: [Block] = []
+    private let render: Render
+
+    init(render: @escaping Render = PageModel.renderBody) {
+        self.render = render
+    }
+
+    /// Clears the old blocks, renders, and keeps the result only if `key` is still the one asked for last.
+    func load(key: String, body: String, store: WikiStore) async {
+        guard key != self.key else { return }
+        self.key = key
+        blocks = []
+        guard !body.isEmpty else { return }
+        let result = await render(body, store)
+        guard !Task.isCancelled, key == self.key else { return }
+        blocks = result.blocks
+    }
+}
+
+/// The body of a metamodel page, as formatted text. Its links lead to other entries and pages.
 struct EntryBody: View {
     let model: MetamodelModel
     let store: WikiStore
     let entry: MetamodelModel.Entry
-    @State private var rendered: [Block] = []
+    @State private var bodyModel = EntryBodyModel()
+    @Environment(\.openWikiPage) private var openPage
 
     var body: some View {
-        BlockList(blocks: rendered)
+        BlockList(blocks: bodyModel.blocks)
             .environment(\.pageLinks, PageLinks(
                 open: { action in
                     switch action {
                     case .anchor(let name): model.show(.anchor(name))
                     case .metamodel(let name): model.show(.metamodel(name))
                     case .web(let url): NSWorkspace.shared.open(url)
-                    case .page: break
+                    case .page(let ref): openPage.run(ref)
                     }
                 },
                 definition: { _, _ in nil }
             ))
-            .task(id: entry.id + entry.body) {
-                guard !entry.body.isEmpty else { rendered = []; return }
-                rendered = await PageModel.renderBody(entry.body, store).blocks
+            .task(id: entry.id + "\n" + entry.body) {
+                await bodyModel.load(key: entry.id + "\n" + entry.body, body: entry.body, store: store)
             }
     }
 }

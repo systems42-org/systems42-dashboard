@@ -33,8 +33,11 @@ import Systems42Kit
         /// What the entry says about its example, for a type. Empty for other kinds.
         public var exampleText = ""
 
+        /// Compares everything the entry shows. The example is shown through `exampleText`.
         public static func == (a: Entry, b: Entry) -> Bool {
-            a.id == b.id && a.definition == b.definition && a.body == b.body
+            a.id == b.id && a.title == b.title && a.definition == b.definition && a.body == b.body
+                && a.facts == b.facts && a.fields == b.fields && a.groups == b.groups
+                && a.reference == b.reference && a.exampleText == b.exampleText && a.example?.ref == b.example?.ref
         }
     }
 
@@ -59,22 +62,52 @@ import Systems42Kit
     public let kinds: [String] = [types, relations, frameworks, projections, rules, anchors, notations]
 
     public private(set) var selectedKind = MetamodelModel.types
-    public private(set) var selectedEntryID: String?
-    /// Set while the list is limited to the types of one section.
-    public private(set) var sectionFilter: WikiSection.ID?
     public private(set) var showsVersionNotice = false
+    /// Says that a click found no entry, nil otherwise.
+    public private(set) var noEntryText: String?
     public var mode = Mode.entries
 
+    private var chosenEntryID: String?
+    private var chosenSection: WikiSection.ID?
     private let session: WikiSession
+
+    private struct Built {
+        var byKind: [String: [Entry]] = [:]
+        var byID: [String: Entry] = [:]
+    }
+
+    /// The entries of the loaded wiki, built once per revision of the session.
+    @ObservationIgnored private var cache: (revision: Int, built: Built)?
 
     public init(session: WikiSession) {
         self.session = session
-        selectedEntryID = entries(of: Self.types).first?.id
+        chosenEntryID = entries(of: Self.types).first?.id
+    }
+
+    private var built: Built {
+        let revision = session.revision
+        if let cache, cache.revision == revision { return cache.built }
+        var built = Built()
+        for kind in kinds {
+            var list: [Entry] = []
+            // A name that repeats inside one kind keeps its first entry.
+            for entry in makeEntries(of: kind) where built.byID[entry.id] == nil {
+                built.byID[entry.id] = entry
+                list.append(entry)
+            }
+            built.byKind[kind] = list
+        }
+        cache = (revision, built)
+        return built
     }
 
     // MARK: Entries
 
     public func entries(of kind: String) -> [Entry] {
+        built.byKind[kind] ?? []
+    }
+
+    private func makeEntries(of kind: String) -> [Entry] {
         let m = session.metamodel
         switch kind {
         case Self.types: return m.types.map(typeEntry)
@@ -93,17 +126,19 @@ import Systems42Kit
         let m = session.metamodel
         switch target {
         case .anchor(let name):
-            return m.anchor(name).map(anchorEntry)
+            return m.anchor(name).flatMap { built.byID[Self.id(Self.anchors, $0.name)] }
         case .metamodel(let name):
             let key = name.lowercased()
             func named(_ c: MMConstruct) -> Bool {
                 c.name.lowercased() == key || aliases(of: c).contains { $0.lowercased() == key }
             }
-            if let type = m.type(named: name) ?? m.types.first(where: { $0.name.lowercased() == key }) { return typeEntry(type) }
-            for list in [m.relations, m.projections, m.rules, m.notations] {
-                if let found = list.first(where: named) { return constructEntry(found) }
+            if let type = m.type(named: name) ?? m.types.first(where: { $0.name.lowercased() == key }) {
+                return built.byID[Self.id(Self.types, type.name)]
             }
-            return m.frameworks.first { $0.name.lowercased() == key }.map(frameworkEntry)
+            for list in [m.relations, m.projections, m.rules, m.notations] {
+                if let found = list.first(where: named) { return built.byID[Self.id(kind(of: found), found.name)] }
+            }
+            return m.frameworks.first { $0.name.lowercased() == key }.flatMap { built.byID[Self.id(Self.frameworks, $0.name)] }
         case .page, .source, .missing:
             return nil
         }
@@ -113,7 +148,20 @@ import Systems42Kit
     public func entries(forSection id: WikiSection.ID) -> [Entry] {
         let m = session.metamodel
         guard let section = m.sections.first(where: { $0.id == id }) else { return [] }
-        return section.types.compactMap { m.type(named: $0) }.map(typeEntry)
+        var seen = Set<String>()
+        return section.types.compactMap { m.type(named: $0) }.filter { seen.insert($0.name).inserted }
+            .compactMap { built.byID[Self.id(Self.types, $0.name)] }
+    }
+
+    private static func id(_ kind: String, _ name: String) -> String { kind + "/" + name }
+
+    private func kind(of construct: MMConstruct) -> String {
+        switch construct.construct {
+        case "relation": Self.relations
+        case "projection": Self.projections
+        case "rule": Self.rules
+        default: Self.notations
+        }
     }
 
     /// The first page of the type in the open wiki. Nil when it has none.
@@ -167,6 +215,16 @@ import Systems42Kit
 
     // MARK: Selection
 
+    /// The entry that is chosen, nil when the wiki no longer has it.
+    public var selectedEntryID: String? {
+        chosenEntryID.flatMap { built.byID[$0] == nil ? nil : $0 }
+    }
+
+    /// Set while the list is limited to the types of one section. A section that vanished from the wiki sets nothing.
+    public var sectionFilter: WikiSection.ID? {
+        chosenSection.flatMap { entries(forSection: $0).isEmpty ? nil : $0 }
+    }
+
     /// The entries the list shows: all of the kind, or the types of the filtered section.
     public var shownEntries: [Entry] {
         if let sectionFilter, selectedKind == Self.types { return entries(forSection: sectionFilter) }
@@ -174,22 +232,26 @@ import Systems42Kit
     }
 
     public var selectedEntry: Entry? {
-        guard let selectedEntryID else { return nil }
-        return shownEntries.first { $0.id == selectedEntryID } ?? entries(of: selectedKind).first { $0.id == selectedEntryID }
+        selectedEntryID.flatMap { built.byID[$0] }
+    }
+
+    private func clearNotices() {
+        showsVersionNotice = false
+        noEntryText = nil
     }
 
     public func select(kind: String) {
         guard kinds.contains(kind) else { return }
         selectedKind = kind
-        sectionFilter = nil
-        showsVersionNotice = false
+        chosenSection = nil
+        clearNotices()
         mode = .entries
-        selectedEntryID = entries(of: kind).first?.id
+        chosenEntryID = entries(of: kind).first?.id
     }
 
     public func select(entry id: String?) {
-        selectedEntryID = id
-        showsVersionNotice = false
+        chosenEntryID = id
+        clearNotices()
     }
 
     /// Opens the entry a target leads to. A target with no entry changes nothing.
@@ -202,15 +264,15 @@ import Systems42Kit
 
     /// Opens the entry a link of another entry points at.
     public func show(link: Link) {
-        if let found = entries(of: link.kind).first(where: { $0.name == link.name }) { show(entry: found) }
+        if let found = built.byID[Self.id(link.kind, link.name)] { show(entry: found) }
     }
 
     public func show(entry found: Entry) {
         selectedKind = found.kind
-        sectionFilter = nil
-        showsVersionNotice = false
+        chosenSection = nil
+        clearNotices()
         mode = .entries
-        selectedEntryID = found.id
+        chosenEntryID = found.id
     }
 
     /// Opens the type entries of a section.
@@ -219,20 +281,43 @@ import Systems42Kit
         let found = entries(forSection: id)
         guard let first = found.first else { return false }
         selectedKind = Self.types
-        sectionFilter = id
-        showsVersionNotice = false
+        chosenSection = id
+        clearNotices()
         mode = .entries
-        selectedEntryID = first.id
+        chosenEntryID = first.id
         return true
+    }
+
+    /// Says in the window that the name has no entry.
+    public func showNoEntry(for target: LinkTarget) {
+        let name: String
+        switch target {
+        case .anchor(let value), .metamodel(let value), .source(let value): name = value
+        case .page(let ref): name = ref.stem
+        case .missing: name = ""
+        }
+        noEntryText = "The metamodel of this wiki has no entry for \"\(name)\"."
+        showsVersionNotice = false
+    }
+
+    /// Says in the window that the section has no type to explain.
+    public func showNoEntry(forSection id: WikiSection.ID) {
+        let title = session.metamodel.sections.first { $0.id == id }?.title ?? id
+        noEntryText = "The metamodel of this wiki names no type for the section \"\(title)\"."
+        showsVersionNotice = false
     }
 
     /// Lists all entries of the kind again.
     public func showAll() {
-        sectionFilter = nil
+        chosenSection = nil
     }
 
     public func showVersionNotice() {
-        guard versionNotice != nil else { return }
+        guard versionNotice != nil else {
+            noEntryText = "The metamodel version of this wiki is supported, so there is nothing to explain."
+            return
+        }
+        noEntryText = nil
         showsVersionNotice = true
     }
 
@@ -327,13 +412,7 @@ import Systems42Kit
     }
 
     private func constructEntry(_ construct: MMConstruct) -> Entry {
-        let kind = switch construct.construct {
-        case "relation": Self.relations
-        case "projection": Self.projections
-        case "rule": Self.rules
-        default: Self.notations
-        }
-        var entry = Entry(kind: kind, name: construct.name, title: construct.name, definition: construct.definition,
+        var entry = Entry(kind: kind(of: construct), name: construct.name, title: construct.name, definition: construct.definition,
                           body: MetaBody.withoutHeading(construct.body))
         for key in construct.frontmatter.keys.sorted() where !Self.hiddenKeys.contains(key) {
             switch construct.frontmatter[key] {

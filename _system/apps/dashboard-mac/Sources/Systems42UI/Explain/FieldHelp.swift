@@ -15,14 +15,15 @@ private struct FieldHelpModifier: ViewModifier {
     let text: String?
     @State private var shown = false
     @State private var pending: Task<Void, Never>?
-    @FocusState private var focused: Bool
 
     func body(content: Content) -> some View {
         if let text {
-            content
-                .focusable()
-                .focused($focused)
-                .onChange(of: focused) { _, now in shown = now }
+            // A plain button: it takes focus like any control, opens the popover on a click or the space bar,
+            // and carries the help text for VoiceOver and the tooltip.
+            Button { shown.toggle() } label: { content }
+                .buttonStyle(.plain)
+                .help(text)
+                .accessibilityHint(text)
                 .onHover { inside in
                     pending?.cancel()
                     if inside {
@@ -33,6 +34,10 @@ private struct FieldHelpModifier: ViewModifier {
                     } else {
                         shown = false
                     }
+                }
+                .onDisappear {
+                    pending?.cancel()
+                    pending = nil
                 }
                 .popover(isPresented: $shown, arrowEdge: .bottom) {
                     DefinitionPopover(definition: Definition(title: title, text: text))

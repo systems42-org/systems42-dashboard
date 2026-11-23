@@ -26,7 +26,7 @@ public struct WikiWindow: View {
             }
         }
         .environment(\.explain, ExplainAction { target in
-            guard ExplainAction.apply(target, to: session.explainer) else { return }
+            ExplainAction.apply(target, to: session.explainer)
             openWindow(id: MetamodelWindowRoot.windowID, value: session.root.url)
         })
         .focusedSceneValue(\.wikiFolder, session.root.url)

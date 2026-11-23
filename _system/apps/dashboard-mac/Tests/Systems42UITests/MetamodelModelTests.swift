@@ -273,3 +273,128 @@ private func edit(_ url: URL, _ file: String, _ change: (String) -> String) thro
         #expect(m.headHelp.contains { $0 != nil && $0 != m.headHelp[status] })
     }
 }
+
+@MainActor @Suite struct MetamodelFixRoundTests {
+    @Test func aTargetWithoutAnEntrySaysSo() async throws {
+        let s = await WikiSession.open(try Preflight.open(Fixture.url("basic")))
+        let m = MetamodelModel(session: s)
+        ExplainAction.apply(.link(.anchor("no-such-anchor")), to: m)
+        #expect(m.noEntryText?.contains("no-such-anchor") == true)
+        ExplainAction.apply(.section("no-such-section"), to: m)
+        #expect(m.noEntryText?.contains("no-such-section") == true)
+        ExplainAction.apply(.versionNotice, to: m)
+        #expect(m.noEntryText != nil)
+        ExplainAction.apply(.link(.anchor("PAM")), to: m)
+        #expect(m.noEntryText == nil)
+        #expect(m.selectedEntry?.title == "PAM")
+    }
+
+    @Test func aRemovedEntryFallsBackToNoSelection() async throws {
+        let copy = try Fixture.tempCopy("basic")
+        let s = await WikiSession.open(try Preflight.open(copy))
+        let m = MetamodelModel(session: s)
+        m.show(.anchor("PAM"))
+        #expect(m.selectedEntry != nil)
+        try FileManager.default.removeItem(at: copy.appending(path: "_system/anchors/pam.md"))
+        s.replace(with: LoadedWiki(root: try Preflight.open(copy)))
+        #expect(m.selectedEntry == nil)
+        #expect(m.selectedEntryID == nil)
+        #expect(m.entry(for: .anchor("PAM")) == nil)
+    }
+
+    @Test func aVanishedSectionFilterIsCleared() async throws {
+        let copy = try Fixture.tempCopy("basic")
+        let s = await WikiSession.open(try Preflight.open(copy))
+        let m = MetamodelModel(session: s)
+        let section = try #require(s.metamodel.sections.first { $0.folders.contains("functional-requirements") })
+        m.show(section: section.id)
+        #expect(m.sectionFilter == section.id)
+        try FileManager.default.removeItem(at: copy.appending(path: "_system/metamodel/types/type-functional-requirement.md"))
+        s.replace(with: LoadedWiki(root: try Preflight.open(copy)))
+        #expect(m.sectionFilter == nil)
+        #expect(m.shownEntries.count == 16)
+    }
+
+    @Test func aRepeatedNameKeepsTheFirstEntry() async throws {
+        let copy = try Fixture.tempCopy("basic")
+        let relations = copy.appending(path: "_system/metamodel/relations")
+        try FileManager.default.copyItem(at: relations.appending(path: "rel-parent.md"), to: relations.appending(path: "rel-parent-again.md"))
+        try edit(copy, "_system/metamodel/relations/rel-parent-again.md") { $0 + "\nA second page.\n" }
+        let m = MetamodelModel(session: try await session(copy: copy))
+        let plain = MetamodelModel(session: try await session("basic"))
+        let list = m.entries(of: "Relations")
+        #expect(list.count == plain.entries(of: "Relations").count)
+        #expect(Set(list.map(\.id)).count == list.count)
+    }
+
+    @Test func entriesAreEqualOnlyWhenWhatTheyShowIsEqual() async throws {
+        let m = MetamodelModel(session: try await session("basic"))
+        let a = try #require(m.entries(of: "Types").first)
+        var b = a
+        #expect(a == b)
+        b.facts.append(MetamodelModel.Fact(label: "x", value: "y"))
+        #expect(a != b)
+        var c = a
+        c.exampleText = "other"
+        #expect(a != c)
+    }
+
+    @Test func aStaleRenderIsDropped() async throws {
+        actor Gate {
+            var open = false
+            func release() { open = true }
+            func wait() async { while !open { await Task.yield() } }
+        }
+        let gate = Gate()
+        let store = WikiStore(root: try Preflight.open(Fixture.url("basic")))
+        let body = EntryBodyModel { text, _ in
+            if text == "slow" { await gate.wait() }
+            return RenderedPage(follows: [], blocks: [.code(language: nil, text)])
+        }
+        let slow = Task { await body.load(key: "a", body: "slow", store: store) }
+        while body.key != "a" { await Task.yield() }
+        await body.load(key: "b", body: "fast", store: store)
+        #expect(body.key == "b")
+        #expect(body.blocks == [.code(language: nil, "fast")])
+        await gate.release()
+        await slow.value
+        #expect(body.blocks == [.code(language: nil, "fast")])
+    }
+
+    @Test func theRegistryFindsSessionsByFolderAndForgetsThem() async throws {
+        let table = OpenSessions()
+        let url = try Fixture.tempCopy("basic")
+        let s = await WikiSession.open(try Preflight.open(url))
+        table.register(s)
+        let other = url.appending(path: "wiki/..")
+        #expect(table.session(for: other) === s)
+        table.unregister(s)
+        #expect(table.session(for: url) == nil)
+    }
+
+    @Test func aRegistryReleasesAClosedWiki() async throws {
+        let table = OpenSessions()
+        let url = try Fixture.tempCopy("basic")
+        weak var released: WikiSession?
+        do {
+            let s = await WikiSession.open(try Preflight.open(url))
+            released = s
+            table.register(s)
+            #expect(table.session(for: url) === s)
+        }
+        #expect(released == nil)
+        #expect(table.session(for: url) == nil)
+    }
+
+    @Test func theLatestRegistrationWins() async throws {
+        let table = OpenSessions()
+        let url = try Fixture.tempCopy("basic")
+        let first = await WikiSession.open(try Preflight.open(url))
+        let second = await WikiSession.open(try Preflight.open(url))
+        table.register(first)
+        table.register(second)
+        #expect(table.session(for: url) === second)
+        table.unregister(first)
+        #expect(table.session(for: url) === second)
+    }
+}

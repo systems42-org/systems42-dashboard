@@ -14,15 +14,13 @@ struct ExplainAction {
 
     @MainActor func callAsFunction(_ target: ExplainTarget) { run(target) }
 
-    /// Shows the target in the model. False when it has no entry.
-    @MainActor @discardableResult
-    static func apply(_ target: ExplainTarget, to model: MetamodelModel) -> Bool {
+    /// Shows the target in the model. A target with no entry shows a line that says so.
+    @MainActor
+    static func apply(_ target: ExplainTarget, to model: MetamodelModel) {
         switch target {
-        case .link(let link): return model.show(link)
-        case .section(let id): return model.show(section: id)
-        case .versionNotice:
-            model.showVersionNotice()
-            return model.showsVersionNotice
+        case .link(let link): if !model.show(link) { model.showNoEntry(for: link) }
+        case .section(let id): if !model.show(section: id) { model.showNoEntry(forSection: id) }
+        case .versionNotice: model.showVersionNotice()
         }
     }
 }
