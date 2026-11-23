@@ -332,6 +332,11 @@ struct EntryBody: View {
     @State private var bodyModel = EntryBodyModel()
     @Environment(\.openWikiPage) private var openPage
 
+    /// The render is kept per entry and wiki revision, so a reload shows the new store's links.
+    static func key(revision: Int, entry: MetamodelModel.Entry) -> String {
+        "\(revision)\n\(entry.id)\n\(entry.body)"
+    }
+
     var body: some View {
         BlockList(blocks: bodyModel.blocks)
             .environment(\.pageLinks, PageLinks(
@@ -345,8 +350,8 @@ struct EntryBody: View {
                 },
                 definition: { _, _ in nil }
             ))
-            .task(id: entry.id + "\n" + entry.body) {
-                await bodyModel.load(key: entry.id + "\n" + entry.body, body: entry.body, store: store)
+            .task(id: Self.key(revision: model.revision, entry: entry)) {
+                await bodyModel.load(key: Self.key(revision: model.revision, entry: entry), body: entry.body, store: store)
             }
     }
 }

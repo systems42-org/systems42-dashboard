@@ -29,6 +29,9 @@ public struct WikiWindowRoot: View {
             }
         }
         .opensDroppedFolders()
+        .onAppear {
+            if case .session(let session)? = result { OpenSessions.shared.register(session) }
+        }
         .onDisappear {
             if case .session(let session)? = result { OpenSessions.shared.unregister(session) }
         }

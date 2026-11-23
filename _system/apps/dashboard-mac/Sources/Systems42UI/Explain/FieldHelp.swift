@@ -14,31 +14,15 @@ private struct FieldHelpModifier: ViewModifier {
     let title: String
     let text: String?
     @State private var shown = false
-    @State private var pending: Task<Void, Never>?
 
     func body(content: Content) -> some View {
         if let text {
-            // A plain button: it takes focus like any control, opens the popover on a click or the space bar,
-            // and carries the help text for VoiceOver and the tooltip.
+            // A plain button: it takes focus like any control, opens the popover on a click or the space bar
+            // (not on focus alone), and carries the help text for VoiceOver and the tooltip.
             Button { shown.toggle() } label: { content }
                 .buttonStyle(.plain)
                 .help(text)
                 .accessibilityHint(text)
-                .onHover { inside in
-                    pending?.cancel()
-                    if inside {
-                        pending = Task {
-                            try? await Task.sleep(for: .milliseconds(400))
-                            if !Task.isCancelled { shown = true }
-                        }
-                    } else {
-                        shown = false
-                    }
-                }
-                .onDisappear {
-                    pending?.cancel()
-                    pending = nil
-                }
                 .popover(isPresented: $shown, arrowEdge: .bottom) {
                     DefinitionPopover(definition: Definition(title: title, text: text))
                 }
@@ -49,7 +33,7 @@ private struct FieldHelpModifier: ViewModifier {
 }
 
 extension View {
-    /// Shows the help text in a popover on hover and on focus. Without text the view stays as it is.
+    /// Shows the help text in a popover on a click or the space bar. Without text the view stays as it is.
     func fieldHelp(title: String, _ text: String?) -> some View {
         modifier(FieldHelpModifier(title: title, text: text))
     }

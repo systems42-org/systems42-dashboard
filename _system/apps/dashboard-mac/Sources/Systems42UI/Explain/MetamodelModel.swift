@@ -69,7 +69,8 @@ import Systems42Kit
 
     private var chosenEntryID: String?
     private var chosenSection: WikiSection.ID?
-    private let session: WikiSession
+    /// Weak: the session owns this model, so a strong reference would be a cycle. A gone session gives empty results.
+    private weak var session: WikiSession?
 
     private struct Built {
         var byKind: [String: [Entry]] = [:]
@@ -85,13 +86,15 @@ import Systems42Kit
     }
 
     private var built: Built {
+        guard let session else { return Built() }
         let revision = session.revision
         if let cache, cache.revision == revision { return cache.built }
+        let metamodel = session.metamodel
         var built = Built()
         for kind in kinds {
             var list: [Entry] = []
             // A name that repeats inside one kind keeps its first entry.
-            for entry in makeEntries(of: kind) where built.byID[entry.id] == nil {
+            for entry in makeEntries(of: kind, in: metamodel) where built.byID[entry.id] == nil {
                 built.byID[entry.id] = entry
                 list.append(entry)
             }
@@ -101,21 +104,23 @@ import Systems42Kit
         return built
     }
 
+    /// The revision of the loaded wiki. It changes when the wiki is replaced.
+    public var revision: Int { session?.revision ?? 0 }
+
     // MARK: Entries
 
     public func entries(of kind: String) -> [Entry] {
         built.byKind[kind] ?? []
     }
 
-    private func makeEntries(of kind: String) -> [Entry] {
-        let m = session.metamodel
+    private func makeEntries(of kind: String, in m: Metamodel) -> [Entry] {
         switch kind {
-        case Self.types: return m.types.map(typeEntry)
+        case Self.types: return m.types.map { typeEntry($0, in: m) }
         case Self.relations: return m.relations.map(constructEntry)
         case Self.frameworks: return m.frameworks.map(frameworkEntry)
         case Self.projections: return m.projections.map(constructEntry)
         case Self.rules: return m.rules.map(constructEntry)
-        case Self.anchors: return m.anchors.map(anchorEntry)
+        case Self.anchors: return m.anchors.map { anchorEntry($0, in: m) }
         case Self.notations: return m.notations.map(constructEntry)
         default: return []
         }
@@ -123,7 +128,7 @@ import Systems42Kit
 
     /// The entry a wikilink target leads to. Only anchors and metamodel pages have one.
     public func entry(for target: LinkTarget) -> Entry? {
-        let m = session.metamodel
+        guard let m = session?.metamodel else { return nil }
         switch target {
         case .anchor(let name):
             return m.anchor(name).flatMap { built.byID[Self.id(Self.anchors, $0.name)] }
@@ -146,7 +151,7 @@ import Systems42Kit
 
     /// The type entries of a section, in the order its block lists them.
     public func entries(forSection id: WikiSection.ID) -> [Entry] {
-        let m = session.metamodel
+        guard let m = session?.metamodel else { return [] }
         guard let section = m.sections.first(where: { $0.id == id }) else { return [] }
         var seen = Set<String>()
         return section.types.compactMap { m.type(named: $0) }.filter { seen.insert($0.name).inserted }
@@ -166,7 +171,7 @@ import Systems42Kit
 
     /// The first page of the type in the open wiki. Nil when it has none.
     public func example(forType name: String) -> Page? {
-        guard let type = session.metamodel.type(named: name), let folder = type.folder.split(separator: "/").last else { return nil }
+        guard let session, let type = session.metamodel.type(named: name), let folder = type.folder.split(separator: "/").last else { return nil }
         return session.store.pages(in: String(folder)).first
     }
 
@@ -181,14 +186,14 @@ import Systems42Kit
     }
 
     private func mmField(type: String, field: String) -> MMField? {
-        session.metamodel.type(named: type)?.fields.first { $0.name == field }
+        session?.metamodel.type(named: type)?.fields.first { $0.name == field }
     }
 
     // MARK: Version notice
 
     /// A line for under the toolbar and the text it opens. Nil when the wiki's metamodel is supported.
     public var versionNotice: (line: String, explanation: String)? {
-        Self.notice(for: session.metamodel.version)
+        session.flatMap { Self.notice(for: $0.metamodel.version) }
     }
 
     static func notice(for state: VersionState) -> (line: String, explanation: String)? {
@@ -302,7 +307,7 @@ import Systems42Kit
 
     /// Says in the window that the section has no type to explain.
     public func showNoEntry(forSection id: WikiSection.ID) {
-        let title = session.metamodel.sections.first { $0.id == id }?.title ?? id
+        let title = session?.metamodel.sections.first { $0.id == id }?.title ?? id
         noEntryText = "The metamodel of this wiki names no type for the section \"\(title)\"."
         showsVersionNotice = false
     }
@@ -325,7 +330,8 @@ import Systems42Kit
 
     /// The metamodel graph of the Graph mode. A web view draws it later (issue 128).
     public var graph: Graph {
-        Projections(store: session.store, metamodel: session.metamodel, agreedOnly: false).graph("metamodel-graph") ?? Graph()
+        guard let session else { return Graph() }
+        return Projections(store: session.store, metamodel: session.metamodel, agreedOnly: false).graph("metamodel-graph") ?? Graph()
     }
 
     public var graphOutline: GraphOutline {
@@ -374,8 +380,7 @@ import Systems42Kit
         }
     }
 
-    private func typeEntry(_ type: MMType) -> Entry {
-        let m = session.metamodel
+    private func typeEntry(_ type: MMType, in m: Metamodel) -> Entry {
         var entry = Entry(kind: Self.types, name: type.name, title: type.label.isEmpty ? type.name : type.label,
                           definition: type.definition, body: MetaBody.withoutHeading(type.body))
         func fact(_ label: String, _ value: String) { if !value.isEmpty { entry.facts.append(Fact(label: label, value: value)) } }
@@ -436,8 +441,7 @@ import Systems42Kit
         return entry
     }
 
-    private func anchorEntry(_ anchor: Anchor) -> Entry {
-        let m = session.metamodel
+    private func anchorEntry(_ anchor: Anchor, in m: Metamodel) -> Entry {
         var entry = Entry(kind: Self.anchors, name: anchor.name, title: anchor.title, definition: anchor.definition, body: anchor.body)
         if !anchor.appliesTo.isEmpty { entry.facts.append(Fact(label: "Applies to", value: anchor.appliesTo.joined(separator: ", "))) }
         if !anchor.aliases.isEmpty { entry.facts.append(Fact(label: "Also written", value: anchor.aliases.joined(separator: ", "))) }

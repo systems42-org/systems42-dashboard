@@ -4,14 +4,21 @@ import Systems42Kit
 import Systems42TestSupport
 @testable import Systems42UI
 
+/// A model holds its session weakly, so these tests keep the sessions they open until the run ends.
+@MainActor private var openSessions: [WikiSession] = []
+
 @MainActor
 private func session(_ fixture: String) async throws -> WikiSession {
-    await WikiSession.open(try Preflight.open(Fixture.url(fixture)))
+    let opened = await WikiSession.open(try Preflight.open(Fixture.url(fixture)))
+    openSessions.append(opened)
+    return opened
 }
 
 @MainActor
 private func session(copy url: URL) async throws -> WikiSession {
-    await WikiSession.open(try Preflight.open(url))
+    let opened = await WikiSession.open(try Preflight.open(url))
+    openSessions.append(opened)
+    return opened
 }
 
 private func edit(_ url: URL, _ file: String, _ change: (String) -> String) throws {
@@ -379,6 +386,9 @@ private func edit(_ url: URL, _ file: String, _ change: (String) -> String) thro
         do {
             let s = await WikiSession.open(try Preflight.open(url))
             released = s
+            let explainer = s.explainer
+            _ = explainer.entries(of: "Types")
+            _ = explainer.graph
             table.register(s)
             #expect(table.session(for: url) === s)
         }
@@ -396,5 +406,47 @@ private func edit(_ url: URL, _ file: String, _ change: (String) -> String) thro
         #expect(table.session(for: url) === second)
         table.unregister(first)
         #expect(table.session(for: url) === second)
+    }
+}
+
+@MainActor @Suite struct MetamodelFixRound2Tests {
+    @Test func theExplainerDoesNotKeepItsSessionAlive() async throws {
+        weak var released: WikiSession?
+        var model: MetamodelModel?
+        do {
+            let s = await WikiSession.open(try Preflight.open(Fixture.url("basic")))
+            released = s
+            model = s.explainer
+            #expect(model?.entries(of: "Types").count == 17)
+        }
+        #expect(released == nil)
+        // The model outlives the session and answers with nothing.
+        #expect(model?.entries(of: "Types").isEmpty == true)
+        #expect(model?.versionNotice == nil)
+        #expect(model?.graph.nodes.isEmpty == true)
+        #expect(model?.example(forType: "goal") == nil)
+        #expect(model?.entry(for: .anchor("PAM")) == nil)
+    }
+
+    @Test func aReloadChangesTheBodyKey() async throws {
+        let copy = try Fixture.tempCopy("basic")
+        let s = await WikiSession.open(try Preflight.open(copy))
+        let m = MetamodelModel(session: s)
+        let entry = try #require(m.entry(for: .anchor("PAM")))
+        let before = EntryBody.key(revision: m.revision, entry: entry)
+        s.replace(with: LoadedWiki(root: try Preflight.open(copy)))
+        let after = EntryBody.key(revision: m.revision, entry: try #require(m.entry(for: .anchor("PAM"))))
+        #expect(before != after)
+        // The same entry is rendered again against the new store.
+        let store = s.store
+        actor Counter { var n = 0; func bump() { n += 1 } }
+        let counter = Counter()
+        let body = EntryBodyModel { text, _ in
+            await counter.bump()
+            return RenderedPage(follows: [], blocks: [.code(language: nil, text)])
+        }
+        await body.load(key: before, body: "x", store: store)
+        await body.load(key: after, body: "x", store: store)
+        #expect(await counter.n == 2)
     }
 }
