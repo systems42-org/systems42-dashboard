@@ -24,6 +24,12 @@
   <dt>Owner</dt> <dd>{% if issue.owner_url %}<a class="wl" href="{{ issue.owner_url }}">{{ issue.owner }}</a>{% elif issue.owner %}{{ issue.owner }}{% else %}<span class="muted">nobody yet</span>{% endif %}</dd>
 </dl>
 {% endif %}
+{% if term and (term.kind or term.aliases) %}
+<dl class="issue-fields" id="term-fields">
+  {% if term.kind %}<dt>Kind</dt> <dd><span class="badge kind-badge">{{ term.kind }}</span></dd>{% endif %}
+  {% if term.aliases %}<dt>Aliases</dt> <dd>{{ term.aliases | join(", ") }}</dd>{% endif %}
+</dl>
+{% endif %}
 <h1 class="page-h1">{{ title }}</h1>
 {{ page_meta(created, updated, tags) }}
 {% if sources is not none %}{{ provenance_chips(sources) }}{% endif %}
@@ -87,6 +93,61 @@
 
 {% if page_issues is defined and page_issues is not none %}{{ page_issues_panel(page_issues) }}{% endif %}
 <article class="detail-pane">{{ body_html | safe }}</article>
+
+{# A structured term's attributes and relationships, from frontmatter (FR-039).
+   A term that declares none shows no section. #}
+{% if term and term.attributes %}
+<section class="term-structure" id="term-attributes">
+  <h2 class="rel-h">Attributes</h2>
+  <div class="table-card">
+  <table>
+    <thead>
+      <tr>
+        <th>Attribute</th>
+        <th class="c-status">Type</th>
+        <th class="c-status">Multiplicity</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in term.attributes %}
+      <tr>
+        <td><code>{{ a.name }}</code>{% if a.identifier %} <span class="badge">identifier</span>{% endif %}</td>
+        <td class="c-status">{{ a.type }}</td>
+        <td class="c-status">{{ a.multiplicity }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endif %}
+{% if term and term.relationships %}
+<section class="term-structure" id="term-relationships">
+  <h2 class="rel-h">Relationships</h2>
+  <div class="table-card">
+  <table>
+    <thead>
+      <tr>
+        <th class="c-status">Type</th>
+        <th class="c-status">Label</th>
+        <th>Term</th>
+        <th class="c-status">Multiplicity</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in term.relationships %}
+      <tr>
+        <td class="c-status">{{ r.kind }}</td>
+        <td class="c-status">{{ r.label }}</td>
+        <td>{% if r.url %}<a class="wl" href="{{ r.url }}"><code>{{ r.target_id }}</code> {{ r.target }}</a>{% else %}{{ r.target }}{% endif %}</td>
+        <td class="c-status">{{ r.multiplicity }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endif %}
 
 {{ trace_panel(trace) }}
 

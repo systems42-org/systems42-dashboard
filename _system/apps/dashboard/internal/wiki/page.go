@@ -116,6 +116,10 @@ var closedStatuses = map[string]bool{
 	"wontfix":  true,
 }
 
+// DomainModelStereotypes lists the stereotypes of a structured domain term, in
+// the order the kind filter offers them.
+var DomainModelStereotypes = []string{"entity", "value-object", "sum-type"}
+
 var domainModelStereotypes = map[string]bool{
 	"entity":       true,
 	"value-object": true,

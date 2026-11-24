@@ -2,6 +2,7 @@ package web
 
 import (
 	"net/http"
+	"slices"
 	"sort"
 	"strings"
 
@@ -240,10 +241,26 @@ func (s *Server) handleDomainTerms(w http.ResponseWriter, r *http.Request) {
 	linkCtx := s.linkContext(sn)
 
 	pages := sn.folder("domain-terms")
+	// the kind filter runs on the server, so the address carries it (FR-038).
+	// An unknown value shows every term
+	query := r.URL.Query()
+	kind := strings.TrimSpace(query.Get("kind"))
+	if kind != "none" && !slices.Contains(wiki.DomainModelStereotypes, kind) {
+		kind = ""
+	}
+	status := ""
+	if query.Get("status") == "accepted" {
+		status = "accepted"
+	}
 	rows := make([]map[string]any, 0, len(pages))
 	for _, p := range pages {
+		termKind := project.TermKind(p)
+		if kind == "none" && termKind != "" || kind != "" && kind != "none" && termKind != kind {
+			continue
+		}
 		rows = append(rows, map[string]any{
 			"id":         p.ID(),
+			"kind":       termKind,
 			"stem":       p.Stem,
 			"folder":     p.Folder,
 			"title":      p.Title(),
@@ -261,9 +278,13 @@ func (s *Server) handleDomainTerms(w http.ResponseWriter, r *http.Request) {
 	})
 
 	s.renderHTML(w, r, http.StatusOK, "glossary.html", cat, map[string]any{
-		"rows":     rows,
-		"total":    len(rows),
-		"maturity": wiki.ComputeMaturity(statusesOf(pages)).ToMap(),
+		"rows":        rows,
+		"total":       len(pages),
+		"kinds":       wiki.DomainModelStereotypes,
+		"chosen_kind": kind,
+		"sort":        strings.TrimSpace(query.Get("sort")),
+		"status":      status,
+		"maturity":    wiki.ComputeMaturity(statusesOf(pages)).ToMap(),
 	}, now)
 }
 

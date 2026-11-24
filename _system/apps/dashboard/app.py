@@ -3429,10 +3429,18 @@ def glossary_view():
     titles = title_index()
     links = link_index()       # so definition wikilinks render as real hyperlinks
     pages = domain_terms()
+    # the kind filter runs on the server, so the address carries it (FR-038).
+    # An unknown value shows every term
+    kind = request.args.get("kind", "").strip()
+    if kind not in DOMAIN_MODEL_STEREOTYPES and kind != "none":
+        kind = ""
     rows = []
     for p in pages:
+        if kind and term_kind(p) != ("" if kind == "none" else kind):
+            continue
         rows.append({
             "id": p.id,
+            "kind": term_kind(p),
             "stem": p.stem,
             "folder": p.folder,
             "title": p.title,
@@ -3446,7 +3454,10 @@ def glossary_view():
         })
     # Default order is alphabetical by term; other orders are applied client-side.
     rows.sort(key=lambda r: r["title"].lower())
-    return render_template("glossary.html", rows=rows, total=len(rows),
+    return render_template("glossary.html", rows=rows, total=len(pages),
+                           kinds=list(DOMAIN_MODEL_STEREOTYPES), chosen_kind=kind,
+                           sort=request.args.get("sort", "").strip(),
+                           status="accepted" if request.args.get("status") == "accepted" else "",
                            maturity=maturity(p.status for p in pages))
 
 
@@ -3737,6 +3748,7 @@ def page_detail(folder, stem):
         issue=issue_fields(page, titles, link_index()) if folder == "issues" else None,
         page_issues=open_issues_for(stem),
         formats=format_labels(page.body),
+        term=term_fields(page) if folder == "domain-terms" else None,
     )
 
 
@@ -3876,7 +3888,7 @@ def _mermaid_goal_tree(vision: Page, objectives: list[Page]) -> str | None:
 # frontmatter is for the projection, the same split that makes the context
 # diagram work (`flows:`, DR-026).
 
-DOMAIN_MODEL_STEREOTYPES = {"entity", "value-object", "sum-type"}
+DOMAIN_MODEL_STEREOTYPES = ("entity", "value-object", "sum-type")
 
 
 def data_model_pages() -> list[Page]:
@@ -3962,25 +3974,34 @@ def data_model_edges() -> list[dict]:
             if tgt and tgt in by_stem and tgt != p.stem:
                 out.append({"source": p.stem, "target": tgt, "verb": "",
                             "cardinality": "", "kind": "inheritance"})
-        for entry in p.as_list("relationships"):
-            if not isinstance(entry, dict):
-                continue
-            tgt = _stem_of_link(entry.get("to"))
-            if not tgt or tgt not in by_stem:
-                continue
-            kind = str(entry.get("kind") or "association").strip().lower()
-            if kind == "generalization":
-                kind = "inheritance"
-            multiplicity = entry.get("multiplicity")
-            if tgt == p.stem and kind == "inheritance":
-                continue                   # a term may refer to itself, not inherit from itself
-            out.append({
-                "source": p.stem,
-                "target": tgt,
-                "verb": _clean_label(str(entry.get("label") or "")),
-                "cardinality": str(multiplicity if multiplicity is not None else "").strip(),
-                "kind": kind if kind in _DM_ARROWS else "association",
-            })
+        out.extend(r for r in _dm_relationships(p) if r["target"] in by_stem)
+    return out
+
+
+def _dm_relationships(page: Page) -> list[dict]:
+    """The entries of a term's `relationships:` that name a target, as edges.
+    The target may be a stem no structured term has: the entity diagram drops
+    those, the term page lists them (FR-039)."""
+    out = []
+    for entry in page.as_list("relationships"):
+        if not isinstance(entry, dict):
+            continue
+        tgt = _stem_of_link(entry.get("to"))
+        if not tgt:
+            continue
+        kind = str(entry.get("kind") or "association").strip().lower()
+        if kind == "generalization":
+            kind = "inheritance"
+        multiplicity = entry.get("multiplicity")
+        if tgt == page.stem and kind == "inheritance":
+            continue                   # a term may refer to itself, not inherit from itself
+        out.append({
+            "source": page.stem,
+            "target": tgt,
+            "verb": _clean_label(str(entry.get("label") or "")),
+            "cardinality": str(multiplicity if multiplicity is not None else "").strip(),
+            "kind": kind if kind in _DM_ARROWS else "association",
+        })
     return out
 
 
@@ -4092,11 +4113,55 @@ _DM_NOTE_RE = re.compile(
 def _extract_dm_attribute_names(page: Page) -> list[str]:
     """Just the attribute *names* from frontmatter `attributes:` — used for the
     compact summary table at the top of /entity-diagram and the class boxes."""
+    return [a["name"] for a in _dm_attributes(page)]
+
+
+def _dm_scalar(value: object) -> str:
+    """A frontmatter value as text if it is a string or a whole number, else ""."""
+    if isinstance(value, str) or isinstance(value, int) and not isinstance(value, bool):
+        return str(value).strip()
+    return ""
+
+
+def _dm_attributes(page: Page) -> list[dict]:
+    """The entries of frontmatter `attributes:` that carry a name, as
+    `{name, type, multiplicity, identifier}`."""
     attributes = page.meta.get("attributes")
     if not isinstance(attributes, list):
         return []
-    return [name for entry in attributes if isinstance(entry, dict)
+    return [{"name": name, "type": _dm_scalar(entry.get("type")),
+             "multiplicity": _dm_scalar(entry.get("multiplicity")),
+             "identifier": entry.get("identifier") is True}
+            for entry in attributes if isinstance(entry, dict)
             and isinstance(name := entry.get("name"), str) and name.strip()]
+
+
+def term_kind(page: Page) -> str:
+    """A domain term's kind: its stereotype, or "" for a plain term (FR-038)."""
+    stereotype = str(page.meta.get("stereotype") or "").strip().lower()
+    return stereotype if stereotype in DOMAIN_MODEL_STEREOTYPES else ""
+
+
+def term_fields(page: Page) -> dict:
+    """What the term page shows beside its text (FR-039): kind, aliases,
+    attributes and relationships. A relationship whose target is a page
+    names it by id and title and links it. Any other target stays as written."""
+    links = link_index()
+    by_stem = {p.stem: p for p in load_all_pages()}
+    relationships = []
+    for r in _dm_relationships(page):
+        target = by_stem.get(links.get(r["target"], ("", ""))[1])
+        relationships.append({
+            "kind": "generalization" if r["kind"] == "inheritance" else r["kind"],
+            "label": r["verb"],
+            "target": target.title if target else r["target"],
+            "target_id": target.id if target else "",
+            "url": _page_url(target.folder, target.stem) if target else "",
+            # a multiplicity on a generalization means nothing, as in the diagram
+            "multiplicity": r["cardinality"] if _DM_ARROWS[r["kind"]][1] else "",
+        })
+    return {"kind": term_kind(page), "aliases": page.aliases,
+            "attributes": _dm_attributes(page), "relationships": relationships}
 
 
 def _extract_dm_sections(page: Page, titles: dict[str, str]) -> list[tuple[str, str]]:
