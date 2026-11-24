@@ -842,15 +842,66 @@ def _page_url(folder: str, stem: str) -> str:
 
 
 @_request_cached
-def link_index() -> dict[str, tuple[str, str]]:
-    """Map each page's stem and id -> (folder, stem), so body wikilinks like
-    `[[STK-006-…|Backoffice]]` or `[[FR-008]]` resolve to a real target URL.
-    Stems/ids are unique; first writer wins on the rare collision."""
-    idx: dict[str, tuple[str, str]] = {}
-    for p in load_all_pages():
-        idx.setdefault(p.stem, (p.folder, p.stem))
-        idx.setdefault(p.id, (p.folder, p.stem))
+def page_index() -> dict[str, Page]:
+    """Map each page's stem and id -> its Page: the names a link may use for
+    a page. A file name always names its own page. An ID names the first page
+    that carries it, unless it is another page's file name."""
+    idx: dict[str, Page] = {}
+    pages = load_all_pages()
+    for p in pages:
+        idx[p.stem] = p
+    for p in pages:
+        idx.setdefault(p.id, p)
     return idx
+
+
+@_request_cached
+def link_index() -> dict[str, tuple[str, str]]:
+    """page_index() as (folder, stem), so body wikilinks like
+    `[[STK-006-…|Backoffice]]` or `[[FR-008]]` resolve to a real target URL."""
+    return {name: (p.folder, p.stem) for name, p in page_index().items()}
+
+
+def link_name(spelling: object) -> str:
+    """The page name inside a link: '[[wiki/goals/GOAL-002#Metric|waiting]]'
+    -> 'GOAL-002'. Drops the brackets, the alias, the heading and the path. A
+    value without brackets is read the same way."""
+    t = str(spelling or "").strip()
+    m = re.search(r"\[\[([^\]]+)\]\]", t)
+    if m:
+        t = m.group(1)
+    t = t.split("|")[0].split("#")[0].strip()
+    return t.split("/")[-1].strip()
+
+
+def resolve_link(spelling: object, index: dict):
+    """The one resolver for links (#178): what `index` holds for the page a
+    link names, or None. The body text, the relations panel and every
+    projection over a link field call it, so a link that opens a page in the
+    text counts for that page everywhere. `index` is page_index() or
+    link_index(): a full file name or an ID alone, case-sensitive. One dict
+    lookup per link, because the relations panel asks every page (#68)."""
+    return index.get(link_name(spelling))
+
+
+def _link_stem(spelling: object) -> str:
+    """The file name of the page a link names, or the name as written when no
+    page has it (a hint can then say which name is missing)."""
+    p = resolve_link(spelling, page_index())
+    return p.stem if p else link_name(spelling)
+
+
+def linked_stems(page: Page) -> set[str]:
+    """The pages `page` links to, each once however often and however it is
+    spelled, without itself. A name no page has stays as written."""
+    return {s for s in map(_link_stem, page.link_targets()) if s != page.stem}
+
+
+def links_to(page: Page, target: Page) -> bool:
+    """Whether `page` links to `target`, by any name that resolves to it."""
+    index = page_index()
+    names = {n for n in (target.stem, target.id) if index.get(n) is target}
+    return page is not target and not names.isdisjoint(page.link_targets())
 
 
 @_request_cached
@@ -1023,7 +1074,7 @@ def render_wikilinks(text: str, titles: dict[str, str],
                 return (f'<a class="wl" href="{escape("/source/" + src.stem)}">'
                         f'{escape(alias.strip() if alias else src.title)}</a>')
         elif links:
-            dest = links.get(base)
+            dest = resolve_link(target, links)
             if dest:
                 return f'<a class="wl" href="{escape(_page_url(*dest))}">{label}</a>'
         if links is not None and (a := anchor_lookup().get(base.lower())):
@@ -1695,12 +1746,7 @@ _TYPE_FOLDER = {
 
 def _stem_of_link(raw: object) -> str:
     """A `related:` entry like '[[DT-026-eaqua|EAquA]]' -> 'DT-026-eaqua'."""
-    t = str(raw or "").strip()
-    m = re.search(r"\[\[([^\]]+)\]\]", t)
-    if m:
-        t = m.group(1)
-    t = t.split("|")[0].split("#")[0].strip()   # drop alias / anchor
-    return t.split("/")[-1].strip()             # drop raw/ path prefix
+    return link_name(raw)
 
 
 def _type_of(stem: str) -> str:
@@ -1725,7 +1771,7 @@ def build_glossary_graph(edge_filter: str = "all") -> dict:
     for p in glossary:                       # src is always a domain term
         src = p.stem
         for raw in p.as_list("related") if edge_filter != "structured" else []:
-            tgt = _stem_of_link(raw)
+            tgt = _link_stem(raw)
             if not tgt or tgt == src or tgt not in by_stem:
                 continue                     # self / dangling / non-page
             pair = frozenset((src, tgt))
@@ -1884,12 +1930,11 @@ def build_relations_panel(stem: str, exclude: set[str] | None = None) -> dict:
         return item
 
     me = by_stem.get(stem)
-    outbound = sorted(s for s in (me.link_targets() if me else ())
+    outbound = sorted(s for s in (linked_stems(me) if me else ())
                       if s in by_stem and s not in exclude)
-    out_set = set(outbound)
-    inbound = sorted(q.stem for q in pages
-                     if q.stem != stem and q.stem not in out_set and q.stem not in exclude
-                     and stem in q.link_targets())
+    # every page that links here, also one this page links to (FR-034)
+    inbound = sorted(q.stem for q in (pages if me else ())
+                     if q.stem not in exclude and links_to(q, me))
 
     def grouped(stems: list) -> list:
         buckets: dict[str, list] = {}
@@ -2117,7 +2162,7 @@ def _fr_first_parent(p: "Page") -> str | None:
     out of scope for this view. Goal inheritance from a use case reads the
     same edge, so the two always agree."""
     for ref in p.as_list("parent"):
-        stem = _fr_stem_from_ref(ref)
+        stem = _link_stem(ref)
         if stem:
             return stem
     return None
@@ -2460,7 +2505,7 @@ def _fr_ancestors(stem: str) -> list[dict]:
     while cur:
         ps = None
         for ref in cur.as_list("parent"):
-            ps = _fr_stem_from_ref(ref)
+            ps = _link_stem(ref)
             if ps:
                 break
         if not ps or ps in seen:
@@ -2493,7 +2538,7 @@ def links_of(page: Page, field: str) -> list[str]:
             for x in v:
                 walk(x)
             return
-        s = _stem_of_link(v) if v else ""
+        s = _link_stem(v) if v else ""
         if s and s in by_stem and s not in out:
             out.append(s)
 
@@ -2706,7 +2751,7 @@ def _struct_targets(p: Page, field: str, keys: tuple[str, ...]) -> list[str]:
             continue
         for k in keys:
             v = _scalar(e.get(k))
-            t = _stem_of_link(v) if v else ""
+            t = _link_stem(v) if v else ""
             if t and t in by_stem and t not in out:
                 out.append(t)
     return out
@@ -2785,7 +2830,7 @@ def _endpoint_stem(text: str, by_stem: dict) -> str:
     a page stem or a path ending in one. Other plain text keeps every
     character, `/` included ("TCP/IP Gateway")."""
     if "[[" in text:
-        return _stem_of_link(text)
+        return _link_stem(text)
     if text in by_stem:
         return text
     last = text.rsplit("/", 1)[-1].strip()
@@ -2994,7 +3039,7 @@ def build_deployment_diagram(root: str | None = None,
             if not isinstance(e, dict):
                 continue
             v = _scalar(e.get("to"))
-            t = _stem_of_link(v) if v else ""
+            t = _link_stem(v) if v else ""
             if t in shown:
                 target = _diagram_node_id(nodes[t].id)
             elif t in eifs:
@@ -3040,7 +3085,7 @@ def deployment_hints(stem: str | None = None) -> list[str]:
                 hints.append(f"{p.id} connects entry {n}: not a {{to, protocol}} entry, not drawn")
                 continue
             v = _scalar(e.get("to"))
-            t = _stem_of_link(v) if v else ""
+            t = _link_stem(v) if v else ""
             if not t:
                 hints.append(f"{p.id} connects entry {n}: to: is empty, not drawn")
             elif t not in pages:
@@ -3439,7 +3484,7 @@ def glossary_view():
             "title": p.title,
             "aliases": p.aliases,
             "definition": extract_labeled(p, "Definition", titles, links),
-            "relations": len(p.link_targets()),
+            "relations": len(linked_stems(p)),
             "status": p.status,
             "created": str(p.meta.get("created", "")),
             "updated": str(p.meta.get("updated", "")),
@@ -3638,7 +3683,7 @@ def stakeholders_view():
         # domain terms the stakeholder points at — quick links to "additional
         # info" (the snapshot's inline links + `related:`), by id.
         rel = []
-        for s in sorted(set(p.link_targets())):
+        for s in sorted(linked_stems(p)):
             q = by_stem.get(s)
             if q and _type_of(s) == "DT":
                 rel.append({"id": q.id, "label": q.title, "type": "DT",
@@ -3962,7 +4007,7 @@ def data_model_edges() -> list[dict]:
         # Draw that as the inheritance it is, rather than make the author repeat
         # it as a relationship entry — one fact, one place.
         for raw in p.as_list("parent"):
-            tgt = _stem_of_link(raw)
+            tgt = _link_stem(raw)
             if tgt and tgt in by_stem and tgt != p.stem:
                 out.append({"source": p.stem, "target": tgt, "verb": "",
                             "cardinality": "", "kind": "inheritance"})
@@ -3978,7 +4023,7 @@ def _dm_relationships(page: Page) -> list[dict]:
     for entry in page.as_list("relationships"):
         if not isinstance(entry, dict):
             continue
-        tgt = _stem_of_link(entry.get("to"))
+        tgt = _link_stem(entry.get("to"))
         if not tgt:
             continue
         kind = str(entry.get("kind") or "association").strip().lower()
@@ -4528,7 +4573,7 @@ def _block_list(block: dict, slug: str | None):
     rows = [
         {"id": p.id, "type": FOLDER_LABELS.get(p.folder, p.folder),
          "title": p.title, "url": _page_url(p.folder, p.stem),
-         "status": p.status, "relations": len(p.link_targets()),
+         "status": p.status, "relations": len(linked_stems(p)),
          **(_qr_details(p, titles, links) if p.folder == "quality-requirements" else {})}
         for p in _block_pages(block)
     ]

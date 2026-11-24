@@ -45,9 +45,9 @@ func FRLevel(p *wiki.Page) string {
 	return strings.ToLower(strings.TrimSpace(p.MetaString("level")))
 }
 
-func frFirstParent(p *wiki.Page) string {
+func frFirstParent(p *wiki.Page, index map[string]*wiki.Page) string {
 	for _, ref := range p.AsList("parent") {
-		if st := wiki.StemFromRef(ref); st != "" {
+		if st := wiki.LinkStem(ref, index); st != "" {
 			return st
 		}
 	}
@@ -138,7 +138,7 @@ func LoadGoals(goals, frs []*wiki.Page, byStem map[string]*wiki.Page) *GoalsData
 	for _, fr := range nonUCs {
 		gids := served(fr)
 		if len(gids) == 0 && FRNotation(fr) == "agile" && (FRLevel(fr) == "feature" || FRLevel(fr) == "story") {
-			if first := frFirstParent(fr); first != "" {
+			if first := frFirstParent(fr, byStem); first != "" {
 				if uc, ok := ucByStem[first]; ok {
 					gids = served(uc)
 				}
@@ -379,7 +379,7 @@ func frNode(p *wiki.Page) map[string]any {
 }
 
 // BuildFRHierarchy projects the Epic -> Feature -> Story story map (DR-038).
-func BuildFRHierarchy(frs []*wiki.Page) map[string]any {
+func BuildFRHierarchy(frs []*wiki.Page, index map[string]*wiki.Page) map[string]any {
 	allPages := make([]*wiki.Page, 0, len(frs))
 	for _, p := range frs {
 		if p.Status() != "deprecated" {
@@ -402,7 +402,7 @@ func BuildFRHierarchy(frs []*wiki.Page) map[string]any {
 
 	children := map[string][]*wiki.Page{}
 	for _, p := range pages {
-		if ps := frFirstParent(p); ps != "" {
+		if ps := frFirstParent(p, index); ps != "" {
 			children[ps] = append(children[ps], p)
 		}
 	}
@@ -499,7 +499,7 @@ func BuildFRHierarchy(frs []*wiki.Page) map[string]any {
 	orphans := make([]map[string]any, 0)
 	for _, p := range pages {
 		lvl := FRLevel(p)
-		ps := frFirstParent(p)
+		ps := frFirstParent(p, index)
 		underRoot := ucByStem[ps] != nil || levelOf(ps) == "epic"
 		if lvl == "feature" && !underRoot {
 			stList := kids(p.Stem, "story")
@@ -597,7 +597,7 @@ func FRHierarchyNode(hierarchy map[string]any, stem string) (map[string]any, str
 }
 
 // FRAncestors walks the first-parent chain for an FR (root first, cycle-safe).
-func FRAncestors(frs []*wiki.Page, stem string) []map[string]any {
+func FRAncestors(frs []*wiki.Page, stem string, index map[string]*wiki.Page) []map[string]any {
 	byStem := make(map[string]*wiki.Page, len(frs))
 	for _, p := range frs {
 		byStem[p.Stem] = p
@@ -606,7 +606,7 @@ func FRAncestors(frs []*wiki.Page, stem string) []map[string]any {
 	cur := byStem[stem]
 	seen := map[string]bool{stem: true}
 	for cur != nil {
-		ps := frFirstParent(cur)
+		ps := frFirstParent(cur, index)
 		if ps == "" || seen[ps] {
 			break
 		}

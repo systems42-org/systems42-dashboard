@@ -33,8 +33,12 @@ def test_relations_panel_outbound_inbound_and_dedup():
     out_ids = {i["id"] for i in out}
     inb_ids = {i["id"] for i in inb}
 
-    # a link never appears in both buckets (inbound excludes outbound)
-    assert not (out_ids & inb_ids), out_ids & inb_ids
+    # a page that links here and is linked from here shows in both (FR-034)
+    with app.app.test_request_context("/"):
+        pages = {p.id: p for p in app.load_all_pages()}
+        me = pages["STK-001"]
+        both = {i for i in out_ids if app.links_to(pages[i], me)}
+    assert out_ids & inb_ids == both, (out_ids & inb_ids, both)
     # never links to itself
     assert "STK-001" not in out_ids and "STK-001" not in inb_ids
 

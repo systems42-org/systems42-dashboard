@@ -59,7 +59,7 @@ func TestFRHierarchyLosesNoRequirement(t *testing.T) {
 		fr("FR-080-reserve", "agile", "feature", "UC-002-borrow", "draft"),
 		fr("FR-081-online", "agile", "story", "FR-080-reserve", "draft"),
 	}
-	h := BuildFRHierarchy(frs)
+	h := BuildFRHierarchy(frs, wiki.PageIndex(frs))
 
 	var shown []string
 	nFeat, nStory := 0, 0

@@ -114,7 +114,7 @@ func (s *Server) renderBlockList(w http.ResponseWriter, r *http.Request, cat *me
 			"title":     p.Title(),
 			"url":       wiki.PageURL(p.Folder, p.Stem),
 			"status":    p.Status(),
-			"relations": len(p.LinkTargets()),
+			"relations": len(p.LinkedStems(sn.byStem())),
 		}
 		if p.Folder == "quality-requirements" {
 			for k, v := range qrDetails(p, linkCtx) {
@@ -147,7 +147,7 @@ func (s *Server) renderBlockList(w http.ResponseWriter, r *http.Request, cat *me
 	if slug == "models" {
 		dt := sn.folder("domain-terms")
 		nodes := project.DataModelNodes(dt)
-		edges := project.DataModelEdges(dt)
+		edges := project.DataModelEdges(dt, sn.byStem())
 		entityDiagram = nilIfEmpty(project.BuildDataModelFullDiagram(nodes, edges, "", ""))
 	}
 
@@ -250,7 +250,7 @@ func (s *Server) handleDomainTerms(w http.ResponseWriter, r *http.Request) {
 			"title":      p.Title(),
 			"aliases":    p.Aliases(),
 			"definition": render.ExtractLabeled(p.Body, "Definition", linkCtx),
-			"relations":  len(p.LinkTargets()),
+			"relations":  len(p.LinkedStems(sn.byStem())),
 			"status":     p.Status(),
 			"created":    p.MetaString("created"),
 			"updated":    p.MetaString("updated"),
@@ -281,8 +281,9 @@ func (s *Server) handleStakeholders(w http.ResponseWriter, r *http.Request) {
 	const relMax = 6
 	rows := make([]map[string]any, 0, len(pages))
 	for _, p := range pages {
-		targets := make([]string, 0, len(p.LinkTargets()))
-		for st := range p.LinkTargets() {
+		linked := p.LinkedStems(byStem)
+		targets := make([]string, 0, len(linked))
+		for st := range linked {
 			targets = append(targets, st)
 		}
 		sort.Strings(targets)

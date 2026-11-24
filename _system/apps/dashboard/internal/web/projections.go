@@ -176,7 +176,7 @@ func (s *Server) handleEntityDiagram(w http.ResponseWriter, r *http.Request) {
 	dtPages := sn.folder("domain-terms")
 
 	nodes := project.DataModelNodes(dtPages)
-	edges := project.DataModelEdges(dtPages)
+	edges := project.DataModelEdges(dtPages, sn.byStem())
 	contexts := project.DataModelContexts(nodes)
 
 	q := r.URL.Query()
@@ -334,7 +334,7 @@ func (s *Server) handleFunctionalRequirements(w http.ResponseWriter, r *http.Req
 	sn := newSnapshot(s.Store)
 
 	frs := sn.folder("functional-requirements")
-	hierarchy := project.BuildFRHierarchy(frs)
+	hierarchy := project.BuildFRHierarchy(frs, sn.byStem())
 	goals := project.LoadGoals(sn.folder("goals"), frs, sn.byStem())
 	diagram, diagramLinks := project.MermaidGoalEpicTree(goals, hierarchy)
 	if diagramLinks == nil {
@@ -397,7 +397,7 @@ func (s *Server) handleFRDetail(w http.ResponseWriter, r *http.Request) {
 	bodyHTML := render.RenderMarkdown(body, linkCtx)
 
 	frs := sn.folder("functional-requirements")
-	hierarchy := project.BuildFRHierarchy(frs)
+	hierarchy := project.BuildFRHierarchy(frs, sn.byStem())
 	node, kind := project.FRHierarchyNode(hierarchy, stem)
 
 	level := kind
@@ -456,7 +456,7 @@ func (s *Server) handleFRDetail(w http.ResponseWriter, r *http.Request) {
 		"body_html":     bodyHTML,
 		"diagram":       nilIfEmpty(diagram),
 		"diagram_links": diagramLinks,
-		"ancestors":     project.FRAncestors(frs, stem),
+		"ancestors":     project.FRAncestors(frs, stem, sn.byStem()),
 		"trace":         trace,
 		"relations":     buildRelationsPanel(sn, stem, traceStems(trace), vocab),
 		"needs_mermaid": diagram != "" || strings.Contains(bodyHTML, "language-mermaid"),

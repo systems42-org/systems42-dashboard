@@ -3,6 +3,7 @@ package wiki
 import (
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -253,5 +254,59 @@ func TestInvalidDateStaysTextAndKeepsThePage(t *testing.T) {
 	day := store.LoadPage("domain-terms", "DT-002-invalid-day")
 	if day == nil || day.Title() != "Invalid day" || day.MetaString("updated") != "2026-02-30" {
 		t.Fatalf("invalid day: %+v", day)
+	}
+}
+
+// One resolver for every link (#178): each spelling the body text resolves
+// names the same page, and the panels count a page once.
+func TestResolveLinkSpellings(t *testing.T) {
+	goal := &Page{Stem: "GOAL-002-shorter-waiting-times", Folder: "goals", Meta: map[string]any{"id": "GOAL-002"}}
+	alpha := &Page{Stem: "DT-001-alpha", Folder: "domain-terms", Meta: map[string]any{"id": "DT-001"},
+		Body: "[[DT-002]], itself [[DT-001]] and [[DT-001-alpha]]."}
+	beta := &Page{Stem: "DT-002-beta", Folder: "domain-terms", Meta: map[string]any{"id": "DT-002"},
+		Body: "[[DT-001-alpha]]"}
+	gamma := &Page{Stem: "DT-003-gamma", Folder: "domain-terms", Meta: map[string]any{"id": "DT-003"},
+		Body: "[[DT-001]], [[domain-terms/DT-001-alpha#Definition|Alpha]] and [[DT-099-missing]]."}
+	pages := []*Page{alpha, beta, gamma, goal}
+	index := PageIndex(pages)
+
+	for _, link := range []string{
+		"[[GOAL-002-shorter-waiting-times]]", "[[GOAL-002]]", "[[GOAL-002|waiting times]]",
+		"[[GOAL-002#Metric]]", "[[goals/GOAL-002-shorter-waiting-times]]",
+		"[[wiki/goals/GOAL-002#Metric|waiting times]]", "GOAL-002",
+	} {
+		if p, ok := ResolveLink(link, index); !ok || p != goal {
+			t.Errorf("ResolveLink(%q) = %v, want the goal", link, p)
+		}
+		if ref, ok := ResolveLink(link, LinkIndex(pages)); !ok || ref.Stem != goal.Stem {
+			t.Errorf("ResolveLink(%q) in the link index = %v", link, ref)
+		}
+	}
+	for _, link := range []any{"[[GOAL-099]]", "[[goal-002]]", "", nil} {
+		if p, ok := ResolveLink(link, index); ok {
+			t.Errorf("ResolveLink(%v) = %v, want no page", link, p)
+		}
+	}
+
+	keys := func(m map[string]struct{}) string {
+		out := make([]string, 0, len(m))
+		for k := range m {
+			out = append(out, k)
+		}
+		sort.Strings(out)
+		return strings.Join(out, ",")
+	}
+	if got := keys(alpha.LinkedStems(index)); got != "DT-002-beta" {
+		t.Errorf("alpha links to %q, want DT-002-beta (an ID-only link, no self-link)", got)
+	}
+	if got := keys(gamma.LinkedStems(index)); got != "DT-001-alpha,DT-099-missing" {
+		t.Errorf("gamma links to %q, want DT-001-alpha once and the missing name", got)
+	}
+	// two pages linking each other link each other, a page never links itself
+	if !LinksTo(alpha, beta, index) || !LinksTo(beta, alpha, index) || !LinksTo(gamma, alpha, index) {
+		t.Error("LinksTo misses a link")
+	}
+	if LinksTo(alpha, alpha, index) || LinksTo(alpha, gamma, index) {
+		t.Error("LinksTo reports a link that is not there")
 	}
 }
