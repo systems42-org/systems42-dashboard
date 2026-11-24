@@ -112,7 +112,9 @@ def test_picker_offers_the_sort_presets():
                       body, re.S)
         assert m, (path, "no list controls")
         labels = [re.sub(r"<[^>]+>", "", o).strip().replace("&amp;", "&")
-                  for o in re.findall(r'<option value="[^"]+">(.*?)</option>', m.group(1), re.S)]
+                  for o in re.findall(r'<option value="[^"]+">(.*?)</option>',
+                                      # the order picker alone: the term list also has a kind picker
+                                      m.group(1).split("<select data-list-order>", 1)[-1].split("</select>", 1)[0], re.S)]
         want = [o["label"] for o in app.sort_presets(typ)]
         assert labels == want, (path, labels, want)
         # the table carries the same orders for the script

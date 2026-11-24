@@ -4,13 +4,20 @@
 {% from "_macros.html" import status_rank %}
 {% macro list_attrs(spec) %} data-list="{{ spec.type }}" data-sort-orders='{{ spec.orders | tojson }}'{% endmacro %}
 
-{% macro list_controls(spec, status=True, order=True) %}
+{# `kinds`: the kinds the list's rows can have. With any, a kind filter shows. #}
+{% macro list_controls(spec, status=True, order=True, kinds=[]) %}
 <div class="list-controls" data-list-controls="{{ spec.type }}" hidden>
   {% if order and spec.orders %}<label class="list-order">Order
     <select data-list-order>
       <option value="">As listed</option>
       {% for o in spec.orders %}<option value="{{ o['keys'] | join(',') }}">{{ o.label }}</option>
       {% endfor %}
+    </select></label>{% endif %}
+  {% if kinds %}<label class="list-order">Kind
+    <select data-list-kind>
+      <option value="">All</option>
+      {% for k in kinds %}<option value="{{ k }}">{{ k }}</option>
+      {% endfor %}<option value="none">No kind</option>
     </select></label>{% endif %}
   {% if status %}<span class="filterbar" role="group" aria-label="Status">
     <button type="button" class="fbtn active" data-list-status="all" aria-pressed="true">All</button>
@@ -19,7 +26,7 @@
 </div>
 {% endmacro %}
 
-{% macro list_empty() %}<p class="empty-hint list-empty" hidden>No agreed pages in this list.</p>{% endmacro %}
+{% macro list_empty(text="No agreed pages in this list.") %}<p class="empty-hint list-empty" hidden>{{ text }}</p>{% endmacro %}
 
 {# One table for the arc42 lists: ID, title, extra columns, state, status.
    `extra` is [(label, key, kind)], kind text | numeric | links (r[key] is then

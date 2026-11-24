@@ -244,6 +244,7 @@ func (s *Server) handleDomainTerms(w http.ResponseWriter, r *http.Request) {
 	for _, p := range pages {
 		rows = append(rows, map[string]any{
 			"id":         p.ID(),
+			"kind":       project.TermKind(p),
 			"stem":       p.Stem,
 			"folder":     p.Folder,
 			"title":      p.Title(),
@@ -261,8 +262,10 @@ func (s *Server) handleDomainTerms(w http.ResponseWriter, r *http.Request) {
 	})
 
 	s.renderHTML(w, r, http.StatusOK, "glossary.html", cat, map[string]any{
+		// the kind filter runs in the browser (static/list-view.js, FR-038)
 		"rows":     rows,
 		"total":    len(rows),
+		"kinds":    wiki.DomainModelStereotypes,
 		"maturity": wiki.ComputeMaturity(statusesOf(pages)).ToMap(),
 	}, now)
 }

@@ -1165,6 +1165,8 @@ html.etsu-disconnected {
 }
 .rel-h { font-size: .95rem; margin: 0 0 .7rem; color: var(--ink);
   border-bottom: 1px solid var(--line); padding-bottom: .5rem; }
+/* a structured term's attributes and relationships (FR-039) */
+.term-structure { margin-top: 1.5rem; }
 .rel-group { margin: 0 0 .7rem; }
 .rel-group:last-child { margin-bottom: 0; }
 .rel-type { display: block; font-size: .75rem; text-transform: uppercase; letter-spacing: .05em;

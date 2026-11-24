@@ -633,6 +633,16 @@ func (s *Server) handlePageDetail(w http.ResponseWriter, r *http.Request) {
 		hints = project.DeploymentHints(stem, nodes, blocks, byStem)
 	}
 
+	var termVal any
+	if folder == "domain-terms" {
+		termVal = map[string]any{
+			"kind":          project.TermKind(page),
+			"aliases":       page.Aliases(),
+			"attributes":    project.DMAttributes(page),
+			"relationships": project.TermRelationships(page, sn.linkIndex(), byStem),
+		}
+	}
+
 	needsMermaid := contextDiagram != nil || whitebox != nil || sequence != nil || deployment != nil || strings.Contains(bodyHTML, "language-mermaid")
 
 	s.renderHTML(w, r, http.StatusOK, "detail.html", cat, withPageHead(page, map[string]any{
@@ -660,6 +670,7 @@ func (s *Server) handlePageDetail(w http.ResponseWriter, r *http.Request) {
 		"issue":           issueVal,
 		"page_issues":     openIssuesFor(sn, stem, vocab),
 		"formats":         render.FormatLabels(page.Body, linkCtx),
+		"term":            termVal,
 	}), now)
 }
 
@@ -748,5 +759,6 @@ func (s *Server) handleSourceDetail(w http.ResponseWriter, r *http.Request) {
 		"sources":         nil,
 		"issue":           nil,
 		"formats":         nil,
+		"term":            nil,
 	}), now)
 }

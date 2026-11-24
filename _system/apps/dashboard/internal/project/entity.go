@@ -77,19 +77,138 @@ func dmClassName(label string, taken map[string]bool) string {
 
 // ExtractDMAttributeNames returns attribute names from frontmatter `attributes:`.
 func ExtractDMAttributeNames(p *wiki.Page) []string {
+	attributes := DMAttributes(p)
+	out := make([]string, 0, len(attributes))
+	for _, a := range attributes {
+		out = append(out, a["name"].(string))
+	}
+	return out
+}
+
+// dmScalar returns a frontmatter value as text if it is a string or a whole
+// number, else "".
+func dmScalar(v any) string {
+	switch v.(type) {
+	case string, int, int64, uint64:
+		return strings.TrimSpace(wiki.ScalarString(v))
+	}
+	return ""
+}
+
+// DMAttributes returns the entries of frontmatter `attributes:` that carry a
+// name, as {name, type, multiplicity, identifier}.
+func DMAttributes(p *wiki.Page) []map[string]any {
 	list, ok := p.Meta["attributes"].([]any)
 	if !ok {
-		return []string{}
+		return []map[string]any{}
 	}
-	out := make([]string, 0, len(list))
+	out := make([]map[string]any, 0, len(list))
 	for _, item := range list {
 		m, ok := item.(map[string]any)
 		if !ok {
 			continue
 		}
-		if name, ok := m["name"].(string); ok && strings.TrimSpace(name) != "" {
-			out = append(out, name)
+		name, ok := m["name"].(string)
+		if !ok || strings.TrimSpace(name) == "" {
+			continue
 		}
+		identifier, _ := m["identifier"].(bool)
+		out = append(out, map[string]any{
+			"name":         name,
+			"type":         dmScalar(m["type"]),
+			"multiplicity": dmScalar(m["multiplicity"]),
+			"identifier":   identifier,
+		})
+	}
+	return out
+}
+
+// TermKind returns a domain term's kind: its stereotype, or "" for a plain
+// term (FR-038).
+func TermKind(p *wiki.Page) string {
+	st := strings.ToLower(strings.TrimSpace(p.MetaString("stereotype")))
+	for _, known := range wiki.DomainModelStereotypes {
+		if st == known {
+			return st
+		}
+	}
+	return ""
+}
+
+// DMRelationships returns the entries of a term's `relationships:` that name a
+// target, as edges. The target may be a stem no structured term has: the
+// entity diagram drops those, the term page lists them (FR-039).
+func DMRelationships(p *wiki.Page) []map[string]any {
+	out := make([]map[string]any, 0)
+	for _, item := range p.AsList("relationships") {
+		entry, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		tgt := wiki.StemOfLink(entry["to"])
+		if tgt == "" {
+			continue
+		}
+		kind := strings.ToLower(strings.TrimSpace(wiki.ScalarString(entry["kind"])))
+		if kind == "" {
+			kind = "association"
+		}
+		if kind == "generalization" {
+			kind = "inheritance"
+		}
+		if _, valid := dmArrows[kind]; !valid {
+			kind = "association"
+		}
+		if tgt == p.Stem && kind == "inheritance" {
+			continue // a term may refer to itself, not inherit from itself
+		}
+		multRaw := entry["multiplicity"]
+		mult := ""
+		if multRaw != nil {
+			mult = strings.TrimSpace(wiki.ScalarString(multRaw))
+		}
+		verbRaw := entry["label"]
+		out = append(out, map[string]any{
+			"source":      p.Stem,
+			"target":      tgt,
+			"verb":        CleanLabel(wiki.ScalarString(verbRaw), true),
+			"cardinality": mult,
+			"kind":        kind,
+		})
+	}
+	return out
+}
+
+// TermRelationships returns a term's relationships as its page shows them
+// (FR-039). A target that is a page is named by ID and title and linked. Any
+// other target stays as written.
+func TermRelationships(p *wiki.Page, links map[string]wiki.PageRef, byStem map[string]*wiki.Page) []map[string]any {
+	out := make([]map[string]any, 0)
+	for _, r := range DMRelationships(p) {
+		kind := r["kind"].(string)
+		row := map[string]any{
+			"kind":         kind,
+			"label":        r["verb"],
+			"target":       r["target"],
+			"target_id":    "",
+			"url":          "",
+			"multiplicity": r["cardinality"],
+		}
+		if kind == "inheritance" {
+			row["kind"] = "generalization"
+		}
+		// a multiplicity on a generalization means nothing, as in the diagram
+		if !dmArrows[kind].carded {
+			row["multiplicity"] = ""
+		}
+		if ref, ok := links[r["target"].(string)]; ok {
+			if target := byStem[ref.Stem]; target != nil {
+				row["target"] = target.Title()
+				row["target_id"] = target.ID()
+				row["url"] = wiki.PageURL(target.Folder, target.Stem)
+			}
+		}
+		out = append(out, row)
 	}
 	return out
 }
@@ -137,41 +256,10 @@ func DataModelEdges(domainTerms []*wiki.Page) []map[string]any {
 				})
 			}
 		}
-		for _, item := range p.AsList("relationships") {
-			entry, ok := item.(map[string]any)
-			if !ok {
-				continue
+		for _, r := range DMRelationships(p) {
+			if byStem[r["target"].(string)] {
+				out = append(out, r)
 			}
-			tgt := wiki.StemOfLink(entry["to"])
-			if tgt == "" || !byStem[tgt] {
-				continue
-			}
-			kind := strings.ToLower(strings.TrimSpace(wiki.ScalarString(entry["kind"])))
-			if kind == "" {
-				kind = "association"
-			}
-			if kind == "generalization" {
-				kind = "inheritance"
-			}
-			if _, valid := dmArrows[kind]; !valid {
-				kind = "association"
-			}
-			if tgt == p.Stem && kind == "inheritance" {
-				continue // a term may refer to itself, not inherit from itself
-			}
-			multRaw := entry["multiplicity"]
-			mult := ""
-			if multRaw != nil {
-				mult = strings.TrimSpace(wiki.ScalarString(multRaw))
-			}
-			verbRaw := entry["label"]
-			out = append(out, map[string]any{
-				"source":      p.Stem,
-				"target":      tgt,
-				"verb":        CleanLabel(wiki.ScalarString(verbRaw), true),
-				"cardinality": mult,
-				"kind":        kind,
-			})
 		}
 	}
 	return out

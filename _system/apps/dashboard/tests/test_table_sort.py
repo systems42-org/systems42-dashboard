@@ -47,7 +47,7 @@ def test_stakeholder_columns():
 
 
 def test_glossary_columns():
-    assert _sortable("/domain-terms") == ["ID", "Term", "Definition", "Links", "Added", "Status"]
+    assert _sortable("/domain-terms") == ["ID", "Term", "Kind", "Definition", "Links", "Added", "Status"]
 
 
 def test_decision_columns():
