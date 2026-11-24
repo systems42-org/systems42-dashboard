@@ -95,8 +95,6 @@ _SERVER = """
 import json, sys
 sys.path.insert(0, sys.argv[1])
 import app
-# a shutdown (FR-050) must end this server only, never signal the test that started it
-app.app.config["DEV_SERVER"] = True
 from werkzeug.serving import WSGIRequestHandler, make_server
 
 class Quiet(WSGIRequestHandler):

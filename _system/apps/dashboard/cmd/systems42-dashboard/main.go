@@ -195,6 +195,8 @@ func runWithIO(args []string, stdout, stderr io.Writer) int {
 
 	watchCtx, watchCancel := context.WithCancel(context.Background())
 	defer watchCancel()
+	// DASH_NO_SHUTDOWN, set to anything, switches the automatic stop off
+	// (FR-050). app.py reads the same variable in start_lifecycle.
 	if strings.TrimSpace(os.Getenv("DASH_NO_SHUTDOWN")) == "" {
 		srv.Session.StartWatchdog(watchCtx, time.Second, triggerShutdown)
 	}

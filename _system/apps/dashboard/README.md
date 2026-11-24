@@ -97,7 +97,15 @@ Every page footer shows the data-refresh timestamp (page load time, `%Y-%m-%d`,
 in `TZ` if set, else the host's local zone).
 
 The dashboard shuts itself down a few seconds after the last browser tab is
-closed (DR-022), so it never lingers as an orphan process or container. The
+closed (DR-022), so it never lingers as an orphan process or container.
+`DASH_NO_SHUTDOWN=1` switches this off (FR-050): the dashboard then runs until
+you stop it (`./dashboard.sh down`, Ctrl+C) or the facilitator chooses
+"Disconnect all". Any value switches it off, and both the Python and the Go
+dashboard read the variable. The watchdog behind the stop starts only with a
+server: `gunicorn.conf.py` starts it in the Gunicorn worker, `python app.py`
+starts it for `local`. `import app` starts no thread, so the site export and
+the tests can use the Flask test client for as long as they need. Gunicorn
+started without `gunicorn.conf.py` has no watchdog and does not stop by itself. The
 footer shows a live client count; the ≡ menu opens the "Who's here?" page (a fun
 nickname per tab, no real names). Whoever connects first is "Yoda" — listed
 and counted like everyone else, but marked as facilitator and the only
@@ -372,7 +380,7 @@ _system/apps/dashboard/
   tests/             plain-assert test scripts (no pytest) + a fixture vault
   Dockerfile         python:3.12-slim + gunicorn, and a `test` stage for `make test`
   preflight.py       the check that the repository is a Systems42 wiki (CON-005)
-  gunicorn.conf.py   runs that check before the app is loaded
+  gunicorn.conf.py   runs that check before the app is loaded, and starts the watchdog in the worker
   dev.sh             rebuild, local and test, reached through ../../../dashboard.sh
 ```
 

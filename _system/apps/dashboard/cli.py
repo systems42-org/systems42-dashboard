@@ -4,7 +4,8 @@
     systems42-dashboard --version
 
 `./dashboard.sh uv` runs this through uv. WIKI defaults to REPO_DIR, then to
-the current folder. DASH_PORT sets the port (8080).
+the current folder. DASH_PORT sets the port (8080). DASH_NO_SHUTDOWN=1 keeps
+the dashboard running after the last browser tab has closed (FR-050).
 
 In the wheel this file is the package `systems42_dashboard` (pyproject.toml),
 and the dashboard's modules and files sit next to it, as they do here. The
