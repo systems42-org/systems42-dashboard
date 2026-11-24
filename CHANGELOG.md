@@ -78,6 +78,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
   next.
 
 ### Changed
+- Dashboard release 0.14.5 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.4 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.3 (`_system/apps/dashboard/VERSION`).
 - Dashboard: the home page, Help and the README no longer call Requirements and Architecture "peaks" or the column between them the "valley", since the Chart mark replaced the Peaks mark. Commons is "shared by both areas" (Python and Go).
