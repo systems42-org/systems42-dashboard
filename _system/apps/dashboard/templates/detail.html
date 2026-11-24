@@ -2,7 +2,7 @@
 {% from "_context_flows.html" import context_flow_table %}
 {% from "_diagram_links.html" import node_links %}
 {% from "_provenance.html" import provenance_chips %}
-{% from "_macros.html" import format_labels %}
+{% from "_macros.html" import format_labels, page_meta %}
 {% from "_trace.html" import trace_panel %}
 {% from "_relations.html" import relations_panel %}
 {% from "_page_issues.html" import page_issues as page_issues_panel %}
@@ -25,11 +25,7 @@
 </dl>
 {% endif %}
 <h1 class="page-h1">{{ title }}</h1>
-<p class="detail-meta">
-  {% if created %}<span>created {{ created }}</span>{% endif %}
-  {% if updated and updated != '—' %}<span>· updated {{ updated }}</span>{% endif %}
-  {% if tags %}<span>· {% for t in tags %}<span class="tag-chip">{{ t }}</span>{% endfor %}</span>{% endif %}
-</p>
+{{ page_meta(created, updated, tags) }}
 {% if sources is not none %}{{ provenance_chips(sources) }}{% endif %}
 
 {% if context_diagram %}

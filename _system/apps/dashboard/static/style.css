@@ -628,6 +628,8 @@ a.format-label:hover { color: var(--accent); border-bottom-color: var(--accent);
 .provenance { display:flex; flex-wrap:wrap; align-items:center; gap:.4rem; margin: -.6rem 0 var(--space-4); }
 /* Right under the head row there is no meta line to pull up to. */
 .detail-head + .provenance { margin-top: .6rem; }
+/* Nor right under the title, on a page without dates and tags. */
+.page-h1 + .provenance { margin-top: .7rem; }
 .provenance-label { font: 600 .75rem/1.4 var(--font-mono); letter-spacing:.08em; text-transform:uppercase; color: var(--ink-dim); margin-right:.2rem; }
 .chip { display:inline-flex; align-items:center; gap:.35rem; font-size:.78rem; padding:.1rem .6rem; border-radius:999px; border:1px solid var(--line); color: var(--ink-soft); text-decoration:none; }
 .chip code { font-size: max(.9em, .75rem); }

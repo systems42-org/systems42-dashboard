@@ -3701,8 +3701,7 @@ def page_detail(folder, stem):
             L["count"] = c[L["key"]]
     return render_template(
         "detail.html", kind=kind, id=page.id, title=page.title,
-        status=page.status, created=str(page.meta.get("created", "")),
-        updated=str(page.meta.get("updated", "")), tags=page.as_list("tags"),
+        status=page.status, **page_head(page),
         body_html=body_html, **_section_crumb(folder),
         context_diagram=context_diagram, context_flows=context_flows,
         relations=build_relations_panel(stem, exclude=trace_stems(trace)),
@@ -3716,6 +3715,17 @@ def page_detail(folder, stem):
         page_issues=open_issues_for(stem),
         formats=format_labels(page.body),
     )
+
+
+def page_head(page) -> dict:
+    """Created date, updated date and tags for the head of a page (FR-034).
+    Every detail view takes them from here and renders them with the
+    `page_meta` macro, so no view can leave them out. A date is text as
+    written, a blank field is empty."""
+    def text(key):
+        value = page.meta.get(key)
+        return "" if value is None else str(value)
+    return {"created": text("created"), "updated": text("updated"), "tags": page.as_list("tags")}
 
 
 def _section_crumb(folder: str) -> dict:
@@ -3753,8 +3763,7 @@ def source_detail(stem):
     ingested = ", ".join(render_wikilinks_text(str(r), titles, link_index()) for r in src.as_list("ingested-pages")) or "—"
     body_html = f'<dl class="source-facts">{facts_html}<dt>Ingested pages</dt><dd>{ingested}</dd></dl>' + render_markdown(body, titles)
     return render_template("detail.html", kind="Source", id=src.id, title=src.title, status=src.status,
-                           created=str(src.meta.get("created", "")), updated=str(src.meta.get("updated", "")),
-                           tags=src.as_list("tags"), body_html=body_html, crumb=None, crumb_href=None,
+                           **page_head(src), body_html=body_html, crumb=None, crumb_href=None,
                            context_diagram=None, context_flows=None,
                            relations=None, ego_graph=None, ego_layers=None,
                            needs_mermaid=False, sources=None)
@@ -4381,6 +4390,7 @@ def fr_view(stem):
         sources=provenance(page),
         page_issues=open_issues_for(stem),
         formats=format_labels(page.body),
+        **page_head(page),
     )
 
 

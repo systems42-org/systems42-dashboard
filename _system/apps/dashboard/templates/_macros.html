@@ -13,3 +13,11 @@
 {# The standards a page follows ("> follows [[MADR]]"), as quiet labels in the
    page head that lead to the anchor's entry on /metamodel (FR-035). #}
 {% macro format_labels(formats) %}{% if formats %}<span class="formats">{% for f in formats %}<span class="format">{% if f.url %}<a class="format-label" href="{{ f.url }}"{% if f.title %} title="{{ f.title }}"{% endif %}>Format: {{ f.label }}</a>{% else %}<span class="format-label">Format: {{ f.label }}</span>{% endif %}{% if f.note %} <span class="format-note">{{ f.note }}</span>{% endif %}</span>{% endfor %}</span>{% endif %}{% endmacro %}
+{# Created date, updated date and tags under the title of a page (FR-034).
+   The values come from `page_head()` in app.py. A page with none of the
+   three gets no line at all. #}
+{% macro page_meta(created, updated, tags) %}{% if created or (updated and updated != '—') or tags %}<p class="detail-meta">
+  {% if created %}<span>created {{ created }}</span>{% endif %}
+  {% if updated and updated != '—' %}<span>· updated {{ updated }}</span>{% endif %}
+  {% if tags %}<span>· {% for t in tags %}<span class="tag-chip">{{ t }}</span>{% endfor %}</span>{% endif %}
+</p>{% endif %}{% endmacro %}

@@ -451,7 +451,7 @@ func (s *Server) handleFRDetail(w http.ResponseWriter, r *http.Request) {
 		diagramLinks = []map[string]any{}
 	}
 	trace := buildTrace(sn, stem, "functional-requirements")
-	s.renderHTML(w, r, http.StatusOK, "fr.html", cat, map[string]any{
+	s.renderHTML(w, r, http.StatusOK, "fr.html", cat, withPageHead(page, map[string]any{
 		"fr":            fr,
 		"body_html":     bodyHTML,
 		"diagram":       nilIfEmpty(diagram),
@@ -463,7 +463,7 @@ func (s *Server) handleFRDetail(w http.ResponseWriter, r *http.Request) {
 		"sources":       provenanceChips(page, sn.sourceIndex()),
 		"page_issues":   openIssuesFor(sn, stem, vocab),
 		"formats":       render.FormatLabels(page.Body, linkCtx),
-	}, now)
+	}), now)
 }
 
 func (s *Server) handleBuildingBlocks(w http.ResponseWriter, r *http.Request) {
