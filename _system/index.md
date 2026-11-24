@@ -193,7 +193,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 ## Issues
 
 - [[ISS-001-who-holds-the-keys-in-parallel-work]] Who holds the keys when two people work in parallel (resolved)
-- [[ISS-002-define-the-clarify-loop]] Define the clarify loop (resolved)
+- [[ISS-002-define-the-clarify-loop]] Define the clarify loop (open)
 - [[ISS-003-goal-coverage-projection-cites-decisions-from-another-wiki]] The goal coverage projection cites decisions from another wiki (open, method, meta #37)
 - [[ISS-004-where-the-metamodel-declares-its-version]] Where the metamodel declares its version (open, method, meta #39)
 - [[ISS-005-the-method-lint-imports-dashboard-code]] The method's lint imports dashboard code (open, method, meta #40)

@@ -478,3 +478,6 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 
 ## [2026-11-24] clarify | Define the clarify loop
 - Resolved [[ISS-002-define-the-clarify-loop]]: Systems42 now defines the loop in `[[clarify]]`, and [[FR-011-explain-the-five-loops]] explains it in the current five-loop method.
+
+## [2026-11-24] correction | Reopen clarify loop issue
+- Reopened [[ISS-002-define-the-clarify-loop]]. The workflow exists, but the team's agreement on its principle was not established. The earlier closure was an agent error; the dashboard explanation in [[FR-011-explain-the-five-loops]] does not resolve it.
