@@ -454,7 +454,8 @@ def _stop_proc(proc: subprocess.Popen) -> None:
 def _discover_wikis(tmp: Path) -> list[tuple[str, dict[str, str], Path, Path]]:
     """Return (label, env_overrides, wiki_dir, raw_sources_dir) for every
     fixture wiki under tests/fixtures/, a synthetic notices/intro-off wiki,
-    a synthetic wiki whose metamodel moves every type folder, and this
+    a synthetic wiki whose metamodel moves every type folder and declares a
+    block without a title, and this
     repository's own wiki."""
     wikis: list[tuple[str, dict[str, str], Path, Path]] = []
 
@@ -518,6 +519,17 @@ def _discover_wikis(tmp: Path) -> list[tuple[str, dict[str, str], Path, Path]]:
     (moved / "wiki" / "domain-terms" / "DT-900-leftover.md").write_text(
         "---\nid: DT-900\ntype: domain-term\ntitle: Leftover\nstatus: draft\nrelated: []\n---\n\n# Leftover\n",
         encoding="utf-8")
+    # A block without a title that a type names, a block without an ID and a
+    # block entry that is plain text (issue #205).
+    fw_req42 = moved / "_system" / "metamodel" / "frameworks" / "fw-req42.md"
+    text = fw_req42.read_text(encoding="utf-8")
+    m = re.search(r"^  - \{id: R4,.*\}\n", text, re.MULTILINE)
+    assert m, "fw-req42.md declares no block R4"
+    fw_req42.write_text(text.replace(
+        m.group(0),
+        "  - {id: R4, types: [activity-model], scope: in}\n"
+        '  - {number: "98", title: "Block without an ID", types: [], scope: in}\n'
+        "  - a block that is plain text\n", 1), encoding="utf-8")
     wikis.append((
         "synthetic:moved-folders",
         {"REPO_DIR": str(moved)},
@@ -733,10 +745,14 @@ def main() -> int:
                     for route, needle in (("/domain-terms", "/page/moved-domain-terms/"),
                                           ("/arc42/building-blocks", "/page/moved-building-blocks/"),
                                           ("/goals", "/page/moved-goals/"),
-                                          ("/stakeholders", "/page/moved-stakeholders/")):
+                                          ("/stakeholders", "/page/moved-stakeholders/"),
+                                          # a block without a title shows its ID (issue #205)
+                                          ("/req42", '<h2 class="tile-title">R4</h2>'),
+                                          ("/metamodel", '<span class="mm-block-title">R4</span>'),
+                                          ("/metamodel", '"label": "R4 \\u00b7 R4"')):
                         body = _fetch(f"http://127.0.0.1:{py_port}{route}")[2].decode("utf-8", "replace")
                         if needle not in body:
-                            failures.append(f"[{label}] {route}: no link to {needle}")
+                            failures.append(f"[{label}] {route}: does not contain {needle}")
                 if label == "fixture:search-wiki" and shutil.which("node"):
                     se_env = dict(os.environ)
                     se_env["DASH_SEARCH_URL"] = f"http://127.0.0.1:{go_port}"
