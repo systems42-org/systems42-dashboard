@@ -976,29 +976,49 @@ func writeJSON(w http.ResponseWriter, r *http.Request, status int, v any) {
 	}
 }
 
-func readClientID(r *http.Request) string {
+// readJSONObject returns the JSON object in the body of a session request
+// (/ping, /leaving, /settings, /disconnect-all), like app.py's _json_object.
+// No body, an unreadable body and null count as an empty object. Any other
+// JSON value (array, string, number, boolean) gets a 400 and ok is false: the
+// handler must return without touching session state.
+func readJSONObject(w http.ResponseWriter, r *http.Request) (obj map[string]any, ok bool) {
 	defer r.Body.Close()
-	body, err := io.ReadAll(io.LimitReader(r.Body, 4096))
-	if err != nil || len(body) == 0 {
-		return "anon"
+	body, _ := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	var value any
+	if err := json.Unmarshal(body, &value); err != nil || value == nil {
+		return map[string]any{}, true
 	}
-	var payload struct {
-		ClientID any `json:"client_id"`
+	obj, ok = value.(map[string]any)
+	if !ok {
+		writeJSON(w, r, http.StatusBadRequest, map[string]string{"error": "not-an-object"})
+		return nil, false
 	}
-	if err := json.Unmarshal(body, &payload); err != nil || payload.ClientID == nil {
-		return "anon"
+	return obj, true
+}
+
+func clientIDOf(obj map[string]any) string {
+	if v := obj["client_id"]; v != nil {
+		return session.NormalizeClientID(fmt.Sprint(v))
 	}
-	return session.NormalizeClientID(fmt.Sprint(payload.ClientID))
+	return "anon"
 }
 
 func (s *Server) handlePing(w http.ResponseWriter, r *http.Request) {
-	cid := readClientID(r)
+	obj, ok := readJSONObject(w, r)
+	if !ok {
+		return
+	}
+	cid := clientIDOf(obj)
 	reply := s.Session.Ping(cid, r.UserAgent())
 	writeJSON(w, r, http.StatusOK, reply)
 }
 
 func (s *Server) handleLeaving(w http.ResponseWriter, r *http.Request) {
-	cid := readClientID(r)
+	obj, ok := readJSONObject(w, r)
+	if !ok {
+		return
+	}
+	cid := clientIDOf(obj)
 	s.Session.Leaving(cid)
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -1019,7 +1039,11 @@ func (s *Server) handleReload(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleDisconnectAll(w http.ResponseWriter, r *http.Request) {
-	cid := readClientID(r)
+	obj, ok := readJSONObject(w, r)
+	if !ok {
+		return
+	}
+	cid := clientIDOf(obj)
 	if !s.Session.IsFacilitator(cid) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return

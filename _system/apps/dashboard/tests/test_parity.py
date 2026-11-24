@@ -574,6 +574,37 @@ def _compare_route(label: str, route: str, py_port: int, go_port: int) -> str | 
     return None
 
 
+# The session endpoints and the bodies both dashboards must reject alike: every
+# JSON type that is not an object (issue #184). A rejected body changes no
+# state, so these requests cannot disturb the route checks.
+SESSION_ROUTES = ["/ping", "/leaving", "/settings", "/disconnect-all"]
+NOT_JSON_OBJECTS = ['["x"]', "[]", '"x"', '""', "7", "0", "1.5", "true", "false"]
+
+
+def _post(url: str, body: str) -> tuple[int, str, bytes]:
+    req = urllib.request.Request(
+        url, data=body.encode("utf-8"), method="POST",
+        headers={"Content-Type": "application/json"})
+    try:
+        with _OPENER.open(req, timeout=5) as resp:
+            return resp.status, resp.headers.get("Content-Type", ""), resp.read()
+    except urllib.error.HTTPError as err:
+        return err.code, err.headers.get("Content-Type", ""), err.read()
+
+
+def _compare_session_body(label: str, route: str, body: str,
+                          py_port: int, go_port: int) -> str | None:
+    py_status, py_ct, py_body = _post(f"http://127.0.0.1:{py_port}{route}", body)
+    go_status, go_ct, go_body = _post(f"http://127.0.0.1:{go_port}{route}", body)
+    where = f"[{label}] POST {route} {body}"
+    if (py_status, go_status) != (400, 400):
+        return f"{where}: status python={py_status}, go={go_status}, want 400"
+    if "application/json" not in py_ct or "application/json" not in go_ct:
+        return f"{where}: content-type python={py_ct!r}, go={go_ct!r}"
+    diff = first_json_diff(json.loads(py_body), json.loads(go_body))
+    return f"{where}: {diff}" if diff else None
+
+
 def _start_python(port: int, env_overrides: dict[str, str]) -> subprocess.Popen:
     env = {k: v for k, v in os.environ.items() if k not in (
         "REPO_DIR", "WIKI_DIR", "WIKI_CONFIG", "RAW_SOURCES_DIR",
@@ -655,6 +686,12 @@ def main() -> int:
                     err = _compare_route(label, route, py_port, go_port)
                     if err:
                         failures.append(err)
+                for route in SESSION_ROUTES:
+                    for body in NOT_JSON_OBJECTS:
+                        checked += 1
+                        err = _compare_session_body(label, route, body, py_port, go_port)
+                        if err:
+                            failures.append(err)
                 if label == "fixture:search-wiki" and shutil.which("node"):
                     se_env = dict(os.environ)
                     se_env["DASH_SEARCH_URL"] = f"http://127.0.0.1:{go_port}"
