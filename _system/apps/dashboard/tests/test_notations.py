@@ -64,6 +64,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(HERE.parent))
 
 import app  # noqa: E402
+import settings  # noqa: E402
 import metamodel  # noqa: E402
 
 
@@ -102,14 +103,14 @@ def test_anchors_name_notations_and_their_aliases():
 
 
 def test_default_notation_is_agile_unless_wiki_yaml_names_one():
-    assert app.wiki_config()["default_notation"] == "agile"
+    assert settings.wiki_config()["default_notation"] == "agile"
     body = app.app.test_client().get("/metamodel").get_data(as_text=True)
     assert body.index('id="notation-agile"') < body.index('id="notation-ears"')
     assert "default" in _row(body, "notation-agile")
     assert "default" not in _row(body, "notation-ears")
     _cfg.write_text("system_name: Notations\ndefault_notation: EARS\n", encoding="utf-8")
     try:
-        assert app.wiki_config()["default_notation"] == "ears"
+        assert settings.wiki_config()["default_notation"] == "ears"
         body = app.app.test_client().get("/metamodel").get_data(as_text=True)
         # the default comes first, then the others by name
         order = [body.index(f'id="notation-{n}"') for n in ("ears", "agile", "prose", "ReportBrief", "use-case")]

@@ -363,7 +363,7 @@ status-strip source count already reads.
 
 ```
 _system/apps/dashboard/
-  app.py             Flask app, the routes, wiki_config() and what the views put together
+  app.py             Flask app, the routes and what the views put together
                      (tiles, lists, issue fields). May import every module below
   catalog.py         the three areas, and the sections from the metamodel with routes and colours
   metamodel.py       reader for _system/metamodel/ (the /metamodel page, ADR-0008)
@@ -399,6 +399,10 @@ _system/apps/dashboard/
   session.py         the session: the view, the grace periods, the presence of the connected
                      tabs, their names and the Keyholder role, the watchdog and the shutdown.
                      May import catalog, never Flask or app
+  settings.py        the settings of one dashboard: wiki_config() and its warnings, the about
+                     page and the files under docs/, the brand folders and their files, and
+                     what the view hides. May import wiki, catalog, metamodel, inputs and
+                     session, never Flask or app
   help.md            source of the /help page
   templates/         base, index, _empty (shared empty state), _macros (plural()),
                      _maturity (maturity bar/legend), _mermaid (loader),

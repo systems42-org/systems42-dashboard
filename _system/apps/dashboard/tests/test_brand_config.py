@@ -33,6 +33,7 @@ _HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_HERE))
 
 import app  # noqa: E402
+import settings  # noqa: E402
 
 client = app.app.test_client()
 BRANDS = _HERE / "brands"
@@ -49,7 +50,7 @@ class _Records(logging.Handler):
 
 
 LOG = _Records()
-app.app.logger.addHandler(LOG)
+logging.getLogger("systems42.settings").addHandler(LOG)
 
 
 def configure(extra: str = "") -> None:
@@ -256,21 +257,21 @@ def test_other_dashboard_version_is_named_in_one_line():
 
 def test_wiki_config_reports_the_three_keys():
     configure()
-    cfg = app.wiki_config()
+    cfg = settings.wiki_config()
     assert cfg["brand"] == "systems42" and cfg["intro"] is True and cfg["dashboard_version"] == ""
     configure("brand: brand/\nintro: off\ndashboard_version: 0.9\n")
-    cfg = app.wiki_config()
+    cfg = settings.wiki_config()
     assert cfg["brand"] == "brand/" and cfg["intro"] is False and cfg["dashboard_version"] == "0.9"
 
 
 def test_unquoted_dashboard_version_is_warned_about():
     LOG.messages.clear()
     configure("dashboard_version: 1.10\n")        # YAML reads a float: 1.1
-    app.wiki_config()
+    settings.wiki_config()
     assert any("dashboard_version" in m and "quote" in m for m in LOG.messages), LOG.messages
     LOG.messages.clear()
     configure('dashboard_version: "1.10"\n')
-    assert app.wiki_config()["dashboard_version"] == "1.10"
+    assert settings.wiki_config()["dashboard_version"] == "1.10"
     assert not any("dashboard_version" in m for m in LOG.messages), LOG.messages
 
 
@@ -278,7 +279,7 @@ def test_non_string_brand_is_warned_about_and_falls_back():
     for value in ("on", "off", "[b]", "42"):
         LOG.messages.clear()
         configure(f"brand: {value}\n")
-        assert app.wiki_config()["brand"] == "systems42", value
+        assert settings.wiki_config()["brand"] == "systems42", value
         page = home()
         assert FRAME in page and 'id="brand-intro"' in intro(), value
         assert any("brand must be a name or a folder path" in m for m in LOG.messages), (value, LOG.messages)

@@ -223,6 +223,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(HERE.parent))  # import app.py
 
 import app  # noqa: E402
+import settings  # noqa: E402
 import links  # noqa: E402
 import project.requirements  # noqa: E402
 
@@ -272,7 +273,7 @@ def _routes() -> list[str]:
     urls += [f"/source/{p.stem}" for p in _sources.glob("*.md")]
     urls += [f"/req42/{slug}" for slug in app.catalog.SECTION_BY_SLUG]
     urls += [f"/section/{sid}" for sid in app.catalog.SECTION_BY_ID]
-    urls += [f"/brand/{name}" for name in app.BRAND_MARKS] + ["/about/files/m.svg"]
+    urls += [f"/brand/{name}" for name in settings.BRAND_MARKS] + ["/about/files/m.svg"]
     urls += ["/entity-diagram?focus=DT-001-hostile", "/entity-diagram?focus=DT-002-hostile",
              "/entity-diagram?context=" + PAYLOAD, "/graph/domain-terms?edges=structured",
              "/search?q=" + PAYLOAD, "/issues?status=" + PAYLOAD + "&section=R1&category=" + PAYLOAD]

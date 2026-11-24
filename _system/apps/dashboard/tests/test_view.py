@@ -39,6 +39,7 @@ HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(HERE))  # import app.py
 
 import app  # noqa: E402
+import settings  # noqa: E402
 import session  # noqa: E402
 
 
@@ -68,19 +69,19 @@ def _snapshot():
 
 def test_nothing_is_hidden_at_the_start():
     session.set_view([])
-    assert app.dashboard_config() == {"hidden": []}
-    assert [a["key"] for a in app.visible_areas()] == ["requirements", "architecture", "commons"]
-    assert len(app.visible_sections("commons")) == 7
+    assert settings.dashboard_config() == {"hidden": []}
+    assert [a["key"] for a in settings.visible_areas()] == ["requirements", "architecture", "commons"]
+    assert len(settings.visible_sections("commons")) == 7
 
 
 def test_the_view_is_normalised_and_ordered():
     session.set_view(["C6", "bogus", "architecture", "C6", "r2"])
     try:
-        assert app.dashboard_config()["hidden"] == ["architecture", "R2", "C6"]  # catalog order, deduped
-        assert app.is_hidden("C6") and app.is_hidden("A3") and app.is_hidden("architecture")
-        assert not app.is_hidden("C1")
-        assert [a["key"] for a in app.visible_areas()] == ["requirements", "commons"]
-        assert [s["id"] for s in app.visible_sections("requirements")] == ["R1", "R3", "R4", "R5", "R6"]
+        assert settings.dashboard_config()["hidden"] == ["architecture", "R2", "C6"]  # catalog order, deduped
+        assert settings.is_hidden("C6") and settings.is_hidden("A3") and settings.is_hidden("architecture")
+        assert not settings.is_hidden("C1")
+        assert [a["key"] for a in settings.visible_areas()] == ["requirements", "commons"]
+        assert [s["id"] for s in settings.visible_sections("requirements")] == ["R1", "R3", "R4", "R5", "R6"]
     finally:
         session.set_view([])
 
@@ -107,10 +108,10 @@ def test_only_the_keyholder_changes_the_view():
     _ping(c, "yoda")            # first connected: holds the keys
     _ping(c, "padawan")
     assert _post_view(c, "padawan", ["C1"]).status_code == 403
-    assert app.dashboard_config()["hidden"] == []
+    assert settings.dashboard_config()["hidden"] == []
     r = _post_view(c, "yoda", ["C1", "A2"])
     assert r.status_code == 200 and r.get_json() == {"ok": True, "hidden": ["A2", "C1"]}
-    assert app.dashboard_config()["hidden"] == ["A2", "C1"]
+    assert settings.dashboard_config()["hidden"] == ["A2", "C1"]
     session.set_view([])
 
 
@@ -121,7 +122,7 @@ def test_unknown_ids_are_refused_and_change_nothing():
     _ping(c, "yoda")
     r = _post_view(c, "yoda", ["C1", "nope"])
     assert r.status_code == 400 and r.get_json()["unknown"] == ["nope"]
-    assert app.dashboard_config()["hidden"] == ["C1"]
+    assert settings.dashboard_config()["hidden"] == ["C1"]
     assert c.post("/settings").status_code in (400, 403)   # no body: no error page
     session.set_view([])
 
@@ -167,7 +168,7 @@ def test_a_restart_shows_everything_again():
     old = _repo / "_system" / "dashboard.yaml"
     old.write_text("hidden: [C1, architecture]\n", encoding="utf-8")
     try:
-        out = subprocess.run([sys.executable, "-c", "import app; print(app.dashboard_config())"],
+        out = subprocess.run([sys.executable, "-c", "import app, settings; print(settings.dashboard_config())"],
                              cwd=HERE, env=dict(os.environ), capture_output=True, text=True)
     finally:
         old.unlink()

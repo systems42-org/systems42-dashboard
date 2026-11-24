@@ -24,6 +24,7 @@ _HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_HERE))
 
 import app  # noqa: E402
+import settings  # noqa: E402
 
 client = app.app.test_client()
 BRANDS = _HERE / "brands"
@@ -36,8 +37,8 @@ def intro(brand: str) -> str:
 
 
 def test_the_example_brands_are_the_ones_shipped():
-    assert tuple(app.EXAMPLE_BRANDS) == SHIPPED
-    assert app.DEFAULT_BRAND == "systems42"
+    assert tuple(settings.EXAMPLE_BRANDS) == SHIPPED
+    assert settings.DEFAULT_BRAND == "systems42"
     assert sorted(p.name for p in BRANDS.iterdir() if p.is_dir()) == sorted(SHIPPED)
     assert (BRANDS / "README.md").is_file(), "the brand contract lives beside the brands"
 

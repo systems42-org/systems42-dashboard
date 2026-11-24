@@ -307,8 +307,9 @@ def export_demo(repo_dir: Path, demo_wiki: Path, out_dir: Path) -> dict:
     sys.path.insert(0, str(dashboard_dir))
 
     import app as dash_app  # type: ignore  # imported after setting REPO_DIR
+    import settings as dash_settings  # type: ignore
 
-    cfg = dash_app.wiki_config()
+    cfg = dash_settings.wiki_config()
     demo_name = cfg.get("system_name") or "Systems42 Demo"
     demo_tagline = cfg.get("tagline") or "Interactive Systems42 requirements and architecture wiki"
 

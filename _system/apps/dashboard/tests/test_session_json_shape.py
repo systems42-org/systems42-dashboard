@@ -33,6 +33,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import settings  # noqa: E402
 import session  # noqa: E402
 
 ROUTES = ["/ping", "/leaving", "/settings", "/disconnect-all"]
@@ -62,7 +63,7 @@ def _state():
     with session._lifecycle_lock:
         return (dict(session._clients), dict(session._leaving), dict(session._first_seen),
                 dict(session._user_agents), dict(session._names), session._facilitator,
-                session._ever_connected, list(app.dashboard_config()["hidden"]), list(_shutdowns))
+                session._ever_connected, list(settings.dashboard_config()["hidden"]), list(_shutdowns))
 
 
 def _post(client, route, body):
@@ -91,7 +92,7 @@ def test_a_rejected_body_changes_no_session_state():
         for body in NOT_OBJECTS:
             assert _post(client, route, body).status_code == 400
             assert _state() == before, (route, body)
-    assert app.dashboard_config()["hidden"] == ["C6"]   # /settings saved nothing
+    assert settings.dashboard_config()["hidden"] == ["C6"]   # /settings saved nothing
     assert _shutdowns == []              # /disconnect-all stopped nothing
 
 
@@ -142,12 +143,12 @@ def test_valid_objects_still_work():
 
     body = json.dumps({"client_id": "luke", "hidden": ["C6"]})
     assert _post(client, "/settings", body).status_code == 403
-    assert app.dashboard_config()["hidden"] == []
+    assert settings.dashboard_config()["hidden"] == []
     body = json.dumps({"client_id": "yoda", "hidden": ["C6"]})
     resp = _post(client, "/settings", body)
     assert resp.status_code == 200
     assert resp.get_json() == {"ok": True, "hidden": ["C6"]}
-    assert app.dashboard_config()["hidden"] == ["C6"]
+    assert settings.dashboard_config()["hidden"] == ["C6"]
 
     assert _post(client, "/disconnect-all", luke).status_code == 403
     assert _shutdowns == []

@@ -32,6 +32,7 @@ ALLOWED = {
     "project.requirements": {"wiki", "links", "render", "project.common"},
     "project.terms": {"wiki", "links", "render", "catalog", "project.common"},
     "session": {"catalog"},
+    "settings": {"wiki", "catalog", "metamodel", "inputs", "session"},
     "preflight": set(),
 }
 # These sit above the modules: the app itself and what starts it.

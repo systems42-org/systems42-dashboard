@@ -45,6 +45,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import settings  # noqa: E402
 import project.common  # noqa: E402
 import project.context  # noqa: E402
 
@@ -95,7 +96,7 @@ _eif("005", "Payments", "core-operations", [
 
 
 def _diagram():
-    d = project.context.build_context_diagram(app.wiki_config()["system_name"])
+    d = project.context.build_context_diagram(settings.wiki_config()["system_name"])
     assert d, "no diagram projected — is another test module holding WIKI_DIR?"
     return d
 
