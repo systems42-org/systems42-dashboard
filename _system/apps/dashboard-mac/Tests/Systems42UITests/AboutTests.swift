@@ -77,7 +77,7 @@ import Systems42TestSupport
         for heading in ["Reading this dashboard", "Brand.", "Menu (≡)", "Who's here", "facilitator", "Docker", "Ctrl K", "intro"] {
             #expect(!HelpText.markdown.contains(heading), "\(heading)")
         }
-        #expect(HelpText.markdown.contains("Help > Metamodel, The Method and Guided Tour"))
+        #expect(HelpText.markdown.contains("Help > Metamodel and The Method."))
         #expect(HelpText.markdown.contains("## The LLM wiki"))
     }
 

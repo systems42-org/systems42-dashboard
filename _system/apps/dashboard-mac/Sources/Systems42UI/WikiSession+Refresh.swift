@@ -32,7 +32,7 @@ extension WikiSession {
     }
 
     /// Reads the changed files again and shows the new state, in one `replace(with:)`. Selection, sort,
-    /// filter, mode and the tour step stay. The reading runs off the main thread.
+    /// filter and mode stay. The reading runs off the main thread.
     ///
     /// Two refreshes never run at once. A call during a refresh adds its files to one waiting set,
     /// and one more refresh reads that set after the running one. The call returns when the

@@ -417,7 +417,7 @@ private func coreIndex() throws -> SearchIndex {
         m.commit()
         #expect(m.takeListFocus() == true)
     }
-    // MARK: pages with the same id, tours and reloads
+    // MARK: pages with the same id and reloads
 
     @Test func twoPagesWithOneIdAreTwoResults() async throws {
         let copy = try Fixture.tempCopy("search")
@@ -439,27 +439,6 @@ private func coreIndex() throws -> SearchIndex {
         #expect(try counts(m, "type") == ["Stakeholder": 2])
     }
 
-    @Test func aTourStartedWhileResultsShowClosesThem() async throws {
-        let (s, m) = try await opened()
-        let section = try #require(s.metamodel.sections.first?.id)
-        s.select(section: section)
-        _ = await found(m, "keyholder")
-        #expect(s.shownSearch != nil)
-        let history = s.historyCount
-        s.tour.start()
-        try #require(s.tour.isActive)
-        #expect(s.shownSearch == nil)
-        #expect(s.historyCount == history)
-        m.followSession()
-        #expect(m.hits.isEmpty)
-        s.tour.stop()
-        // the tour recorded nothing: Back leads to the section place before the search, Forward to the search
-        s.back()
-        #expect(s.selectedSection == section && s.shownSearch == nil)
-        s.forward()
-        #expect(s.shownSearch?.query == "keyholder")
-        #expect(s.historyCount == history)
-    }
     @Test func aReloadThatRemovesTheOpenedPage() async throws {
         let copy = try Fixture.tempCopy("search")
         defer { try? FileManager.default.removeItem(at: copy.deletingLastPathComponent()) }

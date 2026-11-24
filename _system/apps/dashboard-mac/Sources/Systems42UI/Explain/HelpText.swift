@@ -10,7 +10,7 @@ public enum HelpText {
     public static let markdown = #"""
     # Help
 
-    This text comes from the help of the web dashboard. In the Mac app, the same things are in the menus: Help > Metamodel, The Method and Guided Tour.
+    This text comes from the help of the web dashboard. In the Mac app, the same things are in the menus: Help > Metamodel and The Method.
 
     ## The LLM wiki
 

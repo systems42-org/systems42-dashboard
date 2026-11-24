@@ -60,7 +60,7 @@ struct LoadedWiki: Sendable {
                 let paragraph = page.body.components(separatedBy: "\n\n")
                     .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                     .first { !$0.isEmpty && !["#", ">", "-", "|", "<"].contains(String($0.first!)) } ?? ""
-                return Orientation(title: page.title, text: paragraph.replacingOccurrences(of: "**", with: "").replacingOccurrences(of: "\n", with: " "), ref: page.ref)
+                return Orientation(title: page.title, text: paragraph.replacingOccurrences(of: "**", with: "").replacingOccurrences(of: "\n", with: " "))
             }
         }
         return nil
@@ -115,7 +115,6 @@ struct LoadedWiki: Sendable {
     /// shows the same view as for a folder that is not a wiki.
     public internal(set) var missingParts: [String]?
     @ObservationIgnored fileprivate var explainerModel: MetamodelModel?
-    @ObservationIgnored var tourModelStore: TourModel?
     @ObservationIgnored var searchModelStore: SearchModel?
     @ObservationIgnored var projectionsModelStore: ProjectionsModel?
     @ObservationIgnored var termNetworkModelStore: TermNetworkModel?
@@ -278,15 +277,6 @@ struct LoadedWiki: Sendable {
         go(to: Place(section: id, page: ref, search: search, mode: modeShown(in: id)))
     }
 
-    /// Shows a place without recording it in the history. Only the tour uses it. A page that does
-    /// not exist, or a section the wiki lacks, shows nothing.
-    func showUnrecorded(section: WikiSection.ID?, page: PageRef?) {
-        let section = section.flatMap { id in metamodel.sections.contains { $0.id == id } ? id : nil }
-        let page = page.flatMap { store.page($0) == nil ? nil : $0 }
-        // The mode stays what the section is shown in, so a tour step never changes the remembered mode.
-        restore(Place(section: section, page: page, issuesAbout: nil, mode: modeShown(in: section)), remember: false)
-    }
-
     /// The number of places in the history.
     var historyCount: Int { history.count }
 
@@ -354,13 +344,13 @@ struct LoadedWiki: Sendable {
     public func back() {
         guard position > 0 else { return }
         position -= 1
-        restore(history[position], remember: true)
+        restore(history[position])
     }
 
     public func forward() {
         guard position + 1 < history.count else { return }
         position += 1
-        restore(history[position], remember: true)
+        restore(history[position])
     }
 
     private func section(of ref: PageRef) -> WikiSection? {
@@ -368,20 +358,20 @@ struct LoadedWiki: Sendable {
     }
 
     private func go(to place: Place) {
-        // A place the tour showed without recording differs from the recorded one, so it is recorded.
+        // What the window shows can differ from the recorded place (a reload dropped the mode), so it is then recorded.
         if position >= 0, history[position] == place,
            place == Place(section: selectedSection, page: selectedPage, issuesAbout: issueFilter, search: shownSearch, mode: mode) { return }
         history = Array(history.prefix(position + 1)) + [place]
         if history.count > Self.longestHistory { history.removeFirst(history.count - Self.longestHistory) }
         position = history.count - 1
-        restore(place, remember: true)
+        restore(place)
     }
 
-    private func restore(_ wanted: Place, remember: Bool) {
+    private func restore(_ wanted: Place) {
         // A mode the section does not offer now (the wiki was reloaded) shows the list.
         var place = wanted
         if let id = place.section, !offers(place.mode, in: id) { place.mode = ListModel.listMode }
-        if remember, let id = place.section { rememberedModes[id] = place.mode }
+        if let id = place.section { rememberedModes[id] = place.mode }
         mode = place.mode
         selectedSection = place.section
         selectedPage = place.page

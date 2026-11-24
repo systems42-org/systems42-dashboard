@@ -40,7 +40,6 @@ public struct WikiWindow: View {
                     PagePlaceholder(session: session)
                 }
             }
-            TourPanel(tour: session.tour)
         }
         .overlay(alignment: .topTrailing) { SuggestionList(model: session.search) }
         .toolbar {
