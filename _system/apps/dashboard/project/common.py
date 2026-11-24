@@ -2,8 +2,8 @@
 
 Owns the meaning of an open issue, the open issues per folder and the values
 the metamodel allows for an issue, the maturity bar, a page's provenance
-records, the pages of a section, the type prefix of a page name, and the node
-ids, labels and node links of the Mermaid diagrams.
+records, the pages of a section, the type prefix of a page name, a page's
+short title, and the node ids, labels and node links of the Mermaid diagrams.
 
 May import `wiki`, `links` and `metamodel`. No Flask import and no import of
 `app` here (tests/test_module_imports.py).
@@ -152,3 +152,10 @@ def _issue_vocab() -> dict[str, list[str]]:
     read once per request."""
     return {"status": metamodel.lifecycle("issue"),
             **{f: metamodel.field_values("issue", f) for f in ("severity", "kind", "category")}}
+
+
+def _short_title(p: wiki.Page) -> str:
+    """Concise label for diagram nodes / tile rows. `short_title:` frontmatter
+    field wins; falls back to the full title. Defined per goal so the same label
+    is used everywhere a compact form is needed."""
+    return str(p.meta.get("short_title") or p.title).strip()

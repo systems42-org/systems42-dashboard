@@ -25,10 +25,11 @@ import app  # noqa: E402
 import render  # noqa: E402
 import links as links_module  # noqa: E402
 import wiki as wiki_module  # noqa: E402
+import project.requirements  # noqa: E402
 
 
 def test_build_fr_hierarchy_counts_and_shape():
-    bl = app.build_fr_hierarchy()
+    bl = project.requirements.build_fr_hierarchy()
 
     # --- internal-consistency invariants (hold for any valid vault) ---
     assert bl["total_epics"] == len(bl["epics"]), \
@@ -73,8 +74,8 @@ def test_build_fr_hierarchy_counts_and_shape():
 
 
 def test_goal_epic_diagram_string():
-    bl = app.build_fr_hierarchy()
-    dia = app._mermaid_goal_epic_tree(app.load_goals(), bl)
+    bl = project.requirements.build_fr_hierarchy()
+    dia = project.requirements._mermaid_goal_epic_tree(app.load_goals(), bl)
     assert dia is not None
     assert dia.startswith("graph TD"), dia[:40]
     # objectives present and clickable to their goal cards on /goals
@@ -92,10 +93,10 @@ def test_goal_epic_diagram_string():
 
 
 def test_fr_subtree_diagram_string():
-    bl = app.build_fr_hierarchy()
+    bl = project.requirements.build_fr_hierarchy()
     # epic root: features + a nested story, all clicking to their own FR page
     fr001 = next(e for e in bl["epics"] if e["id"] == "FR-001")
-    dia = app._mermaid_fr_subtree(fr001)
+    dia = project.requirements._mermaid_fr_subtree(fr001)
     assert dia is not None and dia.startswith("graph TD"), (dia or "")[:40]
     assert "FR-001" in dia and "FR-002" in dia and "FR-003" in dia
     assert "/functional-requirements/FR-003-scan-a-book" in dia
@@ -103,30 +104,30 @@ def test_fr_subtree_diagram_string():
 
     # feature root: just its stories
     fr002 = next(f for f in fr001["features"] if f["id"] == "FR-002")
-    fdia = app._mermaid_fr_subtree(fr002)
+    fdia = project.requirements._mermaid_fr_subtree(fr002)
     assert fdia is not None and "FR-002" in fdia and "FR-003" in fdia, fdia
 
     # leaf (childless epic, or a story) yields no diagram
     fr006 = next(e for e in bl["epics"] if e["id"] == "FR-006")
-    assert app._mermaid_fr_subtree(fr006) is None
+    assert project.requirements._mermaid_fr_subtree(fr006) is None
     story = fr001["features"][0]["stories"][0]
-    assert app._mermaid_fr_subtree(story) is None
+    assert project.requirements._mermaid_fr_subtree(story) is None
     print("OK fr-subtree diagram:", dia.count("-->"), "edges")
 
 
 def test_fr_ancestors():
     # FR-003 (story) -> FR-002 (feature) -> FR-001 (epic), root first
-    chain = [a["id"] for a in app._fr_ancestors("FR-003-scan-a-book")]
+    chain = [a["id"] for a in project.requirements._fr_ancestors("FR-003-scan-a-book")]
     assert chain == ["FR-001", "FR-002"], chain
     # an epic has no ancestors
-    assert app._fr_ancestors("FR-001-lending") == []
+    assert project.requirements._fr_ancestors("FR-001-lending") == []
     print("OK fr ancestors:", chain)
 
 
 def test_fr_route_redirect_and_404():
     app.app.config["TESTING"] = True
     client = app.app.test_client()
-    bl = app.build_fr_hierarchy()
+    bl = project.requirements.build_fr_hierarchy()
     epic_stem = next(e["stem"] for e in bl["epics"] if e["id"] == "FR-001")
     story_stem = next(
         s["stem"] for e in bl["epics"] for f in e["features"] for s in f["stories"]
@@ -193,7 +194,7 @@ def test_unplaced_requirements_stay_visible():
     real = wiki_module.load_folder
     wiki_module.load_folder = lambda folder: real(folder) + (extra if folder == "functional-requirements" else [])
     try:
-        bl = app.build_fr_hierarchy()
+        bl = project.requirements.build_fr_hierarchy()
         body = app.app.test_client().get("/req42/functional-requirements").get_data(as_text=True)
     finally:
         wiki_module.load_folder = real
@@ -239,12 +240,12 @@ def test_features_and_stories_may_refine_a_use_case():
                 f"status: draft\n{meta}---\n\n# {stem[7:]}\n", encoding="utf-8")
         saved, wiki_module.WIKI_DIR = wiki_module.WIKI_DIR, wiki
         try:
-            bl = app.build_fr_hierarchy()
-            node, level = app._fr_hierarchy_node(bl, "UC-010-borrow")
+            bl = project.requirements.build_fr_hierarchy()
+            node, level = project.requirements._fr_hierarchy_node(bl, "UC-010-borrow")
             client = app.app.test_client()
             uc_page = client.get("/functional-requirements/UC-010-borrow").get_data(as_text=True)
             overview = client.get("/req42/functional-requirements").get_data(as_text=True)
-            crumbs = [a["id"] for a in app._fr_ancestors("FR-093-renew-online")]
+            crumbs = [a["id"] for a in project.requirements._fr_ancestors("FR-093-renew-online")]
             goals = app.load_goals()
         finally:
             wiki_module.WIKI_DIR = saved
@@ -253,10 +254,10 @@ def test_features_and_stories_may_refine_a_use_case():
     assert set(ucs) == {"UC-010", "UC-013"}, ucs
     # fish level: a root like sea
     assert [f["id"] for f in ucs["UC-013"]["features"]] == ["FR-095"], ucs["UC-013"]
-    assert app._fr_hierarchy_node(bl, "UC-013-pick-shelf")[1] == "fish"
+    assert project.requirements._fr_hierarchy_node(bl, "UC-013-pick-shelf")[1] == "fish"
     # an epic under a use case is still an epic root, not part of its breakdown
     assert "FR-096" in {e["id"] for e in bl["epics"]}, bl["epics"]
-    assert app._fr_hierarchy_node(bl, "FR-096-epic-under-uc")[1] == "epic"
+    assert project.requirements._fr_hierarchy_node(bl, "FR-096-epic-under-uc")[1] == "epic"
     uc = ucs["UC-010"]
     assert [f["id"] for f in uc["features"]] == ["FR-092"], uc["features"]
     assert [s["id"] for s in uc["features"][0]["stories"]] == ["FR-093"], uc["features"]
@@ -298,11 +299,11 @@ def test_parent_written_as_a_number_or_a_single_link():
                 f"status: draft\n{meta}---\n\n# {stem[7:]}\n", encoding="utf-8")
         saved, wiki_module.WIKI_DIR = wiki_module.WIKI_DIR, wiki
         try:
-            bl = app.build_fr_hierarchy()
+            bl = project.requirements.build_fr_hierarchy()
             client = app.app.test_client()
             codes = {s: client.get(f"/functional-requirements/{s}").status_code for s in pages}
             overview = client.get("/req42/functional-requirements").status_code
-            crumbs = {s: [a["id"] for a in app._fr_ancestors(s)] for s in pages}
+            crumbs = {s: [a["id"] for a in project.requirements._fr_ancestors(s)] for s in pages}
             goals = app.load_goals()
         finally:
             wiki_module.WIKI_DIR = saved
@@ -313,7 +314,7 @@ def test_parent_written_as_a_number_or_a_single_link():
     assert [f["id"] for f in uc["features"]] == ["FR-082"], uc
     assert [s["id"] for s in uc["features"][0]["stories"]] == ["FR-083"], uc
     assert crumbs["FR-083-under-feature"] == ["UC-080", "FR-082"], crumbs
-    assert app._fr_first_parent(wiki_module.Page("x", {"parent": 7}, "", "functional-requirements")) == "7"
+    assert project.requirements._fr_first_parent(wiki_module.Page("x", {"parent": 7}, "", "functional-requirements")) == "7"
     assert "FR-082" in {p.id for p in goals["coverage"]["GOAL-002"]}
     print("OK parent as a number or a single link")
 

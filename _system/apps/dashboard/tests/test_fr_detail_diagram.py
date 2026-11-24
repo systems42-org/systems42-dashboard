@@ -58,6 +58,7 @@ _driven("building-blocks", "building-block", "BB-004-archive", "Archive", [])
 _driven("decisions", "decision-record", "DR-001-one-desk", "One desk", ["FR-001-lend-books"])
 
 import app  # noqa: E402
+import project.requirements  # noqa: E402
 
 client = app.app.test_client()
 
@@ -134,10 +135,10 @@ def test_the_blocks_come_from_the_drivers_of_the_block_only():
     try:
         path.write_text(old.replace("priority: Should\n",
                                     'priority: Should\nbuilding-blocks: ["[[BB-004-archive]]"]\n'), encoding="utf-8")
-        assert [b.id for b in app.fr_building_blocks("FR-004-remind-readers")] == []
+        assert [b.id for b in project.requirements.fr_building_blocks("FR-004-remind-readers")] == []
     finally:
         path.write_text(old, encoding="utf-8")
-    assert [b.id for b in app.fr_building_blocks("FR-001-lend-books")] == ["BB-001", "BB-002"]
+    assert [b.id for b in project.requirements.fr_building_blocks("FR-001-lend-books")] == ["BB-001", "BB-002"]
 
 
 if __name__ == "__main__":

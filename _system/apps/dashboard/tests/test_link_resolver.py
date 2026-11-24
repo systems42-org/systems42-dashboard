@@ -81,6 +81,7 @@ import app  # noqa: E402
 import wiki  # noqa: E402
 import links  # noqa: E402
 import project.terms  # noqa: E402
+import project.requirements  # noqa: E402
 
 client = app.app.test_client()
 
@@ -144,7 +145,7 @@ def test_coverage_is_the_same_for_every_spelling():
     assert serving == ["FR-001", "FR-002", "FR-003", "FR-004", "FR-005", "FR-006", "FR-007"], serving
     assert data["coverage"]["GOAL-003"] == []
     # the epic whose goal does not exist breaks the rule, no other epic does
-    assert [p.id for p in data["untraced"] if app._fr_level(p) == "epic"] == ["FR-008"], data["untraced"]
+    assert [p.id for p in data["untraced"] if project.requirements._fr_level(p) == "epic"] == ["FR-008"], data["untraced"]
 
     html = _get("/goals")
     rows = {goal: bool(gap) for gap, goal in re.findall(r'<tr( class="gm-gap")? data-goal="(GOAL-\d+)"', html)}
@@ -192,11 +193,11 @@ def test_id_only_reciprocal_self_and_duplicate_links():
 def test_typed_fields_follow_an_id_only_link():
     with app.app.test_request_context("/"):
         # parent: the feature sits under its epic, it is no orphan
-        tree = app.build_fr_hierarchy()
+        tree = project.requirements.build_fr_hierarchy()
         assert tree["orphans"] == [], tree["orphans"]
         epic = next(e for e in tree["epics"] if e["id"] == "FR-002")
         assert [f["id"] for f in epic["features"]] == ["FR-009"], epic
-        assert [a["id"] for a in app._fr_ancestors("FR-009-child")] == ["FR-002"]
+        assert [a["id"] for a in project.requirements._fr_ancestors("FR-009-child")] == ["FR-002"]
         # drivers, realizes, uses, parent and steps of the architecture pages
         assert _ids(app.build_drivers("BB-001-core")) == ["FR-001"]
         assert _ids(app.build_addressed_by("FR-001-stem")) == ["BB-001"]

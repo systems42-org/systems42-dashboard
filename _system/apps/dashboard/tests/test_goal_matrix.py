@@ -31,6 +31,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import project.requirements  # noqa: E402
 
 
 def _page(folder, stem, title, status, **fields):
@@ -124,7 +125,7 @@ def test_rule_helper():
 def test_goal_epic_map_keeps_untraced_epics():
     # the map on the functional-requirements page: an untraced epic is no
     # enabler, but it must not drop off the map either
-    dia = app._mermaid_goal_epic_tree(app.load_goals(), app.build_fr_hierarchy())
+    dia = project.requirements._mermaid_goal_epic_tree(app.load_goals(), project.requirements.build_fr_hierarchy())
     enabler = re.search(r"ENABLER --> (\w+)", dia)
     assert 'NOGOAL["No goal"]' in dia, dia
     assert re.search(r"NOGOAL --> \w+\[\"FR-002", dia), dia

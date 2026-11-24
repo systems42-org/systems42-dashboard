@@ -59,6 +59,7 @@ _page("issues", "ISS-002-about-qr", "About the QR", "open", related='["[[QR-001-
 
 import app  # noqa: E402
 import render  # noqa: E402
+import project.requirements  # noqa: E402
 
 client = app.app.test_client()
 
@@ -77,10 +78,10 @@ def test_goals_without_a_vision_show_objectives_and_matrix():
 
 def test_emphasis_never_touches_a_tag_or_an_attribute():
     html = '<a href="/x*y" title="a*b">foo*bar</a> and *baz*'
-    out = app._emphasis(html)
+    out = project.requirements._emphasis(html)
     assert out == '<a href="/x*y" title="a*b">foo*bar</a> and <em>baz</em>', out
     clean = render.sanitize_html('<a href="/page/x">foo*bar</a> and *baz*')
-    out = app._emphasis(clean)
+    out = project.requirements._emphasis(clean)
     assert out.endswith("foo*bar</a> and <em>baz</em>"), out
     assert render.sanitize_html(out) == out, out
 

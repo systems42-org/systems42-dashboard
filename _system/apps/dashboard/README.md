@@ -384,6 +384,9 @@ _system/apps/dashboard/
                      wiki, links and metamodel
     context.py       the context flows and what they share with the context diagram. May
                      import wiki, links and project.common
+    requirements.py  the functional requirements: notation and level, the hierarchy with the
+                     story map, its Mermaid trees, and the quality scenarios. May import wiki,
+                     links, render and project.common
     terms.py         the domain terms: the term network, the links of a page ("Links to",
                      "Linked from"), a term's fields and the entity diagram. May import wiki,
                      links, render, catalog and project.common

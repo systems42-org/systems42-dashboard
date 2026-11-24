@@ -27,6 +27,7 @@ ALLOWED = {
     "search": {"wiki", "links", "render", "catalog", "project.terms"},
     "project.common": {"wiki", "links", "metamodel"},
     "project.context": {"wiki", "links", "project.common"},
+    "project.requirements": {"wiki", "links", "render", "project.common"},
     "project.terms": {"wiki", "links", "render", "catalog", "project.common"},
     "preflight": set(),
 }

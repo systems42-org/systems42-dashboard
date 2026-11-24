@@ -224,6 +224,7 @@ sys.path.insert(0, str(HERE.parent))  # import app.py
 
 import app  # noqa: E402
 import links  # noqa: E402
+import project.requirements  # noqa: E402
 
 
 class _LiveMarkup(HTMLParser):
@@ -326,7 +327,7 @@ def test_the_payload_was_actually_rendered():
         body = client.get(url).get_data(as_text=True)
         assert MARK in body and "&lt;script&gt;" in body, url
     # the notation pages reached the projections they were written for
-    h = app.build_fr_hierarchy()
+    h = project.requirements.build_fr_hierarchy()
     assert [e["id"] for e in h["epics"]] == ["FR-011"], h["epics"]
     assert [u["id"] for u in h["use_cases"]] == ["UC-011"], h["use_cases"]
     assert {"FR-014", "FR-015"} <= {o["id"] for o in h["other_notations"]}, h["other_notations"]

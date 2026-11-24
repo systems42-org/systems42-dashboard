@@ -101,6 +101,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - Dashboard release 0.14.5 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.4 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.3 (`_system/apps/dashboard/VERSION`).
+- Dashboard: the requirement hierarchy with the story map, its Mermaid trees and the quality scenarios move from `app.py` into the new module `project/requirements.py`. No behaviour change (#185).
 - Dashboard: the term network, the links of a page, the term fields and the entity diagram move from `app.py` into the new module `project/terms.py`, and the search synonyms and the search index into `search.py`. No behaviour change (#185).
 - Dashboard: the context flows and the helpers several projections share (open issues, the maturity bar, provenance, diagram labels and node ids) move from `app.py` into the new package `project/`, modules `context.py` and `common.py`, which import neither Flask nor `app`. No behaviour change (#185).
 - Dashboard: the search records, with the searched fields and a page's text for search, move from `app.py` into the new module `search.py`, which imports neither Flask nor `app`. No behaviour change (#185).
