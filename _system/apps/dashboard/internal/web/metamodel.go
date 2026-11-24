@@ -47,7 +47,7 @@ func mmDRLink(ref, label string, decisionStems map[string]bool) string {
 	}
 	text := render.EscapeHTML(lbl)
 	if decisionStems[ref] {
-		return fmt.Sprintf(`<a class="wl" href="%s">%s</a>`, render.EscapeHTML(wiki.PageURL("decisions", ref)), text)
+		return fmt.Sprintf(`<a class="wl" href="%s">%s</a>`, render.EscapeHTML(wiki.PageURL(metamodel.Folder("decision-record"), ref)), text)
 	}
 	return text
 }
@@ -399,7 +399,7 @@ func (s *Server) handleMetamodel(w http.ResponseWriter, r *http.Request) {
 	methodAnchorIdx := metamodel.AnchorIndex(methodAnchors)
 
 	decisionStems := map[string]bool{}
-	for _, p := range sn.folder("decisions") {
+	for _, p := range sn.typed("decision-record") {
 		decisionStems[p.Stem] = true
 	}
 

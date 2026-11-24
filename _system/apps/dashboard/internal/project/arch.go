@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/metamodel"
 	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/wiki"
 )
 
@@ -71,7 +72,7 @@ func lifecycleSuffix(p *wiki.Page, mixed bool, byStem map[string]*wiki.Page) str
 	return ""
 }
 
-func levelTree(folder string, folderPages []*wiki.Page, byStem map[string]*wiki.Page) []map[string]any {
+func levelTree(folderPages []*wiki.Page, byStem map[string]*wiki.Page) []map[string]any {
 	pages := make(map[string]*wiki.Page, len(folderPages))
 	for _, p := range folderPages {
 		pages[p.Stem] = p
@@ -120,7 +121,7 @@ func levelTree(folder string, folderPages []*wiki.Page, byStem map[string]*wiki.
 			"title":    p.Title(),
 			"status":   p.Status(),
 			"state":    wiki.PageState(p),
-			"url":      wiki.PageURL(folder, s),
+			"url":      wiki.PageURL(p.Folder, s),
 			"children": kids,
 		}
 	}
@@ -163,7 +164,7 @@ func treeFind(nodes []map[string]any, stem string) map[string]any {
 
 // BuildBBTree projects the building-block hierarchy (A2).
 func BuildBBTree(blocks []*wiki.Page, byStem map[string]*wiki.Page) []map[string]any {
-	return levelTree("building-blocks", blocks, byStem)
+	return levelTree(blocks, byStem)
 }
 
 // BuildWhitebox projects the Mermaid white-box diagram for stem ("" for level 1).
@@ -295,7 +296,7 @@ func resolveEndpoint(raw any, byStem map[string]*wiki.Page) (stem string, label 
 		}
 		return "", st
 	}
-	if p.Folder == "stakeholders" || p.Folder == "external-interfaces" {
+	if metamodel.IsType(p.Folder, "stakeholder", "external-interface") {
 		return st, CleanLabel(p.Title(), true)
 	}
 	return st, fmt.Sprintf("%s · %s", p.ID(), CleanLabel(p.Title(), true))
@@ -367,7 +368,7 @@ func BuildSequenceDiagram(stem string, scenarios []*wiki.Page, byStem map[string
 			nid := fmt.Sprintf("L%d", len(nidOf)+1)
 			nidOf[k] = nid
 			kw := "participant"
-			if end[0] != "" && byStem[end[0]] != nil && byStem[end[0]].Folder == "stakeholders" {
+			if end[0] != "" && byStem[end[0]] != nil && metamodel.IsType(byStem[end[0]].Folder, "stakeholder") {
 				kw = "actor"
 			}
 			order = append(order, participant{nid: nid, label: MMEscape(end[1]), kw: kw})
@@ -487,7 +488,7 @@ func RuntimeHints(stem string, scenarios, blocks []*wiki.Page, byStem map[string
 
 // BuildNodeTree projects the deployment-node hierarchy (A3).
 func BuildNodeTree(nodes []*wiki.Page, byStem map[string]*wiki.Page) []map[string]any {
-	return levelTree("deployment-nodes", nodes, byStem)
+	return levelTree(nodes, byStem)
 }
 
 // BuildDeploymentDiagram projects the Mermaid deployment flowchart for all

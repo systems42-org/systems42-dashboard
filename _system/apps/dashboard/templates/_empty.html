@@ -14,7 +14,7 @@
 
 {% macro empty_decisions() %}
 <p class="empty-state">
-  No decisions yet — the agent records one in <code>wiki/decisions/</code> when a
+  No decisions yet — the agent records one in <code>wiki/{{ type_folder('decision-record') }}/</code> when a
   choice is cross-cutting, hard to reverse and weighed against alternatives; you can
   also ask: <em>“record the decision to …”</em>.
 </p>

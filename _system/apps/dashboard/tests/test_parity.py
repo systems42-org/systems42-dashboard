@@ -454,7 +454,8 @@ def _stop_proc(proc: subprocess.Popen) -> None:
 def _discover_wikis(tmp: Path) -> list[tuple[str, dict[str, str], Path, Path]]:
     """Return (label, env_overrides, wiki_dir, raw_sources_dir) for every
     fixture wiki under tests/fixtures/, a synthetic notices/intro-off wiki,
-    and this repository's own wiki."""
+    a synthetic wiki whose metamodel moves every type folder, and this
+    repository's own wiki."""
     wikis: list[tuple[str, dict[str, str], Path, Path]] = []
 
     for entry in sorted(FIXTURES_DIR.iterdir()):
@@ -495,6 +496,35 @@ def _discover_wikis(tmp: Path) -> list[tuple[str, dict[str, str], Path, Path]]:
         edge / "raw" / "sources",
     ))
 
+    # Every type's folder moved by the metamodel (issue #180): two fixture
+    # wikis merged, each folder renamed, each type page declaring the new name.
+    moved = tmp / "moved-folders"
+    for name in ("arc42-views", "link-spellings", "arc42"):
+        shutil.copytree(FIXTURES_DIR / name / "wiki", moved / "wiki", dirs_exist_ok=True)
+    (moved / "raw" / "sources").mkdir(parents=True)
+    shutil.copytree(REPO / "_system" / "metamodel", moved / "_system" / "metamodel")
+    shutil.copytree(REPO / "_system" / "anchors", moved / "_system" / "anchors")
+    (moved / "_system" / "wiki.yaml").write_text('system_name: "Moved"\n', encoding="utf-8")
+    for type_page in sorted((moved / "_system" / "metamodel" / "types").glob("*.md")):
+        text = type_page.read_text(encoding="utf-8")
+        m = re.search(r"^folder: wiki/(\S+)$", text, re.MULTILINE)
+        if not m:
+            continue
+        type_page.write_text(text.replace(m.group(0), f"folder: wiki/moved-{m.group(1)}", 1), encoding="utf-8")
+        if (moved / "wiki" / m.group(1)).is_dir():
+            (moved / "wiki" / m.group(1)).rename(moved / "wiki" / f"moved-{m.group(1)}")
+    # one page stays in a default folder, which no type declares any more
+    (moved / "wiki" / "domain-terms").mkdir()
+    (moved / "wiki" / "domain-terms" / "DT-900-leftover.md").write_text(
+        "---\nid: DT-900\ntype: domain-term\ntitle: Leftover\nstatus: draft\nrelated: []\n---\n\n# Leftover\n",
+        encoding="utf-8")
+    wikis.append((
+        "synthetic:moved-folders",
+        {"REPO_DIR": str(moved)},
+        moved / "wiki",
+        moved / "raw" / "sources",
+    ))
+
     # This repository's own wiki (uses REPO_DIR only, exercising full layout + CON-005 preflight).
     wikis.append((
         "repo:self",
@@ -516,6 +546,9 @@ def _discover_routes(wiki_dir: Path, sources_dir: Path) -> list[str]:
                     routes.append(f"/functional-requirements/{md.stem}")
                 else:
                     routes.append(f"/page/{folder.name}/{md.stem}")
+                    # a moved requirements folder: the redirect above and the page itself
+                    if folder.name.endswith("-functional-requirements"):
+                        routes.append(f"/functional-requirements/{md.stem}")
     if sources_dir.is_dir():
         for md in sorted(sources_dir.glob("*.md")):
             routes.append(f"/source/{md.stem}")
@@ -695,6 +728,15 @@ def main() -> int:
                         err = _compare_session_body(label, route, body, py_port, go_port)
                         if err:
                             failures.append(err)
+                if label == "synthetic:moved-folders":
+                    # both sides agreeing on empty lists would pass unnoticed
+                    for route, needle in (("/domain-terms", "/page/moved-domain-terms/"),
+                                          ("/arc42/building-blocks", "/page/moved-building-blocks/"),
+                                          ("/goals", "/page/moved-goals/"),
+                                          ("/stakeholders", "/page/moved-stakeholders/")):
+                        body = _fetch(f"http://127.0.0.1:{py_port}{route}")[2].decode("utf-8", "replace")
+                        if needle not in body:
+                            failures.append(f"[{label}] {route}: no link to {needle}")
                 if label == "fixture:search-wiki" and shutil.which("node"):
                     se_env = dict(os.environ)
                     se_env["DASH_SEARCH_URL"] = f"http://127.0.0.1:{go_port}"

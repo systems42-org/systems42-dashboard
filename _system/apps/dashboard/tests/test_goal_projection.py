@@ -220,9 +220,9 @@ def test_a_vision_without_objectives_gets_the_objectives_empty_state():
 
 
 def test_the_goal_type_is_labelled_in_search():
-    """FOLDER_LABELS had no entry for goals/, so the Goal type surfaced as the
+    """The goals folder had no label, so the Goal type surfaced as the
     lowercase folder name `goals` in search results and facets."""
-    assert app.FOLDER_LABELS["goals"] == "Goal", app.FOLDER_LABELS.get("goals")
+    assert app.catalog.label("goals") == "Goal", app.catalog.label("goals")
     body = app.app.test_client().get("/search").get_data(as_text=True)
     assert '<span class="badge kind-badge">Goal</span>' in body, \
         "search results do not label goal pages 'Goal'"

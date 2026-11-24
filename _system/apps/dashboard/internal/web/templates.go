@@ -40,8 +40,9 @@ type Engine struct {
 
 // EngineFuncs supplies the Flask-equivalent template globals.
 type EngineFuncs struct {
-	StaticURL func(filename string) string
-	ListSpec  func(typeName string) map[string]any
+	StaticURL  func(filename string) string
+	TypeFolder func(typeName string) string
+	ListSpec   func(typeName string) map[string]any
 }
 
 // NewEngine creates a Jinja2 template engine over fsys (typically embedded templates/).
@@ -79,6 +80,11 @@ func NewEngine(fsys fs.FS, funcs EngineFuncs) *Engine {
 	}
 	globalCtx.Set("static_url", staticURL)
 	globalCtx.Set("list_spec", listSpec)
+	typeFolder := funcs.TypeFolder
+	if typeFolder == nil {
+		typeFolder = func(string) string { return "" }
+	}
+	globalCtx.Set("type_folder", typeFolder)
 	globalCtx.Set("csp_nonce", func() string { return "" })
 	globalCtx.Set("url_for", func(params *exec.VarArgs) *exec.Value {
 		if len(params.Args) > 0 && params.Args[0].String() == "static" {

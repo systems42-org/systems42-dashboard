@@ -57,9 +57,9 @@ def test_relations_panel_outbound_inbound_and_dedup():
         if it["type"] == "FR":
             assert it["url"].startswith("/functional-requirements/"), it
 
-    # groups are typed and ordered (DT before ISS per _REL_TYPE_ORDER)
+    # groups are typed and ordered (DT before ISS per the catalog's group order)
     types = [g["type"] for g in rel["outbound"]]
-    assert types == sorted(types, key=app._REL_TYPE_ORDER.index), types
+    assert types == sorted(types, key=app.catalog.prefix_order().index), types
 
     print(f"OK: STK-001 → {len(out)} outbound, {len(inb)} inbound links")
 

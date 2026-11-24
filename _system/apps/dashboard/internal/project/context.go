@@ -295,6 +295,7 @@ func BuildContextFlows(eifs []*wiki.Page) []map[string]any {
 		groups = append(groups, map[string]any{
 			"id":      p.ID(),
 			"stem":    p.Stem,
+			"url":     wiki.PageURL(p.Folder, p.Stem),
 			"name":    eifNodeLabel(p),
 			"partner": CleanLabel(p.MetaString("partner"), true),
 			"tier":    tierLabelMap[tier],

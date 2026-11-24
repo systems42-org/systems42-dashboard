@@ -145,8 +145,8 @@ def test_strategy_section_links_a1():
     s = app.catalog.build([{"id": "A1", "area": "architecture", "title": "Solution Strategy",
                             "folders": ["solution-strategy"], "scope": "in"}])
     assert s[0]["href"] == "/arc42/strategy" and s[0]["slug"] == "strategy", s
-    assert app.FOLDER_LABELS["solution-strategy"] == "Solution strategy"
-    assert app._TYPE_FOLDER["SOL"] == "solution-strategy"
+    assert app.catalog.label("solution-strategy") == "Solution strategy"
+    assert app.catalog.folder_for_prefix("SOL") == "solution-strategy"
 
 
 # --- runtime scenarios (A4) ---------------------------------------------------

@@ -104,10 +104,7 @@ func (s *Server) renderBlockList(w http.ResponseWriter, r *http.Request, cat *me
 	rows := make([]map[string]any, 0, len(pages))
 	statuses := make([]string, 0, len(pages))
 	for _, p := range pages {
-		typeLabel := wiki.FolderLabels[p.Folder]
-		if typeLabel == "" {
-			typeLabel = p.Folder
-		}
+		typeLabel := metamodel.Label(p.Folder)
 		row := map[string]any{
 			"id":        p.ID(),
 			"type":      typeLabel,
@@ -116,7 +113,7 @@ func (s *Server) renderBlockList(w http.ResponseWriter, r *http.Request, cat *me
 			"status":    p.Status(),
 			"relations": len(p.LinkedStems(sn.byStem())),
 		}
-		if p.Folder == "quality-requirements" {
+		if metamodel.IsType(p.Folder, "quality-requirement") {
 			for k, v := range qrDetails(p, linkCtx) {
 				row[k] = v
 			}
@@ -127,7 +124,7 @@ func (s *Server) renderBlockList(w http.ResponseWriter, r *http.Request, cat *me
 
 	listType := "page"
 	if len(block.Folders) > 0 {
-		listType = s.Metamodel.TypeForFolder(block.Folders[0])
+		listType = metamodel.TypeOf(block.Folders[0])
 	}
 
 	var contextDiagram any
@@ -136,8 +133,8 @@ func (s *Server) renderBlockList(w http.ResponseWriter, r *http.Request, cat *me
 	var entityDiagram any
 	if slug == "scope" {
 		cfg := wiki.LoadConfig(s.Paths, s.warnOnce)
-		eifs := sn.folder("external-interfaces")
-		cd, dl := project.BuildContextDiagram(cfg.SystemName, eifs, sn.folder("stakeholders"))
+		eifs := sn.typed("external-interface")
+		cd, dl := project.BuildContextDiagram(cfg.SystemName, eifs, sn.typed("stakeholder"))
 		contextDiagram = nilIfEmpty(cd)
 		if dl != nil {
 			diagramLinks = dl
@@ -145,7 +142,7 @@ func (s *Server) renderBlockList(w http.ResponseWriter, r *http.Request, cat *me
 		contextFlows = project.BuildContextFlows(eifs)
 	}
 	if slug == "models" {
-		dt := sn.folder("domain-terms")
+		dt := sn.typed("domain-term")
 		nodes := project.DataModelNodes(dt)
 		edges := project.DataModelEdges(dt, sn.byStem())
 		entityDiagram = nilIfEmpty(project.BuildDataModelFullDiagram(nodes, edges, "", ""))
@@ -208,12 +205,12 @@ func (s *Server) handleMethod(w http.ResponseWriter, r *http.Request) {
 	sn := newSnapshot(s.Store)
 
 	var clarify any
-	for _, p := range sn.folder("issues") {
+	for _, p := range sn.typed("issue") {
 		if p.Stem == clarifyIssueStem && wiki.IsOpenIssue(p.Status()) {
 			clarify = map[string]any{
 				"id":    p.ID(),
 				"title": p.Title(),
-				"url":   wiki.PageURL("issues", p.Stem),
+				"url":   wiki.PageURL(p.Folder, p.Stem),
 			}
 			break
 		}
@@ -239,7 +236,7 @@ func (s *Server) handleDomainTerms(w http.ResponseWriter, r *http.Request) {
 	sn := newSnapshot(s.Store)
 	linkCtx := s.linkContext(sn)
 
-	pages := sn.folder("domain-terms")
+	pages := sn.typed("domain-term")
 	rows := make([]map[string]any, 0, len(pages))
 	for _, p := range pages {
 		rows = append(rows, map[string]any{
@@ -277,7 +274,7 @@ func (s *Server) handleStakeholders(w http.ResponseWriter, r *http.Request) {
 	linkCtx := s.linkContext(sn)
 	byStem := sn.byStem()
 
-	pages := sortedByID(sn.folder("stakeholders"))
+	pages := sortedByID(sn.typed("stakeholder"))
 	const relMax = 6
 	rows := make([]map[string]any, 0, len(pages))
 	for _, p := range pages {
@@ -294,7 +291,7 @@ func (s *Server) handleStakeholders(w http.ResponseWriter, r *http.Request) {
 			if q == nil {
 				continue
 			}
-			if wiki.TypeOf(st) != "DT" {
+			if !metamodel.IsType(q.Folder, "domain-term") {
 				continue
 			}
 			rel = append(rel, map[string]any{
@@ -316,6 +313,7 @@ func (s *Server) handleStakeholders(w http.ResponseWriter, r *http.Request) {
 		rows = append(rows, map[string]any{
 			"id":        p.ID(),
 			"stem":      p.Stem,
+			"url":       wiki.PageURL(p.Folder, p.Stem),
 			"title":     p.Title(),
 			"role":      p.MetaString("role"),
 			"snapshot":  render.ExtractLabeled(p.Body, "Snapshot", linkCtx),
@@ -341,7 +339,7 @@ func (s *Server) handleDecisions(w http.ResponseWriter, r *http.Request) {
 	linkCtx := s.linkContext(sn)
 	byStem := sn.byStem()
 
-	pages := sortedByID(sn.folder("decisions"))
+	pages := sortedByID(sn.typed("decision-record"))
 	items := make([]map[string]any, 0, len(pages))
 	statuses := make([]string, 0, len(pages))
 	counts := map[string]int{}
@@ -381,7 +379,7 @@ func (s *Server) handleDecisions(w http.ResponseWriter, r *http.Request) {
 			"kind":    kind,
 			"decided": decided,
 			"aliases": p.Aliases(),
-			"url":     wiki.PageURL("decisions", p.Stem),
+			"url":     wiki.PageURL(p.Folder, p.Stem),
 			"drivers": drivers,
 			"html":    render.RenderMarkdown(p.Body, linkCtx),
 		})
@@ -412,7 +410,7 @@ func (s *Server) handleIssues(w http.ResponseWriter, r *http.Request) {
 	links := sn.linkIndex()
 	vocab := s.loadIssueVocab()
 
-	pages := sortedByID(sn.folder("issues"))
+	pages := sortedByID(sn.typed("issue"))
 	lifecycleValues := s.Metamodel.Lifecycle("issue")
 	categories := s.Metamodel.FieldValues("issue", "category")
 	severities := s.Metamodel.FieldValues("issue", "severity")
@@ -447,7 +445,7 @@ func (s *Server) handleIssues(w http.ResponseWriter, r *http.Request) {
 		it["id"] = p.ID()
 		it["title"] = p.Title()
 		it["sections"] = secs
-		it["url"] = wiki.PageURL("issues", p.Stem)
+		it["url"] = wiki.PageURL(p.Folder, p.Stem)
 		items = append(items, it)
 	}
 

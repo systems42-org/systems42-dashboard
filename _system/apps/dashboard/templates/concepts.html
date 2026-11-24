@@ -19,7 +19,7 @@
   {% endfor %}
 </ul>
 {% else %}
-<p class="muted">No crosscutting concepts yet. Add pages under <code>wiki/crosscutting-concepts/</code> from <code>_templates/crosscutting-concept.md</code>.</p>
+<p class="muted">No crosscutting concepts yet. Add pages under <code>wiki/{{ type_folder('crosscutting-concept') }}/</code> from <code>_templates/crosscutting-concept.md</code>.</p>
 {% endfor %}
 {% if rows %}
 <h2 class="mm-h2">All concepts</h2>

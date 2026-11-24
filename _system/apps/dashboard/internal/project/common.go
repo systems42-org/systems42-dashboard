@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/metamodel"
 	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/wiki"
 )
 
@@ -113,12 +114,12 @@ func SortedByID(pages []*wiki.Page) []*wiki.Page {
 	return cp
 }
 
-// LinkGroups groups stems by type prefix in RelTypeOrder, matching app.py's _link_groups().
+// LinkGroups groups stems by type prefix in the catalog's group order, matching app.py's _link_groups().
 func LinkGroups(stems []string, byStem map[string]*wiki.Page) []map[string]any {
 	buckets := map[string][]map[string]any{}
 	var extraOrder []string
 	inRelOrder := map[string]bool{}
-	for _, t := range wiki.RelTypeOrder {
+	for _, t := range metamodel.PrefixOrder() {
 		inRelOrder[t] = true
 	}
 	for _, st := range stems {
@@ -137,17 +138,14 @@ func LinkGroups(stems []string, byStem map[string]*wiki.Page) []map[string]any {
 			"url":   wiki.PageURL(p.Folder, st),
 		})
 	}
-	order := append(append([]string{}, wiki.RelTypeOrder...), extraOrder...)
+	order := append(append([]string{}, metamodel.PrefixOrder()...), extraOrder...)
 	out := []map[string]any{}
 	for _, tp := range order {
 		links, ok := buckets[tp]
 		if !ok {
 			continue
 		}
-		lbl := wiki.TypeLabel[tp]
-		if lbl == "" {
-			lbl = tp
-		}
+		lbl := metamodel.GroupLabel(tp)
 		out = append(out, map[string]any{
 			"type":  tp,
 			"label": lbl,

@@ -20,6 +20,6 @@
 <h2 class="mm-h2">All strategy pages</h2>
 {{ arch_table(list_spec("solution-strategy"), rows, [("Drivers", "drivers", "links"), ("Shaped by", "decisions", "links")]) }}
 {% else %}
-<p class="muted">No solution strategy yet. Add a page under <code>wiki/solution-strategy/</code> from <code>_templates/solution-strategy.md</code>.</p>
+<p class="muted">No solution strategy yet. Add a page under <code>wiki/{{ type_folder('solution-strategy') }}/</code> from <code>_templates/solution-strategy.md</code>.</p>
 {% endif %}
 {% endblock %}

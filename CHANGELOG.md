@@ -13,6 +13,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
 ## [Unreleased]
 
 ### Fixed
+- Dashboard: the specialized views read each type's folder, ID prefix and label from the type pages of the repository's metamodel. A repository that declares `folder: wiki/terms` for domain terms gets the same pages in the tile count, the term list, the search, the detail pages and the term network, and a page's address names the folder it lives in (`/page/terms/<stem>`). Before, only the tile followed the declaration, so it counted pages the list behind it did not show (#180).
 - Dashboard: a date that is none (`created: 2026-13-01`, `2026-02-30`) in one wiki page, in `wiki.yaml` or in a metamodel file no longer answers every route with an error. The value stays as the text that was written, and the other fields of the file count. Bytes that are not UTF-8 in `wiki.yaml`, a metamodel file or an anchor no longer do so either: that file is ignored. For each such file the log names the file and the problem, and it now does so for malformed YAML and for wiki pages that are not UTF-8 as well (#176).
 - Dashboard: the term network lists the page types behind its "More" button in alphabetical order, as the Go dashboard does. Before, the order followed the links of the terms, so the two dashboards differed.
 - Dashboard: a term page shows the term's kind and aliases, and for a structured term its attributes and its relationships with type, linked target and multiplicity. The term list has a Kind column and a kind filter (`?kind=entity`, `?kind=none`). The filter runs in the browser like the status filter, combines with it and with the sort, and works in the exported demo. Before, both pages left these frontmatter fields out (#177).
@@ -84,6 +85,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
   next.
 
 ### Changed
+- Dashboard release 0.14.12 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.11 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.10 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.9 (`_system/apps/dashboard/VERSION`).

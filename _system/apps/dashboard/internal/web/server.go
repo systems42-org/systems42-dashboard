@@ -133,8 +133,9 @@ func NewServer(opts Options) *Server {
 	}
 
 	s.Templates = NewEngine(opts.TemplatesFS, EngineFuncs{
-		StaticURL: s.staticURL,
-		ListSpec:  s.listSpec,
+		StaticURL:  s.staticURL,
+		ListSpec:   s.listSpec,
+		TypeFolder: metamodel.Folder,
 	})
 	return s
 }
@@ -245,6 +246,8 @@ func (s *Server) isHidden(cat *metamodel.Catalog, keyOrID string) bool {
 
 // ServeHTTP dispatches all dashboard routes.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// the type lookups follow the type pages on every request (CON-006)
+	metamodel.UseTypes(s.Metamodel.Types())
 	p := r.URL.Path
 	if r.Method == http.MethodPost {
 		switch p {
@@ -586,6 +589,16 @@ func (sn *requestSnapshot) folder(name string) []*wiki.Page {
 	return pages
 }
 
+// typed returns the pages of one type, from the folder the repository's
+// metamodel declares for it (CON-006).
+func (sn *requestSnapshot) typed(typeName string) []*wiki.Page {
+	folder := metamodel.Folder(typeName)
+	if folder == "" {
+		return nil
+	}
+	return sn.folder(folder)
+}
+
 func (sn *requestSnapshot) all() []*wiki.Page {
 	if !sn.allLoaded {
 		sn.allPages = sn.store.LoadAllPages()
@@ -618,7 +631,7 @@ func (sn *requestSnapshot) linkIndex() map[string]wiki.PageRef {
 
 func (sn *requestSnapshot) openIssueCounts() map[string]map[string]struct{} {
 	if sn.flags == nil {
-		sn.flags = wiki.OpenIssueCounts(sn.folder("issues"), sn.linkIndex())
+		sn.flags = wiki.OpenIssueCounts(sn.typed("issue"), sn.linkIndex())
 	}
 	return sn.flags
 }
@@ -626,7 +639,7 @@ func (sn *requestSnapshot) openIssueCounts() map[string]map[string]struct{} {
 func unionIssueCount(flags map[string]map[string]struct{}, folders []string, skipIssues bool) int {
 	seen := map[string]struct{}{}
 	for _, f := range folders {
-		if skipIssues && f == "issues" {
+		if skipIssues && metamodel.IsType(f, "issue") {
 			continue
 		}
 		for id := range flags[f] {
@@ -690,8 +703,8 @@ func buildSectionTile(sn *requestSnapshot, sec metamodel.Section) map[string]any
 	case "R4":
 		t["unit"] = "model page"
 		t["count"] = wiki.SupportingModelCount(
-			sn.folder("domain-terms"),
-			sn.folder("activity-models"),
+			sn.typed("domain-term"),
+			sn.typed("activity-model"),
 		)
 	case "C1":
 		t["unit"] = "scenario"
@@ -699,7 +712,7 @@ func buildSectionTile(sn *requestSnapshot, sec metamodel.Section) map[string]any
 		t["unit"] = "constraint"
 	case "C3":
 		t["unit"] = "external interface"
-		t["count"] = len(sn.folder("external-interfaces"))
+		t["count"] = len(sn.typed("external-interface"))
 	case "C4":
 		t["unit"] = "persona"
 	case "C5":
@@ -797,7 +810,7 @@ func severityKey(sev string) int {
 
 func (s *Server) buildValley(sn *requestSnapshot, now time.Time) map[string]any {
 	loc := s.location()
-	issues := sn.folder("issues")
+	issues := sn.typed("issue")
 	var open []*wiki.Page
 	for _, iss := range issues {
 		if wiki.IsOpenIssue(iss.Status()) {
@@ -822,7 +835,7 @@ func (s *Server) buildValley(sn *requestSnapshot, now time.Time) map[string]any 
 			"id":       iss.ID(),
 			"title":    iss.Title(),
 			"stem":     iss.Stem,
-			"url":      wiki.PageURL("issues", iss.Stem),
+			"url":      wiki.PageURL(iss.Folder, iss.Stem),
 			"severity": iss.MetaString("severity"),
 		})
 	}
@@ -831,7 +844,7 @@ func (s *Server) buildValley(sn *requestSnapshot, now time.Time) map[string]any 
 		"changes":        wiki.RecentChanges(sn.all(), 4, now, loc),
 		"open_issues":    openMaps,
 		"open_total":     len(open),
-		"decision_count": len(sn.folder("decisions")),
+		"decision_count": len(sn.typed("decision-record")),
 	}
 }
 
@@ -856,7 +869,7 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 		joinQR = ""
 	}
 
-	vision := wiki.VisionSentence(wiki.VisionPage(sn.folder("goals")), sn.titleIndex())
+	vision := wiki.VisionSentence(wiki.VisionPage(sn.typed("goal")), sn.titleIndex())
 
 	s.renderHTML(w, r, http.StatusOK, "index.html", cat, map[string]any{
 		"areas":           areas,

@@ -31,7 +31,7 @@
     <tr data-status="{{ r.status }}">
       <td class="c-id"><code>{{ r.id }}</code></td>
       <td class="c-term" data-sort-value="{{ r.title }}">
-        <a class="term term-link" href="/page/stakeholders/{{ r.stem }}">{{ r.title }}</a>
+        <a class="term term-link" href="{{ r.url }}">{{ r.title }}</a>
         {% if r.role %}<span class="aliases">{{ r.role }}</span>{% endif %}
       </td>
       <td class="c-def">
@@ -39,7 +39,7 @@
         {% if r.rel_links %}
         <div class="stk-links" aria-label="Links to">
           {% for it in r.rel_links %}<a class="bz bz-{{ it.type }}" href="{{ it.url }}" title="{{ it.id }} · {{ it.label }}">{{ it.label }}</a>{% endfor %}
-          {% if r.rel_more %}<a class="bz bz-more" href="/page/stakeholders/{{ r.stem }}" title="all relations on the detail page">+{{ r.rel_more }}</a>{% endif %}
+          {% if r.rel_more %}<a class="bz bz-more" href="{{ r.url }}" title="all relations on the detail page">+{{ r.rel_more }}</a>{% endif %}
         </div>
         {% endif %}
       </td>
