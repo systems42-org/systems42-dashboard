@@ -18,6 +18,8 @@ from pathlib import Path
 
 import yaml
 
+import inputs
+
 # The metamodel of the repository the dashboard runs on (CON-006): its own
 # variable, else `_system/metamodel/` under REPO_DIR (the one mount, FR-042),
 # else next to this file's repository for a local run.
@@ -91,16 +93,15 @@ def _read(path: Path, parse=None) -> dict | None:
 
 def _parse(path: Path) -> dict | None:
     try:
-        text = path.read_text(encoding="utf-8")
+        text = inputs.read_text(path)
     except OSError:
+        return None
+    if text is None:
         return None
     m = _FM.match(text)
     if not m:
         return None
-    try:
-        meta = yaml.safe_load(m.group(1)) or {}
-    except yaml.YAMLError:
-        return None
+    meta = inputs.load_yaml(path, m.group(1))
     if not isinstance(meta, dict) or meta.get("type") != "metamodel":
         return None
     body = m.group(2).strip()
@@ -127,9 +128,11 @@ def _parse_version(path: Path) -> dict | None:
     """`version:` from a file's frontmatter, as written: every value is read
     as text, so `0.10` stays `0.10`. The file needs no `type: metamodel`."""
     try:
-        text = path.read_text(encoding="utf-8")
+        text = inputs.read_text(path)
     except OSError:
         return None
+    if text is None:                          # not UTF-8: it declares no version
+        return {"version": ""}
     m = _FM.match(text)
     if not m:
         return {"version": ""}
@@ -332,16 +335,15 @@ _ANCHOR_CACHE: dict[Path, tuple[tuple[int, int], dict | None]] = {}
 
 def _parse_anchor(path: Path) -> dict | None:
     try:
-        text = path.read_text(encoding="utf-8")
+        text = inputs.read_text(path)
     except OSError:
+        return None
+    if text is None:
         return None
     m = _FM.match(text)
     if not m:
         return None
-    try:
-        meta = yaml.safe_load(m.group(1)) or {}
-    except yaml.YAMLError:
-        return None
+    meta = inputs.load_yaml(path, m.group(1))
     if not isinstance(meta, dict) or meta.get("type") != "anchor":
         return None
     body = _H1.sub("", m.group(2).strip(), count=1).strip()

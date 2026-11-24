@@ -348,6 +348,7 @@ _system/apps/dashboard/
   app.py             Flask app + wiki parser + all diagram projections
   catalog.py         the three areas, and the sections from the metamodel with routes and colours
   metamodel.py       reader for _system/metamodel/ (the /metamodel page, ADR-0008)
+  inputs.py          reads text and YAML from wiki, wiki.yaml and metamodel, and logs what is invalid
   help.md            source of the /help page
   templates/         base, index, _empty (shared empty state), _macros (plural()),
                      _maturity (maturity bar/legend), _mermaid (loader),

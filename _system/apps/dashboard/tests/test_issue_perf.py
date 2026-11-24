@@ -43,16 +43,16 @@ client = app.app.test_client()
 
 def _count_metamodel_parses(fn):
     calls = [0]
-    real = metamodel.yaml.safe_load
+    real = metamodel.inputs.load_yaml
 
     def counting(*a, **kw):
         calls[0] += 1
         return real(*a, **kw)
-    metamodel.yaml.safe_load = counting
+    metamodel.inputs.load_yaml = counting
     try:
         fn()
     finally:
-        metamodel.yaml.safe_load = real
+        metamodel.inputs.load_yaml = real
     return calls[0]
 
 
