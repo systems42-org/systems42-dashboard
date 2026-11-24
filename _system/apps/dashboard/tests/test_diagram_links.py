@@ -66,6 +66,7 @@ _page("stakeholders", "STK-002-help-desk", ["id: STK-002", "type: stakeholder", 
 sys.path.insert(0, str(HERE))  # import app.py
 
 import app  # noqa: E402
+import wiki  # noqa: E402
 
 client = app.app.test_client()
 _ID_RE = re.compile(r"\b[A-Z]+-\d+\b")
@@ -103,7 +104,7 @@ def test_deployment_view_links_every_node():
 
 
 def test_deployment_node_pages_link_every_node():
-    for p in app.load_folder("deployment-nodes"):
+    for p in wiki.load_folder("deployment-nodes"):
         if app.build_deployment_diagram(p.stem):
             _assert_ids_linked(f"/page/deployment-nodes/{p.stem}")
 

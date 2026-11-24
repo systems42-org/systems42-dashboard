@@ -30,6 +30,7 @@ HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(HERE))
 
 import app  # noqa: E402
+import wiki  # noqa: E402
 
 VISION = """---
 id: GOAL-001
@@ -50,7 +51,7 @@ tile_claim: "Every piece accounted for."
 
 
 def _client():
-    app._PARSE_CACHE.clear()
+    wiki._PARSE_CACHE.clear()
     return app.app.test_client()
 
 

@@ -20,6 +20,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import wiki  # noqa: E402
 
 
 def _flat(nodes):
@@ -29,7 +30,7 @@ def _flat(nodes):
 
 
 def _page(folder, stem):
-    return next(p for p in app.load_folder(folder) if p.stem == stem)
+    return next(p for p in wiki.load_folder(folder) if p.stem == stem)
 
 
 # --- projections -------------------------------------------------------------

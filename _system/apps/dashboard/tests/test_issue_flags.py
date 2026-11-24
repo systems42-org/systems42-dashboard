@@ -29,6 +29,7 @@ HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(HERE))
 
 import app  # noqa: E402
+import wiki  # noqa: E402
 
 TERM = """---
 id: DT-001
@@ -134,7 +135,7 @@ kind: question
 
 
 def test_open_issue_counts_by_folder():
-    app._PARSE_CACHE.clear()
+    wiki._PARSE_CACHE.clear()
     counts = app.open_issue_counts()
     assert {k: len(v) for k, v in counts.items()} == {"domain-terms": 1}
     assert counts == {"domain-terms": {"ISS-001"}}
@@ -165,7 +166,7 @@ def test_issues_tile_says_no_open_when_all_resolved():
     saved = open_path.read_text(encoding="utf-8")
     open_path.unlink()
     try:
-        app._PARSE_CACHE.clear()
+        wiki._PARSE_CACHE.clear()
         body = app.app.test_client().get("/").get_data(as_text=True)
         assert "No open issues" in body, body
         assert "No issues yet" not in body, body
@@ -186,7 +187,7 @@ def test_scope_tile_counts_one_issue_once():
     written[1].write_text(EIF, encoding="utf-8")
     written[2].write_text(ISS_SCOPE, encoding="utf-8")
     try:
-        app._PARSE_CACHE.clear()
+        wiki._PARSE_CACHE.clear()
         body = app.app.test_client().get("/commons").get_data(as_text=True)
         scope = body[body.index("tile-c3"):body.index("tile-c4")]
         assert "1 open issue" in scope, scope

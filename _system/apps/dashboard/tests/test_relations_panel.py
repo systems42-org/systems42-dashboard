@@ -18,6 +18,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import app  # noqa: E402
+import wiki  # noqa: E402
 
 
 def _flat(groups):
@@ -35,7 +36,7 @@ def test_relations_panel_outbound_inbound_and_dedup():
 
     # a page that links here and is linked from here shows in both (FR-034)
     with app.app.test_request_context("/"):
-        pages = {p.id: p for p in app.load_all_pages()}
+        pages = {p.id: p for p in wiki.load_all_pages()}
         me = pages["STK-001"]
         both = {i for i in out_ids if app.links_to(pages[i], me)}
     assert out_ids & inb_ids == both, (out_ids & inb_ids, both)

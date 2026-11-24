@@ -32,6 +32,7 @@ HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(HERE))
 
 import app  # noqa: E402
+import wiki  # noqa: E402
 
 (_src / "SRC-001-brief.md").write_text("""---
 id: SRC-001
@@ -127,15 +128,15 @@ Frontmatter with HTML in it.
 
 
 def test_provenance_resolves_source_records():
-    app._PARSE_CACHE.clear()
-    page = app._parse(_wiki / "domain-terms" / "DT-001-tour.md", "domain-terms")
+    wiki._PARSE_CACHE.clear()
+    page = wiki._parse(_wiki / "domain-terms" / "DT-001-tour.md", "domain-terms")
     rows = app.provenance(page)
     assert rows == [{"id": "SRC-001", "title": "Project brief", "stem": "SRC-001-brief", "type": "document",
                      "origin": "raw/ingested/brief.md", "captured": "2026-09-06", "url": "/source/SRC-001-brief"}], rows
 
 
 def test_chips_on_detail_pages():
-    app._PARSE_CACHE.clear()
+    wiki._PARSE_CACHE.clear()
     c = app.app.test_client()
     sourced = c.get("/page/domain-terms/DT-001-tour").get_data(as_text=True)
     assert 'class="chip chip-src"' in sourced and "SRC-001" in sourced
@@ -144,7 +145,7 @@ def test_chips_on_detail_pages():
 
 
 def test_source_page_renders_and_links_back():
-    app._PARSE_CACHE.clear()
+    wiki._PARSE_CACHE.clear()
     body = app.app.test_client().get("/source/SRC-001-brief").get_data(as_text=True)
     assert "Project brief" in body and "raw/ingested/brief.md" in body
     assert "/page/domain-terms/DT-001-tour" in body        # ingested-pages resolved
@@ -152,7 +153,7 @@ def test_source_page_renders_and_links_back():
 
 
 def test_source_page_escapes_hostile_frontmatter():
-    app._PARSE_CACHE.clear()
+    wiki._PARSE_CACHE.clear()
     resp = app.app.test_client().get("/source/SRC-002-hostile")
     assert resp.status_code == 200
     body = resp.get_data(as_text=True)
@@ -164,8 +165,8 @@ def test_unresolved_and_empty_source_refs():
     """A `sources:` entry with no record behind it must still produce a chip
     (dashed, url=None) rather than vanish; a None/blank entry must produce
     nothing at all rather than an empty chip."""
-    app._PARSE_CACHE.clear()
-    page = app._parse(_wiki / "domain-terms" / "DT-001-tour.md", "domain-terms")
+    wiki._PARSE_CACHE.clear()
+    page = wiki._parse(_wiki / "domain-terms" / "DT-001-tour.md", "domain-terms")
     page.meta["sources"] = ["[[raw/sources/SRC-404-ghost]]", None, "", "   "]
     rows = app.provenance(page)
     assert len(rows) == 1, rows
@@ -173,8 +174,8 @@ def test_unresolved_and_empty_source_refs():
 
 
 def test_provenance_accepts_bare_string_sources():
-    app._PARSE_CACHE.clear()
-    page = app._parse(_wiki / "domain-terms" / "DT-003-single.md", "domain-terms")
+    wiki._PARSE_CACHE.clear()
+    page = wiki._parse(_wiki / "domain-terms" / "DT-003-single.md", "domain-terms")
     rows = app.provenance(page)
     assert len(rows) == 1, rows
     assert rows[0]["url"] == "/source/SRC-001-brief", rows

@@ -78,6 +78,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import wiki  # noqa: E402
 
 client = app.app.test_client()
 
@@ -132,7 +133,7 @@ def test_body_links_open_the_goal():
 def test_coverage_is_the_same_for_every_spelling():
     with app.app.test_request_context("/"):
         data = app.load_goals()
-        by_stem = {p.stem: p for p in app.load_folder("functional-requirements")}
+        by_stem = {p.stem: p for p in wiki.load_folder("functional-requirements")}
         for stem in SPELLINGS:
             assert app.links_of(by_stem[stem], "goal") == [GOAL], stem
         assert app.links_of(by_stem["FR-007-twice"], "goal") == [GOAL]
@@ -198,12 +199,12 @@ def test_typed_fields_follow_an_id_only_link():
         assert _ids(app.build_drivers("BB-001-core")) == ["FR-001"]
         assert _ids(app.build_addressed_by("FR-001-stem")) == ["BB-001"]
         assert _ids(app.build_realized_by("FR-001-stem")) == ["RS-001"]
-        blocks = {p.stem: p for p in app.load_folder("building-blocks")}
+        blocks = {p.stem: p for p in wiki.load_folder("building-blocks")}
         assert app.links_of(blocks["BB-001-core"], "uses") == ["BB-003-store"]
         top = app.build_bb_tree()
         assert [n["stem"] for n in top] == ["BB-001-core", "BB-003-store"], top
         assert [c["stem"] for c in top[0]["children"]] == ["BB-002-part"], top[0]
-        scenario = next(iter(app.load_folder("runtime-scenarios")))
+        scenario = next(iter(wiki.load_folder("runtime-scenarios")))
         steps = app.steps_of(scenario)
         assert (steps[0]["from_stem"], steps[0]["to_stem"]) == ("BB-001-core", "BB-003-store"), steps
     print("OK: parent, drivers, realizes, uses and steps follow an ID-only link")

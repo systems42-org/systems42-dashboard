@@ -32,6 +32,7 @@ files = ["requirements.txt"]
 "catalog.py" = "systems42_dashboard/catalog.py"
 "inputs.py" = "systems42_dashboard/inputs.py"
 "metamodel.py" = "systems42_dashboard/metamodel.py"
+"wiki.py" = "systems42_dashboard/wiki.py"
 "preflight.py" = "systems42_dashboard/preflight.py"
 "gunicorn.conf.py" = "systems42_dashboard/gunicorn.conf.py"
 "help.md" = "systems42_dashboard/help.md"

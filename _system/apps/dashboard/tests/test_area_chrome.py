@@ -27,10 +27,11 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import app  # noqa: E402
+import wiki  # noqa: E402
 
 
 def _get(path):
-    app._PARSE_CACHE.clear()
+    wiki._PARSE_CACHE.clear()
     return app.app.test_client().get(path).get_data(as_text=True)
 
 

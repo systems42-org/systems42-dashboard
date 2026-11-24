@@ -29,6 +29,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import wiki  # noqa: E402
 
 KNOWN_STATUSES = {"draft", "review", "accepted", "deprecated"}
 FIXTURE_STEM = "DR-001-carts-expire-after-a-day"
@@ -36,12 +37,12 @@ FIXTURE_STEM = "DR-001-carts-expire-after-a-day"
 
 def _project_decisions():
     """This project's records; the fixture vault is swapped out for the call."""
-    saved, app.WIKI_DIR = app.WIKI_DIR, PROJECT_WIKI
+    saved, wiki.WIKI_DIR = wiki.WIKI_DIR, PROJECT_WIKI
     try:
         with app.app.test_request_context():
             return app.load_decisions()
     finally:
-        app.WIKI_DIR = saved
+        wiki.WIKI_DIR = saved
 
 
 # --- this project's records (vacuous in a fresh project) -------------------

@@ -29,6 +29,7 @@ HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(HERE))
 
 import app  # noqa: E402
+import wiki  # noqa: E402
 
 TERM = """---
 id: {id}
@@ -62,7 +63,7 @@ def test_bar_renders_on_home_tile_and_list_page():
     for i, st in ((1, "draft"), (2, "accepted")):
         (_wiki / "domain-terms" / f"DT-00{i}-t{i}.md").write_text(TERM.format(id=f"DT-00{i}", title=f"T{i}", status=st), encoding="utf-8")
     try:
-        app._PARSE_CACHE.clear()
+        wiki._PARSE_CACHE.clear()
         c = app.app.test_client()
         home = c.get("/commons").get_data(as_text=True)
         tile = home[home.index("tile-c5"):home.index("tile-c6")]

@@ -42,6 +42,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import wiki  # noqa: E402
 import metamodel  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -94,9 +95,9 @@ def test_reload_empties_the_parse_cache():
     _write_term("Alpha")
     with app.app.test_client() as client:
         client.get("/domain-terms")
-        assert app._PARSE_CACHE, "expected the page render to populate the cache"
+        assert wiki._PARSE_CACHE, "expected the page render to populate the cache"
         client.post("/reload")
-        assert app._PARSE_CACHE == {}, app._PARSE_CACHE
+        assert wiki._PARSE_CACHE == {}, wiki._PARSE_CACHE
 
 
 def test_reload_empties_the_jinja_template_cache():

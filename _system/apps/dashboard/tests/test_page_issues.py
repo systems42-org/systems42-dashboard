@@ -48,6 +48,7 @@ _page("issues", "ISS-005-erwaehnt", "issue", "Nur erwähnt", "open",
       "severity: blocker\nkind: risk\n", body="Erwähnt QR-001 ohne Link.")
 
 import app  # noqa: E402
+import wiki  # noqa: E402
 
 client = app.app.test_client()
 
@@ -96,7 +97,7 @@ def test_page_without_issues_says_so():
 def test_closed_only_says_no_open_and_still_lists_it():
     (_wiki / "issues" / "ISS-001-im-text.md").unlink()
     (_wiki / "issues" / "ISS-004-blocker.md").unlink()
-    app._PARSE_CACHE.clear()
+    wiki._PARSE_CACHE.clear()
     sec = _section("/page/stakeholders/STK-001-aerztin")
     assert "No open issues" in sec and _listed(sec) == ["ISS-002"], sec
 

@@ -7,7 +7,6 @@ is ever written back.
 """
 from __future__ import annotations
 
-import functools
 import mimetypes
 import os
 import re
@@ -18,7 +17,6 @@ import threading
 import time
 import unicodedata
 import zlib
-from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import quote, unquote, urlsplit
@@ -26,27 +24,18 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import markdown as md
 import nh3
-import yaml
 from flask import (Flask, abort, g, has_request_context, jsonify, make_response,
                    redirect, render_template, request, send_file, url_for)
 from markupsafe import Markup, escape
 
 import catalog  # the section catalog (DR-033)
-import inputs  # readers for files the dashboard does not write
 import metamodel  # reader for _system/metamodel/ (DR-035)
+import wiki  # paths, pages, parse cache and loaders
 
 # some slim base images lack a webp entry in their mime.types
 mimetypes.add_type("image/webp", ".webp")
 
 app = Flask(__name__)
-
-# Root of the wiki repository (FR-042, CON-005). The launcher mounts it
-# read-only at /repo and the image sets REPO_DIR; a local run takes the
-# repository this file sits in. Every folder below is found from here by
-# convention. A folder's own variable (WIKI_DIR, DOCS_DIR, ...) still wins,
-# which is how the tests point the app at their fixtures.
-_env_repo = os.environ.get("REPO_DIR")
-REPO_DIR = Path(_env_repo) if _env_repo else Path(__file__).resolve().parents[3]
 
 # Timezone for the "last refreshed" footer; honours the container's TZ env.
 # Empty (not "UTC") when unset, so inject_refresh_time can fall back to the
@@ -78,20 +67,13 @@ def _normalise_hide_entry(raw) -> str | None:
     return None
 
 
-def _request_cached(func):
-    """Memoize a builder for the current request (keyed by name + args). The
-    cached objects are treated as read-only by every caller, so sharing the same
-    reference across calls within a request is safe."""
-    @functools.wraps(func)
-    def wrapper(*args):
-        if not has_request_context():
-            return func(*args)
-        cache = g.setdefault("_build_cache", {})
-        key = (func.__name__, args)
-        if key not in cache:
-            cache[key] = func(*args)
-        return cache[key]
-    return wrapper
+def _build_cache() -> dict | None:
+    """The builder cache of the current request (wiki._request_cached), or
+    None outside a request."""
+    return g.setdefault("_build_cache", {}) if has_request_context() else None
+
+
+wiki.use_request_cache(_build_cache)
 
 
 def _validate_hidden(entries) -> tuple[list[str], list[str]]:
@@ -149,20 +131,6 @@ def inject_refresh_time():
     # ISO-ish and locale-free: "06.09.2026" reads as 9 June to half the room.
     return {"refreshed_at": now.strftime("%Y-%m-%d %H:%M:%Sh")}
 
-# Root of the wiki layer, read-only.
-_env_wiki = os.environ.get("WIKI_DIR")
-WIKI_DIR = Path(_env_wiki) if _env_wiki else REPO_DIR / "wiki"
-
-# Provenance records (raw/sources/, Source type, DR-006). Only ever read.
-_env_src = os.environ.get("RAW_SOURCES_DIR")
-SOURCES_DIR = Path(_env_src) if _env_src else REPO_DIR / "raw" / "sources"
-
-# Project identity. Everything the original demo vault hardcoded (page title,
-# footer, hero, goal-tree root, context-diagram centre) reads from here so a
-# fresh vault can be renamed in one place. Read per call, never cached: during
-# a workshop the group fills this in live and just refreshes the page.
-_env_cfg = os.environ.get("WIKI_CONFIG")
-CONFIG_PATH = Path(_env_cfg) if _env_cfg else REPO_DIR / "_system" / "wiki.yaml"
 
 DEFAULT_SYSTEM_NAME = "Requirements Wiki"
 
@@ -200,7 +168,7 @@ def wiki_config() -> dict:
     placeholder — renaming it is bootstrap.md step 1, and the workflow is where
     that is asked for. The dashboard does not second-guess the configured name.
     """
-    data = _config_data()
+    data = wiki._config_data()
     name = str(data.get("system_name") or "").strip()
     about = about_doc(data.get("about"))
     version = data.get("dashboard_version")
@@ -230,7 +198,7 @@ def wiki_config() -> dict:
 # Project documentation (`docs/`), mounted read-only. Only `/about` reads it:
 # the page `about:` in wiki.yaml names, plus the files that page links to.
 _env_docs = os.environ.get("DOCS_DIR")
-DOCS_DIR = Path(_env_docs) if _env_docs else REPO_DIR / "docs"
+DOCS_DIR = Path(_env_docs) if _env_docs else wiki.REPO_DIR / "docs"
 
 
 def about_doc(value) -> Path | None:
@@ -254,17 +222,6 @@ def docs_file(rel: str) -> Path | None:
     return path if root in path.parents and path.is_file() else None
 
 
-def _config_data() -> dict:
-    """wiki.yaml as a mapping. {} when the file is missing, is not UTF-8 or
-    is not a YAML mapping: `inputs` logs the last two."""
-    try:
-        text = inputs.read_text(CONFIG_PATH)
-    except OSError:
-        return {}
-    data = inputs.load_yaml(CONFIG_PATH, text) if text is not None else None
-    return data if isinstance(data, dict) else {}
-
-
 _config_warned: set[str] = set()
 
 
@@ -273,10 +230,6 @@ def _config_warning(message: str) -> None:
     if message not in _config_warned:
         _config_warned.add(message)
         app.logger.warning(message)
-
-
-def _inside(root: Path, path: Path) -> bool:
-    return path == root or root in path.parents
 
 
 def brand_dir(value: str) -> Path:
@@ -290,9 +243,9 @@ def brand_dir(value: str) -> Path:
     name = str(value or "").strip() or DEFAULT_BRAND
     if name in EXAMPLE_BRANDS:
         return BRANDS_DIR / name
-    root = REPO_DIR.resolve()
+    root = wiki.REPO_DIR.resolve()
     path = (root / name).resolve()
-    if not _inside(root, path):
+    if not wiki._inside(root, path):
         _config_warning(f"brand: {name!r} is outside the wiki repository, showing {DEFAULT_BRAND}")
         return default
     if not path.is_dir():
@@ -590,220 +543,6 @@ app.jinja_env.globals["list_spec"] = list_spec
 app.jinja_env.globals["type_folder"] = catalog.folder
 
 
-# [[target]] | [[target|alias]] | [[target#heading]] | [[path/target|alias]]
-WIKILINK_RE = re.compile(r"\[\[([^\]\|#]+)(?:#[^\]\|]+)?(?:\|([^\]]+))?\]\]")
-FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n?(.*)$", re.DOTALL)
-
-
-@dataclass
-class Page:
-    stem: str                       # filename without .md, e.g. DT-006-kind
-    meta: dict                      # parsed frontmatter
-    body: str                       # markdown body (frontmatter stripped)
-    folder: str                     # owning wiki subfolder, e.g. domain-terms
-    # Last-modified time of the source file. Last field, and defaulted, so every
-    # existing positional/keyword construction keeps working. Feeds the home
-    # page's "Latest changes" tile — see recent_changes().
-    mtime: float = 0.0
-    # link_targets() memo. A parsed Page is shared through _PARSE_CACHE and
-    # replaced, never edited, when its file changes, so the memo cannot go stale.
-    _targets: frozenset[str] | None = field(default=None, init=False, repr=False, compare=False)
-
-    @property
-    def id(self) -> str:
-        # a blank `id:` (a draft still being written) falls back to the file
-        # name, so sorting and linking never meet None
-        return str(self.meta.get("id") or self.stem)
-
-    @property
-    def title(self) -> str:
-        # a blank `title:` (YAML null) falls back to the file name like a
-        # missing one; a number or date is shown as written
-        t = self.meta.get("title")
-        return str(t) if t not in (None, "") else self.stem
-
-    @property
-    def status(self) -> str:
-        return str(self.meta.get("status") or "")
-
-    @property
-    def aliases(self) -> list[str]:
-        return [str(x) for x in self.as_list("aliases") if x]
-
-    def as_list(self, field: str) -> list:
-        """A list-valued frontmatter field as a list, whatever was written:
-        blank → [], a single value → [value] (`tags: draft` is one tag, and
-        `parent: 7` must not crash an iteration)."""
-        v = self.meta.get(field)
-        if v is None or v == "":
-            return []
-        return v if isinstance(v, list) else [v]
-
-    def link_targets(self) -> frozenset[str]:
-        """Distinct wiki pages this page points to (frontmatter + body),
-        excluding self-references and raw/ source provenance links. Computed
-        once per Page: the relations panel asks every page in the wiki."""
-        if self._targets is not None:
-            return self._targets
-        targets: set[str] = set()
-        haystack = yaml.safe_dump(self.meta, allow_unicode=True) + "\n" + self.body
-        for m in WIKILINK_RE.finditer(haystack):
-            tgt = m.group(1).strip()
-            base = tgt.split("/")[-1]              # drop raw/ path prefix
-            if tgt.startswith("raw/") or base.startswith("SRC-"):
-                continue                            # provenance, not a relation
-            if base == self.stem or base == self.id:
-                continue                            # self-reference
-            targets.add(base)
-        self._targets = frozenset(targets)
-        return self._targets
-
-
-# --- caching ----------------------------------------------------------------
-#
-# The wiki is parsed live on every request and was, before caching, re-read and
-# re-parsed dozens of times per page (every `render_markdown` rebuilt the whole
-# link index from disk). Two complementary layers fix that without ever serving
-# stale content:
-#
-#   Tier 1  _parse() is memoized by (path, mtime_ns, size). A file is re-read only
-#           when it changes on disk, so editing a page and refreshing the browser still
-#           shows the new text — but repeated reads (within a request and across
-#           requests) collapse to a dict lookup. The cache lives for the worker's
-#           lifetime; each gunicorn worker warms its own.
-#
-#   Tier 2  the aggregate builders (load_folder / load_all_pages / title_index /
-#           link_index / load_decisions) are memoized for the duration of ONE request
-#           via flask.g, so the tree is walked once per request instead of once
-#           per markdown block rendered. Outside a request context they run
-#           uncached (keeps build_* helpers usable standalone, e.g. for ISS-010).
-
-# (path -> ((mtime_ns, size), parsed Page or None)), like metamodel._CACHE. The
-# size catches a same-mtime rewrite whose length changed. Folder is
-# deterministic from the path (always path.parent.name at every call site), so
-# the path alone is the key.
-_PARSE_CACHE: dict[Path, tuple[tuple[int, int], "Page | None"]] = {}
-# gunicorn serves requests on several threads (Dockerfile, `--threads 4`). The
-# lock covers each read, write and sweep of _PARSE_CACHE. Parsing runs outside
-# it: two threads parsing the same file waste a parse, nothing worse.
-_PARSE_LOCK = threading.Lock()
-
-
-def _forget(path: Path) -> None:
-    """Drop a file's cache entry: it is gone, unreadable or no longer served."""
-    with _PARSE_LOCK:
-        _PARSE_CACHE.pop(path, None)
-
-
-def _forget_missing(folder: Path, present: list[Path]) -> None:
-    """Drop the entries of files in `folder` that are no longer listed there.
-    A deleted page is never globbed again, so _parse() never sees it."""
-    keep = set(present)
-    with _PARSE_LOCK:
-        for path in [p for p in _PARSE_CACHE if p.parent == folder and p not in keep]:
-            del _PARSE_CACHE[path]
-
-
-def _resolves_inside(root: Path, path: Path) -> bool:
-    """True when `path`, every symlink on the way resolved, is `root` or below
-    it. A symlink in the wiki that points elsewhere in the wiki is fine; one
-    that leads out of it (a committed `x.md -> /etc/…`, a linked folder) is
-    not read: the dashboard serves the wiki, not what a link names."""
-    try:
-        return _inside(root.resolve(), path.resolve(strict=True))
-    except (OSError, RuntimeError):            # missing, or a symlink loop
-        return False
-
-
-def _page_root(path: Path) -> Path:
-    """The folder a page must stay inside: raw/sources/ for a provenance
-    record, the wiki for everything else."""
-    return SOURCES_DIR if _inside(SOURCES_DIR.absolute(), path.absolute()) else WIKI_DIR
-
-
-def _parse(path: Path, folder: str) -> Page | None:
-    # checked before the cache: a symlink retargeted out of the wiki must not
-    # keep serving the page it pointed to before
-    if not _resolves_inside(_page_root(path), path):
-        _forget(path)
-        return None
-    try:
-        st = path.stat()
-    except OSError:
-        _forget(path)
-        return None
-    stamp = (st.st_mtime_ns, st.st_size)
-    with _PARSE_LOCK:
-        cached = _PARSE_CACHE.get(path)
-    if cached is not None and cached[0] == stamp:
-        return cached[1]
-    # One broken file must never take the whole dashboard down: every page
-    # render walks the full vault (title/link indexes), so an exception here
-    # is a 500 everywhere. Bytes that are not UTF-8 show as U+FFFD, and a
-    # date that is none stays text: `inputs` logs both. A file that vanished
-    # between stat and read is simply skipped (not cached).
-    try:
-        text = inputs.read_text(path, replace=True)
-    except OSError:
-        _forget(path)
-        return None
-    m = FRONTMATTER_RE.match(text)
-    if not m:
-        page = None
-    else:
-        meta = inputs.load_yaml(path, m.group(1))
-        if not isinstance(meta, dict):
-            meta = {}                         # `--- just a string ---` or a list: no fields
-        page = Page(stem=path.stem, meta=meta, body=m.group(2), folder=folder,
-                    mtime=st.st_mtime)
-    with _PARSE_LOCK:
-        _PARSE_CACHE[path] = (stamp, page)
-    return page
-
-
-@_request_cached
-def load_folder(folder: str) -> list[Page]:
-    d = WIKI_DIR / folder
-    paths = sorted(d.glob("*.md")) if d.is_dir() and _resolves_inside(WIKI_DIR, d) else []
-    _forget_missing(d, paths)
-    pages = [_parse(p, folder) for p in paths]
-    return [p for p in pages if p is not None]
-
-
-def load_type(type_name: str) -> list[Page]:
-    """The pages of one type, from the folder the repository's metamodel
-    declares for it (CON-006)."""
-    folder = catalog.folder(type_name)
-    return load_folder(folder) if folder else []
-
-
-def _is(folder: str, *type_names: str) -> bool:
-    """Whether `wiki/<folder>` holds the pages of one of the named types."""
-    return catalog.type_of(folder) in type_names
-
-
-@_request_cached
-def load_sources() -> list[Page]:
-    """Provenance records from raw/sources/ — counted on the home page's status
-    strip so the room can see how much material the wiki actually rests on.
-    Not a wiki folder: it lives outside WIKI_DIR and is never rendered."""
-    paths = sorted(SOURCES_DIR.glob("*.md")) if SOURCES_DIR.is_dir() else []
-    _forget_missing(SOURCES_DIR, paths)
-    pages = [_parse(p, "sources") for p in paths]
-    return [p for p in pages if p is not None]
-
-
-@_request_cached
-def load_all_pages() -> list[Page]:
-    """Every wiki page across all content-type folders, for global search."""
-    out: list[Page] = []
-    if WIKI_DIR.is_dir():
-        for d in sorted(WIKI_DIR.iterdir()):
-            if d.is_dir():
-                out.extend(load_folder(d.name))
-    return out
-
-
 def _relative_when(ts: float, now: float | None = None) -> str:
     """'just now' / '12 min ago' / '3 h ago' / '2026-09-06' — coarse on purpose."""
     now = time.time() if now is None else now
@@ -821,7 +560,7 @@ def recent_changes(n: int | None = 5) -> list[dict]:
     """The n most recently modified wiki pages (file mtime — the cheapest
     'what changed' there is; the vault is regenerated a few times per
     workshop, nobody watches it live)."""
-    pages = sorted(load_all_pages(), key=lambda p: -p.mtime)[:n]
+    pages = sorted(wiki.load_all_pages(), key=lambda p: -p.mtime)[:n]
     return [{"id": p.id, "title": p.title, "kind": catalog.label(p.folder),
              "url": _page_url(p.folder, p.stem), "when": _relative_when(p.mtime)} for p in pages]
 
@@ -830,38 +569,38 @@ def vault_status() -> dict:
     """The one-line state of the vault under the hero: how much is captured,
     what is still open, how much source material it rests on, and how fresh
     the whole thing is."""
-    pages = load_all_pages()
-    issues = load_type("issue")
+    pages = wiki.load_all_pages()
+    issues = wiki.load_type("issue")
     last = max((p.mtime for p in pages), default=0.0)
     return {"pages": len(pages),
             "open_issues": sum(1 for i in issues if is_open_issue(i.status)),
-            "sources": len(load_sources()),
+            "sources": len(wiki.load_sources()),
             "last_change": _relative_when(last) if last else "—"}
 
 
-@_request_cached
+@wiki._request_cached
 def title_index() -> dict[str, str]:
     """Map every page stem -> human title, for resolving wikilinks to text.
     Built from load_all_pages(), so it knows exactly the pages link_index()
     and the lists know (a nested or root-level .md is none of them)."""
-    return {p.stem: p.title for p in load_all_pages()}
+    return {p.stem: p.title for p in wiki.load_all_pages()}
 
 
 def _page_url(folder: str, stem: str) -> str:
     """Canonical dashboard URL for a wiki page. FRs have their own rich route;
     everything else uses the generic /page view."""
-    if _is(folder, "functional-requirement"):
+    if wiki._is(folder, "functional-requirement"):
         return f"/functional-requirements/{stem}"
     return f"/page/{folder}/{stem}"
 
 
-@_request_cached
-def page_index() -> dict[str, Page]:
+@wiki._request_cached
+def page_index() -> dict[str, wiki.Page]:
     """Map each page's stem and id -> its Page: the names a link may use for
     a page. A file name always names its own page. An ID names the first page
     that carries it, unless it is another page's file name."""
-    idx: dict[str, Page] = {}
-    pages = load_all_pages()
+    idx: dict[str, wiki.Page] = {}
+    pages = wiki.load_all_pages()
     for p in pages:
         idx[p.stem] = p
     for p in pages:
@@ -869,7 +608,7 @@ def page_index() -> dict[str, Page]:
     return idx
 
 
-@_request_cached
+@wiki._request_cached
 def link_index() -> dict[str, tuple[str, str]]:
     """page_index() as (folder, stem), so body wikilinks like
     `[[STK-006-…|Backoffice]]` or `[[FR-008]]` resolve to a real target URL."""
@@ -905,32 +644,32 @@ def _link_stem(spelling: object) -> str:
     return p.stem if p else link_name(spelling)
 
 
-def linked_stems(page: Page) -> set[str]:
+def linked_stems(page: wiki.Page) -> set[str]:
     """The pages `page` links to, each once however often and however it is
     spelled, without itself. A name no page has stays as written."""
     return {s for s in map(_link_stem, page.link_targets()) if s != page.stem}
 
 
-def links_to(page: Page, target: Page) -> bool:
+def links_to(page: wiki.Page, target: wiki.Page) -> bool:
     """Whether `page` links to `target`, by any name that resolves to it."""
     index = page_index()
     names = {n for n in (target.stem, target.id) if index.get(n) is target}
     return page is not target and not names.isdisjoint(page.link_targets())
 
 
-@_request_cached
-def source_index() -> dict[str, Page]:
+@wiki._request_cached
+def source_index() -> dict[str, wiki.Page]:
     """Map each raw/sources/ record's stem and id -> its Page, so a page's
     `sources:` wikilinks (and the /source/<stem> route) can resolve either
     form."""
-    idx: dict[str, Page] = {}
-    for p in load_sources():
+    idx: dict[str, wiki.Page] = {}
+    for p in wiki.load_sources():
         idx.setdefault(p.stem, p)
         idx.setdefault(p.id, p)
     return idx
 
 
-def provenance(page: Page) -> list[dict]:
+def provenance(page: wiki.Page) -> list[dict]:
     """Resolve a page's `sources:` wikilinks to provenance records. Unresolved
     entries are kept (url=None) so the chip can say so instead of vanishing."""
     idx = source_index()
@@ -952,7 +691,7 @@ def provenance(page: Page) -> list[dict]:
     return rows
 
 
-@_request_cached
+@wiki._request_cached
 def open_issue_counts() -> dict[str, set[str]]:
     """folder -> ids of OPEN issues whose links (frontmatter `related:` or body
     wikilinks) resolve to a page in that folder. One issue's id can appear in
@@ -962,7 +701,7 @@ def open_issue_counts() -> dict[str, set[str]]:
     even if it links pages in more than one of those folders."""
     links = link_index()
     out: dict[str, set[str]] = {}
-    for iss in load_type("issue"):
+    for iss in wiki.load_type("issue"):
         if not is_open_issue(iss.status):
             continue
         for folder in {links[t][0] for t in iss.link_targets() if t in links}:
@@ -1094,7 +833,7 @@ def render_wikilinks(text: str, titles: dict[str, str],
         if links is not None and (a := anchor_lookup().get(base.lower())):
             return _anchor_link(a, str(escape(alias.strip() if alias else a["name"])))
         return f'<span class="wl">{label}</span>'
-    return WIKILINK_RE.sub(repl, text)
+    return wiki.WIKILINK_RE.sub(repl, text)
 
 
 def render_wikilinks_text(text: str, titles: dict[str, str],
@@ -1102,7 +841,7 @@ def render_wikilinks_text(text: str, titles: dict[str, str],
     """render_wikilinks for a plain-text value (a frontmatter string): the
     text between the links is escaped too, so `<b>` shows as written."""
     parts, pos = [], 0
-    for m in WIKILINK_RE.finditer(text):
+    for m in wiki.WIKILINK_RE.finditer(text):
         parts.append(str(escape(text[pos:m.start()])))
         parts.append(render_wikilinks(m.group(0), titles, links))
         pos = m.end()
@@ -1116,7 +855,7 @@ def render_wikilinks_text(text: str, titles: dict[str, str],
 # entry on /metamodel, with the short definition as the link's title, so a
 # reader learns what the page follows without leaving it.
 
-@_request_cached
+@wiki._request_cached
 def anchor_lookup() -> dict[str, dict]:
     """Lower-cased anchor title, alias and file name → the anchor."""
     return metamodel.anchor_index(metamodel.method_anchors())
@@ -1129,7 +868,7 @@ _PLAIN_MD_RE = re.compile(r"\*\*([^*]+)\*\*|`([^`]+)`|<(https?://[^>]+)>|\[([^\]
 
 def anchor_title(a: dict) -> str:
     """An anchor's definition as plain text, for a `title` attribute."""
-    text = WIKILINK_RE.sub(lambda m: (m.group(2) or m.group(1)).strip(), a.get("definition") or "")
+    text = wiki.WIKILINK_RE.sub(lambda m: (m.group(2) or m.group(1)).strip(), a.get("definition") or "")
     return _PLAIN_MD_RE.sub(lambda m: m.group(1) or m.group(2) or m.group(3) or m.group(4), text)
 
 
@@ -1213,7 +952,7 @@ def _follows_notes(body: str) -> list[tuple[int, str]]:
         if not m:
             continue
         text = m.group(1)
-        if not WIKILINK_RE.search(text) and (len(text.split()) > _FOLLOWS_PLAIN_MAX_WORDS
+        if not wiki.WIKILINK_RE.search(text) and (len(text.split()) > _FOLLOWS_PLAIN_MAX_WORDS
                                               or re.search(r"[.!?;:]", text)):
             continue                         # an ordinary sentence in a quote
         out.append((i, text))
@@ -1238,10 +977,10 @@ def format_labels(body: str) -> list[dict]:
     out: list[dict] = []
     seen: set[str] = set()
     for _, line in _follows_notes(body):
-        note = WIKILINK_RE.sub("", line).strip(" ,;.").strip()
+        note = wiki.WIKILINK_RE.sub("", line).strip(" ,;.").strip()
         note = re.sub(r"^\((.*)\)$", r"\1", note).strip()
         found = []
-        for wm in WIKILINK_RE.finditer(line):
+        for wm in wiki.WIKILINK_RE.finditer(line):
             base = wm.group(1).strip().split("/")[-1]
             a = anchor_lookup().get(base.lower())
             if a:
@@ -1359,7 +1098,7 @@ def render_markdown(body: str, titles: dict[str, str]) -> str:
     return sanitize_html(wrap_tables(md.markdown(body, extensions=["extra", "sane_lists"])))
 
 
-def extract_labeled(page: Page, label: str, titles: dict[str, str],
+def extract_labeled(page: wiki.Page, label: str, titles: dict[str, str],
                     links: dict[str, tuple[str, str]] | None = None) -> str:
     """Pull the paragraph introduced by a bold lead like **Definition.** or
     **Snapshot.**, collapse whitespace, and render its wikilinks. Pass `links`
@@ -1379,7 +1118,7 @@ _PAM_BULLET_RE = re.compile(
 )
 
 
-def extract_pam_bullet(page: Page, label: str, titles: dict[str, str],
+def extract_pam_bullet(page: wiki.Page, label: str, titles: dict[str, str],
                        links: dict[str, tuple[str, str]] | None = None) -> str:
     """Pull a bullet-style PAM field (`- **Purpose.** …`) from a goal body.
     Bullets can wrap onto continuation lines; stops at the next sibling bullet,
@@ -1443,13 +1182,13 @@ def _strip_inline_markdown(text: str) -> str:
                              text).strip()
 
 
-@_request_cached
+@wiki._request_cached
 def load_decisions() -> list[dict]:
     """Decision records (wiki/decisions/) as list rows with rendered bodies, in
     ID order. `kind` outside architecture|business falls back to undefined."""
     titles = title_index()
     out = []
-    for p in sorted(load_type("decision-record"), key=lambda p: p.id):
+    for p in sorted(wiki.load_type("decision-record"), key=lambda p: p.id):
         kind = str(p.meta.get("kind") or "").strip().lower()
         decided = p.meta.get("decided") or p.meta.get("created") or ""
         out.append({
@@ -1477,11 +1216,11 @@ def load_decisions() -> list[dict]:
 # /req42/<slug> list for the other known sections, and /section/<id> for a
 # section the dashboard has no view for.
 
-def _block_pages(block: dict) -> list[Page]:
+def _block_pages(block: dict) -> list[wiki.Page]:
     """All wiki pages feeding one req42 block, sorted by id."""
-    pages: list[Page] = []
+    pages: list[wiki.Page] = []
     for folder in block["folders"]:
-        pages.extend(load_folder(folder))
+        pages.extend(wiki.load_folder(folder))
     return sorted(pages, key=lambda p: p.id)
 
 
@@ -1570,7 +1309,7 @@ def _eif_flows(p) -> tuple[list[dict], list[dict], list[dict]]:
             flows)
 
 
-def _node_link(p: Page) -> dict:
+def _node_link(p: wiki.Page) -> dict:
     """A page drawn as a diagram node, as the text link beside the diagram."""
     return {"id": p.id, "title": p.title, "url": _page_url(p.folder, p.stem)}
 
@@ -1609,7 +1348,7 @@ def build_context_diagram(center: str | None = None,
     # real external systems — one node each (DR-013), one line each (DR-026).
     # A deprecated interface is one the boundary decision moved *inside* the
     # system (ISS-010), so it is no longer a neighbour and must not be drawn.
-    for p in load_type("external-interface"):
+    for p in wiki.load_type("external-interface"):
         if p.status == "deprecated":
             continue
         ins, outs, ordered = _eif_flows(p)
@@ -1633,7 +1372,7 @@ def build_context_diagram(center: str | None = None,
                 dst.append(x)
 
     groups: dict[str, dict] = {}   # label -> {prov, recv, cls, order}
-    for p in load_type("stakeholder"):
+    for p in wiki.load_type("stakeholder"):
         prov, recv = p.as_list("provides"), p.as_list("receives")
         if not (prov or recv):
             continue
@@ -1697,7 +1436,7 @@ def build_context_flows() -> list[dict]:
         return None if not s or s.lower() in ("unknown", "n/a", "none") else s
 
     groups: list[dict] = []
-    for p in load_type("external-interface"):
+    for p in wiki.load_type("external-interface"):
         if p.status == "deprecated":
             continue
         ins, outs, ordered = _eif_flows(p)
@@ -1735,15 +1474,15 @@ def _type_of(stem: str) -> str:
     return stem.split("-")[0] if "-" in stem else stem
 
 
-def domain_terms() -> list[Page]:
-    return load_type("domain-term")
+def domain_terms() -> list[wiki.Page]:
+    return wiki.load_type("domain-term")
 
 
 def build_glossary_graph(edge_filter: str = "all") -> dict:
     """Project simple links and structured relationships over the terminology."""
     glossary = domain_terms()
     glo_stems = {p.stem for p in glossary}
-    by_stem = {p.stem: p for p in load_all_pages()}   # existence + title/folder
+    by_stem = {p.stem: p for p in wiki.load_all_pages()}   # existence + title/folder
 
     seen_pairs: set[frozenset] = set()
     edges: list[dict] = []
@@ -1876,13 +1615,13 @@ def build_relations_panel(stem: str, exclude: set[str] | None = None) -> dict:
     issue carries its `status` and whether it is `closed`."""
     exclude = exclude or set()
     titles = title_index()
-    pages = load_all_pages()
+    pages = wiki.load_all_pages()
     by_stem = {p.stem: p for p in pages}
 
     def info(s: str) -> dict:
         ntype = _type_of(s)
         folder = by_stem[s].folder if s in by_stem else catalog.folder_for_prefix(ntype)
-        if folder and _is(folder, "functional-requirement"):
+        if folder and wiki._is(folder, "functional-requirement"):
             url = f"/functional-requirements/{s}"
         elif folder:
             url = f"/page/{folder}/{s}"
@@ -1891,7 +1630,7 @@ def build_relations_panel(stem: str, exclude: set[str] | None = None) -> dict:
         item = {"id": by_stem[s].id if s in by_stem else s,
                 "label": titles.get(s, s), "url": url, "type": ntype,
                 "status": "", "closed": False}
-        if s in by_stem and _is(by_stem[s].folder, "issue"):
+        if s in by_stem and wiki._is(by_stem[s].folder, "issue"):
             # a linked issue says how firm it is, closed the way the issues
             # panel says it (FR-034, FR-027)
             st = by_stem[s].status
@@ -1942,7 +1681,7 @@ def _goal_id_from_ref(ref: object) -> str:
     return stem
 
 
-def _goal_maturity(p: Page) -> str:
+def _goal_maturity(p: wiki.Page) -> str:
     """PAM until `horizon:` is set, then promotion to SMART (DR-016 / anchor)."""
     return "SMART" if str(p.meta.get("horizon") or "").strip() else "PAM"
 
@@ -1955,7 +1694,7 @@ _VISION_SKIP = (">", "<!--", "**Objectives.**", "*Optional:*")
 _SENTENCE_RE = re.compile(r"^(.+?[.!?])(?=\s+[^a-z\s]|\s*$)", re.DOTALL)
 
 
-def _vision_paragraphs(page: Page, titles: dict[str, str],
+def _vision_paragraphs(page: wiki.Page, titles: dict[str, str],
                        links: dict[str, tuple[str, str]] | None = None) -> list[str]:
     """Every prose paragraph under `## Vision` in the Vision page, inline
     markdown (`**bold**`, wikilinks) rendered, no <p> wrapper. Pass `links` to
@@ -1981,7 +1720,7 @@ def _vision_paragraphs(page: Page, titles: dict[str, str],
     return out
 
 
-def vision_sentence(page: Page | None, titles: dict[str, str]) -> str:
+def vision_sentence(page: wiki.Page | None, titles: dict[str, str]) -> str:
     """The first sentence of the vision as plain text, for the home hero
     (FR-018). A wikilink reads as its alias or its target's title. Empty when
     there is no vision or no prose under `## Vision`."""
@@ -1992,7 +1731,7 @@ def vision_sentence(page: Page | None, titles: dict[str, str]) -> str:
         para = para.strip()
         if not para or para.startswith(_VISION_SKIP):
             continue
-        text = WIKILINK_RE.sub(
+        text = wiki.WIKILINK_RE.sub(
             lambda w: (w.group(2) or titles.get(w.group(1).strip().split("/")[-1], w.group(1))).strip(),
             re.sub(r"\s+", " ", para))
         text = _strip_inline_markdown(text)
@@ -2004,17 +1743,17 @@ def vision_sentence(page: Page | None, titles: dict[str, str]) -> str:
 ENABLER_LANES = ("platform", "display")
 
 
-def _in_enabler_lane(fr: Page) -> bool:
+def _in_enabler_lane(fr: wiki.Page) -> bool:
     return str(fr.meta.get("lane") or "").strip().lower() in ENABLER_LANES
 
 
-def is_enabler(fr: Page, goals: list) -> bool:
+def is_enabler(fr: wiki.Page, goals: list) -> bool:
     """rel-goal: an FR that serves no goal (`goals`, its own or its use-case
     parent's) and sits in lane platform or display is an explicit enabler."""
     return not goals and _in_enabler_lane(fr)
 
 
-def breaks_fr_traces_to_goal(fr: Page, goals: list) -> bool:
+def breaks_fr_traces_to_goal(fr: wiki.Page, goals: list) -> bool:
     """rule-fr-traces-to-goal: an Agile epic or feature serves a goal (`goals`,
     its own or its use-case parent's) or is an enabler. Advisory only."""
     if _fr_notation(fr) != "agile" or _fr_level(fr) not in ("epic", "feature"):
@@ -2022,10 +1761,10 @@ def breaks_fr_traces_to_goal(fr: Page, goals: list) -> bool:
     return not goals and not _in_enabler_lane(fr)
 
 
-def vision_page() -> Page | None:
+def vision_page() -> wiki.Page | None:
     """The goal page with `stereotype: vision`, picked by stereotype and never
     by ID. If two pages claim it, the lowest ID wins."""
-    goals = sorted(load_type("goal"), key=lambda p: p.id)
+    goals = sorted(wiki.load_type("goal"), key=lambda p: p.id)
     return next((p for p in goals
                  if str(p.meta.get("stereotype") or "").strip().lower() == "vision"), None)
 
@@ -2051,26 +1790,26 @@ def load_goals() -> dict:
     silently dropped. If two pages claim `stereotype: vision`, the
     lowest-id one is the vision and the rest fall through to objectives.
     """
-    goals = sorted(load_type("goal"), key=lambda p: p.id)
+    goals = sorted(wiki.load_type("goal"), key=lambda p: p.id)
     vision = vision_page()
     objectives = [p for p in goals if p is not vision]
 
-    all_frs = sorted(load_type("functional-requirement"), key=lambda p: p.id)
+    all_frs = sorted(wiki.load_type("functional-requirement"), key=lambda p: p.id)
     ucs = [p for p in all_frs if _fr_notation(p) == "use-case"]
     frs = [p for p in all_frs if _fr_notation(p) != "use-case"]
     # the use cases Agile features and stories may refine (DR-038 amendment),
     # the same set the story map roots them under
     uc_by_stem = {u.stem: u for u in ucs if _fr_level(u) in UC_REFINABLE_LEVELS}
-    coverage: dict[str, list[Page]] = {o.id: [] for o in objectives}
+    coverage: dict[str, list[wiki.Page]] = {o.id: [] for o in objectives}
     objective_by_stem = {o.stem: o for o in objectives}
 
-    def served(p: Page) -> list[str]:
+    def served(p: wiki.Page) -> list[str]:
         # only links that resolve to an objective count: the vision, a missing
         # page or a mangled value serves no goal (rule-fr-traces-to-goal)
         return [objective_by_stem[s].id for s in links_of(p, "goal") if s in objective_by_stem]
 
-    enablers: list[Page] = []
-    untraced: list[Page] = []
+    enablers: list[wiki.Page] = []
+    untraced: list[wiki.Page] = []
     for fr in frs:
         gids = served(fr)
         if not gids and _fr_notation(fr) == "agile" and _fr_level(fr) in ("feature", "story"):
@@ -2112,11 +1851,11 @@ def _fr_stem_from_ref(ref: object) -> str:
     return (m.group(1) if m else s).split("/")[-1].strip()
 
 
-def _fr_level(p: "Page") -> str:
+def _fr_level(p: "wiki.Page") -> str:
     return str(p.meta.get("level") or "").strip().lower()
 
 
-def _fr_notation(p: "Page") -> str:
+def _fr_notation(p: "wiki.Page") -> str:
     # No fallback: a page without `notation:` is unplaced, not silently Agile.
     return str(p.meta.get("notation") or "").strip().lower()
 
@@ -2127,7 +1866,7 @@ AGILE_LEVELS = ("epic", "feature", "story")
 UC_REFINABLE_LEVELS = ("sea", "fish")
 
 
-def _fr_first_parent(p: "Page") -> str | None:
+def _fr_first_parent(p: "wiki.Page") -> str | None:
     """The stem of an FR's first `parent:`. The story map is a tree: a page
     with several parents is placed under its first; multi-parent graphs are
     out of scope for this view. Goal inheritance from a use case reads the
@@ -2139,7 +1878,7 @@ def _fr_first_parent(p: "Page") -> str | None:
     return None
 
 
-def _fr_sort_key(p: "Page"):
+def _fr_sort_key(p: "wiki.Page"):
     """Hierarchy order: numeric `order:` field, then id as a stable tiebreak."""
     try:
         order = int(p.meta.get("order"))
@@ -2148,7 +1887,7 @@ def _fr_sort_key(p: "Page"):
     return (order, p.id)
 
 
-def _fr_node(p: "Page") -> dict:
+def _fr_node(p: "wiki.Page") -> dict:
     """Slim per-page record shared by cards and the diagram."""
     return {
         "id": p.id, "title": p.title, "stem": p.stem,
@@ -2189,7 +1928,7 @@ def build_fr_hierarchy() -> dict:
     # is not part of the live hierarchy and must not be counted, drawn, or listed as
     # an orphan. Same rule as the context projection applies to a deprecated
     # interface. A live child of a retired parent correctly becomes an orphan.
-    all_pages = [p for p in load_type("functional-requirement")
+    all_pages = [p for p in wiki.load_type("functional-requirement")
                  if p.status != "deprecated"]
     pages = [p for p in all_pages
              if _fr_notation(p) == "agile" and _fr_level(p) in AGILE_LEVELS]
@@ -2199,13 +1938,13 @@ def build_fr_hierarchy() -> dict:
 
     parent_stem = _fr_first_parent
 
-    children: dict[str, list["Page"]] = {}
+    children: dict[str, list["wiki.Page"]] = {}
     for p in pages:
         ps = parent_stem(p)
         if ps:
             children.setdefault(ps, []).append(p)
 
-    def kids(stem: str, level: str) -> list["Page"]:
+    def kids(stem: str, level: str) -> list["wiki.Page"]:
         return sorted((c for c in children.get(stem, []) if _fr_level(c) == level),
                       key=_fr_sort_key)
 
@@ -2213,7 +1952,7 @@ def build_fr_hierarchy() -> dict:
     epic_rows = []
     total_features = total_stories = 0
 
-    def breakdown(root: "Page") -> dict:
+    def breakdown(root: "wiki.Page") -> dict:
         feats = kids(root.stem, "feature")
         feature_rows = [
             {**_fr_node(f), "stories": [_fr_node(s) for s in kids(f.stem, "story")]}
@@ -2323,7 +2062,7 @@ def _mermaid_goal_epic_tree(goals: dict, hierarchy: dict,
         drawn.append({"id": e["id"], "title": e["title"], "url": f'/functional-requirements/{e["stem"]}'})
         seen.add(e["id"])
 
-    def uc_edge(parent_nid: str, uc: Page) -> None:
+    def uc_edge(parent_nid: str, uc: wiki.Page) -> None:
         nid = _diagram_node_id(uc.id)
         if uc.id in seen:
             lines.append(f'  {parent_nid} --> {nid}')
@@ -2375,14 +2114,14 @@ def _mermaid_goal_epic_tree(goals: dict, hierarchy: dict,
     return "\n".join(lines)
 
 
-def fr_building_blocks(stem: str) -> list[Page]:
+def fr_building_blocks(stem: str) -> list[wiki.Page]:
     """The building blocks whose `drivers:` name this requirement (rel-drivers),
     by id. The link is stored on the block only, never on the requirement."""
-    return [p for p in sorted(load_type("building-block"), key=lambda q: q.id)
+    return [p for p in sorted(wiki.load_type("building-block"), key=lambda q: q.id)
             if stem in links_of(p, "drivers")]
 
 
-def _mermaid_fr_subtree(node: dict | None, blocks: list[Page] | None = None,
+def _mermaid_fr_subtree(node: dict | None, blocks: list[wiki.Page] | None = None,
                         links: list[dict] | None = None) -> str | None:
     """One FR's detail diagram (FR-047), drawn on its FR page so the hierarchy
     overview can stay compact: its breakdown and its building blocks. Handles
@@ -2470,7 +2209,7 @@ def _fr_ancestors(stem: str) -> list[dict]:
     """The parent chain for an FR (root first), walked over the first-parent
     `parent:` edge across notations (a story may sit under a use case,
     DR-038). Powers the FR-page breadcrumb. Cycle-guarded."""
-    pages = {p.stem: p for p in load_type("functional-requirement")}
+    pages = {p.stem: p for p in wiki.load_type("functional-requirement")}
     out: list[dict] = []
     cur, seen = pages.get(stem), {stem}
     while cur:
@@ -2497,11 +2236,11 @@ def _fr_ancestors(stem: str) -> list[dict]:
 # is empty, a context page or missing is level 1). The tree, a block's white box
 # and the "addressed by" side of `drivers:` are projections, never stored.
 
-def links_of(page: Page, field: str) -> list[str]:
+def links_of(page: wiki.Page, field: str) -> list[str]:
     """Existing target stems of a link field, in order, without duplicates.
     Accepts '[[stem]]', '[[stem|alias]]', a bare stem, a single value or a
     list, and the nested list YAML makes of an unquoted [[stem]]."""
-    by_stem = {p.stem for p in load_all_pages()}
+    by_stem = {p.stem for p in wiki.load_all_pages()}
     out: list[str] = []
 
     def walk(v: object) -> None:
@@ -2517,7 +2256,7 @@ def links_of(page: Page, field: str) -> list[str]:
     return out
 
 
-def _bb_parent(p: Page, bb_stems: set[str]) -> str | None:
+def _bb_parent(p: wiki.Page, bb_stems: set[str]) -> str | None:
     return next((s for s in links_of(p, "parent") if s in bb_stems), None)
 
 
@@ -2527,7 +2266,7 @@ def _level_tree(type_name: str, keep=None) -> list[dict]:
     `keep` is level 1. Every page appears exactly once: one caught in a
     `parent:` cycle has no level-1 ancestor, so it is promoted to level 1
     instead of vanishing."""
-    pages = {p.stem: p for p in load_type(type_name) if keep is None or keep(p)}
+    pages = {p.stem: p for p in wiki.load_type(type_name) if keep is None or keep(p)}
     stems = set(pages)
     children: dict[str | None, list[str]] = {}
     for s, p in pages.items():
@@ -2573,17 +2312,17 @@ _GREYED = "fill:#eceef2,stroke:#9aa3b2,color:#6b7280"
 _FUTURE = ("planned", "target")
 
 
-def lifecycle(p: Page) -> str:
+def lifecycle(p: wiki.Page) -> str:
     """The page's state, with `status: deprecated` counting as outdated."""
     return "outdated" if p.status == "deprecated" else page_state(p)
 
 
-def _mixed(pages: list[Page]) -> bool:
+def _mixed(pages: list[wiki.Page]) -> bool:
     lcs = {lifecycle(p) for p in pages}
     return bool(lcs & set(_FUTURE)) and bool(lcs - set(_FUTURE))
 
 
-def _lifecycle_lines(shown: dict[str, tuple[str, Page]]) -> list[str]:
+def _lifecycle_lines(shown: dict[str, tuple[str, wiki.Page]]) -> list[str]:
     """Style lines and replaced-by edges for the elements of one diagram,
     given as {stem: (mermaid id, page)}."""
     mixed = _mixed([p for _, p in shown.values()])
@@ -2599,7 +2338,7 @@ def _lifecycle_lines(shown: dict[str, tuple[str, Page]]) -> list[str]:
     return lines
 
 
-def _lifecycle_suffix(p: Page, mixed: bool) -> str:
+def _lifecycle_suffix(p: wiki.Page, mixed: bool) -> str:
     lc = lifecycle(p)
     if lc == "outdated" or (lc in _FUTURE and mixed):
         return f" · {lc}"
@@ -2620,8 +2359,8 @@ def build_whitebox(stem: str | None) -> str | None:
     if not kids:
         return None
     inside = {n["stem"] for n in kids}
-    pages = {p.stem: p for p in load_type("building-block")}
-    eifs = {p.stem: p for p in load_type("external-interface")}
+    pages = {p.stem: p for p in wiki.load_type("building-block")}
+    eifs = {p.stem: p for p in wiki.load_type("external-interface")}
     lines = ["flowchart LR"]
     mixed = _mixed([pages[n["stem"]] for n in kids])
     for n in kids:
@@ -2662,7 +2401,7 @@ def build_whitebox(stem: str | None) -> str | None:
 
 def _link_groups(stems: list[str]) -> list[dict]:
     """Stems as link dicts grouped by type prefix, in the relations-panel order."""
-    by_stem = {p.stem: p for p in load_all_pages()}
+    by_stem = {p.stem: p for p in wiki.load_all_pages()}
     buckets: dict[str, list] = {}
     for s in stems:
         p = by_stem[s]
@@ -2677,7 +2416,7 @@ def _link_groups(stems: list[str]) -> list[dict]:
 
 def build_drivers(stem: str) -> list[dict]:
     """The requirements a decision record or building block rests on."""
-    p = next((q for q in load_all_pages() if q.stem == stem), None)
+    p = next((q for q in wiki.load_all_pages() if q.stem == stem), None)
     return _link_groups(links_of(p, "drivers")) if p else []
 
 
@@ -2698,7 +2437,7 @@ _DRIVER_TYPES = ("decision-record",) + tuple(t for t in ARCH_TYPES if t != "runt
 _STATES = ("outdated", "current", "planned", "target")
 
 
-def page_state(p: Page) -> str:
+def page_state(p: wiki.Page) -> str:
     """'current' or 'target'; empty or unknown values count as target."""
     v = str(p.meta.get("state") or "").strip().lower()
     return v if v in _STATES else "target"
@@ -2712,10 +2451,10 @@ def _scalar(v: object) -> object:
     return v
 
 
-def _struct_targets(p: Page, field: str, keys: tuple[str, ...]) -> list[str]:
+def _struct_targets(p: wiki.Page, field: str, keys: tuple[str, ...]) -> list[str]:
     """Existing target stems named under `keys` in a structured-list field
     (`steps:` from/to, `connects:` to), in order, without duplicates."""
-    by_stem = {q.stem for q in load_all_pages()}
+    by_stem = {q.stem for q in wiki.load_all_pages()}
     out: list[str] = []
     entries = p.meta.get(field) or []
     for e in entries if isinstance(entries, list) else []:
@@ -2731,14 +2470,14 @@ def _struct_targets(p: Page, field: str, keys: tuple[str, ...]) -> list[str]:
 
 def build_addressed_by(stem: str) -> list[dict]:
     """Decision records and architecture pages whose `drivers:` name this page."""
-    hits = [p.stem for t in _DRIVER_TYPES for p in sorted(load_type(t), key=lambda q: q.id)
+    hits = [p.stem for t in _DRIVER_TYPES for p in sorted(wiki.load_type(t), key=lambda q: q.id)
             if stem in links_of(p, "drivers")]
     return _link_groups(hits)
 
 
 def build_realized_by(stem: str) -> list[dict]:
     """The runtime scenarios whose `realizes:` name this page (rel-realizes)."""
-    return _link_groups([p.stem for p in sorted(load_type("runtime-scenario"), key=lambda q: q.id)
+    return _link_groups([p.stem for p in sorted(wiki.load_type("runtime-scenario"), key=lambda q: q.id)
                          if stem in links_of(p, "realizes")])
 
 
@@ -2757,37 +2496,37 @@ def build_trace(stem: str, folder: str) -> dict:
     keys = ("drivers", "realizes", "shaped_by", "used_by", "addressed_by", "realized_by", "replaced_by",
             "replaces", "applies_to", "governed_by", "hosts", "deployed_on", "takes_part_in")
     trace: dict = {k: [] for k in keys}
-    me = (next((p for p in load_folder(folder) if p.stem == stem), None)
-          if _is(folder, *ARCH_TYPES, "decision-record") else None)
-    if _is(folder, *_DRIVER_TYPES):
+    me = (next((p for p in wiki.load_folder(folder) if p.stem == stem), None)
+          if wiki._is(folder, *ARCH_TYPES, "decision-record") else None)
+    if wiki._is(folder, *_DRIVER_TYPES):
         trace["drivers"] = build_drivers(stem)
-    if _is(folder, "runtime-scenario") and me:
+    if wiki._is(folder, "runtime-scenario") and me:
         trace["realizes"] = _link_groups(links_of(me, "realizes"))
-    if me and not _is(folder, "decision-record"):
+    if me and not wiki._is(folder, "decision-record"):
         trace["shaped_by"] = _link_groups(links_of(me, "decisions"))
     if me:
         trace["replaced_by"] = _link_groups(links_of(me, "superseded-by"))
-        trace["replaces"] = _link_groups([p.stem for p in sorted(load_folder(folder), key=lambda q: q.id)
+        trace["replaces"] = _link_groups([p.stem for p in sorted(wiki.load_folder(folder), key=lambda q: q.id)
                                           if stem in links_of(p, "superseded-by")])
-    if _is(folder, "building-block"):
-        trace["used_by"] = _link_groups([p.stem for p in sorted(load_folder(folder), key=lambda q: q.id)
+    if wiki._is(folder, "building-block"):
+        trace["used_by"] = _link_groups([p.stem for p in sorted(wiki.load_folder(folder), key=lambda q: q.id)
                                          if stem in links_of(p, "uses")])
-        trace["deployed_on"] = _link_groups([p.stem for p in sorted(load_type("deployment-node"), key=lambda q: q.id)
+        trace["deployed_on"] = _link_groups([p.stem for p in sorted(wiki.load_type("deployment-node"), key=lambda q: q.id)
                                              if stem in links_of(p, "hosts")])
-    if _is(folder, "building-block", "deployment-node"):
-        trace["governed_by"] = _link_groups([p.stem for p in sorted(load_type("crosscutting-concept"), key=lambda q: q.id)
+    if wiki._is(folder, "building-block", "deployment-node"):
+        trace["governed_by"] = _link_groups([p.stem for p in sorted(wiki.load_type("crosscutting-concept"), key=lambda q: q.id)
                                              if stem in links_of(p, "applies-to")])
-    if _is(folder, "building-block", "deployment-node", "external-interface", "stakeholder"):
+    if wiki._is(folder, "building-block", "deployment-node", "external-interface", "stakeholder"):
         trace["takes_part_in"] = _link_groups(
-            [p.stem for p in sorted(load_type("runtime-scenario"), key=lambda q: q.id)
+            [p.stem for p in sorted(wiki.load_type("runtime-scenario"), key=lambda q: q.id)
              if stem in _struct_targets(p, "steps", ("from", "to"))])
-    if _is(folder, "crosscutting-concept") and me:
+    if wiki._is(folder, "crosscutting-concept") and me:
         trace["applies_to"] = _link_groups(links_of(me, "applies-to"))
-    if _is(folder, "deployment-node") and me:
+    if wiki._is(folder, "deployment-node") and me:
         trace["hosts"] = _link_groups(links_of(me, "hosts"))
-    if _is(folder, *_ADDRESSABLE):
+    if wiki._is(folder, *_ADDRESSABLE):
         trace["addressed_by"] = build_addressed_by(stem)
-    if _is(folder, *_REALIZABLE):
+    if wiki._is(folder, *_REALIZABLE):
         trace["realized_by"] = build_realized_by(stem)
     # the stories that realize a use case are its breakdown on the FR page
     # (DR-038); realized_by holds the runtime scenarios only
@@ -2818,21 +2557,21 @@ def _endpoint(raw: object, by_stem: dict) -> tuple[str | None, str]:
     p = by_stem.get(stem)
     if not p:
         return None, stem or "?"
-    if _is(p.folder, "stakeholder", "external-interface"):
+    if wiki._is(p.folder, "stakeholder", "external-interface"):
         return stem, _clean_label(p.title)
     return stem, f"{p.id} · {_clean_label(p.title)}"
 
 
-def _entries(p: Page, field: str) -> list:
+def _entries(p: wiki.Page, field: str) -> list:
     v = p.meta.get(field) or []
     return v if isinstance(v, list) else [v]
 
 
-def steps_of(p: Page) -> list[dict]:
+def steps_of(p: wiki.Page) -> list[dict]:
     """The scenario's steps in order, each with its 1-based position in
     `steps:`. Entries that are not mappings are not steps; runtime_hints
     names them."""
-    by_stem = {q.stem: q for q in load_all_pages()}
+    by_stem = {q.stem: q for q in wiki.load_all_pages()}
     out: list[dict] = []
     for n, e in enumerate(_entries(p, "steps"), 1):
         if not isinstance(e, dict):
@@ -2862,11 +2601,11 @@ def build_sequence_diagram(stem: str) -> str | None:
     """Mermaid sequenceDiagram of a runtime scenario: one participant per distinct
     end in order of first appearance (stakeholders as actors), one arrow per
     step, the step's note over the receiver. None without steps."""
-    p = next((q for q in load_type("runtime-scenario") if q.stem == stem), None)
+    p = next((q for q in wiki.load_type("runtime-scenario") if q.stem == stem), None)
     steps = steps_of(p) if p else []
     if not steps:
         return None
-    by_stem = {q.stem: q for q in load_all_pages()}
+    by_stem = {q.stem: q for q in wiki.load_all_pages()}
     # Ids are L1, L2, … per distinct end — an existing page by its stem, any
     # other end by its text — so no name can collide with a mermaid keyword
     # (`end`, `box`, `note` …) or sanitise onto another end's id.
@@ -2882,7 +2621,7 @@ def build_sequence_diagram(stem: str) -> str | None:
             if k in nid_of:
                 continue
             nid_of[k] = f"L{len(nid_of) + 1}"
-            kw = "actor" if sstem and _is(by_stem[sstem].folder, "stakeholder") else "participant"
+            kw = "actor" if sstem and wiki._is(by_stem[sstem].folder, "stakeholder") else "participant"
             order.append((nid_of[k], _seq_text(label), kw))
     lines = ["sequenceDiagram"] + [f"  {kw} {nid} as {label}" for nid, label, kw in order]
     for st in steps:
@@ -2908,10 +2647,10 @@ def runtime_hints(stem: str) -> list[str]:
     (rule-runtime-matches-uses): entries that are not steps, empty ends, ends
     that name no page, and steps between two blocks with no `uses:` edge
     between them or their ancestors. Advisory."""
-    p = next((q for q in load_type("runtime-scenario") if q.stem == stem), None)
+    p = next((q for q in wiki.load_type("runtime-scenario") if q.stem == stem), None)
     if not p:
         return []
-    blocks = {q.stem: q for q in load_type("building-block")}
+    blocks = {q.stem: q for q in wiki.load_type("building-block")}
     hints: list[str] = []
     for n, e in enumerate(_entries(p, "steps"), 1):
         if not isinstance(e, dict):
@@ -2962,11 +2701,11 @@ def build_deployment_diagram(root: str | None = None,
         tree = [me] if me else []
     if not tree:
         return None
-    nodes = {p.stem: p for p in load_type("deployment-node")}
-    blocks = {p.stem: p for p in load_type("building-block")}
-    eifs = {p.stem: p for p in load_type("external-interface")}
+    nodes = {p.stem: p for p in wiki.load_type("deployment-node")}
+    blocks = {p.stem: p for p in wiki.load_type("building-block")}
+    eifs = {p.stem: p for p in wiki.load_type("external-interface")}
     shown: set[str] = set()
-    marked: dict[str, tuple[str, Page]] = {}
+    marked: dict[str, tuple[str, wiki.Page]] = {}
     lines = ["flowchart TB"]
 
     def walk(ns: list[dict]):
@@ -3044,9 +2783,9 @@ def deployment_hints(stem: str | None = None) -> list[str]:
     """What the deployment diagrams leave out, for one node or all: `connects:`
     entries that are not mappings or name no page, `hosts:` entries that are
     not building blocks. Advisory."""
-    nodes = {p.stem: p for p in load_type("deployment-node")}
-    blocks = {p.stem for p in load_type("building-block")}
-    pages = {p.stem for p in load_all_pages()}
+    nodes = {p.stem: p for p in wiki.load_type("deployment-node")}
+    blocks = {p.stem for p in wiki.load_type("building-block")}
+    pages = {p.stem for p in wiki.load_all_pages()}
     hints: list[str] = []
     for s in sorted(nodes, key=lambda k: nodes[k].id) if stem is None else [stem]:
         p = nodes.get(s)
@@ -3077,7 +2816,7 @@ def trace_stems(trace: dict) -> set[str]:
 def building_blocks_view():
     """A2 Building Block View: the level tree and the level-1 white box."""
     block = catalog.SECTION_BY_SLUG.get("building-blocks") or abort(404)
-    pages = load_type("building-block")
+    pages = wiki.load_type("building-block")
     rows = [_arch_row(p) for p in sorted(pages, key=lambda q: q.id)]
     return render_template(
         "building_blocks.html", block=block, tree=build_bb_tree(), total=len(pages),
@@ -3092,7 +2831,7 @@ _CONCEPT_CATEGORIES = [
 ]
 
 
-def _arch_row(p: Page) -> dict:
+def _arch_row(p: wiki.Page) -> dict:
     return {"id": p.id, "title": p.title, "status": p.status, "state": page_state(p),
             "url": _page_url(p.folder, p.stem)}
 
@@ -3102,7 +2841,7 @@ def strategy_view():
     """A1 Solution Strategy: every strategy page, marked by state, with what it
     answers and the decisions it summarises."""
     block = catalog.SECTION_BY_SLUG.get("strategy") or abort(404)
-    pages = sorted(load_type("solution-strategy"), key=lambda q: q.id)
+    pages = sorted(wiki.load_type("solution-strategy"), key=lambda q: q.id)
     rows = []
     for p in pages:
         row = _arch_row(p)
@@ -3118,7 +2857,7 @@ def strategy_view():
 def concepts_view():
     """A5 Crosscutting Concepts: grouped by arc42 topic, with what each governs."""
     block = catalog.SECTION_BY_SLUG.get("concepts") or abort(404)
-    pages = sorted(load_type("crosscutting-concept"), key=lambda q: q.id)
+    pages = sorted(wiki.load_type("crosscutting-concept"), key=lambda q: q.id)
     known = dict(_CONCEPT_CATEGORIES)
     groups = []
     for key, label in _CONCEPT_CATEGORIES + [(None, "Uncategorised")]:
@@ -3148,7 +2887,7 @@ def concepts_view():
 def runtime_view():
     """A4 Runtime View: the scenarios and the requirements they realise."""
     block = catalog.SECTION_BY_SLUG.get("runtime") or abort(404)
-    pages = sorted(load_type("runtime-scenario"), key=lambda q: q.id)
+    pages = sorted(wiki.load_type("runtime-scenario"), key=lambda q: q.id)
     rows = []
     for p in pages:
         row = _arch_row(p)
@@ -3164,7 +2903,7 @@ def deployment_view():
     """A3 Deployment View: one projected diagram of everything relevant today —
     existing, planned and replaced — and the node levels."""
     block = catalog.SECTION_BY_SLUG.get("deployment") or abort(404)
-    pages = load_type("deployment-node")
+    pages = wiki.load_type("deployment-node")
     rows = []
     for p in sorted(pages, key=lambda q: q.id):
         row = _arch_row(p)
@@ -3200,7 +2939,7 @@ _LINE_MARK_RE = re.compile(r"^\s*(?:#{1,6}\s+|>\s*(?:\[![\w-]+\][-+]?\s*)?|[-*+]
 _EMPHASIS_RE = re.compile(r"\*\*|__|~~|`|(?<!\w)\*(?=\S)|(?<=\S)\*(?!\w)")
 
 
-def search_plain(page: Page, titles: dict[str, str]) -> str:
+def search_plain(page: wiki.Page, titles: dict[str, str]) -> str:
     """A page body as the reader sees it, for search: wikilinks become their
     label (or the target's title), markdown and HTML markup go, hard-wrapped
     prose is joined. One line per paragraph or list item, so the ranker can
@@ -3220,7 +2959,7 @@ def search_plain(page: Page, titles: dict[str, str]) -> str:
         return titles.get(base, target)
 
     body = _unwrap_prose(drop_follows(page.body))
-    body = WIKILINK_RE.sub(link_text, body)
+    body = wiki.WIKILINK_RE.sub(link_text, body)
     body = _MD_LINK_RE.sub(lambda m: m.group(1), body)
     body = _HTML_TAG_RE.sub(" ", body)
     lines = []
@@ -3236,7 +2975,7 @@ def search_plain(page: Page, titles: dict[str, str]) -> str:
     return "\n".join(lines)
 
 
-def _search_fields(page: Page) -> dict[str, list[str]]:
+def _search_fields(page: wiki.Page) -> dict[str, list[str]]:
     out: dict[str, list[str]] = {}
     for key in SEARCH_FIELDS:
         v = page.meta.get(key)
@@ -3247,7 +2986,7 @@ def _search_fields(page: Page) -> dict[str, list[str]]:
     return out
 
 
-def _search_links(pages: list[Page]) -> dict[str, set[str]]:
+def _search_links(pages: list[wiki.Page]) -> dict[str, set[str]]:
     """page id -> ids one link step away, in either direction (FR-008)."""
     idx = link_index()
     by_stem = {p.stem: p for p in pages}
@@ -3269,7 +3008,7 @@ def build_search_records() -> list[dict]:
     static/search-rank.js. Each record links to that unit's own detail page
     and carries the reader's text (`plain`), `aliases`, the searched `fields`
     (lower-cased) and the ids of its neighbours (`links`)."""
-    pages = load_all_pages()
+    pages = wiki.load_all_pages()
     titles = title_index()
     neighbours = _search_links(pages)
     records = []
@@ -3319,7 +3058,7 @@ def build_section_tile(section: dict) -> dict:
         base["maturity"] = maturity([])
         base["open_issues"] = 0
         return base
-    pages = [p for f in folders for p in load_folder(f)]
+    pages = [p for f in folders for p in wiki.load_folder(f)]
     flags = open_issue_counts()
     # union, not sum: an issue linking pages in two of this section's folders
     # must count once, not twice.
@@ -3342,7 +3081,7 @@ def build_section_tile(section: dict) -> dict:
     elif sid == "C3":
         # folders carries both (maturity and issue flags span the context page
         # too), but the headline number is what the unit says: interfaces.
-        t.update({"unit": "external interface", "count": len(load_type("external-interface"))})
+        t.update({"unit": "external interface", "count": len(wiki.load_type("external-interface"))})
     elif sid == "C4":
         t["unit"] = "persona"
     elif sid == "C5":
@@ -3363,14 +3102,14 @@ def build_area_tile(area: dict) -> dict:
     with its section tile's count (FR-018)."""
     sections = visible_sections(area["key"])
     folders = [f for s in sections for f in s["folders"]]
-    pages = [p for f in folders for p in load_folder(f)]
+    pages = [p for f in folders for p in wiki.load_folder(f)]
     flags = open_issue_counts()
     tiles = {s["id"]: build_section_tile(s) for s in sections if s["scope"] == "in"}
     return {
         "key": area["key"], "label": area["label"], "subtitle": area["subtitle"],
         "href": area["href"], "colors": area["colors"],
         "count": len(pages), "maturity": maturity(p.status for p in pages),
-        "open_issues": len(set().union(*(flags.get(f, set()) for f in folders if not _is(f, "issue")))),
+        "open_issues": len(set().union(*(flags.get(f, set()) for f in folders if not wiki._is(f, "issue")))),
         "sections": [{"id": s["id"], "title": s["title"], "href": s["href"], "scope": s["scope"],
                       **({"count": tiles[s["id"]]["count"], "unit": tiles[s["id"]]["unit"],
                           "unit_many": tiles[s["id"]]["unit_many"]} if s["id"] in tiles else {})}
@@ -3382,7 +3121,7 @@ def build_area_tile(area: dict) -> dict:
 def build_valley() -> dict:
     """What the agent did: the vault's state, what moved last, what is open.
     Sits between the two peaks on the home page (DR-033)."""
-    issues = load_type("issue")
+    issues = wiki.load_type("issue")
     open_issues = sorted((i for i in issues if is_open_issue(i.status)),
                          key=lambda i: ({"blocker": 0, "major": 1, "minor": 2}
                                         .get(str(i.meta.get("severity") or ""), 3), i.id))
@@ -3393,7 +3132,7 @@ def build_valley() -> dict:
                          "url": _page_url(i.folder, i.stem),
                          "severity": str(i.meta.get("severity") or "")} for i in open_issues[:5]],
         "open_total": len(open_issues),
-        "decision_count": len(load_type("decision-record")),
+        "decision_count": len(wiki.load_type("decision-record")),
     }
 
 
@@ -3418,7 +3157,7 @@ CLARIFY_ISSUE = "ISS-002-define-the-clarify-loop"
 def method_view():
     """The three loops, capture, inspect and clarify, by their principles
     (FR-011). Clarify links its issue while that issue is open."""
-    issue = next((p for p in load_type("issue")
+    issue = next((p for p in wiki.load_type("issue")
                   if p.stem == CLARIFY_ISSUE and is_open_issue(p.status)), None)
     clarify = ({"id": issue.id, "title": issue.title, "url": _page_url(issue.folder, issue.stem)}
                if issue else None)
@@ -3496,7 +3235,7 @@ def glossary_graph_view():
                            named_layers=named_layers, rest=rest, edge_filter=edge_filter)
 
 
-def _issue_owner(p: Page, titles: dict[str, str],
+def _issue_owner(p: wiki.Page, titles: dict[str, str],
                  links: dict[str, tuple[str, str]]) -> dict:
     """Who is expected to answer an issue (FR-028): `key` for the filter,
     `label` to show, `url` when it names a wiki page. An empty owner gives
@@ -3523,7 +3262,7 @@ def _issue_owner(p: Page, titles: dict[str, str],
 _ISSUE_STATUS_GROUPS = ("open", "closed")
 
 
-@_request_cached
+@wiki._request_cached
 def _issue_vocab() -> dict[str, list[str]]:
     """The values the metamodel allows for an issue's status and enum fields,
     read once per request."""
@@ -3531,7 +3270,7 @@ def _issue_vocab() -> dict[str, list[str]]:
             **{f: metamodel.field_values("issue", f) for f in ("severity", "kind", "category")}}
 
 
-def issue_fields(p: Page, titles: dict[str, str], links: dict[str, tuple[str, str]]) -> dict:
+def issue_fields(p: wiki.Page, titles: dict[str, str], links: dict[str, tuple[str, str]]) -> dict:
     """An issue's own fields as the list and its page show them (FR-025 to
     FR-028). A value outside the metamodel's list comes back empty."""
     vocab = _issue_vocab()
@@ -3548,13 +3287,13 @@ def issue_fields(p: Page, titles: dict[str, str], links: dict[str, tuple[str, st
 _SEVERITY_RANK = {"blocker": 0, "major": 1, "minor": 2}
 
 
-@_request_cached
+@wiki._request_cached
 def _issue_backlinks() -> dict[str, list[dict]]:
     """page stem -> the issues that link to it, by frontmatter or body
     wikilink (FR-027). A mere mention without a link does not count."""
     titles, links = title_index(), link_index()
     out: dict[str, list[dict]] = {}
-    for iss in load_type("issue"):
+    for iss in wiki.load_type("issue"):
         f = issue_fields(iss, titles, links)
         item = {"id": iss.id, "title": iss.title, "status": f["status"], "severity": f["severity"],
                 "is_open": f["is_open"], "url": _page_url(iss.folder, iss.stem)}
@@ -3576,7 +3315,7 @@ def issues_view():
     section and owner (FR-025). Filters combine and live in the address, so a
     copied link shows the same issues. Unknown values are ignored."""
     titles, links = title_index(), link_index()
-    pages = sorted(load_type("issue"), key=lambda x: x.id)
+    pages = sorted(wiki.load_type("issue"), key=lambda x: x.id)
     lifecycle_values = metamodel.lifecycle("issue")
     categories = metamodel.field_values("issue", "category")
     severities = metamodel.field_values("issue", "severity")
@@ -3645,8 +3384,8 @@ def issues_view():
 def stakeholders_view():
     titles = title_index()
     links = link_index()       # snapshot wikilinks become real hyperlinks
-    by_stem = {q.stem: q for q in load_all_pages()}   # resolve related domain terms
-    pages = sorted(load_type("stakeholder"), key=lambda x: x.id)
+    by_stem = {q.stem: q for q in wiki.load_all_pages()}   # resolve related domain terms
+    pages = sorted(wiki.load_type("stakeholder"), key=lambda x: x.id)
     _REL_MAX = 6               # cap chips per row; rest is one click away on the detail page
     rows = []
     for p in pages:
@@ -3655,7 +3394,7 @@ def stakeholders_view():
         rel = []
         for s in sorted(linked_stems(p)):
             q = by_stem.get(s)
-            if q and _is(q.folder, "domain-term"):
+            if q and wiki._is(q.folder, "domain-term"):
                 rel.append({"id": q.id, "label": q.title, "type": "DT",
                             "url": f"/page/{q.folder}/{s}"})
         rel.sort(key=lambda r: r["id"])
@@ -3692,8 +3431,8 @@ def _is_wiki_folder(folder: str) -> bool:
     symlinks resolved, stays inside it."""
     if not folder or folder.startswith(".") or "/" in folder or "\\" in folder:
         return False
-    d = WIKI_DIR / folder
-    return d.is_dir() and _resolves_inside(WIKI_DIR, d)
+    d = wiki.WIKI_DIR / folder
+    return d.is_dir() and wiki._resolves_inside(wiki.WIKI_DIR, d)
 
 
 @app.route("/page/<folder>/<stem>")
@@ -3704,7 +3443,7 @@ def page_detail(folder, stem):
     # FRs have their own rich page (full text + hierarchy breakdown) under the
     # functional-requirements/ path; send any /page link there so the whole
     # hierarchy stays on one route.
-    if _is(folder, "functional-requirement"):
+    if wiki._is(folder, "functional-requirement"):
         return redirect(f"/functional-requirements/{stem}", code=302)
 
     # `folder` must name one of the wiki's own content folders: the route
@@ -3713,8 +3452,8 @@ def page_detail(folder, stem):
     # `dashboard.sh local`, /repo under Docker).
     if not _is_wiki_folder(folder):
         abort(404)
-    path = WIKI_DIR / folder / f"{stem}.md"
-    page = _parse(path, folder) if path.is_file() else None
+    path = wiki.WIKI_DIR / folder / f"{stem}.md"
+    page = wiki._parse(path, folder) if path.is_file() else None
     if not page:
         abort(404)
     kind = catalog.label(folder)
@@ -3723,16 +3462,16 @@ def page_detail(folder, stem):
     body_html = render_markdown(body, titles)
     # context pages carry the system-context diagram, projected live (DR-013)
     diagram_links: list[dict] = []
-    context_diagram = build_context_diagram(links=diagram_links) if _is(folder, "context") else None
-    context_flows = build_context_flows() if _is(folder, "context") else None
+    context_diagram = build_context_diagram(links=diagram_links) if wiki._is(folder, "context") else None
+    context_flows = build_context_flows() if wiki._is(folder, "context") else None
     # domain terms carry a focused ego-graph snippet above the definition (DR-023)
-    ego_graph = build_glossary_ego_graph(stem) if _is(folder, "domain-term") else None
+    ego_graph = build_glossary_ego_graph(stem) if wiki._is(folder, "domain-term") else None
     trace = build_trace(stem, folder)
-    whitebox = build_whitebox(stem) if _is(folder, "building-block") else None
-    sequence = build_sequence_diagram(stem) if _is(folder, "runtime-scenario") else None
-    hints = (runtime_hints(stem) if _is(folder, "runtime-scenario")
-             else deployment_hints(stem) if _is(folder, "deployment-node") else [])
-    deployment = build_deployment_diagram(stem, diagram_links) if _is(folder, "deployment-node") else None
+    whitebox = build_whitebox(stem) if wiki._is(folder, "building-block") else None
+    sequence = build_sequence_diagram(stem) if wiki._is(folder, "runtime-scenario") else None
+    hints = (runtime_hints(stem) if wiki._is(folder, "runtime-scenario")
+             else deployment_hints(stem) if wiki._is(folder, "deployment-node") else [])
+    deployment = build_deployment_diagram(stem, diagram_links) if wiki._is(folder, "deployment-node") else None
     ego_layers = None
     if ego_graph:
         c = ego_graph["layer_counts"]
@@ -3748,15 +3487,15 @@ def page_detail(folder, stem):
         context_diagram=context_diagram, context_flows=context_flows,
         relations=build_relations_panel(stem, exclude=trace_stems(trace)),
         trace=trace, whitebox=whitebox,
-        state=page_state(page) if _is(folder, *ARCH_TYPES) else None,
+        state=page_state(page) if wiki._is(folder, *ARCH_TYPES) else None,
         sequence=sequence, hints=hints, deployment=deployment, diagram_links=diagram_links,
         ego_graph=ego_graph, ego_layers=ego_layers,
         needs_mermaid=bool(context_diagram or whitebox or sequence or deployment) or "language-mermaid" in body_html,
         sources=provenance(page),
-        issue=issue_fields(page, titles, link_index()) if _is(folder, "issue") else None,
+        issue=issue_fields(page, titles, link_index()) if wiki._is(folder, "issue") else None,
         page_issues=open_issues_for(stem),
         formats=format_labels(page.body),
-        term=term_fields(page) if _is(folder, "domain-term") else None,
+        term=term_fields(page) if wiki._is(folder, "domain-term") else None,
     )
 
 
@@ -3842,7 +3581,7 @@ def _search_filters() -> dict[str, list[dict]]:
     lower-case, as the ranker compares it; the label is how the wiki writes
     it (the first spelling found)."""
     labels: dict[str, dict[str, str]] = {"status": {}, "priority": {}, "tags": {}}
-    for p in load_all_pages():
+    for p in wiki.load_all_pages():
         for key, seen in labels.items():
             raw = p.meta.get(key)
             for x in raw if isinstance(raw, list) else [raw]:
@@ -3857,14 +3596,14 @@ def _search_filters() -> dict[str, list[dict]]:
     return {"status": opts("status"), "priority": opts("priority", _PRIORITY_ORDER), "tag": opts("tags")}
 
 
-def _short_title(p: Page) -> str:
+def _short_title(p: wiki.Page) -> str:
     """Concise label for diagram nodes / tile rows. `short_title:` frontmatter
     field wins; falls back to the full title. Defined per goal so the same label
     is used everywhere a compact form is needed."""
     return str(p.meta.get("short_title") or p.title).strip()
 
 
-def _mermaid_goal_tree(vision: Page, objectives: list[Page]) -> str | None:
+def _mermaid_goal_tree(vision: wiki.Page, objectives: list[wiki.Page]) -> str | None:
     """Project the Vision→Objectives tree from `parent:` edges (DR-018 style).
     Top-down, short-name nodes; clicking a goal jumps to its anchor below.
     Default `useMaxWidth: true` so the SVG fits the container at typical
@@ -3899,9 +3638,9 @@ def _mermaid_goal_tree(vision: Page, objectives: list[Page]) -> str | None:
 DOMAIN_MODEL_STEREOTYPES = ("entity", "value-object", "sum-type")
 
 
-def data_model_pages() -> list[Page]:
+def data_model_pages() -> list[wiki.Page]:
     """The structured domain terms, by id."""
-    return sorted((page for page in load_type("domain-term")
+    return sorted((page for page in wiki.load_type("domain-term")
                    if str(page.meta.get("stereotype") or "").strip().lower() in DOMAIN_MODEL_STEREOTYPES),
                   key=lambda page: page.id)
 
@@ -3951,7 +3690,7 @@ def _dm_class_name(label: str, taken: set) -> str:
     return name
 
 
-@_request_cached
+@wiki._request_cached
 def data_model_nodes() -> list[dict]:
     """Every class in the model: one per structured domain term."""
     return [{
@@ -3966,7 +3705,7 @@ def data_model_nodes() -> list[dict]:
     } for p in data_model_pages()]
 
 
-@_request_cached
+@wiki._request_cached
 def data_model_edges() -> list[dict]:
     """Relationships, read from `relationships:` frontmatter on structured terms. An
     entry pointing at a page that does not exist is dropped, not drawn as a
@@ -3986,7 +3725,7 @@ def data_model_edges() -> list[dict]:
     return out
 
 
-def _dm_relationships(page: Page) -> list[dict]:
+def _dm_relationships(page: wiki.Page) -> list[dict]:
     """The entries of a term's `relationships:` that name a target, as edges.
     The target may be a stem no structured term has: the entity diagram drops
     those, the term page lists them (FR-039)."""
@@ -4013,7 +3752,7 @@ def _dm_relationships(page: Page) -> list[dict]:
     return out
 
 
-@_request_cached
+@wiki._request_cached
 def data_model_contexts() -> list[str]:
     """The bounded contexts present in the model, for the filter control."""
     return sorted({n["context"] for n in data_model_nodes() if n["context"]})
@@ -4118,7 +3857,7 @@ _DM_NOTE_RE = re.compile(
     re.MULTILINE,
 )
 
-def _extract_dm_attribute_names(page: Page) -> list[str]:
+def _extract_dm_attribute_names(page: wiki.Page) -> list[str]:
     """Just the attribute *names* from frontmatter `attributes:` — used for the
     compact summary table at the top of /entity-diagram and the class boxes."""
     return [a["name"] for a in _dm_attributes(page)]
@@ -4131,7 +3870,7 @@ def _dm_scalar(value: object) -> str:
     return ""
 
 
-def _dm_attributes(page: Page) -> list[dict]:
+def _dm_attributes(page: wiki.Page) -> list[dict]:
     """The entries of frontmatter `attributes:` that carry a name, as
     `{name, type, multiplicity, identifier}`."""
     attributes = page.meta.get("attributes")
@@ -4144,18 +3883,18 @@ def _dm_attributes(page: Page) -> list[dict]:
             and isinstance(name := entry.get("name"), str) and name.strip()]
 
 
-def term_kind(page: Page) -> str:
+def term_kind(page: wiki.Page) -> str:
     """A domain term's kind: its stereotype, or "" for a plain term (FR-038)."""
     stereotype = str(page.meta.get("stereotype") or "").strip().lower()
     return stereotype if stereotype in DOMAIN_MODEL_STEREOTYPES else ""
 
 
-def term_fields(page: Page) -> dict:
+def term_fields(page: wiki.Page) -> dict:
     """What the term page shows beside its text (FR-039): kind, aliases,
     attributes and relationships. A relationship whose target is a page
     names it by id and title and links it. Any other target stays as written."""
     links = link_index()
-    by_stem = {p.stem: p for p in load_all_pages()}
+    by_stem = {p.stem: p for p in wiki.load_all_pages()}
     relationships = []
     for r in _dm_relationships(page):
         target = by_stem.get(links.get(r["target"], ("", ""))[1])
@@ -4172,7 +3911,7 @@ def term_fields(page: Page) -> dict:
             "attributes": _dm_attributes(page), "relationships": relationships}
 
 
-def _extract_dm_sections(page: Page, titles: dict[str, str]) -> list[tuple[str, str]]:
+def _extract_dm_sections(page: wiki.Page, titles: dict[str, str]) -> list[tuple[str, str]]:
     """`(label, rendered-html)` pairs for every `**Label.**` section in a term's body,
     in source order. Bullets / inline code are preserved by routing the section
     body back through `render_markdown`."""
@@ -4184,7 +3923,7 @@ def _extract_dm_sections(page: Page, titles: dict[str, str]) -> list[tuple[str, 
     return out
 
 
-def _extract_dm_notes(page: Page, titles: dict[str, str]) -> list[dict]:
+def _extract_dm_notes(page: wiki.Page, titles: dict[str, str]) -> list[dict]:
     """`> [!note] Title` callouts as `{title, html}` records. Quote markers
     (`> `) are stripped before the body is re-rendered as markdown."""
     out = []
@@ -4220,7 +3959,7 @@ def data_model_entities() -> list[dict]:
 
 def supporting_model_count() -> int:
     """R4's headline: the structured domain terms plus the activity models."""
-    return len(data_model_pages()) + len(load_type("activity-model"))
+    return len(data_model_pages()) + len(wiki.load_type("activity-model"))
 
 
 def _goal_matrix(data: dict) -> tuple[list[dict], list[dict]]:
@@ -4237,7 +3976,7 @@ def _goal_matrix(data: dict) -> tuple[list[dict], list[dict]]:
     epics = [fr for fr in data["frs"]
              if _fr_notation(fr) == "agile" and _fr_level(fr) == "epic"]
 
-    def col(p: Page) -> dict:
+    def col(p: wiki.Page) -> dict:
         return {"id": p.id, "title": p.title, "url": _page_url(p.folder, p.stem),
                 "status": p.status, "enabler": p.id in enabler_ids,
                 "nogoal": p.id in untraced_ids}
@@ -4247,7 +3986,7 @@ def _goal_matrix(data: dict) -> tuple[list[dict], list[dict]]:
             + [col(e) for e in epics if e.id in enabler_ids])
     col_ids = {c["id"] for c in cols}
 
-    def view(serving: list[Page]) -> dict:
+    def view(serving: list[wiki.Page]) -> dict:
         # gap: nothing serves the goal. served: a row without a mark names the
         # features and stories that serve it, grouped by kind
         groups = []
@@ -4401,7 +4140,7 @@ def area_view(area_key):
     # section hidden on its own is dropped.
     tiles = [build_section_tile(s) for s in catalog.sections_of(area_key)
              if s["id"] not in dashboard_config()["hidden"]]
-    pages = [p for t in tiles for f in t["folders"] for p in load_folder(f)]
+    pages = [p for t in tiles for f in t["folders"] for p in wiki.load_folder(f)]
     return render_template("area.html", area=area, tiles=tiles, count=len(pages),
                            maturity=maturity(p.status for p in pages), needs_mermaid=False)
 
@@ -4422,7 +4161,7 @@ def functional_requirements_view():
     # the flat list under the hierarchy (FR-021): every requirement of every
     # notation once, sortable by priority, release and order
     rows = []
-    for p in sorted(load_type("functional-requirement"), key=lambda q: q.id):
+    for p in sorted(wiki.load_type("functional-requirement"), key=lambda q: q.id):
         rows.append({"id": p.id, "title": p.title,
                      "url": f"/functional-requirements/{p.stem}",
                      "notation": _fr_notation(p), "level": _fr_level(p),
@@ -4447,8 +4186,8 @@ def fr_view(stem):
     'Functional Requirements' breadcrumb (instead of the generic /page 'Search' crumb).
     404 if `stem` is not an FR page."""
     fr_folder = catalog.folder("functional-requirement")
-    path = WIKI_DIR / fr_folder / f"{stem}.md"
-    page = _parse(path, fr_folder) if fr_folder and path.is_file() else None
+    path = wiki.WIKI_DIR / fr_folder / f"{stem}.md"
+    page = wiki._parse(path, fr_folder) if fr_folder and path.is_file() else None
     if not page:
         abort(404)
     titles = title_index()
@@ -4503,7 +4242,7 @@ def _emphasis(html: str) -> str:
                    for part in re.split(r"(<[^>]*>)", html))
 
 
-def _qr_details(page: Page, titles: dict[str, str],
+def _qr_details(page: wiki.Page, titles: dict[str, str],
                 links: dict[str, tuple[str, str]]) -> dict:
     """What a quality requirement needs on the block list besides its title:
     its Q42 dimensions (DR-003), the priority and its Q42 quality scenario, so
@@ -4546,7 +4285,7 @@ def _block_list(block: dict, slug: str | None):
         {"id": p.id, "type": catalog.label(p.folder),
          "title": p.title, "url": _page_url(p.folder, p.stem),
          "status": p.status, "relations": len(linked_stems(p)),
-         **(_qr_details(p, titles, links) if _is(p.folder, "quality-requirement") else {})}
+         **(_qr_details(p, titles, links) if wiki._is(p.folder, "quality-requirement") else {})}
         for p in _block_pages(block)
     ]
     # the Scope block (03) shows the same live-projected system-context diagram
@@ -5032,8 +4771,8 @@ def reload_caches():
 def _clear_caches() -> None:
     """Drop the parsed wiki pages, the parsed metamodel and anchor pages, and
     Jinja's compiled templates. Used by /reload and by saving the view."""
-    with _PARSE_LOCK:
-        _PARSE_CACHE.clear()
+    with wiki._PARSE_LOCK:
+        wiki._PARSE_CACHE.clear()
     metamodel.clear_caches()
     if app.jinja_env.cache is not None:
         app.jinja_env.cache.clear()
@@ -5142,7 +4881,7 @@ def _mm_dr_link(ref: str, label: str = "") -> str:
     bare ID is never linked, and a full stem ('DR-013-data-flows-as-…') the
     vault lacks stays plain text instead of a link that 404s."""
     text = escape(label or ref)
-    if ref in {p.stem for p in load_type("decision-record")}:
+    if ref in {p.stem for p in wiki.load_type("decision-record")}:
         return f'<a class="wl" href="{escape(_page_url(catalog.folder("decision-record"), ref))}">{text}</a>'
     return str(text)
 
@@ -5166,7 +4905,7 @@ def _mm_wikilinks(text: str, anchors: dict[str, str]) -> str:
         if _MM_DR_RE.match(base):
             return _mm_dr_link(base, alias)
         return f'<span class="mm-anchor">{escape(alias or base)}</span>'
-    return outside_code(text, lambda t: WIKILINK_RE.sub(repl, t))
+    return outside_code(text, lambda t: wiki.WIKILINK_RE.sub(repl, t))
 
 
 def _mm_html(text: str, anchors: dict[str, str]) -> str:
@@ -5195,11 +4934,11 @@ def _mm_example(t: dict) -> dict:
     pages, the id / title / url / status of the one that represents it best."""
     folder = str(t.get("folder") or "")
     if folder.startswith("raw/"):
-        pages = load_sources()
+        pages = wiki.load_sources()
         url = lambda p: f"/source/{p.stem}"             # noqa: E731
     else:
         name = Path(folder).name
-        pages = load_folder(name)
+        pages = wiki.load_folder(name)
         url = lambda p: _page_url(name, p.stem)         # noqa: E731
     if not pages:
         return {"count": 0}
@@ -5423,7 +5162,7 @@ def metamodel_view():
 
 
 def _about_path() -> Path | None:
-    return about_doc(_config_data().get("about"))
+    return about_doc(wiki._config_data().get("about"))
 
 
 # Relative src/href in the rendered page → /about/files/<path under docs/>, so

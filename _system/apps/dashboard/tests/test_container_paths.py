@@ -40,8 +40,8 @@ def test_every_folder_is_found_below_the_repository():
            if k not in ("WIKI_DIR", "RAW_SOURCES_DIR", "DOCS_DIR", "METAMODEL_DIR", "ANCHORS_DIR",
                         "WIKI_CONFIG")}
     env["REPO_DIR"] = str(tmp)
-    code = ("import app, metamodel\n"
-            "for p in (app.WIKI_DIR, app.SOURCES_DIR, app.DOCS_DIR, app.CONFIG_PATH,"
+    code = ("import app, metamodel, wiki\n"
+            "for p in (wiki.WIKI_DIR, wiki.SOURCES_DIR, app.DOCS_DIR, wiki.CONFIG_PATH,"
             " metamodel.METAMODEL_DIR, metamodel.ANCHORS_DIR): print(p)")
     out = subprocess.run([sys.executable, "-c", code], cwd=HERE, env=env, capture_output=True, text=True)
     assert out.returncode == 0, out.stderr
@@ -52,7 +52,7 @@ def test_every_folder_is_found_below_the_repository():
 
 def test_the_image_holds_every_module_the_app_imports():
     """A module next to app.py that the Dockerfile does not copy stops the container at import."""
-    for mod in ("app.py", "catalog.py", "inputs.py", "metamodel.py", "preflight.py", "gunicorn.conf.py"):
+    for mod in ("app.py", "catalog.py", "inputs.py", "metamodel.py", "wiki.py", "preflight.py", "gunicorn.conf.py"):
         assert re.search(r"^COPY " + re.escape(mod) + r" \.$", DOCKERFILE, re.M), mod
 
 

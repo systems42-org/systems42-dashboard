@@ -33,6 +33,7 @@ _DASH = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_DASH))
 
 import app  # noqa: E402
+import wiki  # noqa: E402
 
 PAGE = """---
 id: {id}
@@ -54,7 +55,7 @@ def _write(folder, stem, **kw):
 def test_index_endpoint():
     _write("domain-terms", "DT-001-training", id="DT-001", type="domain-term",
            title="Training", body="Ein Training führt zur Prüfung.")
-    app._PARSE_CACHE.clear()
+    wiki._PARSE_CACHE.clear()
     r = app.app.test_client().get("/search.json")
     assert r.status_code == 200 and r.is_json
     data = r.get_json()

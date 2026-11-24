@@ -61,6 +61,7 @@ _g = _wiki / "goals" / "GOAL-001-page-1.md"
 _g.write_text(_g.read_text(encoding="utf-8").replace("stereotype: objective", "stereotype: vision"), encoding="utf-8")
 
 import app  # noqa: E402
+import wiki  # noqa: E402
 
 client = app.app.test_client()
 
@@ -155,14 +156,14 @@ def test_goal_list_without_a_vision():
     # no vision yet: the page shows its empty state, and still lists the goals
     _g.write_text(_g.read_text(encoding="utf-8").replace("stereotype: vision", "stereotype: objective"),
                   encoding="utf-8")
-    app._PARSE_CACHE.clear()
+    wiki._PARSE_CACHE.clear()
     try:
         _, table = _list_table(_get("/goals"), "/goals")
         assert "GOAL-001" in table and "GOAL-002" in table
     finally:
         _g.write_text(_g.read_text(encoding="utf-8").replace("stereotype: objective", "stereotype: vision"),
                       encoding="utf-8")
-        app._PARSE_CACHE.clear()
+        wiki._PARSE_CACHE.clear()
 
 
 def test_bad_query_strings_show_the_list():
