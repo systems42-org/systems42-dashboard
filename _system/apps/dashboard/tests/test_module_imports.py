@@ -47,6 +47,7 @@ _BELOW_WEB = {"inputs", "metamodel", "catalog", "wiki", "links", "render", "sear
 WEB = {
     "web.common": _BELOW_WEB | {"flask", "segno"},
     "web.pages": _BELOW_WEB | {"flask", "web.common"},
+    "web.projections": _BELOW_WEB | {"flask", "web.common"},
 }
 # These sit above the modules: the app itself and what starts it.
 ABOVE = {"app", "cli", "gunicorn.conf"}

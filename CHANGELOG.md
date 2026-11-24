@@ -110,6 +110,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - Dashboard release 0.14.5 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.4 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.3 (`_system/apps/dashboard/VERSION`).
+- Dashboard: the goals, the functional requirements, the term list, the term network, the entity diagram, the arc42 views, the decisions, the stakeholders and the issue list move from `app.py` into the Flask blueprint `web/projections.py`. No URL changes. No behaviour change (#185).
 - Dashboard: the home page, the area pages, the section lists, the page and source detail and the changes move from `app.py` into the new package `web/` as the Flask blueprint `web/pages.py`. What several route groups share moves into `web/common.py`. No URL changes. No behaviour change (#185).
 - Dashboard: `wiki_config()`, the config warning, the about page lookup, the brand folders and what the view hides moved from `app.py` into `settings.py`. The config warning is logged on `systems42.settings`. No behaviour change (#185).
 - Dashboard: the context diagram moves from `app.py` into `project/context.py` and the goal tree into `project/goals.py`. Both take the system's name as an argument. The watchdog, the shutdown and their flags move into `session.py`, which logs the shutdown through its own logger `systems42.session`. No behaviour change (#185).

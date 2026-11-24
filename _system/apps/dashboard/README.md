@@ -372,6 +372,9 @@ _system/apps/dashboard/
                      that link to a page, the address and QR code for joining
     pages.py         home with its tiles and the state of the vault, the area pages, the
                      generic section list, the page and source detail, the changes
+    projections.py   the goals, the functional requirements and the page of one requirement,
+                     the term list, the term network and the entity diagram, the arc42 views,
+                     the decisions, the stakeholders and the issue list
   catalog.py         the three areas, and the sections from the metamodel with routes and colours
   metamodel.py       reader for _system/metamodel/ (the /metamodel page, ADR-0008)
   inputs.py          reads text and YAML from wiki, wiki.yaml and metamodel, and logs what is invalid
