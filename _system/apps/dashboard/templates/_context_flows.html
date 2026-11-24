@@ -21,7 +21,7 @@
       <tr>
         {% if loop.first %}
         <th class="ctx-neighbour" scope="rowgroup" rowspan="{{ g.rows|length }}">
-          <a href="/page/external-interfaces/{{ g.stem }}">{{ g.name }}</a>
+          <a href="{{ g.url }}">{{ g.name }}</a>
           <span class="ctx-eid">{{ g.id }}</span>
         </th>
         <td class="ctx-tier" rowspan="{{ g.rows|length }}">{{ g.tier or '—' }}</td>

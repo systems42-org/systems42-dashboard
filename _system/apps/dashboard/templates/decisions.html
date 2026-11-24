@@ -9,7 +9,7 @@
 {% block content %}
 <h1 class="page-h1">Decisions <span class="count-pill">{{ total }}</span></h1>
 {{ maturity_bar(maturity) }}
-<p class="lead">Decision records of kind architecture, business or undefined (<code>wiki/decisions/</code>, MADR).</p>
+<p class="lead">Decision records of kind architecture, business or undefined (<code>wiki/{{ type_folder('decision-record') }}/</code>, MADR).</p>
 
 {% if items %}
 {{ list_controls(spec) }}

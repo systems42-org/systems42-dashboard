@@ -586,6 +586,8 @@ def list_spec(type_name: str) -> dict:
 
 
 app.jinja_env.globals["list_spec"] = list_spec
+# the folder a type's pages live in, for the hints that name it (CON-006)
+app.jinja_env.globals["type_folder"] = catalog.folder
 
 
 # [[target]] | [[target|alias]] | [[target#heading]] | [[path/target|alias]]
@@ -768,6 +770,18 @@ def load_folder(folder: str) -> list[Page]:
     return [p for p in pages if p is not None]
 
 
+def load_type(type_name: str) -> list[Page]:
+    """The pages of one type, from the folder the repository's metamodel
+    declares for it (CON-006)."""
+    folder = catalog.folder(type_name)
+    return load_folder(folder) if folder else []
+
+
+def _is(folder: str, *type_names: str) -> bool:
+    """Whether `wiki/<folder>` holds the pages of one of the named types."""
+    return catalog.type_of(folder) in type_names
+
+
 @_request_cached
 def load_sources() -> list[Page]:
     """Provenance records from raw/sources/ — counted on the home page's status
@@ -808,7 +822,7 @@ def recent_changes(n: int | None = 5) -> list[dict]:
     'what changed' there is; the vault is regenerated a few times per
     workshop, nobody watches it live)."""
     pages = sorted(load_all_pages(), key=lambda p: -p.mtime)[:n]
-    return [{"id": p.id, "title": p.title, "kind": FOLDER_LABELS.get(p.folder, p.folder),
+    return [{"id": p.id, "title": p.title, "kind": catalog.label(p.folder),
              "url": _page_url(p.folder, p.stem), "when": _relative_when(p.mtime)} for p in pages]
 
 
@@ -817,7 +831,7 @@ def vault_status() -> dict:
     what is still open, how much source material it rests on, and how fresh
     the whole thing is."""
     pages = load_all_pages()
-    issues = load_folder("issues")
+    issues = load_type("issue")
     last = max((p.mtime for p in pages), default=0.0)
     return {"pages": len(pages),
             "open_issues": sum(1 for i in issues if is_open_issue(i.status)),
@@ -836,7 +850,7 @@ def title_index() -> dict[str, str]:
 def _page_url(folder: str, stem: str) -> str:
     """Canonical dashboard URL for a wiki page. FRs have their own rich route;
     everything else uses the generic /page view."""
-    if folder == "functional-requirements":
+    if _is(folder, "functional-requirement"):
         return f"/functional-requirements/{stem}"
     return f"/page/{folder}/{stem}"
 
@@ -948,7 +962,7 @@ def open_issue_counts() -> dict[str, set[str]]:
     even if it links pages in more than one of those folders."""
     links = link_index()
     out: dict[str, set[str]] = {}
-    for iss in load_folder("issues"):
+    for iss in load_type("issue"):
         if not is_open_issue(iss.status):
             continue
         for folder in {links[t][0] for t in iss.link_targets() if t in links}:
@@ -1435,7 +1449,7 @@ def load_decisions() -> list[dict]:
     ID order. `kind` outside architecture|business falls back to undefined."""
     titles = title_index()
     out = []
-    for p in sorted(load_folder("decisions"), key=lambda p: p.id):
+    for p in sorted(load_type("decision-record"), key=lambda p: p.id):
         kind = str(p.meta.get("kind") or "").strip().lower()
         decided = p.meta.get("decided") or p.meta.get("created") or ""
         out.append({
@@ -1446,7 +1460,7 @@ def load_decisions() -> list[dict]:
             "kind": kind if kind in DECISION_KINDS else "undefined",
             "decided": str(decided) or "—",
             "aliases": p.aliases,
-            "url": _page_url("decisions", p.stem),
+            "url": _page_url(p.folder, p.stem),
             "drivers": [l for g in build_drivers(p.stem) for l in g["links"]],
             "html": render_markdown(p.body, titles),
         })
@@ -1462,26 +1476,6 @@ def load_decisions() -> list[dict]:
 # an existing rich view where one exists (domain terms/stakeholders/issues), a
 # /req42/<slug> list for the other known sections, and /section/<id> for a
 # section the dashboard has no view for.
-
-# Human-readable type label per wiki folder, for the "Type" column.
-FOLDER_LABELS = {
-    "goals": "Goal",
-    "context": "Context",
-    "external-interfaces": "External interface",
-    "functional-requirements": "Functional requirement",
-    "activity-models": "Activity model",
-    "quality-requirements": "Quality requirement",
-    "constraints": "Constraint",
-    "domain-terms": "Domain term",
-    "stakeholders": "Stakeholder",
-    "issues": "Issue",
-    "decisions": "Decision record",
-    "solution-strategy": "Solution strategy",
-    "building-blocks": "Building block",
-    "crosscutting-concepts": "Crosscutting concept",
-    "runtime-scenarios": "Runtime scenario",
-    "deployment-nodes": "Deployment node",
-}
 
 def _block_pages(block: dict) -> list[Page]:
     """All wiki pages feeding one req42 block, sorted by id."""
@@ -1615,7 +1609,7 @@ def build_context_diagram(center: str | None = None,
     # real external systems — one node each (DR-013), one line each (DR-026).
     # A deprecated interface is one the boundary decision moved *inside* the
     # system (ISS-010), so it is no longer a neighbour and must not be drawn.
-    for p in load_folder("external-interfaces"):
+    for p in load_type("external-interface"):
         if p.status == "deprecated":
             continue
         ins, outs, ordered = _eif_flows(p)
@@ -1639,7 +1633,7 @@ def build_context_diagram(center: str | None = None,
                 dst.append(x)
 
     groups: dict[str, dict] = {}   # label -> {prov, recv, cls, order}
-    for p in load_folder("stakeholders"):
+    for p in load_type("stakeholder"):
         prov, recv = p.as_list("provides"), p.as_list("receives")
         if not (prov or recv):
             continue
@@ -1703,7 +1697,7 @@ def build_context_flows() -> list[dict]:
         return None if not s or s.lower() in ("unknown", "n/a", "none") else s
 
     groups: list[dict] = []
-    for p in load_folder("external-interfaces"):
+    for p in load_type("external-interface"):
         if p.status == "deprecated":
             continue
         ins, outs, ordered = _eif_flows(p)
@@ -1714,7 +1708,7 @@ def build_context_flows() -> list[dict]:
             rows.append({"direction": direction, "data": cell(f.get("data")) or "—",
                          "format": cell(f.get("format")), "trigger": cell(f.get("trigger"))})
         groups.append({
-            "id": p.id, "stem": p.stem, "name": _eif_node_label(p),
+            "id": p.id, "stem": p.stem, "url": _page_url(p.folder, p.stem), "name": _eif_node_label(p),
             "partner": _clean_label(p.meta.get("partner") or ""),
             "tier": _TIER_LABEL.get(str(p.meta.get("tier") or "").strip().lower(), ""),
             "label": _flow_edge_label(ordered), "rows": rows,
@@ -1732,18 +1726,6 @@ def build_context_flows() -> list[dict]:
 # ONLY from `related:` frontmatter (body wikilinks would add uncurated noise, so
 # link_targets() is deliberately NOT used here).
 
-# Stem prefix -> wiki folder, for click-through URLs (/page/<folder>/<stem>).
-# UC: a migrated use case keeps its ID as a functional requirement (DR-038).
-_TYPE_FOLDER = {
-    "DT": "domain-terms", "STK": "stakeholders",
-    "EIF": "external-interfaces", "GOAL": "goals", "CTX": "context",
-    "FR": "functional-requirements", "CON": "constraints", "ISS": "issues",
-    "UC": "functional-requirements", "ACT": "activity-models", "QR": "quality-requirements",
-    "DR": "decisions", "SOL": "solution-strategy", "BB": "building-blocks",
-    "CC": "crosscutting-concepts", "RS": "runtime-scenarios", "DN": "deployment-nodes",
-}
-
-
 def _stem_of_link(raw: object) -> str:
     """A `related:` entry like '[[DT-026-eaqua|EAquA]]' -> 'DT-026-eaqua'."""
     return link_name(raw)
@@ -1754,7 +1736,7 @@ def _type_of(stem: str) -> str:
 
 
 def domain_terms() -> list[Page]:
-    return load_folder("domain-terms")
+    return load_type("domain-term")
 
 
 def build_glossary_graph(edge_filter: str = "all") -> dict:
@@ -1885,18 +1867,6 @@ def build_glossary_ego_graph(stem: str) -> dict | None:
     return {"nodes": nodes, "edges": edges, "layer_counts": layer_counts}
 
 
-# Group label per stem-type for the detail-page relations panel.
-_TYPE_LABEL = {
-    "DT": "Domain terms", "STK": "Stakeholders", "CTX": "Context",
-    "EIF": "External interfaces", "GOAL": "Goals", "FR": "Functional requirements",
-    "UC": "Use cases", "ACT": "Activity models", "QR": "Quality requirements",
-    "CON": "Constraints", "DR": "Decisions", "SOL": "Solution strategies", "BB": "Building blocks",
-    "CC": "Crosscutting concepts", "RS": "Runtime scenarios", "DN": "Deployment nodes", "ISS": "Issues",
-}
-_REL_TYPE_ORDER = ["DT", "STK", "CTX", "EIF", "GOAL", "FR", "UC", "ACT", "QR", "CON", "DR",
-                   "SOL", "BB", "CC", "RS", "DN", "ISS"]
-
-
 def build_relations_panel(stem: str, exclude: set[str] | None = None) -> dict:
     """Outbound links (this page's `related:` + body wikilinks) and inbound
     backlinks (other pages that reference it), grouped by type, as link dicts.
@@ -1911,8 +1881,8 @@ def build_relations_panel(stem: str, exclude: set[str] | None = None) -> dict:
 
     def info(s: str) -> dict:
         ntype = _type_of(s)
-        folder = by_stem[s].folder if s in by_stem else _TYPE_FOLDER.get(ntype)
-        if folder == "functional-requirements":
+        folder = by_stem[s].folder if s in by_stem else catalog.folder_for_prefix(ntype)
+        if folder and _is(folder, "functional-requirement"):
             url = f"/functional-requirements/{s}"
         elif folder:
             url = f"/page/{folder}/{s}"
@@ -1921,7 +1891,7 @@ def build_relations_panel(stem: str, exclude: set[str] | None = None) -> dict:
         item = {"id": by_stem[s].id if s in by_stem else s,
                 "label": titles.get(s, s), "url": url, "type": ntype,
                 "status": "", "closed": False}
-        if s in by_stem and by_stem[s].folder == "issues":
+        if s in by_stem and _is(by_stem[s].folder, "issue"):
             # a linked issue says how firm it is, closed the way the issues
             # panel says it (FR-034, FR-027)
             st = by_stem[s].status
@@ -1941,8 +1911,9 @@ def build_relations_panel(stem: str, exclude: set[str] | None = None) -> dict:
         for s in stems:
             i = info(s)
             buckets.setdefault(i["type"], []).append(i)
-        ordered = _REL_TYPE_ORDER + [t for t in buckets if t not in _REL_TYPE_ORDER]
-        return [{"type": t, "label": _TYPE_LABEL.get(t, t), "links": buckets[t]}
+        order = catalog.prefix_order()
+        ordered = order + [t for t in buckets if t not in order]
+        return [{"type": t, "label": catalog.group_label(t), "links": buckets[t]}
                 for t in ordered if t in buckets]
 
     return {"outbound": grouped(outbound), "inbound": grouped(inbound)}
@@ -2054,7 +2025,7 @@ def breaks_fr_traces_to_goal(fr: Page, goals: list) -> bool:
 def vision_page() -> Page | None:
     """The goal page with `stereotype: vision`, picked by stereotype and never
     by ID. If two pages claim it, the lowest ID wins."""
-    goals = sorted(load_folder("goals"), key=lambda p: p.id)
+    goals = sorted(load_type("goal"), key=lambda p: p.id)
     return next((p for p in goals
                  if str(p.meta.get("stereotype") or "").strip().lower() == "vision"), None)
 
@@ -2080,11 +2051,11 @@ def load_goals() -> dict:
     silently dropped. If two pages claim `stereotype: vision`, the
     lowest-id one is the vision and the rest fall through to objectives.
     """
-    goals = sorted(load_folder("goals"), key=lambda p: p.id)
+    goals = sorted(load_type("goal"), key=lambda p: p.id)
     vision = vision_page()
     objectives = [p for p in goals if p is not vision]
 
-    all_frs = sorted(load_folder("functional-requirements"), key=lambda p: p.id)
+    all_frs = sorted(load_type("functional-requirement"), key=lambda p: p.id)
     ucs = [p for p in all_frs if _fr_notation(p) == "use-case"]
     frs = [p for p in all_frs if _fr_notation(p) != "use-case"]
     # the use cases Agile features and stories may refine (DR-038 amendment),
@@ -2218,7 +2189,7 @@ def build_fr_hierarchy() -> dict:
     # is not part of the live hierarchy and must not be counted, drawn, or listed as
     # an orphan. Same rule as the context projection applies to a deprecated
     # interface. A live child of a retired parent correctly becomes an orphan.
-    all_pages = [p for p in load_folder("functional-requirements")
+    all_pages = [p for p in load_type("functional-requirement")
                  if p.status != "deprecated"]
     pages = [p for p in all_pages
              if _fr_notation(p) == "agile" and _fr_level(p) in AGILE_LEVELS]
@@ -2279,7 +2250,7 @@ def build_fr_hierarchy() -> dict:
         b = breakdown(u)
         total_features += b["n_features"]
         total_stories += b["n_stories"]
-        uc_rows.append({**_fr_node(u), "url": _page_url("functional-requirements", u.stem), **b})
+        uc_rows.append({**_fr_node(u), "url": _page_url(u.folder, u.stem), **b})
 
     # A parent that exists does not place a page: only a root shows features,
     # and only a root or a feature shows stories. A feature no root shows is an
@@ -2407,7 +2378,7 @@ def _mermaid_goal_epic_tree(goals: dict, hierarchy: dict,
 def fr_building_blocks(stem: str) -> list[Page]:
     """The building blocks whose `drivers:` name this requirement (rel-drivers),
     by id. The link is stored on the block only, never on the requirement."""
-    return [p for p in sorted(load_folder("building-blocks"), key=lambda q: q.id)
+    return [p for p in sorted(load_type("building-block"), key=lambda q: q.id)
             if stem in links_of(p, "drivers")]
 
 
@@ -2499,7 +2470,7 @@ def _fr_ancestors(stem: str) -> list[dict]:
     """The parent chain for an FR (root first), walked over the first-parent
     `parent:` edge across notations (a story may sit under a use case,
     DR-038). Powers the FR-page breadcrumb. Cycle-guarded."""
-    pages = {p.stem: p for p in load_folder("functional-requirements")}
+    pages = {p.stem: p for p in load_type("functional-requirement")}
     out: list[dict] = []
     cur, seen = pages.get(stem), {stem}
     while cur:
@@ -2550,13 +2521,13 @@ def _bb_parent(p: Page, bb_stems: set[str]) -> str | None:
     return next((s for s in links_of(p, "parent") if s in bb_stems), None)
 
 
-def _level_tree(folder: str, keep=None) -> list[dict]:
-    """The `parent:` levels of one folder as nested dicts, level 1 first, by ID.
+def _level_tree(type_name: str, keep=None) -> list[dict]:
+    """The `parent:` levels of one type as nested dicts, level 1 first, by ID.
     A page whose parent is empty, of another type, missing or filtered out by
     `keep` is level 1. Every page appears exactly once: one caught in a
     `parent:` cycle has no level-1 ancestor, so it is promoted to level 1
     instead of vanishing."""
-    pages = {p.stem: p for p in load_folder(folder) if keep is None or keep(p)}
+    pages = {p.stem: p for p in load_type(type_name) if keep is None or keep(p)}
     stems = set(pages)
     children: dict[str | None, list[str]] = {}
     for s, p in pages.items():
@@ -2569,7 +2540,7 @@ def _level_tree(folder: str, keep=None) -> list[dict]:
         p = pages[s]
         kids = sorted((k for k in children.get(s, []) if k not in seen), key=lambda k: pages[k].id)
         return {"stem": s, "id": p.id, "title": p.title, "status": p.status,
-                "state": page_state(p), "url": _page_url(folder, s),
+                "state": page_state(p), "url": _page_url(p.folder, s),
                 "children": [node(k) for k in kids if k not in seen]}
 
     roots = [node(s) for s in sorted(children.get(None, []), key=lambda k: pages[k].id)]
@@ -2581,7 +2552,7 @@ def _level_tree(folder: str, keep=None) -> list[dict]:
 
 def build_bb_tree() -> list[dict]:
     """The building-block levels (see _level_tree)."""
-    return _level_tree("building-blocks")
+    return _level_tree("building-block")
 
 
 def _bb_find(nodes: list[dict], stem: str) -> dict | None:
@@ -2649,8 +2620,8 @@ def build_whitebox(stem: str | None) -> str | None:
     if not kids:
         return None
     inside = {n["stem"] for n in kids}
-    pages = {p.stem: p for p in load_folder("building-blocks")}
-    eifs = {p.stem: p for p in load_folder("external-interfaces")}
+    pages = {p.stem: p for p in load_type("building-block")}
+    eifs = {p.stem: p for p in load_type("external-interface")}
     lines = ["flowchart LR"]
     mixed = _mixed([pages[n["stem"]] for n in kids])
     for n in kids:
@@ -2698,8 +2669,9 @@ def _link_groups(stems: list[str]) -> list[dict]:
         t = _type_of(s)
         buckets.setdefault(t, []).append({"id": p.id, "label": p.title, "type": t,
                                           "url": _page_url(p.folder, s)})
-    ordered = _REL_TYPE_ORDER + [t for t in buckets if t not in _REL_TYPE_ORDER]
-    return [{"type": t, "label": _TYPE_LABEL.get(t, t), "links": buckets[t]}
+    order = catalog.prefix_order()
+    ordered = order + [t for t in buckets if t not in order]
+    return [{"type": t, "label": catalog.group_label(t), "links": buckets[t]}
             for t in ordered if t in buckets]
 
 
@@ -2718,11 +2690,11 @@ def build_drivers(stem: str) -> list[dict]:
 # requirement they carry out (`realizes:`), nodes host blocks and connect to
 # each other. All reverse sides are projected here, never stored.
 
-ARCH_FOLDERS = ("solution-strategy", "building-blocks", "crosscutting-concepts", "runtime-scenarios",
-                "deployment-nodes")
-# The folders whose `drivers:` the Addressed-by panel reads (proj-addressed-by).
+ARCH_TYPES = ("solution-strategy", "building-block", "crosscutting-concept", "runtime-scenario",
+              "deployment-node")
+# The types whose `drivers:` the Addressed-by panel reads (proj-addressed-by).
 # A runtime scenario names its requirement in `realizes:` instead.
-_DRIVER_FOLDERS = ("decisions",) + tuple(f for f in ARCH_FOLDERS if f != "runtime-scenarios")
+_DRIVER_TYPES = ("decision-record",) + tuple(t for t in ARCH_TYPES if t != "runtime-scenario")
 _STATES = ("outdated", "current", "planned", "target")
 
 
@@ -2759,22 +2731,22 @@ def _struct_targets(p: Page, field: str, keys: tuple[str, ...]) -> list[str]:
 
 def build_addressed_by(stem: str) -> list[dict]:
     """Decision records and architecture pages whose `drivers:` name this page."""
-    hits = [p.stem for f in _DRIVER_FOLDERS for p in sorted(load_folder(f), key=lambda q: q.id)
+    hits = [p.stem for t in _DRIVER_TYPES for p in sorted(load_type(t), key=lambda q: q.id)
             if stem in links_of(p, "drivers")]
     return _link_groups(hits)
 
 
 def build_realized_by(stem: str) -> list[dict]:
     """The runtime scenarios whose `realizes:` name this page (rel-realizes)."""
-    return _link_groups([p.stem for p in sorted(load_folder("runtime-scenarios"), key=lambda q: q.id)
+    return _link_groups([p.stem for p in sorted(load_type("runtime-scenario"), key=lambda q: q.id)
                          if stem in links_of(p, "realizes")])
 
 
-# Requirement folders a `drivers:` link may point at (rel-drivers).
-_ADDRESSABLE = {"goals", "functional-requirements", "quality-requirements", "constraints",
-                "activity-models"}
-# Folders a runtime scenario's `realizes:` may point at (rel-realizes).
-_REALIZABLE = {"functional-requirements", "activity-models"}
+# Requirement types a `drivers:` link may point at (rel-drivers).
+_ADDRESSABLE = ("goal", "functional-requirement", "quality-requirement", "constraint",
+                "activity-model")
+# Types a runtime scenario's `realizes:` may point at (rel-realizes).
+_REALIZABLE = ("functional-requirement", "activity-model")
 
 
 def build_trace(stem: str, folder: str) -> dict:
@@ -2786,36 +2758,36 @@ def build_trace(stem: str, folder: str) -> dict:
             "replaces", "applies_to", "governed_by", "hosts", "deployed_on", "takes_part_in")
     trace: dict = {k: [] for k in keys}
     me = (next((p for p in load_folder(folder) if p.stem == stem), None)
-          if folder in ARCH_FOLDERS or folder == "decisions" else None)
-    if folder in _DRIVER_FOLDERS:
+          if _is(folder, *ARCH_TYPES, "decision-record") else None)
+    if _is(folder, *_DRIVER_TYPES):
         trace["drivers"] = build_drivers(stem)
-    if folder == "runtime-scenarios" and me:
+    if _is(folder, "runtime-scenario") and me:
         trace["realizes"] = _link_groups(links_of(me, "realizes"))
-    if me and folder != "decisions":
+    if me and not _is(folder, "decision-record"):
         trace["shaped_by"] = _link_groups(links_of(me, "decisions"))
     if me:
         trace["replaced_by"] = _link_groups(links_of(me, "superseded-by"))
         trace["replaces"] = _link_groups([p.stem for p in sorted(load_folder(folder), key=lambda q: q.id)
                                           if stem in links_of(p, "superseded-by")])
-    if folder == "building-blocks":
+    if _is(folder, "building-block"):
         trace["used_by"] = _link_groups([p.stem for p in sorted(load_folder(folder), key=lambda q: q.id)
                                          if stem in links_of(p, "uses")])
-        trace["deployed_on"] = _link_groups([p.stem for p in sorted(load_folder("deployment-nodes"), key=lambda q: q.id)
+        trace["deployed_on"] = _link_groups([p.stem for p in sorted(load_type("deployment-node"), key=lambda q: q.id)
                                              if stem in links_of(p, "hosts")])
-    if folder in ("building-blocks", "deployment-nodes"):
-        trace["governed_by"] = _link_groups([p.stem for p in sorted(load_folder("crosscutting-concepts"), key=lambda q: q.id)
+    if _is(folder, "building-block", "deployment-node"):
+        trace["governed_by"] = _link_groups([p.stem for p in sorted(load_type("crosscutting-concept"), key=lambda q: q.id)
                                              if stem in links_of(p, "applies-to")])
-    if folder in ("building-blocks", "deployment-nodes", "external-interfaces", "stakeholders"):
+    if _is(folder, "building-block", "deployment-node", "external-interface", "stakeholder"):
         trace["takes_part_in"] = _link_groups(
-            [p.stem for p in sorted(load_folder("runtime-scenarios"), key=lambda q: q.id)
+            [p.stem for p in sorted(load_type("runtime-scenario"), key=lambda q: q.id)
              if stem in _struct_targets(p, "steps", ("from", "to"))])
-    if folder == "crosscutting-concepts" and me:
+    if _is(folder, "crosscutting-concept") and me:
         trace["applies_to"] = _link_groups(links_of(me, "applies-to"))
-    if folder == "deployment-nodes" and me:
+    if _is(folder, "deployment-node") and me:
         trace["hosts"] = _link_groups(links_of(me, "hosts"))
-    if folder in _ADDRESSABLE:
+    if _is(folder, *_ADDRESSABLE):
         trace["addressed_by"] = build_addressed_by(stem)
-    if folder in _REALIZABLE:
+    if _is(folder, *_REALIZABLE):
         trace["realized_by"] = build_realized_by(stem)
     # the stories that realize a use case are its breakdown on the FR page
     # (DR-038); realized_by holds the runtime scenarios only
@@ -2846,7 +2818,7 @@ def _endpoint(raw: object, by_stem: dict) -> tuple[str | None, str]:
     p = by_stem.get(stem)
     if not p:
         return None, stem or "?"
-    if p.folder in ("stakeholders", "external-interfaces"):
+    if _is(p.folder, "stakeholder", "external-interface"):
         return stem, _clean_label(p.title)
     return stem, f"{p.id} · {_clean_label(p.title)}"
 
@@ -2890,7 +2862,7 @@ def build_sequence_diagram(stem: str) -> str | None:
     """Mermaid sequenceDiagram of a runtime scenario: one participant per distinct
     end in order of first appearance (stakeholders as actors), one arrow per
     step, the step's note over the receiver. None without steps."""
-    p = next((q for q in load_folder("runtime-scenarios") if q.stem == stem), None)
+    p = next((q for q in load_type("runtime-scenario") if q.stem == stem), None)
     steps = steps_of(p) if p else []
     if not steps:
         return None
@@ -2910,7 +2882,7 @@ def build_sequence_diagram(stem: str) -> str | None:
             if k in nid_of:
                 continue
             nid_of[k] = f"L{len(nid_of) + 1}"
-            kw = "actor" if sstem and by_stem[sstem].folder == "stakeholders" else "participant"
+            kw = "actor" if sstem and _is(by_stem[sstem].folder, "stakeholder") else "participant"
             order.append((nid_of[k], _seq_text(label), kw))
     lines = ["sequenceDiagram"] + [f"  {kw} {nid} as {label}" for nid, label, kw in order]
     for st in steps:
@@ -2936,10 +2908,10 @@ def runtime_hints(stem: str) -> list[str]:
     (rule-runtime-matches-uses): entries that are not steps, empty ends, ends
     that name no page, and steps between two blocks with no `uses:` edge
     between them or their ancestors. Advisory."""
-    p = next((q for q in load_folder("runtime-scenarios") if q.stem == stem), None)
+    p = next((q for q in load_type("runtime-scenario") if q.stem == stem), None)
     if not p:
         return []
-    blocks = {q.stem: q for q in load_folder("building-blocks")}
+    blocks = {q.stem: q for q in load_type("building-block")}
     hints: list[str] = []
     for n, e in enumerate(_entries(p, "steps"), 1):
         if not isinstance(e, dict):
@@ -2966,7 +2938,7 @@ def runtime_hints(stem: str) -> list[str]:
 
 def build_node_tree() -> list[dict]:
     """The deployment-node levels."""
-    return _level_tree("deployment-nodes")
+    return _level_tree("deployment-node")
 
 
 def _edge_text(s: object) -> str:
@@ -2990,9 +2962,9 @@ def build_deployment_diagram(root: str | None = None,
         tree = [me] if me else []
     if not tree:
         return None
-    nodes = {p.stem: p for p in load_folder("deployment-nodes")}
-    blocks = {p.stem: p for p in load_folder("building-blocks")}
-    eifs = {p.stem: p for p in load_folder("external-interfaces")}
+    nodes = {p.stem: p for p in load_type("deployment-node")}
+    blocks = {p.stem: p for p in load_type("building-block")}
+    eifs = {p.stem: p for p in load_type("external-interface")}
     shown: set[str] = set()
     marked: dict[str, tuple[str, Page]] = {}
     lines = ["flowchart TB"]
@@ -3072,8 +3044,8 @@ def deployment_hints(stem: str | None = None) -> list[str]:
     """What the deployment diagrams leave out, for one node or all: `connects:`
     entries that are not mappings or name no page, `hosts:` entries that are
     not building blocks. Advisory."""
-    nodes = {p.stem: p for p in load_folder("deployment-nodes")}
-    blocks = {p.stem for p in load_folder("building-blocks")}
+    nodes = {p.stem: p for p in load_type("deployment-node")}
+    blocks = {p.stem for p in load_type("building-block")}
     pages = {p.stem for p in load_all_pages()}
     hints: list[str] = []
     for s in sorted(nodes, key=lambda k: nodes[k].id) if stem is None else [stem]:
@@ -3105,8 +3077,8 @@ def trace_stems(trace: dict) -> set[str]:
 def building_blocks_view():
     """A2 Building Block View: the level tree and the level-1 white box."""
     block = catalog.SECTION_BY_SLUG.get("building-blocks") or abort(404)
-    pages = load_folder("building-blocks")
-    rows = [_arch_row(p, "building-blocks") for p in sorted(pages, key=lambda q: q.id)]
+    pages = load_type("building-block")
+    rows = [_arch_row(p) for p in sorted(pages, key=lambda q: q.id)]
     return render_template(
         "building_blocks.html", block=block, tree=build_bb_tree(), total=len(pages),
         whitebox=build_whitebox(None), maturity=maturity(p.status for p in pages), rows=rows,
@@ -3120,9 +3092,9 @@ _CONCEPT_CATEGORIES = [
 ]
 
 
-def _arch_row(p: Page, folder: str) -> dict:
+def _arch_row(p: Page) -> dict:
     return {"id": p.id, "title": p.title, "status": p.status, "state": page_state(p),
-            "url": _page_url(folder, p.stem)}
+            "url": _page_url(p.folder, p.stem)}
 
 
 @app.route("/arc42/strategy")
@@ -3130,10 +3102,10 @@ def strategy_view():
     """A1 Solution Strategy: every strategy page, marked by state, with what it
     answers and the decisions it summarises."""
     block = catalog.SECTION_BY_SLUG.get("strategy") or abort(404)
-    pages = sorted(load_folder("solution-strategy"), key=lambda q: q.id)
+    pages = sorted(load_type("solution-strategy"), key=lambda q: q.id)
     rows = []
     for p in pages:
-        row = _arch_row(p, "solution-strategy")
+        row = _arch_row(p)
         row["drivers"] = _link_groups(links_of(p, "drivers"))
         row["decisions"] = _link_groups(links_of(p, "decisions"))
         row["replaced_by"] = _link_groups(links_of(p, "superseded-by"))
@@ -3146,7 +3118,7 @@ def strategy_view():
 def concepts_view():
     """A5 Crosscutting Concepts: grouped by arc42 topic, with what each governs."""
     block = catalog.SECTION_BY_SLUG.get("concepts") or abort(404)
-    pages = sorted(load_folder("crosscutting-concepts"), key=lambda q: q.id)
+    pages = sorted(load_type("crosscutting-concept"), key=lambda q: q.id)
     known = dict(_CONCEPT_CATEGORIES)
     groups = []
     for key, label in _CONCEPT_CATEGORIES + [(None, "Uncategorised")]:
@@ -3156,7 +3128,7 @@ def concepts_view():
             cat = raw.lower()
             if (cat if cat in known else None) != key:
                 continue
-            row = _arch_row(p, "crosscutting-concepts")
+            row = _arch_row(p)
             row["unknown_category"] = raw if raw and cat not in known else ""
             row["applies_to"] = _link_groups(links_of(p, "applies-to"))
             rows.append(row)
@@ -3164,7 +3136,7 @@ def concepts_view():
             groups.append({"label": label, "rows": rows})
     flat = []
     for p in pages:
-        row = _arch_row(p, "crosscutting-concepts")
+        row = _arch_row(p)
         raw = str(p.meta.get("category") or "").strip()
         row["category"] = known.get(raw.lower(), raw)
         flat.append(row)
@@ -3176,10 +3148,10 @@ def concepts_view():
 def runtime_view():
     """A4 Runtime View: the scenarios and the requirements they realise."""
     block = catalog.SECTION_BY_SLUG.get("runtime") or abort(404)
-    pages = sorted(load_folder("runtime-scenarios"), key=lambda q: q.id)
+    pages = sorted(load_type("runtime-scenario"), key=lambda q: q.id)
     rows = []
     for p in pages:
-        row = _arch_row(p, "runtime-scenarios")
+        row = _arch_row(p)
         row["realizes"] = _link_groups(links_of(p, "realizes"))
         row["steps"] = len(steps_of(p))
         rows.append(row)
@@ -3192,17 +3164,17 @@ def deployment_view():
     """A3 Deployment View: one projected diagram of everything relevant today —
     existing, planned and replaced — and the node levels."""
     block = catalog.SECTION_BY_SLUG.get("deployment") or abort(404)
-    pages = load_folder("deployment-nodes")
+    pages = load_type("deployment-node")
     rows = []
     for p in sorted(pages, key=lambda q: q.id):
-        row = _arch_row(p, "deployment-nodes")
+        row = _arch_row(p)
         row["stereotype"] = str(p.meta.get("stereotype") or "").strip()
         rows.append(row)
     diagram_links: list[dict] = []
     diagram = build_deployment_diagram(links=diagram_links)
     return render_template("deployment.html", block=block, diagram=diagram,
                            diagram_links=[l for l in diagram_links
-                                          if not l["url"].startswith("/page/deployment-nodes/")],
+                                          if not l["url"].startswith(f"/page/{catalog.folder('deployment-node')}/")],
                            hints=deployment_hints(), rows=rows,
                            tree=build_node_tree(), total=len(pages),
                            maturity=maturity(p.status for p in pages))
@@ -3304,12 +3276,10 @@ def build_search_records() -> list[dict]:
     for p in pages:
         records.append({
             "id": p.id,
-            "type": FOLDER_LABELS.get(p.folder, p.folder),
+            "type": catalog.label(p.folder),
             "title": p.title,
             "status": p.status,
-            "url": (f"/functional-requirements/{p.stem}"
-                    if p.folder == "functional-requirements"
-                    else f"/page/{p.folder}/{p.stem}"),
+            "url": _page_url(p.folder, p.stem),
             "aliases": [str(a) for a in p.aliases],
             "plain": search_plain(p, titles),
             "fields": _search_fields(p),
@@ -3372,7 +3342,7 @@ def build_section_tile(section: dict) -> dict:
     elif sid == "C3":
         # folders carries both (maturity and issue flags span the context page
         # too), but the headline number is what the unit says: interfaces.
-        t.update({"unit": "external interface", "count": len(load_folder("external-interfaces"))})
+        t.update({"unit": "external interface", "count": len(load_type("external-interface"))})
     elif sid == "C4":
         t["unit"] = "persona"
     elif sid == "C5":
@@ -3400,7 +3370,7 @@ def build_area_tile(area: dict) -> dict:
         "key": area["key"], "label": area["label"], "subtitle": area["subtitle"],
         "href": area["href"], "colors": area["colors"],
         "count": len(pages), "maturity": maturity(p.status for p in pages),
-        "open_issues": len(set().union(*(flags.get(f, set()) for f in folders if f != "issues"))),
+        "open_issues": len(set().union(*(flags.get(f, set()) for f in folders if not _is(f, "issue")))),
         "sections": [{"id": s["id"], "title": s["title"], "href": s["href"], "scope": s["scope"],
                       **({"count": tiles[s["id"]]["count"], "unit": tiles[s["id"]]["unit"],
                           "unit_many": tiles[s["id"]]["unit_many"]} if s["id"] in tiles else {})}
@@ -3412,7 +3382,7 @@ def build_area_tile(area: dict) -> dict:
 def build_valley() -> dict:
     """What the agent did: the vault's state, what moved last, what is open.
     Sits between the two peaks on the home page (DR-033)."""
-    issues = load_folder("issues")
+    issues = load_type("issue")
     open_issues = sorted((i for i in issues if is_open_issue(i.status)),
                          key=lambda i: ({"blocker": 0, "major": 1, "minor": 2}
                                         .get(str(i.meta.get("severity") or ""), 3), i.id))
@@ -3420,10 +3390,10 @@ def build_valley() -> dict:
         "status": vault_status(),
         "changes": recent_changes(4),
         "open_issues": [{"id": i.id, "title": i.title, "stem": i.stem,
-                         "url": _page_url("issues", i.stem),
+                         "url": _page_url(i.folder, i.stem),
                          "severity": str(i.meta.get("severity") or "")} for i in open_issues[:5]],
         "open_total": len(open_issues),
-        "decision_count": len(load_folder("decisions")),
+        "decision_count": len(load_type("decision-record")),
     }
 
 
@@ -3448,9 +3418,9 @@ CLARIFY_ISSUE = "ISS-002-define-the-clarify-loop"
 def method_view():
     """The three loops, capture, inspect and clarify, by their principles
     (FR-011). Clarify links its issue while that issue is open."""
-    issue = next((p for p in load_folder("issues")
+    issue = next((p for p in load_type("issue")
                   if p.stem == CLARIFY_ISSUE and is_open_issue(p.status)), None)
-    clarify = ({"id": issue.id, "title": issue.title, "url": _page_url("issues", issue.stem)}
+    clarify = ({"id": issue.id, "title": issue.title, "url": _page_url(issue.folder, issue.stem)}
                if issue else None)
     return render_template("method.html", clarify_issue=clarify)
 
@@ -3584,10 +3554,10 @@ def _issue_backlinks() -> dict[str, list[dict]]:
     wikilink (FR-027). A mere mention without a link does not count."""
     titles, links = title_index(), link_index()
     out: dict[str, list[dict]] = {}
-    for iss in load_folder("issues"):
+    for iss in load_type("issue"):
         f = issue_fields(iss, titles, links)
         item = {"id": iss.id, "title": iss.title, "status": f["status"], "severity": f["severity"],
-                "is_open": f["is_open"], "url": _page_url("issues", iss.stem)}
+                "is_open": f["is_open"], "url": _page_url(iss.folder, iss.stem)}
         for stem in {links[t][1] for t in iss.link_targets() if t in links}:
             out.setdefault(stem, []).append(item)
     return out
@@ -3606,7 +3576,7 @@ def issues_view():
     section and owner (FR-025). Filters combine and live in the address, so a
     copied link shows the same issues. Unknown values are ignored."""
     titles, links = title_index(), link_index()
-    pages = sorted(load_folder("issues"), key=lambda x: x.id)
+    pages = sorted(load_type("issue"), key=lambda x: x.id)
     lifecycle_values = metamodel.lifecycle("issue")
     categories = metamodel.field_values("issue", "category")
     severities = metamodel.field_values("issue", "severity")
@@ -3617,7 +3587,7 @@ def issues_view():
         sections = sorted({folder_section[links[t][0]] for t in p.link_targets()
                            if t in links and links[t][0] in folder_section})
         items.append({"id": p.id, "title": p.title, **issue_fields(p, titles, links),
-                      "sections": sections, "url": _page_url("issues", p.stem)})
+                      "sections": sections, "url": _page_url(p.folder, p.stem)})
 
     # the filters: only known values count, anything else shows every issue
     # one option per owner: a page by its title, whatever alias an issue uses
@@ -3676,7 +3646,7 @@ def stakeholders_view():
     titles = title_index()
     links = link_index()       # snapshot wikilinks become real hyperlinks
     by_stem = {q.stem: q for q in load_all_pages()}   # resolve related domain terms
-    pages = sorted(load_folder("stakeholders"), key=lambda x: x.id)
+    pages = sorted(load_type("stakeholder"), key=lambda x: x.id)
     _REL_MAX = 6               # cap chips per row; rest is one click away on the detail page
     rows = []
     for p in pages:
@@ -3685,13 +3655,14 @@ def stakeholders_view():
         rel = []
         for s in sorted(linked_stems(p)):
             q = by_stem.get(s)
-            if q and _type_of(s) == "DT":
+            if q and _is(q.folder, "domain-term"):
                 rel.append({"id": q.id, "label": q.title, "type": "DT",
                             "url": f"/page/{q.folder}/{s}"})
         rel.sort(key=lambda r: r["id"])
         rows.append({
             "id": p.id,
             "stem": p.stem,
+            "url": _page_url(p.folder, p.stem),
             "title": p.title,
             "role": p.meta.get("role", ""),
             "snapshot": extract_labeled(p, "Snapshot", titles, links),
@@ -3733,7 +3704,7 @@ def page_detail(folder, stem):
     # FRs have their own rich page (full text + hierarchy breakdown) under the
     # functional-requirements/ path; send any /page link there so the whole
     # hierarchy stays on one route.
-    if folder == "functional-requirements":
+    if _is(folder, "functional-requirement"):
         return redirect(f"/functional-requirements/{stem}", code=302)
 
     # `folder` must name one of the wiki's own content folders: the route
@@ -3746,22 +3717,22 @@ def page_detail(folder, stem):
     page = _parse(path, folder) if path.is_file() else None
     if not page:
         abort(404)
-    kind = FOLDER_LABELS.get(folder, folder)
+    kind = catalog.label(folder)
     # drop the leading "# Title" heading from the body — shown in the page header
     body = re.sub(r"^\s*#\s+.*(?:\n|$)", "", page.body, count=1)
     body_html = render_markdown(body, titles)
     # context pages carry the system-context diagram, projected live (DR-013)
     diagram_links: list[dict] = []
-    context_diagram = build_context_diagram(links=diagram_links) if folder == "context" else None
-    context_flows = build_context_flows() if folder == "context" else None
+    context_diagram = build_context_diagram(links=diagram_links) if _is(folder, "context") else None
+    context_flows = build_context_flows() if _is(folder, "context") else None
     # domain terms carry a focused ego-graph snippet above the definition (DR-023)
-    ego_graph = build_glossary_ego_graph(stem) if folder == "domain-terms" else None
+    ego_graph = build_glossary_ego_graph(stem) if _is(folder, "domain-term") else None
     trace = build_trace(stem, folder)
-    whitebox = build_whitebox(stem) if folder == "building-blocks" else None
-    sequence = build_sequence_diagram(stem) if folder == "runtime-scenarios" else None
-    hints = (runtime_hints(stem) if folder == "runtime-scenarios"
-             else deployment_hints(stem) if folder == "deployment-nodes" else [])
-    deployment = build_deployment_diagram(stem, diagram_links) if folder == "deployment-nodes" else None
+    whitebox = build_whitebox(stem) if _is(folder, "building-block") else None
+    sequence = build_sequence_diagram(stem) if _is(folder, "runtime-scenario") else None
+    hints = (runtime_hints(stem) if _is(folder, "runtime-scenario")
+             else deployment_hints(stem) if _is(folder, "deployment-node") else [])
+    deployment = build_deployment_diagram(stem, diagram_links) if _is(folder, "deployment-node") else None
     ego_layers = None
     if ego_graph:
         c = ego_graph["layer_counts"]
@@ -3777,15 +3748,15 @@ def page_detail(folder, stem):
         context_diagram=context_diagram, context_flows=context_flows,
         relations=build_relations_panel(stem, exclude=trace_stems(trace)),
         trace=trace, whitebox=whitebox,
-        state=page_state(page) if folder in ARCH_FOLDERS else None,
+        state=page_state(page) if _is(folder, *ARCH_TYPES) else None,
         sequence=sequence, hints=hints, deployment=deployment, diagram_links=diagram_links,
         ego_graph=ego_graph, ego_layers=ego_layers,
         needs_mermaid=bool(context_diagram or whitebox or sequence or deployment) or "language-mermaid" in body_html,
         sources=provenance(page),
-        issue=issue_fields(page, titles, link_index()) if folder == "issues" else None,
+        issue=issue_fields(page, titles, link_index()) if _is(folder, "issue") else None,
         page_issues=open_issues_for(stem),
         formats=format_labels(page.body),
-        term=term_fields(page) if folder == "domain-terms" else None,
+        term=term_fields(page) if _is(folder, "domain-term") else None,
     )
 
 
@@ -3930,7 +3901,7 @@ DOMAIN_MODEL_STEREOTYPES = ("entity", "value-object", "sum-type")
 
 def data_model_pages() -> list[Page]:
     """The structured domain terms, by id."""
-    return sorted((page for page in load_folder("domain-terms")
+    return sorted((page for page in load_type("domain-term")
                    if str(page.meta.get("stereotype") or "").strip().lower() in DOMAIN_MODEL_STEREOTYPES),
                   key=lambda page: page.id)
 
@@ -4249,7 +4220,7 @@ def data_model_entities() -> list[dict]:
 
 def supporting_model_count() -> int:
     """R4's headline: the structured domain terms plus the activity models."""
-    return len(data_model_pages()) + len(load_folder("activity-models"))
+    return len(data_model_pages()) + len(load_type("activity-model"))
 
 
 def _goal_matrix(data: dict) -> tuple[list[dict], list[dict]]:
@@ -4451,7 +4422,7 @@ def functional_requirements_view():
     # the flat list under the hierarchy (FR-021): every requirement of every
     # notation once, sortable by priority, release and order
     rows = []
-    for p in sorted(load_folder("functional-requirements"), key=lambda q: q.id):
+    for p in sorted(load_type("functional-requirement"), key=lambda q: q.id):
         rows.append({"id": p.id, "title": p.title,
                      "url": f"/functional-requirements/{p.stem}",
                      "notation": _fr_notation(p), "level": _fr_level(p),
@@ -4475,8 +4446,9 @@ def fr_view(stem):
     here, so the whole hierarchy lives under one sprechenden path with a
     'Functional Requirements' breadcrumb (instead of the generic /page 'Search' crumb).
     404 if `stem` is not an FR page."""
-    path = WIKI_DIR / "functional-requirements" / f"{stem}.md"
-    page = _parse(path, "functional-requirements") if path.is_file() else None
+    fr_folder = catalog.folder("functional-requirement")
+    path = WIKI_DIR / fr_folder / f"{stem}.md"
+    page = _parse(path, fr_folder) if fr_folder and path.is_file() else None
     if not page:
         abort(404)
     titles = title_index()
@@ -4505,7 +4477,7 @@ def fr_view(stem):
     # a requirement outside the hierarchy (another notation) still shows its blocks
     diagram = _mermaid_fr_subtree(node or {"id": page.id, "title": page.title},
                                   fr_building_blocks(stem), diagram_links)
-    trace = build_trace(stem, "functional-requirements")
+    trace = build_trace(stem, fr_folder)
     return render_template(
         "fr.html", fr=fr, body_html=body_html, diagram=diagram, diagram_links=diagram_links,
         ancestors=_fr_ancestors(stem),
@@ -4571,10 +4543,10 @@ def section_view(sid):
 def _block_list(block: dict, slug: str | None):
     titles, links = title_index(), link_index()
     rows = [
-        {"id": p.id, "type": FOLDER_LABELS.get(p.folder, p.folder),
+        {"id": p.id, "type": catalog.label(p.folder),
          "title": p.title, "url": _page_url(p.folder, p.stem),
          "status": p.status, "relations": len(linked_stems(p)),
-         **(_qr_details(p, titles, links) if p.folder == "quality-requirements" else {})}
+         **(_qr_details(p, titles, links) if _is(p.folder, "quality-requirement") else {})}
         for p in _block_pages(block)
     ]
     # the Scope block (03) shows the same live-projected system-context diagram
@@ -4584,7 +4556,7 @@ def _block_list(block: dict, slug: str | None):
     entity_diagram = build_data_model_full_diagram() if slug == "models" else None
     return render_template(
         "req42_block.html", block=block, rows=rows, total=len(rows),
-        list_type=metamodel.type_for_folder(block["folders"][0]) if block["folders"] else "page",
+        list_type=catalog.type_of(block["folders"][0]) if block["folders"] else "page",
         context_diagram=context_diagram, context_flows=context_flows, diagram_links=diagram_links,
         entity_diagram=entity_diagram, needs_mermaid=bool(context_diagram or entity_diagram),
         maturity=maturity(r["status"] for r in rows),
@@ -5170,8 +5142,8 @@ def _mm_dr_link(ref: str, label: str = "") -> str:
     bare ID is never linked, and a full stem ('DR-013-data-flows-as-…') the
     vault lacks stays plain text instead of a link that 404s."""
     text = escape(label or ref)
-    if ref in {p.stem for p in load_folder("decisions")}:
-        return f'<a class="wl" href="{escape(_page_url("decisions", ref))}">{text}</a>'
+    if ref in {p.stem for p in load_type("decision-record")}:
+        return f'<a class="wl" href="{escape(_page_url(catalog.folder("decision-record"), ref))}">{text}</a>'
     return str(text)
 
 

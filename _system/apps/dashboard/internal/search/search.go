@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/metamodel"
 	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/render"
 	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/wiki"
 )
@@ -188,12 +189,9 @@ func BuildRecords(allPages []*wiki.Page, titles map[string]string, linkIdx map[s
 	nbrs := neighbourLinks(allPages, linkIdx)
 	records := make([]map[string]any, 0, len(allPages))
 	for _, p := range allPages {
-		typeLabel := wiki.FolderLabels[p.Folder]
-		if typeLabel == "" {
-			typeLabel = p.Folder
-		}
+		typeLabel := metamodel.Label(p.Folder)
 		url := "/page/" + p.Folder + "/" + p.Stem
-		if p.Folder == "functional-requirements" {
+		if metamodel.IsType(p.Folder, "functional-requirement") {
 			url = "/functional-requirements/" + p.Stem
 		}
 		aliases := p.Aliases()

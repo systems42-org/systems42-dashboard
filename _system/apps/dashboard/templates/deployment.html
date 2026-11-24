@@ -33,7 +33,7 @@
 <h2 class="mm-h2">All deployment nodes</h2>
 {{ arch_table(list_spec("deployment-node"), rows, [("Kind", "stereotype", "text")]) }}
 {% else %}
-<p class="muted">No deployment nodes yet. Add pages under <code>wiki/deployment-nodes/</code> from <code>_templates/deployment-node.md</code>.</p>
+<p class="muted">No deployment nodes yet. Add pages under <code>wiki/{{ type_folder('deployment-node') }}/</code> from <code>_templates/deployment-node.md</code>.</p>
 {% endif %}
 {% endblock %}
 {% block scripts %}{% if diagram %}{% include "_mermaid.html" %}{% endif %}{% endblock %}

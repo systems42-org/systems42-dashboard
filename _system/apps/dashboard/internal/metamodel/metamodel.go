@@ -130,6 +130,7 @@ type Reader struct {
 	mu          sync.RWMutex
 	cache       map[cacheKey]entry
 	anchorCache map[string]anchorEntry
+	types       *Types
 }
 
 // NewReader creates a metamodel Reader for the given directories.

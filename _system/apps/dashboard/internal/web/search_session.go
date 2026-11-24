@@ -28,7 +28,7 @@ var (
 func (s *Server) buildSearchIndex(sn *requestSnapshot) map[string]any {
 	return search.BuildIndex(
 		sn.all(),
-		sn.folder("domain-terms"),
+		sn.typed("domain-term"),
 		sn.titleIndex(),
 		sn.linkIndex(),
 		sn.sourceIndex(),

@@ -288,6 +288,24 @@ def blocks() -> list[dict]:
     return out
 
 
+def type_decls() -> list[dict]:
+    """What each type page declares about its place in the wiki: `name`,
+    `folder` (the folder under `wiki/`, "" for a type kept elsewhere, such as
+    sources), `prefix` and `label`, in file order. The catalog builds its
+    type lookups from this (CON-006)."""
+    out: list[dict] = []
+    for t in _load("types", "type"):
+        name = str(t.get("name") or "").strip()
+        if not name:
+            continue
+        path = Path(str(t.get("folder") or ""))
+        folder = path.name if path.parent.name in ("wiki", "") else ""
+        out.append({"name": name, "folder": folder,
+                    "prefix": str(t.get("prefix") or "").strip(),
+                    "label": str(t.get("label") or "").strip()})
+    return out
+
+
 def _type_page(type_name: str) -> dict:
     return next((t for t in _load("types", "type") if t.get("name") == type_name), {})
 

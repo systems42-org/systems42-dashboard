@@ -15,6 +15,8 @@ import (
 	"unicode/utf8"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/metamodel"
 )
 
 var (
@@ -28,73 +30,18 @@ var (
 	whitespaceRE    = regexp.MustCompile(`\s+`)
 )
 
-// ArchFolders lists the arc42 architecture content folders (A1-A5).
-var ArchFolders = []string{"solution-strategy", "building-blocks", "crosscutting-concepts", "runtime-scenarios", "deployment-nodes"}
+// ArchTypes lists the arc42 architecture content types (A1-A5).
+var ArchTypes = []string{"solution-strategy", "building-block", "crosscutting-concept", "runtime-scenario", "deployment-node"}
 
-// DriverFolders lists the folders whose `drivers:` the Addressed-by panel reads
+// DriverTypes lists the types whose `drivers:` the Addressed-by panel reads
 // (proj-addressed-by). A runtime scenario names its requirement in `realizes:`.
-var DriverFolders = []string{"decisions", "solution-strategy", "building-blocks", "crosscutting-concepts", "deployment-nodes"}
-
-var archFolderSet = map[string]bool{
-	"solution-strategy":     true,
-	"building-blocks":       true,
-	"crosscutting-concepts": true,
-	"runtime-scenarios":     true,
-	"deployment-nodes":      true,
-}
+var DriverTypes = []string{"decision-record", "solution-strategy", "building-block", "crosscutting-concept", "deployment-node"}
 
 var validArchStates = map[string]bool{
 	"outdated": true,
 	"current":  true,
 	"planned":  true,
 	"target":   true,
-}
-
-// TypeFolder maps stem ID prefixes to their canonical wiki subfolder.
-// UC: a migrated use case keeps its ID as a functional requirement (DR-038).
-var TypeFolder = map[string]string{
-	"DT": "domain-terms", "STK": "stakeholders",
-	"EIF": "external-interfaces", "GOAL": "goals", "CTX": "context",
-	"FR": "functional-requirements", "CON": "constraints", "ISS": "issues",
-	"UC": "functional-requirements", "ACT": "activity-models", "QR": "quality-requirements",
-	"DR": "decisions", "SOL": "solution-strategy", "BB": "building-blocks",
-	"CC": "crosscutting-concepts", "RS": "runtime-scenarios", "DN": "deployment-nodes",
-}
-
-// TypeLabel maps stem ID prefixes to group labels for the relations and trace panels.
-var TypeLabel = map[string]string{
-	"DT": "Domain terms", "STK": "Stakeholders",
-	"CTX": "Context", "EIF": "External interfaces", "GOAL": "Goals",
-	"FR": "Functional requirements", "UC": "Use cases", "ACT": "Activity models",
-	"QR": "Quality requirements", "CON": "Constraints", "DR": "Decisions",
-	"SOL": "Solution strategies", "BB": "Building blocks", "CC": "Crosscutting concepts",
-	"RS": "Runtime scenarios", "DN": "Deployment nodes", "ISS": "Issues",
-}
-
-// RelTypeOrder defines the group display order in relations and trace panels.
-var RelTypeOrder = []string{
-	"DT", "STK", "CTX", "EIF", "GOAL", "FR", "UC", "ACT",
-	"QR", "CON", "DR", "SOL", "BB", "CC", "RS", "DN", "ISS",
-}
-
-// FolderLabels maps wiki subfolder names to display names, matching app.py.
-var FolderLabels = map[string]string{
-	"goals":                   "Goal",
-	"context":                 "Context",
-	"external-interfaces":     "External interface",
-	"functional-requirements": "Functional requirement",
-	"activity-models":         "Activity model",
-	"quality-requirements":    "Quality requirement",
-	"constraints":             "Constraint",
-	"domain-terms":            "Domain term",
-	"stakeholders":            "Stakeholder",
-	"issues":                  "Issue",
-	"decisions":               "Decision record",
-	"solution-strategy":       "Solution strategy",
-	"building-blocks":         "Building block",
-	"crosscutting-concepts":   "Crosscutting concept",
-	"runtime-scenarios":       "Runtime scenario",
-	"deployment-nodes":        "Deployment node",
 }
 
 // MaturityOrder is the four-step lifecycle order shown on every maturity bar.
@@ -208,9 +155,9 @@ func (p *Page) Aliases() []string {
 	return out
 }
 
-// IsArchFolder reports whether folder is one of the arc42 folders.
+// IsArchFolder reports whether folder holds the pages of an arc42 type.
 func IsArchFolder(folder string) bool {
-	return archFolderSet[folder]
+	return metamodel.IsType(folder, ArchTypes...)
 }
 
 // PageState returns an architecture page's lifecycle state, defaulting to "target".
@@ -711,7 +658,7 @@ func (s *Store) LoadAllPages() []*Page {
 
 // PageURL returns the canonical dashboard URL for a wiki page.
 func PageURL(folder, stem string) string {
-	if folder == "functional-requirements" {
+	if metamodel.IsType(folder, "functional-requirement") {
 		return "/functional-requirements/" + stem
 	}
 	return "/page/" + folder + "/" + stem
@@ -895,10 +842,7 @@ func RecentChanges(pages []*Page, n int, now time.Time, loc *time.Location) []ma
 	}
 	out := make([]map[string]any, 0, len(cp))
 	for _, p := range cp {
-		kind := FolderLabels[p.Folder]
-		if kind == "" {
-			kind = p.Folder
-		}
+		kind := metamodel.Label(p.Folder)
 		out = append(out, map[string]any{
 			"id":    p.ID(),
 			"title": p.Title(),

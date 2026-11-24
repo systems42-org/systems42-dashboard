@@ -10,6 +10,6 @@
 {% if rows %}
 {{ arch_table(list_spec("runtime-scenario"), rows, [("Steps", "steps", "numeric"), ("Realizes", "realizes", "links")]) }}
 {% else %}
-<p class="muted">No runtime scenarios yet. Add pages under <code>wiki/runtime-scenarios/</code> from <code>_templates/runtime-scenario.md</code>.</p>
+<p class="muted">No runtime scenarios yet. Add pages under <code>wiki/{{ type_folder('runtime-scenario') }}/</code> from <code>_templates/runtime-scenario.md</code>.</p>
 {% endif %}
 {% endblock %}

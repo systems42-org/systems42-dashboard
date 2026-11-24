@@ -199,6 +199,16 @@ section's area is the `area:` of its framework file. The dashboard adds the
 routes and colours of the sections it knows. A section it does not know gets
 the generic list at `/section/<id>`, a generic tile and its area's colours.
 
+`catalog.py` also answers where a type's pages live and what they are called:
+`folder("domain-term")`, `type_of(folder)`, `label(folder)` and the ID prefix
+lookups read `folder:`, `prefix:` and `label:` of the type pages in
+`_system/metamodel/types/` (CON-006). Every specialized view asks with the
+type it wants, so a repository that declares `folder: wiki/terms` shows its
+terms at `/domain-terms`. A page's address names the folder it lives in:
+`/page/terms/<stem>`. The Systems42 values are the fallback for a type or a
+key the repository does not declare. The Go twin is
+`internal/metamodel/types.go`.
+
 The home page (`/`) opens with the vault name and the first sentence of the
 vision, the goal page with `stereotype: vision`. Without a vision it shows the
 tagline (FR-018). Below it come two
@@ -455,7 +465,8 @@ drift in silence — `_templates/` against `app.py`'s parser, and the skills the
 workflows name against the ones vendored under `.agents/skills/`. The
 three-area restructure is pinned by `test_catalog.py` (every wiki folder
 belongs to exactly one section), `test_sections_from_metamodel.py` (a renamed
-and an added section show without a code change, FR-044), `test_view.py` (the view, its lifetime
+and an added section show without a code change, FR-044), `test_moved_type_folder.py`
+(a moved type folder shows in tile, list, search, detail page and projections), `test_view.py` (the view, its lifetime
 and the success metric of FR-046), `test_areas.py`, `test_area_chrome.py` (breadcrumbs,
 colour bar), `test_menu.py`, `test_help.py` and `test_home_layout.py`.
 The metamodel is pinned twice: `test_metamodel_lint.py` runs

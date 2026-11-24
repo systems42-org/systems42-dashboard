@@ -16,8 +16,13 @@ and project. A section drawn with a blend in the diagram lists two colours.
 `scope`: "in" = captured in wiki folders · "out" = deliberately not captured
 (no route) · "planned" = no wiki folders yet. Only an "in" section has a route.
 
+The folder, ID prefix and label of each type come from its type page in
+`_system/metamodel/types/` (via `metamodel.type_decls()`). `folder()`,
+`type_of()`, `label()` and the prefix lookups below are the one place the
+dashboard asks where a type's pages live and what they are called.
+
 `refresh()` reads the metamodel again. The app calls it once per request, so
-an edited framework file shows on the next page load.
+an edited framework or type file shows on the next page load.
 """
 from __future__ import annotations
 
@@ -93,6 +98,146 @@ def build(blocks: list[dict]) -> list[dict]:
     return sorted(out, key=lambda s: order.index(s["area"]))
 
 
+# The types the dashboard has views for, with the folder, ID prefix and label
+# the Systems42 metamodel gives them. A value here is used only when the
+# repository's metamodel does not declare it (CON-006): a wiki without a
+# metamodel folder, or a type page without that key.
+_DEFAULT_TYPES: dict[str, dict] = {
+    name: {"name": name, "folder": folder, "prefix": prefix, "label": label}
+    for name, folder, prefix, label in (
+        ("goal", "goals", "GOAL", "Goal"),
+        ("context", "context", "CTX", "Context"),
+        ("external-interface", "external-interfaces", "EIF", "External interface"),
+        ("functional-requirement", "functional-requirements", "FR", "Functional requirement"),
+        ("activity-model", "activity-models", "ACT", "Activity model"),
+        ("quality-requirement", "quality-requirements", "QR", "Quality requirement"),
+        ("constraint", "constraints", "CON", "Constraint"),
+        ("domain-term", "domain-terms", "DT", "Domain term"),
+        ("stakeholder", "stakeholders", "STK", "Stakeholder"),
+        ("issue", "issues", "ISS", "Issue"),
+        ("decision-record", "decisions", "DR", "Decision record"),
+        ("solution-strategy", "solution-strategy", "SOL", "Solution strategy"),
+        ("building-block", "building-blocks", "BB", "Building block"),
+        ("crosscutting-concept", "crosscutting-concepts", "CC", "Crosscutting concept"),
+        ("runtime-scenario", "runtime-scenarios", "RS", "Runtime scenario"),
+        ("deployment-node", "deployment-nodes", "DN", "Deployment node"),
+    )
+}
+
+# Presentation: the heading of a type's group in the relations and trace
+# panels, and the order of the groups. A type without a heading here shows
+# its metamodel label.
+_GROUP_LABELS: dict[str, str] = {
+    "domain-term": "Domain terms", "stakeholder": "Stakeholders", "context": "Context",
+    "external-interface": "External interfaces", "goal": "Goals",
+    "functional-requirement": "Functional requirements", "activity-model": "Activity models",
+    "quality-requirement": "Quality requirements", "constraint": "Constraints",
+    "decision-record": "Decisions", "solution-strategy": "Solution strategies",
+    "building-block": "Building blocks", "crosscutting-concept": "Crosscutting concepts",
+    "runtime-scenario": "Runtime scenarios", "deployment-node": "Deployment nodes",
+    "issue": "Issues",
+}
+_GROUP_ORDER = ["domain-term", "stakeholder", "context", "external-interface", "goal",
+                "functional-requirement", "activity-model", "quality-requirement", "constraint",
+                "decision-record", "solution-strategy", "building-block", "crosscutting-concept",
+                "runtime-scenario", "deployment-node", "issue"]
+# UC: a migrated use case keeps its ID as a functional requirement (DR-038).
+# The prefix is no type's own, so no type page declares it.
+_LEGACY_PREFIXES: dict[str, tuple[str, str]] = {"UC": ("functional-requirement", "Use cases")}
+
+TYPES: dict[str, dict] = {}
+_TYPE_DECLS: list[dict] | None = None
+_TYPE_BY_FOLDER: dict[str, str] = {}
+_TYPE_BY_PREFIX: dict[str, str] = {}
+_PREFIX_ORDER: list[str] = []
+
+
+def build_types(decls: list[dict]) -> dict[str, dict]:
+    """Every type by name, as `{name, folder, prefix, label}`: what the type
+    pages declare (`metamodel.type_decls()`), filled from `_DEFAULT_TYPES`
+    where a page leaves a key out, plus the default types no page declares."""
+    out: dict[str, dict] = {}
+    for d in decls:
+        base = _DEFAULT_TYPES.get(d["name"], {})
+        out.setdefault(d["name"], {
+            "name": d["name"],
+            "folder": d["folder"] or base.get("folder", ""),
+            "prefix": d["prefix"] or base.get("prefix", ""),
+            "label": d["label"] or base.get("label", d["name"]),
+        })
+    for name, base in _DEFAULT_TYPES.items():
+        out.setdefault(name, dict(base))
+    return out
+
+
+def _refresh_types() -> None:
+    global TYPES, _TYPE_DECLS, _TYPE_BY_FOLDER, _TYPE_BY_PREFIX, _PREFIX_ORDER
+    decls = metamodel.type_decls()
+    if decls == _TYPE_DECLS:
+        return
+    types = build_types(decls)
+    by_folder: dict[str, str] = {}
+    by_prefix: dict[str, str] = {}
+    # declared types first, so a declared folder or prefix wins over a default
+    for t in types.values():
+        if t["folder"]:
+            by_folder.setdefault(t["folder"], t["name"])
+        if t["prefix"]:
+            by_prefix.setdefault(t["prefix"], t["name"])
+    order: list[str] = []
+    for name in _GROUP_ORDER:
+        order.append(types[name]["prefix"])
+        order.extend(p for p, (owner, _) in _LEGACY_PREFIXES.items()
+                     if owner == name and p not in by_prefix)
+    for prefix, (owner, _) in _LEGACY_PREFIXES.items():
+        by_prefix.setdefault(prefix, owner)
+    TYPES, _TYPE_DECLS = types, decls
+    _TYPE_BY_FOLDER, _TYPE_BY_PREFIX, _PREFIX_ORDER = by_folder, by_prefix, order
+
+
+def folder(type_name: str) -> str:
+    """The wiki folder that holds the pages of a type, "" for an unknown type."""
+    t = TYPES.get(type_name)
+    return t["folder"] if t else ""
+
+
+def type_of(folder_name: str) -> str | None:
+    """The type whose pages live in `wiki/<folder_name>`, or None."""
+    return _TYPE_BY_FOLDER.get(folder_name)
+
+
+def label(folder_name: str) -> str:
+    """The label of the type whose pages live in the folder, else the folder
+    name: the "Type" of a page in lists, search and on its detail page."""
+    t = TYPES.get(_TYPE_BY_FOLDER.get(folder_name, ""))
+    return t["label"] if t else folder_name
+
+
+def type_for_prefix(prefix: str) -> str | None:
+    """The type whose IDs start with `prefix` (`DT`, `FR`), or None."""
+    return _TYPE_BY_PREFIX.get(prefix)
+
+
+def folder_for_prefix(prefix: str) -> str | None:
+    """The folder a page with this ID prefix belongs in, or None."""
+    return folder(_TYPE_BY_PREFIX.get(prefix, "")) or None
+
+
+def group_label(prefix: str) -> str:
+    """The heading of the group that collects links to pages with this ID
+    prefix. An unknown prefix is its own heading."""
+    name = _TYPE_BY_PREFIX.get(prefix)
+    legacy = _LEGACY_PREFIXES.get(prefix)
+    if legacy and legacy[0] == name and TYPES[name]["prefix"] != prefix:
+        return legacy[1]
+    return _GROUP_LABELS.get(name) or (TYPES[name]["label"] if name else prefix)
+
+
+def prefix_order() -> list[str]:
+    """The ID prefixes in the order their groups show."""
+    return _PREFIX_ORDER
+
+
 SECTIONS: list[dict] = []
 SECTION_BY_ID: dict[str, dict] = {}
 SECTION_BY_SLUG: dict[str, dict] = {}
@@ -100,9 +245,10 @@ _SECTION_BY_FOLDER: dict[str, dict] = {}
 
 
 def refresh() -> None:
-    """Read the sections from the metamodel again. The lookups below change
-    only when the sections do."""
+    """Read the types and the sections from the metamodel again. The lookups
+    change only when the declarations do."""
     global SECTIONS, SECTION_BY_ID, SECTION_BY_SLUG, _SECTION_BY_FOLDER
+    _refresh_types()
     sections = build(metamodel.blocks())
     if sections == SECTIONS:
         return

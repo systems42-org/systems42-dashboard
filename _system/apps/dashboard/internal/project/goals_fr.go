@@ -478,7 +478,7 @@ func BuildFRHierarchy(frs []*wiki.Page, index map[string]*wiki.Page) map[string]
 		totalFeatures += nf
 		totalStories += ns
 		row := frNode(u)
-		row["url"] = wiki.PageURL("functional-requirements", u.Stem)
+		row["url"] = wiki.PageURL(u.Folder, u.Stem)
 		row["n_features"] = nf
 		row["n_stories"] = ns
 		row["features"] = feats

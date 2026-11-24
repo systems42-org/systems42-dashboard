@@ -91,12 +91,12 @@ def test_every_template_id_prefix_is_known_to_the_type_maps():
         prefix = m.group(1)
         if prefix in NON_WIKI_PREFIXES:
             continue
-        assert prefix in app._TYPE_FOLDER, \
-            f"{f.name} emits {prefix}- but _TYPE_FOLDER has no such key"
-        assert prefix in app._TYPE_LABEL, \
-            f"{f.name} emits {prefix}- but _TYPE_LABEL has no such key"
-        assert prefix in app._REL_TYPE_ORDER, \
-            f"{f.name} emits {prefix}- but _REL_TYPE_ORDER omits it"
+        assert app.catalog.folder_for_prefix(prefix), \
+            f"{f.name} emits {prefix}- but the catalog knows no folder for it"
+        assert app.catalog.group_label(prefix) != prefix, \
+            f"{f.name} emits {prefix}- but the catalog has no group label for it"
+        assert prefix in app.catalog.prefix_order(), \
+            f"{f.name} emits {prefix}- but the catalog's group order omits it"
 
 
 def test_no_type_map_entry_is_dead():
@@ -106,9 +106,8 @@ def test_no_type_map_entry_is_dead():
     for f in _templates():
         m = re.search(r"^id:\s*([A-Z]+)-", _frontmatter(f), re.MULTILINE)
         emitted.add(m.group(1))
-    for name, keys in (("_TYPE_FOLDER", set(app._TYPE_FOLDER)),
-                       ("_TYPE_LABEL", set(app._TYPE_LABEL)),
-                       ("_REL_TYPE_ORDER", set(app._REL_TYPE_ORDER))):
+    for name, keys in (("the catalog's prefix lookup", set(app.catalog._TYPE_BY_PREFIX)),
+                       ("the catalog's group order", set(app.catalog.prefix_order()))):
         # UC: a use case migrated to a functional requirement keeps its ID
         # (notation-use-case, DR-038)
         dead = sorted(keys - emitted - {"UC"})

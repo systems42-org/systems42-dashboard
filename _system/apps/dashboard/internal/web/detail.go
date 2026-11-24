@@ -18,19 +18,11 @@ var (
 	leadingH1RE = regexp.MustCompile(`^\s*#\s+.*(?:\n|$)`)
 )
 
-var addressableFolders = map[string]bool{
-	"goals":                   true,
-	"functional-requirements": true,
-	"quality-requirements":    true,
-	"constraints":             true,
-	"activity-models":         true,
-}
+// addressableTypes are the requirement types a `drivers:` link may point at (rel-drivers).
+var addressableTypes = []string{"goal", "functional-requirement", "quality-requirement", "constraint", "activity-model"}
 
-// realizableFolders are the folders a runtime scenario's `realizes:` may name (rel-realizes).
-var realizableFolders = map[string]bool{
-	"functional-requirements": true,
-	"activity-models":         true,
-}
+// realizableTypes are the types a runtime scenario's `realizes:` may name (rel-realizes).
+var realizableTypes = []string{"functional-requirement", "activity-model"}
 
 type issueVocab struct {
 	status   map[string]bool
@@ -119,7 +111,7 @@ func linkGroups(stems []string, byStem map[string]*wiki.Page) []map[string]any {
 	buckets := map[string][]map[string]any{}
 	var extraOrder []string
 	inRelOrder := map[string]bool{}
-	for _, t := range wiki.RelTypeOrder {
+	for _, t := range metamodel.PrefixOrder() {
 		inRelOrder[t] = true
 	}
 	for _, st := range stems {
@@ -138,17 +130,14 @@ func linkGroups(stems []string, byStem map[string]*wiki.Page) []map[string]any {
 			"url":   wiki.PageURL(p.Folder, st),
 		})
 	}
-	order := append(append([]string{}, wiki.RelTypeOrder...), extraOrder...)
+	order := append(append([]string{}, metamodel.PrefixOrder()...), extraOrder...)
 	out := []map[string]any{}
 	for _, tp := range order {
 		links, ok := buckets[tp]
 		if !ok {
 			continue
 		}
-		lbl := wiki.TypeLabel[tp]
-		if lbl == "" {
-			lbl = tp
-		}
+		lbl := metamodel.GroupLabel(tp)
 		out = append(out, map[string]any{
 			"type":  tp,
 			"label": lbl,
@@ -195,21 +184,21 @@ func buildTrace(sn *requestSnapshot, stem, folder string) map[string]any {
 	}
 
 	var me *wiki.Page
-	if wiki.IsArchFolder(folder) || folder == "decisions" {
+	if wiki.IsArchFolder(folder) || metamodel.IsType(folder, "decision-record") {
 		for _, p := range sn.folder(folder) {
 			if p.Stem == stem {
 				me = p
 				break
 			}
 		}
-		if p := byStem[stem]; p != nil && folder != "runtime-scenarios" {
+		if p := byStem[stem]; p != nil && !metamodel.IsType(folder, "runtime-scenario") {
 			trace["drivers"] = linkGroups(wiki.LinksOf(p, "drivers", byStem), byStem)
 		}
 	}
-	if folder == "runtime-scenarios" && me != nil {
+	if metamodel.IsType(folder, "runtime-scenario") && me != nil {
 		trace["realizes"] = linkGroups(wiki.LinksOf(me, "realizes", byStem), byStem)
 	}
-	if me != nil && folder != "decisions" {
+	if me != nil && !metamodel.IsType(folder, "decision-record") {
 		trace["shaped_by"] = linkGroups(wiki.LinksOf(me, "decisions", byStem), byStem)
 	}
 	if me != nil {
@@ -222,7 +211,7 @@ func buildTrace(sn *requestSnapshot, stem, folder string) map[string]any {
 		}
 		trace["replaces"] = linkGroups(replaces, byStem)
 	}
-	if folder == "building-blocks" {
+	if metamodel.IsType(folder, "building-block") {
 		var usedBy []string
 		for _, p := range sortedByID(sn.folder(folder)) {
 			if containsStr(wiki.LinksOf(p, "uses", byStem), stem) {
@@ -232,41 +221,41 @@ func buildTrace(sn *requestSnapshot, stem, folder string) map[string]any {
 		trace["used_by"] = linkGroups(usedBy, byStem)
 
 		var deployedOn []string
-		for _, p := range sortedByID(sn.folder("deployment-nodes")) {
+		for _, p := range sortedByID(sn.typed("deployment-node")) {
 			if containsStr(wiki.LinksOf(p, "hosts", byStem), stem) {
 				deployedOn = append(deployedOn, p.Stem)
 			}
 		}
 		trace["deployed_on"] = linkGroups(deployedOn, byStem)
 	}
-	if folder == "building-blocks" || folder == "deployment-nodes" {
+	if metamodel.IsType(folder, "building-block", "deployment-node") {
 		var governedBy []string
-		for _, p := range sortedByID(sn.folder("crosscutting-concepts")) {
+		for _, p := range sortedByID(sn.typed("crosscutting-concept")) {
 			if containsStr(wiki.LinksOf(p, "applies-to", byStem), stem) {
 				governedBy = append(governedBy, p.Stem)
 			}
 		}
 		trace["governed_by"] = linkGroups(governedBy, byStem)
 	}
-	if folder == "building-blocks" || folder == "deployment-nodes" || folder == "external-interfaces" || folder == "stakeholders" {
+	if metamodel.IsType(folder, "building-block", "deployment-node", "external-interface", "stakeholder") {
 		var takesPart []string
-		for _, p := range sortedByID(sn.folder("runtime-scenarios")) {
+		for _, p := range sortedByID(sn.typed("runtime-scenario")) {
 			if containsStr(wiki.StructTargets(p, "steps", []string{"from", "to"}, byStem), stem) {
 				takesPart = append(takesPart, p.Stem)
 			}
 		}
 		trace["takes_part_in"] = linkGroups(takesPart, byStem)
 	}
-	if folder == "crosscutting-concepts" && me != nil {
+	if metamodel.IsType(folder, "crosscutting-concept") && me != nil {
 		trace["applies_to"] = linkGroups(wiki.LinksOf(me, "applies-to", byStem), byStem)
 	}
-	if folder == "deployment-nodes" && me != nil {
+	if metamodel.IsType(folder, "deployment-node") && me != nil {
 		trace["hosts"] = linkGroups(wiki.LinksOf(me, "hosts", byStem), byStem)
 	}
-	if addressableFolders[folder] {
+	if metamodel.IsType(folder, addressableTypes...) {
 		var candidates []*wiki.Page
-		for _, f := range wiki.DriverFolders {
-			candidates = append(candidates, sortedByID(sn.folder(f))...)
+		for _, t := range wiki.DriverTypes {
+			candidates = append(candidates, sortedByID(sn.typed(t))...)
 		}
 		var addressed []string
 		for _, p := range candidates {
@@ -276,9 +265,9 @@ func buildTrace(sn *requestSnapshot, stem, folder string) map[string]any {
 		}
 		trace["addressed_by"] = linkGroups(addressed, byStem)
 	}
-	if realizableFolders[folder] {
+	if metamodel.IsType(folder, realizableTypes...) {
 		var realizedBy []string
-		for _, p := range sortedByID(sn.folder("runtime-scenarios")) {
+		for _, p := range sortedByID(sn.typed("runtime-scenario")) {
 			if containsStr(wiki.LinksOf(p, "realizes", byStem), stem) {
 				realizedBy = append(realizedBy, p.Stem)
 			}
@@ -315,7 +304,7 @@ func buildRelationsPanel(sn *requestSnapshot, stem string, exclude map[string]bo
 	info := func(st string) map[string]any {
 		ntype := wiki.TypeOf(st)
 		p := byStem[st]
-		folder := wiki.TypeFolder[ntype]
+		folder := metamodel.FolderForPrefix(ntype)
 		if p != nil {
 			folder = p.Folder
 		}
@@ -336,7 +325,7 @@ func buildRelationsPanel(sn *requestSnapshot, stem string, exclude map[string]bo
 			"status": "",
 			"closed": false,
 		}
-		if p != nil && p.Folder == "issues" {
+		if p != nil && metamodel.IsType(p.Folder, "issue") {
 			stVal := p.Status()
 			if vocab.status[stVal] {
 				item["status"] = stVal
@@ -368,7 +357,7 @@ func buildRelationsPanel(sn *requestSnapshot, stem string, exclude map[string]bo
 		buckets := map[string][]map[string]any{}
 		var extraOrder []string
 		inOrder := map[string]bool{}
-		for _, t := range wiki.RelTypeOrder {
+		for _, t := range metamodel.PrefixOrder() {
 			inOrder[t] = true
 		}
 		for _, st := range stems {
@@ -379,17 +368,14 @@ func buildRelationsPanel(sn *requestSnapshot, stem string, exclude map[string]bo
 			}
 			buckets[tp] = append(buckets[tp], it)
 		}
-		order := append(append([]string{}, wiki.RelTypeOrder...), extraOrder...)
+		order := append(append([]string{}, metamodel.PrefixOrder()...), extraOrder...)
 		out := []map[string]any{}
 		for _, tp := range order {
 			links, ok := buckets[tp]
 			if !ok {
 				continue
 			}
-			lbl := wiki.TypeLabel[tp]
-			if lbl == "" {
-				lbl = tp
-			}
+			lbl := metamodel.GroupLabel(tp)
 			out = append(out, map[string]any{
 				"type":  tp,
 				"label": lbl,
@@ -472,7 +458,7 @@ func openIssuesFor(sn *requestSnapshot, stem string, vocab issueVocab) []map[str
 	titles := sn.titleIndex()
 	links := sn.linkIndex()
 	out := []map[string]any{}
-	for _, iss := range sn.folder("issues") {
+	for _, iss := range sn.typed("issue") {
 		f := issueFields(iss, titles, links, vocab)
 		seen := map[string]bool{}
 		for tgt := range iss.LinkTargets() {
@@ -484,7 +470,7 @@ func openIssuesFor(sn *requestSnapshot, stem string, vocab issueVocab) []map[str
 					"status":   f["status"],
 					"severity": f["severity"],
 					"is_open":  f["is_open"],
-					"url":      wiki.PageURL("issues", iss.Stem),
+					"url":      wiki.PageURL(iss.Folder, iss.Stem),
 				})
 			}
 		}
@@ -539,7 +525,7 @@ func (s *Server) handlePageDetail(w http.ResponseWriter, r *http.Request) {
 	}
 	folder, stem := parts[0], parts[1]
 
-	if folder == "functional-requirements" {
+	if metamodel.IsType(folder, "functional-requirement") {
 		s.redirect(w, r, "/functional-requirements/"+stem, http.StatusFound)
 		return
 	}
@@ -560,10 +546,7 @@ func (s *Server) handlePageDetail(w http.ResponseWriter, r *http.Request) {
 	linkCtx := s.linkContext(sn)
 	vocab := s.loadIssueVocab()
 
-	kind := wiki.FolderLabels[folder]
-	if kind == "" {
-		kind = folder
-	}
+	kind := metamodel.Label(folder)
 	body := leadingH1RE.ReplaceAllString(page.Body, "")
 	bodyHTML := render.RenderMarkdown(body, linkCtx)
 	trace := buildTrace(sn, stem, folder)
@@ -575,7 +558,7 @@ func (s *Server) handlePageDetail(w http.ResponseWriter, r *http.Request) {
 		stateVal = wiki.PageState(page)
 	}
 	var issueVal any
-	if folder == "issues" {
+	if metamodel.IsType(folder, "issue") {
 		issueVal = issueFields(page, sn.titleIndex(), sn.linkIndex(), vocab)
 	}
 
@@ -584,18 +567,18 @@ func (s *Server) handlePageDetail(w http.ResponseWriter, r *http.Request) {
 	var contextDiagram, contextFlows, whitebox, sequence, deployment, egoGraph, egoLayers any
 	hints := []string{}
 
-	switch folder {
+	switch metamodel.TypeOf(folder) {
 	case "context":
 		cfg := wiki.LoadConfig(s.Paths, s.warnOnce)
-		eifs := sn.folder("external-interfaces")
-		cd, dl := project.BuildContextDiagram(cfg.SystemName, eifs, sn.folder("stakeholders"))
+		eifs := sn.typed("external-interface")
+		cd, dl := project.BuildContextDiagram(cfg.SystemName, eifs, sn.typed("stakeholder"))
 		contextDiagram = nilIfEmpty(cd)
 		if dl != nil {
 			diagramLinks = dl
 		}
 		contextFlows = project.BuildContextFlows(eifs)
-	case "domain-terms":
-		eg := project.BuildGlossaryEgoGraph(sn.all(), sn.folder("domain-terms"), stem)
+	case "domain-term":
+		eg := project.BuildGlossaryEgoGraph(sn.all(), sn.typed("domain-term"), stem)
 		if eg != nil {
 			egoGraph = eg
 			counts := eg["layer_counts"].(map[string]int)
@@ -607,16 +590,16 @@ func (s *Server) handlePageDetail(w http.ResponseWriter, r *http.Request) {
 			}
 			egoLayers = layers
 		}
-	case "building-blocks":
-		whitebox = nilIfEmpty(project.BuildWhitebox(stem, sn.folder("building-blocks"), sn.folder("external-interfaces"), byStem))
-	case "runtime-scenarios":
-		scenarios := sn.folder("runtime-scenarios")
+	case "building-block":
+		whitebox = nilIfEmpty(project.BuildWhitebox(stem, sn.typed("building-block"), sn.typed("external-interface"), byStem))
+	case "runtime-scenario":
+		scenarios := sn.typed("runtime-scenario")
 		sequence = nilIfEmpty(project.BuildSequenceDiagram(stem, scenarios, byStem))
-		hints = project.RuntimeHints(stem, scenarios, sn.folder("building-blocks"), byStem)
-	case "deployment-nodes":
-		nodes := sn.folder("deployment-nodes")
-		blocks := sn.folder("building-blocks")
-		dep, dl := project.BuildDeploymentDiagram(stem, nodes, blocks, sn.folder("external-interfaces"), byStem)
+		hints = project.RuntimeHints(stem, scenarios, sn.typed("building-block"), byStem)
+	case "deployment-node":
+		nodes := sn.typed("deployment-node")
+		blocks := sn.typed("building-block")
+		dep, dl := project.BuildDeploymentDiagram(stem, nodes, blocks, sn.typed("external-interface"), byStem)
 		deployment = nilIfEmpty(dep)
 		if dl != nil {
 			diagramLinks = dl
@@ -625,7 +608,7 @@ func (s *Server) handlePageDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var termVal any
-	if folder == "domain-terms" {
+	if metamodel.IsType(folder, "domain-term") {
 		termVal = map[string]any{
 			"kind":          project.TermKind(page),
 			"aliases":       page.Aliases(),

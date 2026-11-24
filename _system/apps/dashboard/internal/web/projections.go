@@ -27,13 +27,13 @@ var conceptCategories = [][2]string{
 	{"operations", "Operations"},
 }
 
-func archRow(p *wiki.Page, folder string) map[string]any {
+func archRow(p *wiki.Page) map[string]any {
 	return map[string]any{
 		"id":     p.ID(),
 		"title":  p.Title(),
 		"status": p.Status(),
 		"state":  wiki.PageState(p),
-		"url":    wiki.PageURL(folder, p.Stem),
+		"url":    wiki.PageURL(p.Folder, p.Stem),
 	}
 }
 
@@ -52,7 +52,7 @@ func (s *Server) handleGoals(w http.ResponseWriter, r *http.Request) {
 	titles := sn.titleIndex()
 	cfg := wiki.LoadConfig(s.Paths, s.warnOnce)
 
-	data := project.LoadGoals(sn.folder("goals"), sn.folder("functional-requirements"), sn.byStem())
+	data := project.LoadGoals(sn.typed("goal"), sn.typed("functional-requirement"), sn.byStem())
 	vision, objectives := data.Vision, data.Objectives
 
 	allGoals := make([]*wiki.Page, 0, len(objectives)+1)
@@ -173,7 +173,7 @@ func (s *Server) handleEntityDiagram(w http.ResponseWriter, r *http.Request) {
 	sn := newSnapshot(s.Store)
 	linkCtx := s.linkContext(sn)
 
-	dtPages := sn.folder("domain-terms")
+	dtPages := sn.typed("domain-term")
 
 	nodes := project.DataModelNodes(dtPages)
 	edges := project.DataModelEdges(dtPages, sn.byStem())
@@ -241,7 +241,7 @@ func (s *Server) handleGlossaryGraph(w http.ResponseWriter, r *http.Request) {
 
 	graph := project.BuildGlossaryGraph(
 		sn.all(),
-		sn.folder("domain-terms"),
+		sn.typed("domain-term"),
 		edgeFilter,
 	)
 	counts := graph["layer_counts"].(map[string]int)
@@ -333,9 +333,9 @@ func (s *Server) handleFunctionalRequirements(w http.ResponseWriter, r *http.Req
 	}
 	sn := newSnapshot(s.Store)
 
-	frs := sn.folder("functional-requirements")
+	frs := sn.typed("functional-requirement")
 	hierarchy := project.BuildFRHierarchy(frs, sn.byStem())
-	goals := project.LoadGoals(sn.folder("goals"), frs, sn.byStem())
+	goals := project.LoadGoals(sn.typed("goal"), frs, sn.byStem())
 	diagram, diagramLinks := project.MermaidGoalEpicTree(goals, hierarchy)
 	if diagramLinks == nil {
 		diagramLinks = []map[string]any{}
@@ -381,7 +381,8 @@ func (s *Server) handleFRDetail(w http.ResponseWriter, r *http.Request) {
 		s.handleNotFound(w, r)
 		return
 	}
-	page := s.Store.LoadPage("functional-requirements", stem)
+	frFolder := metamodel.Folder("functional-requirement")
+	page := s.Store.LoadPage(frFolder, stem)
 	if page == nil {
 		s.handleNotFound(w, r)
 		return
@@ -396,7 +397,7 @@ func (s *Server) handleFRDetail(w http.ResponseWriter, r *http.Request) {
 	body := leadingH1RE.ReplaceAllString(page.Body, "")
 	bodyHTML := render.RenderMarkdown(body, linkCtx)
 
-	frs := sn.folder("functional-requirements")
+	frs := sn.typed("functional-requirement")
 	hierarchy := project.BuildFRHierarchy(frs, sn.byStem())
 	node, kind := project.FRHierarchyNode(hierarchy, stem)
 
@@ -445,12 +446,12 @@ func (s *Server) handleFRDetail(w http.ResponseWriter, r *http.Request) {
 	if subtreeNode == nil {
 		subtreeNode = map[string]any{"id": page.ID(), "title": page.Title()}
 	}
-	frBlocks := project.FRBuildingBlocks(stem, sn.folder("building-blocks"), sn.byStem())
+	frBlocks := project.FRBuildingBlocks(stem, sn.typed("building-block"), sn.byStem())
 	diagram, diagramLinks := project.MermaidFRSubtree(subtreeNode, frBlocks)
 	if diagramLinks == nil {
 		diagramLinks = []map[string]any{}
 	}
-	trace := buildTrace(sn, stem, "functional-requirements")
+	trace := buildTrace(sn, stem, frFolder)
 	s.renderHTML(w, r, http.StatusOK, "fr.html", cat, withPageHead(page, map[string]any{
 		"fr":            fr,
 		"body_html":     bodyHTML,
@@ -475,14 +476,14 @@ func (s *Server) handleBuildingBlocks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sn := newSnapshot(s.Store)
-	pages := sn.folder("building-blocks")
+	pages := sn.typed("building-block")
 	sorted := sortedByID(pages)
 	rows := make([]map[string]any, 0, len(sorted))
 	for _, p := range sorted {
-		rows = append(rows, archRow(p, "building-blocks"))
+		rows = append(rows, archRow(p))
 	}
 	byStem := sn.byStem()
-	whitebox := project.BuildWhitebox("", pages, sn.folder("external-interfaces"), byStem)
+	whitebox := project.BuildWhitebox("", pages, sn.typed("external-interface"), byStem)
 
 	s.renderHTML(w, r, http.StatusOK, "building_blocks.html", cat, map[string]any{
 		"block":    block.ToMap(),
@@ -504,11 +505,11 @@ func (s *Server) handleStrategy(w http.ResponseWriter, r *http.Request) {
 	}
 	sn := newSnapshot(s.Store)
 	byStem := sn.byStem()
-	pages := sortedByID(sn.folder("solution-strategy"))
+	pages := sortedByID(sn.typed("solution-strategy"))
 
 	rows := make([]map[string]any, 0, len(pages))
 	for _, p := range pages {
-		row := archRow(p, "solution-strategy")
+		row := archRow(p)
 		row["drivers"] = linkGroups(wiki.LinksOf(p, "drivers", byStem), byStem)
 		row["decisions"] = linkGroups(wiki.LinksOf(p, "decisions", byStem), byStem)
 		row["replaced_by"] = linkGroups(wiki.LinksOf(p, "superseded-by", byStem), byStem)
@@ -533,7 +534,7 @@ func (s *Server) handleConcepts(w http.ResponseWriter, r *http.Request) {
 	}
 	sn := newSnapshot(s.Store)
 	byStem := sn.byStem()
-	pages := sortedByID(sn.folder("crosscutting-concepts"))
+	pages := sortedByID(sn.typed("crosscutting-concept"))
 
 	known := make(map[string]string, len(conceptCategories))
 	for _, kv := range conceptCategories {
@@ -555,7 +556,7 @@ func (s *Server) handleConcepts(w http.ResponseWriter, r *http.Request) {
 			if matchedKey != key {
 				continue
 			}
-			row := archRow(p, "crosscutting-concepts")
+			row := archRow(p)
 			if raw != "" && matchedKey == "" {
 				row["unknown_category"] = raw
 			} else {
@@ -574,7 +575,7 @@ func (s *Server) handleConcepts(w http.ResponseWriter, r *http.Request) {
 
 	flat := make([]map[string]any, 0, len(pages))
 	for _, p := range pages {
-		row := archRow(p, "crosscutting-concepts")
+		row := archRow(p)
 		raw := strings.TrimSpace(p.MetaString("category"))
 		if lbl, ok := known[strings.ToLower(raw)]; ok {
 			row["category"] = lbl
@@ -603,11 +604,11 @@ func (s *Server) handleRuntime(w http.ResponseWriter, r *http.Request) {
 	}
 	sn := newSnapshot(s.Store)
 	byStem := sn.byStem()
-	pages := sortedByID(sn.folder("runtime-scenarios"))
+	pages := sortedByID(sn.typed("runtime-scenario"))
 
 	rows := make([]map[string]any, 0, len(pages))
 	for _, p := range pages {
-		row := archRow(p, "runtime-scenarios")
+		row := archRow(p)
 		row["realizes"] = linkGroups(wiki.LinksOf(p, "realizes", byStem), byStem)
 		row["steps"] = len(project.StepsOf(p, byStem))
 		rows = append(rows, row)
@@ -631,14 +632,14 @@ func (s *Server) handleDeployment(w http.ResponseWriter, r *http.Request) {
 	}
 	sn := newSnapshot(s.Store)
 	byStem := sn.byStem()
-	nodes := sn.folder("deployment-nodes")
-	blocks := sn.folder("building-blocks")
-	eifs := sn.folder("external-interfaces")
+	nodes := sn.typed("deployment-node")
+	blocks := sn.typed("building-block")
+	eifs := sn.typed("external-interface")
 
 	sorted := sortedByID(nodes)
 	rows := make([]map[string]any, 0, len(sorted))
 	for _, p := range sorted {
-		row := archRow(p, "deployment-nodes")
+		row := archRow(p)
 		row["stereotype"] = strings.TrimSpace(p.MetaString("stereotype"))
 		rows = append(rows, row)
 	}
@@ -646,7 +647,7 @@ func (s *Server) handleDeployment(w http.ResponseWriter, r *http.Request) {
 	diagram, rawLinks := project.BuildDeploymentDiagram("", nodes, blocks, eifs, byStem)
 	filteredLinks := make([]map[string]any, 0, len(rawLinks))
 	for _, l := range rawLinks {
-		if !strings.HasPrefix(l["url"].(string), "/page/deployment-nodes/") {
+		if !strings.HasPrefix(l["url"].(string), "/page/"+metamodel.Folder("deployment-node")+"/") {
 			filteredLinks = append(filteredLinks, l)
 		}
 	}
