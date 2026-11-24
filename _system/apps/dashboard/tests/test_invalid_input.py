@@ -105,6 +105,7 @@ _log = _Collect()
 logging.getLogger("systems42.inputs").addHandler(_log)
 
 import app  # noqa: E402
+import wiki  # noqa: E402
 import inputs  # noqa: E402
 
 
@@ -143,11 +144,11 @@ def test_no_route_breaks():
 
 
 def test_an_invalid_date_costs_the_page_nothing_else():
-    month = app._parse(_wiki / "domain-terms" / "DT-001-invalid-month.md", "domain-terms")
+    month = wiki._parse(_wiki / "domain-terms" / "DT-001-invalid-month.md", "domain-terms")
     assert month.id == "DT-001" and month.title == "Invalid month" and month.status == "draft"
     assert month.meta["created"] == "2026-13-01", "the invalid date is not kept as written"
     assert str(month.meta["updated"]) == "2026-01-02", "the valid date beside it is lost"
-    day = app._parse(_wiki / "domain-terms" / "DT-002-invalid-day.md", "domain-terms")
+    day = wiki._parse(_wiki / "domain-terms" / "DT-002-invalid-day.md", "domain-terms")
     assert day.title == "Invalid day" and day.meta["updated"] == "2026-02-30"
     status, body = _get("/page/domain-terms/DT-003-valid")
     assert status == 200
@@ -177,11 +178,11 @@ def test_wiki_diagnostics_name_file_and_problem():
 
 def test_a_value_no_type_accepts_drops_the_fields_and_says_so():
     path = _wiki / "constraints" / "CON-001-not-an-int.md"
-    page = app._parse(path, "constraints")
+    page = wiki._parse(path, "constraints")
     assert page.meta == {} and page.title == "CON-001-not-an-int"
     assert _logged(path, "fields ignored", "abc")
     path = _wiki / "goals" / "GOAL-001-not-a-timestamp.md"
-    assert app._parse(path, "goals").meta == {}
+    assert wiki._parse(path, "goals").meta == {}
     assert _logged(path, "fields ignored")
 
 

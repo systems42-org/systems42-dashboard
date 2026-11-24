@@ -37,6 +37,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import wiki  # noqa: E402
 
 QR = """---
 id: QR-001
@@ -72,7 +73,7 @@ NAV = ["Requirements", "Architecture", "Domain Terms", "Decisions", "Issues"]
 
 
 def _home():
-    app._PARSE_CACHE.clear()
+    wiki._PARSE_CACHE.clear()
     return app.app.test_client().get("/").get_data(as_text=True)
 
 
@@ -193,7 +194,7 @@ def test_changes_lists_a_backdated_page_with_relative_time():
 
 
 def _area(route):
-    app._PARSE_CACHE.clear()
+    wiki._PARSE_CACHE.clear()
     return app.app.test_client().get(route).get_data(as_text=True)
 
 
@@ -202,7 +203,7 @@ def test_recent_changes_shape():
         QR.replace("QR-001", "DT-001").replace("quality-requirement", "domain-term"),
         encoding="utf-8")
     try:
-        app._PARSE_CACHE.clear()
+        wiki._PARSE_CACHE.clear()
         rows = app.recent_changes(5)
         assert rows and set(rows[0]) >= {"id", "title", "kind", "url", "when"}, rows
         assert rows[0]["url"] == "/page/domain-terms/DT-001-x"
@@ -265,7 +266,7 @@ def test_use_cases_are_functional_requirements():
         r3 = body[body.index("tile-r3"):body.index("tile-r4")]
         r4 = body[body.index("tile-r4"):body.index("tile-r5")]
         # the headline counts all functional requirements; the tile names none (FR-019)
-        n_fr = len(app.load_folder("functional-requirements"))
+        n_fr = len(wiki.load_folder("functional-requirements"))
         assert f'<span class="num">{n_fr}</span>' in r3, r3
         assert ("requirement" if n_fr == 1 else "requirements") in r3, r3
         assert "UC-001" not in r3 and "use case" not in r3, r3

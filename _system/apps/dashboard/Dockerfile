@@ -47,6 +47,7 @@ COPY app.py .
 COPY catalog.py .
 COPY inputs.py .
 COPY metamodel.py .
+COPY wiki.py .
 COPY preflight.py .
 COPY gunicorn.conf.py .
 COPY help.md .

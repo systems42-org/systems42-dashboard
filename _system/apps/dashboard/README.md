@@ -363,10 +363,13 @@ status-strip source count already reads.
 
 ```
 _system/apps/dashboard/
-  app.py             Flask app + wiki parser + all diagram projections
+  app.py             Flask app + all diagram projections. May import every module below
   catalog.py         the three areas, and the sections from the metamodel with routes and colours
   metamodel.py       reader for _system/metamodel/ (the /metamodel page, ADR-0008)
   inputs.py          reads text and YAML from wiki, wiki.yaml and metamodel, and logs what is invalid
+  wiki.py            the repository paths, Page, parsing and containment, the parse cache, the
+                     folder loaders, wiki.yaml as a mapping and the per-request memo decorator.
+                     May import inputs, metamodel and catalog, never Flask or app
   help.md            source of the /help page
   templates/         base, index, _empty (shared empty state), _macros (plural()),
                      _maturity (maturity bar/legend), _mermaid (loader),
@@ -461,7 +464,7 @@ terms, context and focus filters),
 contract, the `/reload` control (server-side caches cleared, `static_url`
 versioning), the copy contract (client wording with correct plurals, no glyph
 abbreviations, DR-025 is indexed), and two contracts that would otherwise
-drift in silence — `_templates/` against `app.py`'s parser, and the skills the
+drift in silence — `_templates/` against `wiki.py`'s parser, and the skills the
 workflows name against the ones vendored under `.agents/skills/`. The
 three-area restructure is pinned by `test_catalog.py` (every wiki folder
 belongs to exactly one section), `test_sections_from_metamodel.py` (a renamed

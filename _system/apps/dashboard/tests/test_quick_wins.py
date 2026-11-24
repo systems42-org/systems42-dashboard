@@ -66,6 +66,7 @@ _page("issues", "ISS-003-closed-qr", "ISS-003", "issue", "Closed one", "resolved
     "---\nid: SRC-001\ntype: source\ntitle: Notes\nstatus: ingested\n---\n\n# Notes\n", encoding="utf-8")
 
 import app  # noqa: E402
+import wiki  # noqa: E402
 
 client = app.app.test_client()
 
@@ -136,7 +137,7 @@ def test_center_tile_shows_four_changes_and_no_page_count():
 
 def test_changes_page_lists_every_page_newest_first():
     body = client.get("/changes").get_data(as_text=True)
-    assert len(re.findall(r'class="ml-hit"', body)) == len(app.load_all_pages())
+    assert len(re.findall(r'class="ml-hit"', body)) == len(wiki.load_all_pages())
 
 
 def test_section_open_issue_count_opens_only_those_issues():

@@ -155,6 +155,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import wiki  # noqa: E402
 
 
 def _get(path):
@@ -183,12 +184,12 @@ def test_no_route_breaks_on_a_bad_page():
 
 
 def test_bad_fields_fall_back_instead_of_crashing():
-    page = app._parse(_wiki / "domain-terms" / "DT-101-blank-title.md", "domain-terms")
+    page = wiki._parse(_wiki / "domain-terms" / "DT-101-blank-title.md", "domain-terms")
     assert page.title == "DT-101-blank-title", page.title
     assert page.aliases == ["Alias"], page.aliases
     assert page.as_list("tags") == ["single"]
-    assert app._parse(_wiki / "issues" / "ISS-001-string-frontmatter.md", "issues").meta == {}
-    assert app._parse(_wiki / "constraints" / "CON-001-list-frontmatter.md", "constraints").meta == {}
+    assert wiki._parse(_wiki / "issues" / "ISS-001-string-frontmatter.md", "issues").meta == {}
+    assert wiki._parse(_wiki / "constraints" / "CON-001-list-frontmatter.md", "constraints").meta == {}
     _, body = _get("/page/domain-terms/DT-102-latin1")
     assert "Latin-1" in body and "Gr��e" in body
 
@@ -291,9 +292,9 @@ def test_symlinks_out_of_the_wiki_are_not_followed():
     for url in ("/", "/search", "/search.json", "/domain-terms", "/changes"):
         _, body = _get(url)
         assert "LINKED SECRET" not in body and "Linked out" not in body, url
-    assert app._parse(_wiki / "domain-terms" / "DT-105-linked-out.md", "domain-terms") is None
+    assert wiki._parse(_wiki / "domain-terms" / "DT-105-linked-out.md", "domain-terms") is None
     assert not app._is_wiki_folder("linked")
-    assert app.load_folder("linked") == []
+    assert wiki.load_folder("linked") == []
 
 
 def test_symlinks_inside_the_wiki_still_work():

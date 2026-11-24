@@ -25,10 +25,11 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import wiki  # noqa: E402
 
 
 def _page(folder, stem):
-    return next(p for p in app.load_folder(folder) if p.stem == stem)
+    return next(p for p in wiki.load_folder(folder) if p.stem == stem)
 
 
 def _ids(groups):
@@ -353,15 +354,15 @@ def test_single_lifecycle_draws_plain():
     for f in tmp.glob("deployment-nodes/*.md"):
         if f.stem not in ("DN-001-isaqb-cloud", "DN-002-app-server"):
             f.unlink()
-    saved = app.WIKI_DIR
-    app.WIKI_DIR = tmp
+    saved = wiki.WIKI_DIR
+    wiki.WIKI_DIR = tmp
     try:
-        app._PARSE_CACHE.clear()
+        wiki._PARSE_CACHE.clear()
         mm = app.build_deployment_diagram()
         assert "stroke-dasharray" not in mm and "· planned" not in mm, mm
     finally:
-        app.WIKI_DIR = saved
-        app._PARSE_CACHE.clear()
+        wiki.WIKI_DIR = saved
+        wiki._PARSE_CACHE.clear()
         shutil.rmtree(tmp.parent)
 
 
@@ -377,7 +378,7 @@ def test_free_text_keeps_slash():
     assert "as TCP/IP Gateway" in mm, mm
     assert "TCP/IP Gateway: no such page" in app.runtime_hints("RS-003-edge-cases")
     # a path to a real page still resolves
-    by_stem = {q.stem: q for q in app.load_all_pages()}
+    by_stem = {q.stem: q for q in wiki.load_all_pages()}
     assert app._endpoint("wiki/building-blocks/BB-003-console", by_stem)[0] == "BB-003-console"
 
 

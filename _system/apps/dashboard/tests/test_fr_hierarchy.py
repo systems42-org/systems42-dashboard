@@ -22,6 +22,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import wiki as wiki_module  # noqa: E402
 
 
 def test_build_fr_hierarchy_counts_and_shape():
@@ -180,20 +181,20 @@ def test_unplaced_requirements_stay_visible():
     """A page the Agile projection cannot place (other notation, no notation)
     is listed, never silently dropped."""
     extra = [
-        app.Page("UC-009-find", {"id": "UC-009", "title": "Find", "notation": "use-case",
+        wiki_module.Page("UC-009-find", {"id": "UC-009", "title": "Find", "notation": "use-case",
                                  "level": "sea"}, "", "functional-requirements"),
-        app.Page("FR-090-unplaced", {"id": "FR-090", "title": "No notation"},
+        wiki_module.Page("FR-090-unplaced", {"id": "FR-090", "title": "No notation"},
                  "", "functional-requirements"),
-        app.Page("FR-091-ears", {"id": "FR-091", "title": "Shall", "notation": "ears",
+        wiki_module.Page("FR-091-ears", {"id": "FR-091", "title": "Shall", "notation": "ears",
                                  "level": "requirement"}, "", "functional-requirements"),
     ]
-    real = app.load_folder
-    app.load_folder = lambda folder: real(folder) + (extra if folder == "functional-requirements" else [])
+    real = wiki_module.load_folder
+    wiki_module.load_folder = lambda folder: real(folder) + (extra if folder == "functional-requirements" else [])
     try:
         bl = app.build_fr_hierarchy()
         body = app.app.test_client().get("/req42/functional-requirements").get_data(as_text=True)
     finally:
-        app.load_folder = real
+        wiki_module.load_folder = real
     other = {o["id"]: o for o in bl["other_notations"]}
     assert set(other) == {"UC-009", "FR-090", "FR-091"}, other
     assert other["FR-090"]["notation"] == "", other["FR-090"]
@@ -234,7 +235,7 @@ def test_features_and_stories_may_refine_a_use_case():
             (wiki / "functional-requirements" / f"{stem}.md").write_text(
                 f"---\nid: {stem[:6]}\ntype: functional-requirement\ntitle: {stem[7:]}\n"
                 f"status: draft\n{meta}---\n\n# {stem[7:]}\n", encoding="utf-8")
-        saved, app.WIKI_DIR = app.WIKI_DIR, wiki
+        saved, wiki_module.WIKI_DIR = wiki_module.WIKI_DIR, wiki
         try:
             bl = app.build_fr_hierarchy()
             node, level = app._fr_hierarchy_node(bl, "UC-010-borrow")
@@ -244,7 +245,7 @@ def test_features_and_stories_may_refine_a_use_case():
             crumbs = [a["id"] for a in app._fr_ancestors("FR-093-renew-online")]
             goals = app.load_goals()
         finally:
-            app.WIKI_DIR = saved
+            wiki_module.WIKI_DIR = saved
 
     ucs = {u["id"]: u for u in bl["use_cases"]}
     assert set(ucs) == {"UC-010", "UC-013"}, ucs
@@ -293,7 +294,7 @@ def test_parent_written_as_a_number_or_a_single_link():
             (wiki / "functional-requirements" / f"{stem}.md").write_text(
                 f"---\nid: {stem[:6]}\ntype: functional-requirement\ntitle: {stem[7:]}\n"
                 f"status: draft\n{meta}---\n\n# {stem[7:]}\n", encoding="utf-8")
-        saved, app.WIKI_DIR = app.WIKI_DIR, wiki
+        saved, wiki_module.WIKI_DIR = wiki_module.WIKI_DIR, wiki
         try:
             bl = app.build_fr_hierarchy()
             client = app.app.test_client()
@@ -302,7 +303,7 @@ def test_parent_written_as_a_number_or_a_single_link():
             crumbs = {s: [a["id"] for a in app._fr_ancestors(s)] for s in pages}
             goals = app.load_goals()
         finally:
-            app.WIKI_DIR = saved
+            wiki_module.WIKI_DIR = saved
     assert set(codes.values()) == {200} and overview == 200, (codes, overview)
     assert "FR-081" in {o["id"] for o in bl["orphans"]}, bl["orphans"]
     assert crumbs["FR-081-number"] == [], crumbs
@@ -310,7 +311,7 @@ def test_parent_written_as_a_number_or_a_single_link():
     assert [f["id"] for f in uc["features"]] == ["FR-082"], uc
     assert [s["id"] for s in uc["features"][0]["stories"]] == ["FR-083"], uc
     assert crumbs["FR-083-under-feature"] == ["UC-080", "FR-082"], crumbs
-    assert app._fr_first_parent(app.Page("x", {"parent": 7}, "", "functional-requirements")) == "7"
+    assert app._fr_first_parent(wiki_module.Page("x", {"parent": 7}, "", "functional-requirements")) == "7"
     assert "FR-082" in {p.id for p in goals["coverage"]["GOAL-002"]}
     print("OK parent as a number or a single link")
 

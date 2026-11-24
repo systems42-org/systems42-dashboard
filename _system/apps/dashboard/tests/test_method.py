@@ -25,6 +25,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import wiki  # noqa: E402
 
 ISSUE = """---
 id: ISS-002
@@ -45,7 +46,7 @@ LINK = '<a href="/page/issues/ISS-002-define-the-clarify-loop">ISS-002 Define th
 
 
 def _method():
-    app._PARSE_CACHE.clear()
+    wiki._PARSE_CACHE.clear()
     r = app.app.test_client().get("/method")
     assert r.status_code == 200, r.status_code
     body = r.get_data(as_text=True)

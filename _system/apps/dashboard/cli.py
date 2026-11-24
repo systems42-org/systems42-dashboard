@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-# Path settings that app.py and metamodel.py read from the environment.
+# Path settings that app.py, wiki.py and metamodel.py read from the environment.
 PATH_SETTINGS = ("WIKI_DIR", "RAW_SOURCES_DIR", "WIKI_CONFIG", "DOCS_DIR",
                  "METAMODEL_DIR", "NOTATIONS_DIR", "ANCHORS_DIR")
 

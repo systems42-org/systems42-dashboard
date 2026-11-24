@@ -87,6 +87,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import wiki  # noqa: E402
 
 _META = re.compile(r'<p class="detail-meta">.*?</p>', re.S)
 
@@ -158,7 +159,7 @@ def test_markup_matches_the_generic_page():
 
 
 def test_one_builder_for_both_views():
-    page = next(p for p in app.load_folder("functional-requirements") if p.stem == "FR-005-odd")
+    page = next(p for p in wiki.load_folder("functional-requirements") if p.stem == "FR-005-odd")
     assert app.page_head(page) == {"created": "2026-13-01", "updated": "", "tags": ["lonely"]}
     templates = Path(app.app.root_path) / "templates"
     for name in ("detail.html", "fr.html"):

@@ -59,25 +59,26 @@ _page("domain-terms/deeper", "DT-900-nested", "Nested")
     "Purpose, activity, metric.\n", encoding="utf-8")
 
 import app  # noqa: E402
+import wiki  # noqa: E402
 import metamodel  # noqa: E402
 
 client = app.app.test_client()
 
 
 def test_link_targets_dump_once_per_page():
-    app._PARSE_CACHE.clear()
+    wiki._PARSE_CACHE.clear()
     calls = []
-    real = app.yaml.safe_dump
+    real = wiki.yaml.safe_dump
 
     def counting(*a, **kw):
         calls.append(1)
         return real(*a, **kw)
 
-    app.yaml.safe_dump = counting
+    wiki.yaml.safe_dump = counting
     try:
         assert client.get("/page/stakeholders/STK-001-owner").status_code == 200
         first = len(calls)
-        pages = app.load_all_pages()
+        pages = wiki.load_all_pages()
         assert 0 < first <= len(pages), (first, len(pages))
         for p in pages:
             assert p.link_targets() == p.link_targets()
@@ -85,27 +86,27 @@ def test_link_targets_dump_once_per_page():
         assert client.get("/page/stakeholders/STK-001-owner").status_code == 200
         assert len(calls) == len(pages), (len(calls), len(pages))
     finally:
-        app.yaml.safe_dump = real
-    owner = next(p for p in app.load_all_pages() if p.stem == "STK-001-owner")
+        wiki.yaml.safe_dump = real
+    owner = next(p for p in wiki.load_all_pages() if p.stem == "STK-001-owner")
     assert owner.link_targets() == {"DT-001-term-1"}
 
 
 def test_an_edited_page_gets_fresh_link_targets():
-    app._PARSE_CACHE.clear()
+    wiki._PARSE_CACHE.clear()
     path = _wiki / "stakeholders" / "STK-002-editor.md"
     _page("stakeholders", "STK-002-editor", "Editor", "Uses [[DT-002-term-2]].")
-    page = app._parse(path, "stakeholders")
+    page = wiki._parse(path, "stakeholders")
     assert page.link_targets() == {"DT-002-term-2"}
     _page("stakeholders", "STK-002-editor", "Editor", "Uses [[DT-003-term-3]].")
     st = path.stat()
     os.utime(path, ns=(st.st_atime_ns, st.st_mtime_ns + 1_000_000_000))
-    assert app._parse(path, "stakeholders").link_targets() == {"DT-003-term-3"}
+    assert wiki._parse(path, "stakeholders").link_targets() == {"DT-003-term-3"}
     path.unlink()
 
 
 def test_title_index_knows_what_load_all_pages_knows():
     with app.app.test_request_context("/"):
-        stems = {p.stem for p in app.load_all_pages()}
+        stems = {p.stem for p in wiki.load_all_pages()}
         titles = app.title_index()
     assert set(titles) == stems, (set(titles) ^ stems)
     assert "DT-900-nested" not in titles and "README" not in titles
@@ -114,21 +115,21 @@ def test_title_index_knows_what_load_all_pages_knows():
 
 def test_a_deleted_page_leaves_the_cache():
     path = _page("domain-terms", "DT-050-doomed", "Doomed")
-    app.load_folder("domain-terms")
-    assert path in app._PARSE_CACHE
+    wiki.load_folder("domain-terms")
+    assert path in wiki._PARSE_CACHE
     path.unlink()
-    assert "DT-050-doomed" not in {p.stem for p in app.load_folder("domain-terms")}
-    assert path not in app._PARSE_CACHE
+    assert "DT-050-doomed" not in {p.stem for p in wiki.load_folder("domain-terms")}
+    assert path not in wiki._PARSE_CACHE
     # the other pages of the folder stay cached
-    assert _wiki / "domain-terms" / "DT-001-term-1.md" in app._PARSE_CACHE
+    assert _wiki / "domain-terms" / "DT-001-term-1.md" in wiki._PARSE_CACHE
 
 
 def test_parse_of_a_vanished_file_drops_its_entry():
     path = _page("domain-terms", "DT-051-gone", "Gone")
-    assert app._parse(path, "domain-terms") is not None
+    assert wiki._parse(path, "domain-terms") is not None
     path.unlink()
-    assert app._parse(path, "domain-terms") is None
-    assert path not in app._PARSE_CACHE
+    assert wiki._parse(path, "domain-terms") is None
+    assert path not in wiki._PARSE_CACHE
 
 
 def test_a_deleted_anchor_leaves_the_anchor_cache():
@@ -143,7 +144,7 @@ def test_a_deleted_anchor_leaves_the_anchor_cache():
 def test_threads_parsing_at_once_agree():
     for i in range(40):
         _page("issues", f"ISS-{100 + i}-load", f"Load {i}", "About [[DT-001-term-1]].")
-    app._PARSE_CACHE.clear()
+    wiki._PARSE_CACHE.clear()
     errors, results = [], []
     start = threading.Barrier(8)
 
@@ -151,7 +152,7 @@ def test_threads_parsing_at_once_agree():
         try:
             start.wait()
             for _ in range(20):
-                pages = app.load_all_pages()
+                pages = wiki.load_all_pages()
                 results.append(sorted((p.stem, p.title, tuple(sorted(p.link_targets())))
                                       for p in pages))
                 metamodel.method_anchors()
@@ -166,7 +167,7 @@ def test_threads_parsing_at_once_agree():
     assert not errors, errors
     assert all(r == results[0] for r in results)
     files = {p for p in _wiki.glob("*/*.md")}
-    assert set(app._PARSE_CACHE) == files, set(app._PARSE_CACHE) ^ files
+    assert set(wiki._PARSE_CACHE) == files, set(wiki._PARSE_CACHE) ^ files
 
 
 if __name__ == "__main__":
