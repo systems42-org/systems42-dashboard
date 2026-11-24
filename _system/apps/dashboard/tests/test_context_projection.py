@@ -95,7 +95,7 @@ _eif("005", "Payments", "core-operations", [
 
 
 def _diagram():
-    d = app.build_context_diagram()
+    d = project.context.build_context_diagram(app.wiki_config()["system_name"])
     assert d, "no diagram projected — is another test module holding WIKI_DIR?"
     return d
 

@@ -11,9 +11,7 @@ import mimetypes
 import os
 import re
 import secrets
-import signal
 import socket
-import threading
 import time
 import zlib
 from datetime import datetime
@@ -24,18 +22,18 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import markdown as md
 from flask import (Flask, abort, g, has_request_context, jsonify, make_response,
                    redirect, render_template, request, send_file, url_for)
-from markupsafe import Markup, escape
+from markupsafe import escape
 
 import catalog  # the section catalog (DR-033)
 import metamodel  # reader for _system/metamodel/ (DR-035)
 import render  # sanitizer, wikilinks and Markdown
 import search  # search records
-import session  # presence, the Keyholder role and the view
+import session  # presence, the Keyholder role, the view and the lifecycle
 import links as links_module  # link resolver and indexes. "links" is a local name in many functions here
 import wiki  # paths, pages, parse cache and loaders
 import project.architecture  # decisions, building blocks, runtime, deployment, traces
 import project.common  # what several projections share
-import project.context  # the context flows
+import project.context  # the context diagram and its flows
 import project.goals  # vision, objectives and goal coverage
 import project.requirements  # requirement hierarchy, its Mermaid trees, quality scenarios
 import project.terms  # term network, relations and entity diagram
@@ -540,139 +538,6 @@ def vault_status() -> dict:
             "open_issues": sum(1 for i in issues if project.common.is_open_issue(i.status)),
             "sources": len(wiki.load_sources()),
             "last_change": _relative_when(last) if last else "—"}
-
-
-# --- Systems42 sections (DR-033) ------------------------------------------
-#
-# The section catalog (catalog.py) holds three areas (Requirements,
-# Architecture, Commons) and the sections the repository's metamodel declares
-# (FR-044). Each section maps to zero or more wiki folders; an "entry" is one
-# page in those folders. "href" is where the section's "View all" link points:
-# an existing rich view where one exists (domain terms/stakeholders/issues), a
-# /req42/<slug> list for the other known sections, and /section/<id> for a
-# section the dashboard has no view for.
-
-
-# --- context diagram (req42 block 03) --------------------------------------
-#
-# The system context is NOT stored as a diagram (DR-013, ISS-010): it is
-# projected live from the structured edges — each external interface's `flows`
-# and each stakeholder's `provides:`/`receives:` — into a mermaid flowchart.
-# Center = the system (blueish box); systems/organizations = light-grey boxes;
-# human roles = actor symbol ("Person"). Stakeholders are merged/hidden/shaped per their
-# `context_role`/`nature` fields (DR-014). No node links (not needed yet).
-
-
-def build_context_diagram(center: str | None = None,
-                          links: list[dict] | None = None) -> str | None:
-    """Project a mermaid context diagram from EIF.flows + STK.provides/receives.
-
-    One line per neighbour, not one per direction: an interface with both an
-    inbound and an outbound flow draws a single `<-->` edge carrying a single
-    label, and the two directions are spelled out in the flow table beneath
-    (build_context_flows). Returns None when no edges exist yet. Pure and
-    string-only, so it can be reused outside the request cycle. `links`, when
-    given, receives every page drawn as a node (QR-001)."""
-    center = center or project.common._clean_label(wiki_config()["system_name"], drop_parenthetical=False)
-    drawn: list[dict] = []
-    core = "CORE"
-    bands: dict[str, list[tuple[str, str, str]]] = {}   # tier -> [(nid, label, cls)]
-    loose: list[tuple[str, str, str]] = []
-    edges: list[str] = []
-
-    def add_edge(nid: str, ins: list, outs: list, side: str, ordered: list | None = None) -> None:
-        """`side` decides which end of the edge the neighbour sits on, which is
-        what actually positions it: mermaid ranks the source before the target."""
-        if ins and outs:
-            lab = project.context._flow_edge_label(ordered if ordered is not None else ins + outs)
-            src, arrow, dst = (nid, "<-->", core) if side == "left" else (core, "<-->", nid)
-        elif ins:
-            lab, src, arrow, dst = project.context._flow_edge_label(ins), nid, "-->", core
-        elif outs:
-            lab, src, arrow, dst = project.context._flow_edge_label(outs), core, "-->", nid
-        else:
-            return
-        edges.append(f'  {src} {arrow}|"{lab}"| {dst}' if lab else f"  {src} {arrow} {dst}")
-
-    # real external systems — one node each (DR-013), one line each (DR-026).
-    # A deprecated interface is one the boundary decision moved *inside* the
-    # system (ISS-010), so it is no longer a neighbour and must not be drawn.
-    for p in wiki.load_type("external-interface"):
-        if p.status == "deprecated":
-            continue
-        ins, outs, ordered = project.context._eif_flows(p)
-        if not (ins or outs):
-            continue
-        nid = project.common._diagram_node_id(p.id)
-        tier = str(p.meta.get("tier") or "").strip().lower()
-        side = next((s for k, _, s in project.context._TIER_BANDS if k == tier), "left")
-        (bands.setdefault(tier, []) if tier in project.context._TIER_LABEL else loose).append(
-            (nid, project.context._eif_node_label(p), "system"))
-        add_edge(nid, ins, outs, side, ordered)
-        drawn.append(project.common._node_link(p))
-
-    # user roles — flows live on the stakeholder, not as EIF nodes. DR-014:
-    # several stakeholders sharing a `context_role` merge into ONE node (union of
-    # their flows); `context_role: none` hides the role; `nature: organization`
-    # draws a box instead of the person/actor symbol.
-    def _union(dst: list, src) -> None:
-        for x in (src or []):
-            if x not in dst:
-                dst.append(x)
-
-    groups: dict[str, dict] = {}   # label -> {prov, recv, cls, order}
-    for p in wiki.load_type("stakeholder"):
-        prov, recv = p.as_list("provides"), p.as_list("receives")
-        if not (prov or recv):
-            continue
-        raw_role = p.meta.get("context_role")
-        if isinstance(raw_role, str) and raw_role.strip().lower() == "none":
-            continue
-        label = project.common._clean_label(raw_role) if raw_role else project.common._clean_label(p.title)
-        is_org = str(p.meta.get("nature", "person")).strip().lower() == "organization"
-        g = groups.get(label)
-        if g is None:
-            g = groups[label] = {"prov": [], "recv": [], "cls": "actor", "order": len(groups)}
-        if is_org:
-            g["cls"] = "system"          # organizations/systems share the box style
-        _union(g["prov"], prov)
-        _union(g["recv"], recv)
-        drawn.append(project.common._node_link(p))   # a merged role node links each of its stakeholders
-
-    for label, g in sorted(groups.items(), key=lambda kv: kv[1]["order"]):
-        nid = project.common._diagram_node_id(label)
-        loose.append((nid, label, g["cls"]))
-        ins = [{"data": x} for x in g["prov"]]
-        outs = [{"data": x} for x in g["recv"]]
-        add_edge(nid, ins, outs, "left")
-
-    if not edges:
-        return None
-    if links is not None:
-        links.extend(drawn)
-
-    def node_line(nid: str, label: str, cls: str) -> str:
-        # persons get the actor symbol (stadium + "Person"); systems/orgs are boxes
-        return (f'  {nid}(["Person · {label}"]):::actor' if cls == "actor"
-                else f'  {nid}["{label}"]:::{cls}')
-
-    lines = ["flowchart LR"]
-    for tier, tier_label, _ in project.context._TIER_BANDS:
-        if not bands.get(tier):
-            continue
-        lines.append(f'  subgraph {project.common._diagram_node_id(tier)}["{tier_label}"]')
-        lines.append("    direction TB")
-        lines += ["  " + node_line(*n) for n in bands[tier]]
-        lines.append("  end")
-    lines.append(f'  {core}["{project.common._clean_label(center)}"]:::core')
-    lines += [node_line(*n) for n in loose]
-    lines += edges
-    lines += [
-        "  classDef core fill:#2f6fb3,stroke:#7fc0ff,stroke-width:2px,color:#ffffff,font-weight:bold;",
-        "  classDef system fill:#d7dbe3,stroke:#9aa3b2,color:#15202e;",
-        "  classDef actor fill:#f3f6fb,stroke:#aeb8c9,color:#15202e;",
-    ]
-    return "\n".join(lines)
 
 
 @app.route("/arc42/building-blocks")
@@ -1197,7 +1062,7 @@ def page_detail(folder, stem):
     body_html = render.render_markdown(body, titles)
     # context pages carry the system-context diagram, projected live (DR-013)
     diagram_links: list[dict] = []
-    context_diagram = build_context_diagram(links=diagram_links) if wiki._is(folder, "context") else None
+    context_diagram = project.context.build_context_diagram(wiki_config()["system_name"], links=diagram_links) if wiki._is(folder, "context") else None
     context_flows = project.context.build_context_flows() if wiki._is(folder, "context") else None
     # domain terms carry a focused ego-graph snippet above the definition (DR-023)
     ego_graph = project.terms.build_glossary_ego_graph(stem) if wiki._is(folder, "domain-term") else None
@@ -1331,30 +1196,6 @@ def _search_filters() -> dict[str, list[dict]]:
     return {"status": opts("status"), "priority": opts("priority", _PRIORITY_ORDER), "tag": opts("tags")}
 
 
-def _mermaid_goal_tree(vision: wiki.Page, objectives: list[wiki.Page]) -> str | None:
-    """Project the Vision→Objectives tree from `parent:` edges (DR-018 style).
-    Top-down, short-name nodes; clicking a goal jumps to its anchor below.
-    Default `useMaxWidth: true` so the SVG fits the container at typical
-    desktop widths (≥1000 px) without horizontal scrolling."""
-    if not vision or not objectives:
-        return None
-    root = project.common._clean_label(wiki_config()["system_name"], drop_parenthetical=False)
-    lines = ["graph TD", f'  V["Vision {root}"]:::vision',
-             f'  click V "/goals#{vision.id}"']
-    for o in objectives:
-        nid = project.common._diagram_node_id(o.id)
-        label = project.common._clean_label(project.common._short_title(o))
-        lines.append(f'  V --> {nid}["{o.id}<br/>{label}"]:::goal')
-        # absolute target so the same diagram works on /goals (in-page anchor)
-        # and on /req42 (cross-page navigation to the matching goal card)
-        lines.append(f'  click {nid} "/goals#{o.id}"')
-    lines += [
-        "  classDef vision fill:#2f6fb3,stroke:#7fc0ff,color:#ffffff,stroke-width:2px,font-weight:bold;",
-        "  classDef goal fill:#d7dbe3,stroke:#9aa3b2,color:#15202e;",
-    ]
-    return "\n".join(lines)
-
-
 @app.route("/goals")
 def goals_view():
     """req42 Block 01 — Vision + Objectives. Three sections top-down:
@@ -1433,7 +1274,7 @@ def goals_view():
                       for p in data["coverage"].get(o.id, [])],
         })
 
-    diagram = _mermaid_goal_tree(vision, objectives)
+    diagram = project.goals._mermaid_goal_tree(wiki_config()["system_name"], vision, objectives)
     return render_template(
         "goals.html",
         diagram=diagram,
@@ -1602,7 +1443,7 @@ def _block_list(block: dict, slug: str | None):
     ]
     # the Scope block (03) shows the same live-projected system-context diagram
     diagram_links: list[dict] = []
-    context_diagram = build_context_diagram(links=diagram_links) if slug == "scope" else None
+    context_diagram = project.context.build_context_diagram(wiki_config()["system_name"], links=diagram_links) if slug == "scope" else None
     context_flows = project.context.build_context_flows() if slug == "scope" else None
     entity_diagram = project.terms.build_data_model_full_diagram() if slug == "models" else None
     return render_template(
@@ -1664,135 +1505,6 @@ def join_page():
     return render_template("join.html", join_url=url, join_qr=qr_svg(url, scale=10))
 
 
-# ---------------------------------------------------------------------------
-# Server lifecycle: self-shutdown as soon as no browser is watching anymore.
-# Multiple browsers (workshop clients) may watch at once, so presence is
-# tracked per client (a random id each tab generates once, in base.html)
-# rather than as a single "is anyone home" flag.
-#
-# Every open page sends a lightweight heartbeat (`POST /ping`) every few
-# seconds, tagged with its client_id. As long as any client keeps pinging,
-# the server keeps running; once the last one goes quiet, the watchdog shuts
-# it down after a grace period — a closed browser window leaves no orphaned
-# container behind. A page additionally reports via a pagehide beacon
-# `POST /leaving` that it is going away: if it was just navigation, the next
-# page's `/ping` (same client_id, carried via sessionStorage) immediately
-# clears the signal; if the tab is really closed, that client is dropped
-# after `_LEAVE_GRACE` (~5 s) instead of waiting out the full heartbeat grace
-# period.
-#
-# Deliberately NO long-lived open connection (an earlier iteration used an
-# SSE/events stream): that tied up a worker thread for a tab's entire
-# lifetime, and clicking through subpages piled these up until the thread
-# pool was exhausted and even /stop stopped being served. A /ping is instead
-# an immediate request that holds no thread — the problem disappears
-# entirely. The grace period is generous so a tab throttled in the background
-# (browsers throttle timers to ~1x/min) stays alive; only a genuinely closed
-# tab stops pinging altogether. A single worker keeps the state
-# process-coherent (Dockerfile: --workers 1). See DR-022 and its addendum.
-# ---------------------------------------------------------------------------
-
-_ever_connected = False
-_shutting_down = False
-_watchdog_started = False
-_server_started = time.monotonic()
-# The pid of the Gunicorn master, once gunicorn.conf.py has reported it
-# (`start_lifecycle`). None everywhere else: under the development server, in
-# the site export and in tests the parent is a shell or a test runner.
-_gunicorn_master: int | None = None
-
-
-def _shutdown(reason):
-    """Cleanly shut down the server. Under gunicorn, the master is terminated
-    via SIGTERM, so all workers exit and the container's PID 1 returns — with
-    `restart: no` the container then stays down. The master is the pid that
-    gunicorn.conf.py handed to `start_lifecycle`, never a guess from the
-    parent pid. Everywhere else we only terminate ourselves (NOT the parent —
-    that is a shell or a test runner) via SIGTERM: a SIGINT sent from a
-    background thread to our own process is swallowed by the Werkzeug dev
-    server (Werkzeug 3.x), whereas SIGTERM is reliably handled via the default
-    signal action."""
-    global _shutting_down
-    with session._lifecycle_lock:
-        if _shutting_down:
-            return
-        _shutting_down = True
-    app.logger.info("dashboard shutdown: %s", reason)
-
-    def _terminate():
-        time.sleep(0.4)  # let the HTTP response / beacon flush first
-        if _gunicorn_master is not None:
-            try:
-                os.kill(_gunicorn_master, signal.SIGTERM)
-            except (ProcessLookupError, PermissionError):
-                pass
-        os.kill(os.getpid(), signal.SIGTERM)
-
-    threading.Thread(target=_terminate, daemon=True).start()
-
-
-def _watchdog_pass(auto_stop: bool) -> bool:
-    """One pass of the watchdog: drop the clients that are gone, then stop the
-    server when nobody is left and `auto_stop` is on. Returns True when the
-    watchdog has nothing more to do."""
-    with session._lifecycle_lock:
-        if _shutting_down:
-            return True
-        now = time.monotonic()
-        # A client said goodbye and never pinged again: drop it (fast
-        # path on tab close). A fresher ping after the goodbye cancels it
-        # (was just in-page navigation).
-        for cid, left_at in list(session._leaving.items()):
-            last = session._clients.get(cid)
-            if last is not None and last > left_at:
-                session._leaving.pop(cid, None)
-            elif now - left_at > session._LEAVE_GRACE:
-                session._forget_client(cid)
-        # A client simply went stale (no goodbye, no more pings either).
-        for cid, last in list(session._clients.items()):
-            if now - last > session._HEARTBEAT_GRACE:
-                session._forget_client(cid)
-        anyone_left = bool(session._clients)
-        ever = _ever_connected
-    if not auto_stop:
-        return False
-    if not ever:
-        # Nobody has ever pinged -> startup grace period.
-        if now - _server_started > session._STARTUP_GRACE:
-            _shutdown("no browser heartbeat within the startup grace period")
-            return True
-    elif not anyone_left:
-        _shutdown("no more browser heartbeat (all tabs closed)")
-        return True
-    return False
-
-
-def _watchdog(auto_stop: bool):
-    while not _watchdog_pass(auto_stop):
-        time.sleep(1.0)
-
-
-def start_lifecycle(gunicorn_master: int | None = None) -> None:
-    """Start the watchdog. Only a server entry point calls this: the Gunicorn
-    hook in gunicorn.conf.py, which passes the master's pid, and `python
-    app.py`. Importing this module starts nothing, so the site export and the
-    tests can use the Flask test client for as long as they need (issue #182).
-
-    DASH_NO_SHUTDOWN, set to anything, switches the automatic stop off
-    (FR-050): the watchdog still drops clients that are gone, and "Disconnect
-    all" still stops the server. The Go dashboard reads the same variable."""
-    global _watchdog_started, _gunicorn_master, _server_started
-    with session._lifecycle_lock:
-        if _watchdog_started:
-            return
-        _watchdog_started = True
-        _gunicorn_master = gunicorn_master
-        _server_started = time.monotonic()   # the startup grace starts here
-    auto_stop = not os.environ.get("DASH_NO_SHUTDOWN", "").strip()
-    threading.Thread(target=_watchdog, args=(auto_stop,), daemon=True,
-                     name="dashboard-watchdog").start()
-
-
 def _json_object(req) -> dict:
     """The JSON object in the body of a session request (/ping, /leaving,
     /settings, /disconnect-all). No body, an unreadable body and `null` count
@@ -1830,17 +1542,10 @@ def heartbeat_ping():
     changes once given (`_name_for`). Both are re-sent on every ping, so the
     button follows the role live if it ever transfers (Yoda's tab
     disappearing): the heir gets the button but keeps its own name."""
-    global _ever_connected
     cid = _client_id(request)
     ua = request.headers.get("User-Agent", "")[:200]
     with session._lifecycle_lock:
-        now = time.monotonic()
-        if cid not in session._clients:
-            session._first_seen[cid] = now
-        session._clients[cid] = now
-        session._user_agents[cid] = ua
-        session._leaving.pop(cid, None)
-        _ever_connected = True
+        session._record_ping(cid, ua)
         is_facilitator = cid == session._facilitator_client_id()
         nickname = session._name_for(cid)
     return {"nickname": nickname, "is_facilitator": is_facilitator}
@@ -1996,14 +1701,14 @@ def settings_post():
 @app.route("/disconnect-all", methods=["POST"])
 def disconnect_all():
     """Facilitator-only: end the session for every connected browser by
-    shutting the server down outright (`_shutdown`, above). Everyone else's
+    shutting the server down outright (`session._shutdown`). Everyone else's
     next /ping then fails, which the footer script turns into a plain
     "session ended" notice (base.html)."""
     cid = _client_id(request)
     with session._lifecycle_lock:
         if cid != session._facilitator_client_id():
             abort(403)
-    _shutdown("disconnect-all requested by facilitator")
+    session._shutdown("disconnect-all requested by facilitator")
     return ("", 204)
 
 
@@ -2378,5 +2083,5 @@ def about_file(name):
 
 
 if __name__ == "__main__":
-    start_lifecycle()
+    session.start_lifecycle()
     app.run(host="0.0.0.0", port=8000, threaded=True)

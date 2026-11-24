@@ -98,7 +98,7 @@ def test_goal_cards_link_to_their_pages():
 
 def test_the_vision_node_of_the_goal_tree_is_clickable():
     data = project.goals.load_goals()
-    tree = app._mermaid_goal_tree(data["vision"], data["objectives"])
+    tree = project.goals._mermaid_goal_tree(app.wiki_config()["system_name"], data["vision"], data["objectives"])
     assert 'click V "/goals#GOAL-001"' in tree
 
 

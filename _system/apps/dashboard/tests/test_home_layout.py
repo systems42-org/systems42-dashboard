@@ -144,7 +144,9 @@ def test_hidden_area_and_section_leave_home():
         body = _home()
         assert "area-tile-architecture" not in body
         com = body[body.index("area-tile-commons"):]
-        assert "C6" not in com and "C5" in com
+        # The section line, not the bare text: the page's script nonce is
+        # random and holds "C6" about once in 200 renders.
+        assert '<code class="ml-id">C6</code>' not in com and '<code class="ml-id">C5</code>' in com
     finally:
         session.set_view([])
 

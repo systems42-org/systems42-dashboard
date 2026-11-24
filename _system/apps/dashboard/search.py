@@ -124,9 +124,6 @@ def build_search_records() -> list[dict]:
     return records
 
 
-# --- global search ---------------------------------------------------------
-
-
 def search_synonyms() -> list[list[str]]:
     """Each domain term's title plus its aliases, lower-cased. The search
     treats a group as one word (FR-003)."""

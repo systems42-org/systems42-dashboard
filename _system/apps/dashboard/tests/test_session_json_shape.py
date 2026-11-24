@@ -42,7 +42,7 @@ NOT_OBJECTS = ['["x"]', "[]", '"x"', '""', "7", "0", "1.5", "true", "false"]
 NOT_AN_OBJECT = {"error": "not-an-object"}
 
 _shutdowns = []
-app._shutdown = _shutdowns.append  # never signal the test process
+session._shutdown = _shutdowns.append  # never signal the test process
 
 
 def _reset():
@@ -53,7 +53,7 @@ def _reset():
         session._user_agents.clear()
         session._names.clear()
         session._facilitator = None
-        app._ever_connected = False
+        session._ever_connected = False
     session.set_view([])
     del _shutdowns[:]
 
@@ -62,7 +62,7 @@ def _state():
     with session._lifecycle_lock:
         return (dict(session._clients), dict(session._leaving), dict(session._first_seen),
                 dict(session._user_agents), dict(session._names), session._facilitator,
-                app._ever_connected, list(app.dashboard_config()["hidden"]), list(_shutdowns))
+                session._ever_connected, list(app.dashboard_config()["hidden"]), list(_shutdowns))
 
 
 def _post(client, route, body):
@@ -101,7 +101,7 @@ def test_a_rejected_first_request_does_not_count_as_a_connected_page():
     for body in NOT_OBJECTS:
         _post(client, "/ping", body)
     with session._lifecycle_lock:
-        assert session._clients == {} and app._ever_connected is False
+        assert session._clients == {} and session._ever_connected is False
 
 
 def test_no_body_an_unreadable_body_and_null_still_mean_an_empty_object():

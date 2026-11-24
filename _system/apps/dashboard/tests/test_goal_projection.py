@@ -241,7 +241,7 @@ def test_a_parenthesised_system_name_survives_into_the_diagrams():
         cfg.write_text('system_name: "System X (v2)"\n', encoding="utf-8")
         with app.app.app_context():
             data = project.goals.load_goals()
-            tree = app._mermaid_goal_tree(data["vision"], data["objectives"])
+            tree = project.goals._mermaid_goal_tree(app.wiki_config()["system_name"], data["vision"], data["objectives"])
         assert "System X (v2)" in tree, tree.splitlines()[:2]
         # square brackets are mermaid node delimiters and must still go
         assert project.common._clean_label("Acme [Beta]") == "Acme Beta"
