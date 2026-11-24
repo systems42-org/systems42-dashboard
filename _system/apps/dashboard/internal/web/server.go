@@ -571,6 +571,7 @@ type requestSnapshot struct {
 	links       map[string]wiki.PageRef
 	titles      map[string]string
 	flags       map[string]map[string]struct{}
+	definitions map[string]string
 }
 
 func newSnapshot(store *wiki.Store) *requestSnapshot {

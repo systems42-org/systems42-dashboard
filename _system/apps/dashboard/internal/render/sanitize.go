@@ -87,7 +87,7 @@ var aboutStyleProps = map[string]bool{
 
 var (
 	contentIDRE    = regexp.MustCompile(`^fn(?:ref\d*)?:[\w.-]+$`)
-	contentClassRE = regexp.MustCompile(`^(?:wl|wl-anchor|mm-anchor|language-[\w+-]+|footnote(?:-ref|-backref)?|table-scroll)$`)
+	contentClassRE = regexp.MustCompile(`^(?:wl|wl-anchor|wl-term|mm-anchor|language-[\w+-]+|footnote(?:-ref|-backref)?|table-scroll)$`)
 	urlSchemeRE    = regexp.MustCompile(`(?i)^([a-z][a-z0-9+.-]*):`)
 	cssFetchRE     = regexp.MustCompile(`(?i)url\s*\(|image-set|image\s*\(|\\`)
 )

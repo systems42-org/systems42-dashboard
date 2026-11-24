@@ -209,7 +209,9 @@ def test_titles_and_bodies_render_inert():
     # what the wiki legitimately uses survives the sanitizer
     assert 'style="text-align:left"' in body, "table alignment lost"
     assert 'class="language-mermaid"' in body, "mermaid block lost its class"
-    assert '<a class="wl" href="/page/domain-terms/DT-103-hostile-title">' in body
+    # the link carries the term's definition, its markup as text (FR-041)
+    assert ('<a class="wl wl-term" href="/page/domain-terms/DT-103-hostile-title" '
+            'title="&lt;script&gt;alert(2)&lt;/script&gt; see Linker.">') in body
     assert 'id="fn:1"' in body and 'class="footnote-ref"' in body, "footnotes lost"
     _, body = _get("/page/domain-terms/DT-103-hostile-title")
     assert "<script>alert(2)" not in body

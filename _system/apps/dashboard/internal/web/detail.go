@@ -100,11 +100,30 @@ func (s *Server) linkContext(sn *requestSnapshot) render.LinkContext {
 		sn.anchors = metamodel.AnchorIndex(s.Metamodel.MethodAnchors())
 	}
 	return render.LinkContext{
-		Titles:  sn.titleIndex(),
-		Links:   sn.linkIndex(),
-		Sources: sn.sourceIndex(),
-		Anchors: sn.anchors,
+		Titles:     sn.titleIndex(),
+		Links:      sn.linkIndex(),
+		Sources:    sn.sourceIndex(),
+		Anchors:    sn.anchors,
+		Definition: sn.termDefinition,
 	}
+}
+
+// termDefinition is the plain definition of the domain term with this file
+// name, "" for a term without one and for a page of another type. Read once
+// per request and term, however many links name the term (FR-041).
+func (sn *requestSnapshot) termDefinition(stem string) string {
+	if def, ok := sn.definitions[stem]; ok {
+		return def
+	}
+	def := ""
+	if p := sn.byStem()[stem]; p != nil && metamodel.IsType(p.Folder, "domain-term") {
+		def = render.TermDefinition(p.Body, sn.titleIndex())
+	}
+	if sn.definitions == nil {
+		sn.definitions = map[string]string{}
+	}
+	sn.definitions[stem] = def
+	return def
 }
 
 func (sn *requestSnapshot) byStem() map[string]*wiki.Page {

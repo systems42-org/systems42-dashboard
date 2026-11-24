@@ -378,6 +378,16 @@ func RenderAboutMarkdown(body string) string {
 // whitespace, resolves wikilinks, and sanitises the HTML (matching app.py's
 // extract_labeled()).
 func ExtractLabeled(body, label string, ctx LinkContext) string {
+	raw := LabeledText(body, label)
+	if raw == "" {
+		return ""
+	}
+	return SanitizeHTML(RenderWikilinks(raw, ctx), false)
+}
+
+// LabeledText returns the paragraph introduced by **<label>.** as written, on
+// one line (render.py's labeled_text()).
+func LabeledText(body, label string) string {
 	body = strings.ReplaceAll(body, "\r\n", "\n")
 	startRE := regexp.MustCompile(`\*\*` + regexp.QuoteMeta(label) + `\.\*\*\s*`)
 	m := startRE.FindStringIndex(body)
@@ -388,11 +398,7 @@ func ExtractLabeled(body, label string, ctx LinkContext) string {
 	if end := labeledEndRE.FindStringIndex(rest); end != nil {
 		rest = rest[:end[0]]
 	}
-	raw := strings.TrimSpace(collapseSpaceRE.ReplaceAllString(rest, " "))
-	if raw == "" {
-		return ""
-	}
-	return SanitizeHTML(RenderWikilinks(raw, ctx), false)
+	return strings.TrimSpace(collapseSpaceRE.ReplaceAllString(rest, " "))
 }
 
 // ExtractPAMBullet pulls a bullet-style `- **<label>.** ...` field from a page

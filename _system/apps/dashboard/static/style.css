@@ -502,6 +502,22 @@ th[aria-sort="descending"] .th-sort::after { content: "▼"; color: var(--ink); 
 a.wl { text-decoration: none; cursor: pointer; }
 a.wl:hover { border-bottom-style: solid; border-bottom-color: var(--accent); }
 
+/* --- term definition in place (FR-041, static/term-definition.js) ---
+   One box for the page, placed next to the term link by the script. Fixed to
+   the viewport and never wider than it, so it cannot widen a narrow page. */
+.term-def { position: fixed; top: 0; left: 0; z-index: 40; box-sizing: border-box;
+  width: max-content; max-width: min(24rem, calc(100vw - 16px)); padding: var(--space-2) var(--space-3);
+  font-size: var(--step--1); line-height: 1.4; font-weight: 400; text-align: left; overflow-wrap: anywhere;
+  color: var(--ink); background: var(--card-2); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow); animation: term-def-in .12s ease-out; }
+.term-def[hidden] { display: none; }
+.term-def-open { display: block; margin-top: var(--space-2); padding: var(--space-2) 0;
+  color: var(--accent); font-weight: 600; }
+.term-def-open[hidden] { display: none; }
+@keyframes term-def-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .term-def { animation: none; } }
+/* --- end of term definition in place --- */
+
 /* ---- Quality (req42 block C1): each QR shows its Q42 quality scenario ---- */
 .c-title { min-width: 16rem; }
 .qr-meta { display: flex; flex-wrap: wrap; gap: .35rem; margin: .35rem 0 0; }

@@ -391,8 +391,8 @@ _system/apps/dashboard/
                      May import inputs, metamodel and catalog, never Flask or app
   links.py           the link resolver, the title, page, link and source indexes and the page
                      URL. May import wiki, never Flask or app
-  render.py          the sanitizer, wikilinks, method-anchor links, "follows" notes, callouts
-                     and Markdown. May import wiki, links and metamodel, never Flask or app
+  render.py          the sanitizer, wikilinks, the definition a term link carries, method-anchor
+                     links, "follows" notes, callouts and Markdown. May import wiki, links and metamodel, never Flask or app
   search.py          the search: searched fields, a page's text for search, its
                      neighbours, the synonyms and the search index. May import wiki, links,
                      render, catalog and project.terms, never Flask or app
@@ -435,6 +435,8 @@ _system/apps/dashboard/
                              a kind filter and a delivery filter, and keeps them in
                              the address (?sort=, ?status=, ?kind=, ?delivery=)
   static/metamodel-graph.js  the cytoscape metamodel network on /metamodel
+  static/term-definition.js  shows the definition a term link carries in its title, next to
+                             the link: on hover, on focus and at the first tap (FR-041)
   static/settings.js   the View dialog
   static/systems42-sections.svg   the sections diagram shown on /help
   static/systems42-logo.svg, systems42-favicon.png   the Systems42 mark

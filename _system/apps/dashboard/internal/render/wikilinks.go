@@ -18,18 +18,29 @@ var (
 	fenceRE        = regexp.MustCompile("^ {0,3}(`{3,}|~{3,})")
 	parensWrapRE   = regexp.MustCompile(`^\((.*)\)$`)
 	leadingTheRE   = regexp.MustCompile(`(?i)^the\s+`)
+	// what Python's \s matches in a str, so both cut a definition at the same place
+	unicodeSpaceRE = regexp.MustCompile(`[\s\x0b\x1c-\x1f\x{85}\x{a0}\x{1680}\x{2000}-\x{200a}\x{2028}\x{2029}\x{202f}\x{205f}\x{3000}]+`)
+	// characters Markdown reads as markup, see TitleAttribute
+	titleMarkup = strings.NewReplacer("`", "&#96;", "[", "&#91;", "]", "&#93;", `\`, "&#92;", "*", "&#42;", "_", "&#95;")
 )
+
+// TermDefinitionMax is the longest definition a link carries, in characters,
+// the ellipsis included (render.py's TERM_DEFINITION_MAX).
+const TermDefinitionMax = 300
 
 const followsPlainMaxWords = 6
 
 // LinkContext provides the per-request indexes needed to resolve wikilinks,
 // source provenance links, and method anchors. When Links is nil, wikilinks
-// render as styled spans rather than hyperlinks.
+// render as styled spans rather than hyperlinks. Definition gives the plain
+// definition of the domain term with a file name, "" for any other page: a
+// link to a term carries it as its title (FR-041). Nil means no link does.
 type LinkContext struct {
-	Titles  map[string]string
-	Links   map[string]wiki.PageRef
-	Sources map[string]*wiki.Page
-	Anchors map[string]metamodel.Anchor
+	Titles     map[string]string
+	Links      map[string]wiki.PageRef
+	Sources    map[string]*wiki.Page
+	Anchors    map[string]metamodel.Anchor
+	Definition func(stem string) string
 }
 
 // EscapeHTML escapes &, <, >, ", and ' matching MarkupSafe's escape().
@@ -65,6 +76,51 @@ func AnchorTitle(a metamodel.Anchor) string {
 		}
 		return match
 	})
+}
+
+// TitleAttribute escapes text for a title attribute written into Markdown
+// text. A backtick or bracket in it could pair with one in the text around
+// the link and break the attribute open, so those go in as character
+// references (render.py's _title_attribute()).
+func TitleAttribute(text string) string {
+	return titleMarkup.Replace(EscapeHTML(text))
+}
+
+// TermDefinition reduces a term page's **Definition.** paragraph to plain
+// text: links and Markdown become their text, and a text longer than
+// TermDefinitionMax characters is cut at a word (render.py's term_definition()).
+func TermDefinition(body string, titles map[string]string) string {
+	text := wikilinkRE.ReplaceAllStringFunc(LabeledText(body, "Definition"), func(match string) string {
+		sub := wikilinkRE.FindStringSubmatch(match)
+		if sub[2] != "" {
+			return strings.TrimSpace(sub[2])
+		}
+		parts := strings.Split(strings.TrimSpace(sub[1]), "/")
+		base := parts[len(parts)-1]
+		if t, ok := titles[base]; ok {
+			return strings.TrimSpace(t)
+		}
+		return base
+	})
+	text = plainMDRE.ReplaceAllStringFunc(text, func(match string) string {
+		sub := plainMDRE.FindStringSubmatch(match)
+		for i := 1; i <= 4; i++ {
+			if sub[i] != "" {
+				return sub[i]
+			}
+		}
+		return match
+	})
+	text = strings.TrimSpace(unicodeSpaceRE.ReplaceAllString(text, " "))
+	runes := []rune(text)
+	if len(runes) > TermDefinitionMax {
+		cut := string(runes[:TermDefinitionMax-1])
+		if i := strings.LastIndex(cut, " "); i >= 0 {
+			cut = cut[:i]
+		}
+		text = strings.TrimRight(cut, " ,;:.") + "…"
+	}
+	return text
 }
 
 // AnchorURL returns the /metamodel anchor fragment for a.
@@ -107,8 +163,14 @@ func RenderWikilinks(text string, ctx LinkContext) string {
 			}
 		} else if len(ctx.Links) > 0 {
 			if dest, ok := wiki.ResolveLink(target, ctx.Links); ok {
-				return fmt.Sprintf(`<a class="wl" href="%s">%s</a>`,
-					EscapeHTML(wiki.PageURL(dest.Folder, dest.Stem)), label)
+				url := EscapeHTML(wiki.PageURL(dest.Folder, dest.Stem))
+				if ctx.Definition != nil {
+					if def := ctx.Definition(dest.Stem); def != "" {
+						return fmt.Sprintf(`<a class="wl wl-term" href="%s" title="%s">%s</a>`,
+							url, TitleAttribute(def), label)
+					}
+				}
+				return fmt.Sprintf(`<a class="wl" href="%s">%s</a>`, url, label)
 			}
 		}
 		if ctx.Links != nil && ctx.Anchors != nil {
