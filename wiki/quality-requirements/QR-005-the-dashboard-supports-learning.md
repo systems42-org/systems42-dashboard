@@ -26,5 +26,5 @@ The dashboard helps readers understand what it does and learn how Systems42 work
 - **Response.** The dashboard makes its purpose and method understandable through its views and learning material.
 - **Measure.** After at most 10 minutes, at least 4 of 5 test readers can explain what the dashboard does and name the five Systems42 loops with their purpose.
 
-**Applies to.** [[FR-010-show-the-method]], [[FR-011-explain-the-five-loops]], [[FR-012-guided-path-through-the-wiki]], [[FR-066-see-the-architecture-views]] and [[FR-068-read-the-metamodel-as-a-reference]].
+**Applies to.** [[FR-010-show-the-method]], [[FR-011-explain-the-five-loops]], [[FR-066-see-the-architecture-views]] and [[FR-068-read-the-metamodel-as-a-reference]].
 **Tensions.** None known.

@@ -80,7 +80,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-009-more-filters-on-the-full-results-page]] More filters on the full results page (feature, Could, draft)
 - [[FR-010-show-the-method]] Show the method (epic, Should, draft)
 - [[FR-011-explain-the-five-loops]] Explain the five loops (feature, Should, draft)
-- [[FR-012-guided-path-through-the-wiki]] Guided path through the wiki (feature, Should, draft)
+- [[FR-012-guided-path-through-the-wiki]] Guided path through the wiki (feature, Should, deprecated)
 - [[FR-013-header-and-footer-on-every-page]] Header and footer on every page (feature, Must, draft)
 - [[FR-014-reach-the-main-content-from-the-header]] Reach the main content from the header (story, Must, draft)
 - [[FR-015-read-the-formalities-in-the-footer]] Read the formalities in the footer (story, Should, draft)

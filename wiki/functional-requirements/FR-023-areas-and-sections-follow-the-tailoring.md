@@ -4,9 +4,9 @@ type: functional-requirement
 title: Areas and sections follow the tailoring
 status: draft
 created: 2026-11-12
-updated: 2026-11-19
+updated: 2026-11-24
 sources: ["[[SRC-013-browse-by-area-and-section]]", "[[SRC-014-grilling-session-on-browsing]]"]
-related: ["[[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]]", "[[FR-012-guided-path-through-the-wiki]]", "[[STK-010-operators]]", "[[FR-044-sections-come-from-the-repositorys-metamodel]]", "[[FR-046-shared-session-in-a-workshop]]"]
+related: ["[[DR-002-tailoring-belongs-to-systems42-the-view-to-the-dashboard]]", "[[STK-010-operators]]", "[[FR-044-sections-come-from-the-repositorys-metamodel]]", "[[FR-046-shared-session-in-a-workshop]]"]
 tags: ["functional-requirement", "navigation"]
 notation: agile
 level: feature
@@ -30,7 +30,7 @@ In Systems42 the metamodel is configurable. A project adapts it to its needs ([[
 
 - The three areas (Requirements, Architecture, Commons) always exist.
 - A project may leave out sections inside an area.
-- A left-out section appears nowhere: not on the first page, in the header, in counts, lists or the guided path ([[FR-012-guided-path-through-the-wiki]]).
+- A left-out section appears nowhere: not on the first page, in the header, in counts or lists.
 - An address that points to a left-out section shows "This part is not used in this project" instead of an error.
 - Browsing works in the same three steps for every tailoring.
 

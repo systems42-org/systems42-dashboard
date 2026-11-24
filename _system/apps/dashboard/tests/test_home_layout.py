@@ -324,7 +324,7 @@ def test_hero_shows_the_vision_sentence_or_the_tagline():
         sentence = "For Role B, System X answers e.g. any question about Entity A."
         assert f'<p class="lead hero-vision">{sentence}</p>' in hero, hero
         assert "second sentence" not in hero and "Tagline of System X" not in hero, hero
-        assert "Take the guided path" not in hero, "/tour is not built yet (FR-012)"
+        assert "Take the guided path" not in hero, "the guided path is not planned (FR-012 is deprecated)"
     finally:
         for f in (objective, vision, _tmp / "wiki.yaml"):
             f.unlink(missing_ok=True)
