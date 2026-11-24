@@ -112,8 +112,10 @@ def _stem_of_link(raw: object) -> str:
 def links_of(page: wiki.Page, field: str) -> list[str]:
     """Existing target stems of a link field, in order, without duplicates.
     Accepts '[[stem]]', '[[stem|alias]]', a bare stem, a single value or a
-    list, and the nested list YAML makes of an unquoted [[stem]]."""
-    by_stem = {p.stem for p in wiki.load_all_pages()}
+    list, and the nested list YAML makes of an unquoted [[stem]]. A value
+    counts when page_index() has a page for it: the index holds every file
+    name, so no walk over all pages per call is needed (#206)."""
+    index = page_index()
     out: list[str] = []
 
     def walk(v: object) -> None:
@@ -121,9 +123,9 @@ def links_of(page: wiki.Page, field: str) -> list[str]:
             for x in v:
                 walk(x)
             return
-        s = _link_stem(v) if v else ""
-        if s and s in by_stem and s not in out:
-            out.append(s)
+        p = resolve_link(v, index) if v else None
+        if p is not None and p.stem not in out:
+            out.append(p.stem)
 
     walk(page.meta.get(field))
     return out
