@@ -79,7 +79,7 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-008-related-pages-group]] Related pages group (feature, Should, draft)
 - [[FR-009-more-filters-on-the-full-results-page]] More filters on the full results page (feature, Could, draft)
 - [[FR-010-show-the-method]] Show the method (epic, Should, draft)
-- [[FR-011-explain-the-three-loops]] Explain the three loops (feature, Should, draft)
+- [[FR-011-explain-the-five-loops]] Explain the five loops (feature, Should, draft)
 - [[FR-012-guided-path-through-the-wiki]] Guided path through the wiki (feature, Should, draft)
 - [[FR-013-header-and-footer-on-every-page]] Header and footer on every page (feature, Must, draft)
 - [[FR-014-reach-the-main-content-from-the-header]] Reach the main content from the header (story, Must, draft)
@@ -134,6 +134,9 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[FR-063-manage-development-with-make]] Manage development with make (feature, Should, draft)
 - [[FR-064-install-the-app-with-homebrew]] Install the app with Homebrew (story, Could, draft)
 - [[FR-065-a-mac-native-dashboard-app]] A Mac-native dashboard app (feature, Should, draft)
+- [[FR-066-see-the-architecture-views]] See the architecture views (feature, Must, draft)
+- [[FR-067-read-the-project-about-page]] Read the project About page (feature, Should, draft)
+- [[FR-068-read-the-metamodel-as-a-reference]] Read the metamodel as a reference (feature, Should, draft)
 
 ## Quality requirements
 
@@ -141,6 +144,8 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[QR-002-runs-alike-on-linux-and-macos]] Runs alike on Linux and macOS (flexible, operable, should, draft)
 - [[QR-003-works-in-every-current-browser]] Works in every current browser (flexible, reliable, should, draft)
 - [[QR-004-the-wikis-content-stays-on-the-machine]] The wiki's content stays on the machine (secure, reliable, must, draft)
+- [[QR-005-the-dashboard-supports-learning]] The dashboard supports learning (usable, should, draft)
+- [[QR-006-hostile-wiki-content-is-inert]] Hostile wiki content is inert (secure, must, draft)
 
 ## Constraints
 
@@ -188,13 +193,15 @@ every capture (`_system/workflows/capture.md`, step 7).
 ## Issues
 
 - [[ISS-001-who-holds-the-keys-in-parallel-work]] Who holds the keys when two people work in parallel (resolved)
-- [[ISS-002-define-the-clarify-loop]] Define the clarify loop (open)
+- [[ISS-002-define-the-clarify-loop]] Define the clarify loop (resolved)
 - [[ISS-003-goal-coverage-projection-cites-decisions-from-another-wiki]] The goal coverage projection cites decisions from another wiki (open, method, meta #37)
 - [[ISS-004-where-the-metamodel-declares-its-version]] Where the metamodel declares its version (open, method, meta #39)
 - [[ISS-005-the-method-lint-imports-dashboard-code]] The method's lint imports dashboard code (open, method, meta #40)
 - [[ISS-006-other-container-engines-than-docker]] Should the dashboard run with other container engines than Docker (open, requirements, #24)
 - [[ISS-007-issue-category-and-owner-belong-in-meta]] Issue category and owner fields belong in meta (resolved, method, meta #53)
 - [[ISS-008-q42-dimensions-belong-in-meta]] Q42 dimensions for quality requirements belong in meta (open, method, meta #35)
+- [[ISS-009-correct-ambiguous-code-references]] Correct ambiguous and unresolved code references (open, method)
+- [[ISS-010-are-build-hardening-rules-required]] Are build-hardening rules required (open, architecture)
 
 ## Sources
 
@@ -252,3 +259,5 @@ every capture (`_system/workflows/capture.md`, step 7).
 - [[SRC-049-grilling-session-on-the-mac-native-app]] Grilling session on the Mac-native app (interview)
 - [[SRC-053-the-chart-mark]] The Chart mark (diagram)
 - [[SRC-054-grilling-session-on-the-chart-mark]] Grilling session on the Chart mark (interview)
+- [[SRC-055-recovery-report-systems42-dashboard]] Recovery report — systems42-dashboard at 8b98d1a (document)
+- [[SRC-056-closing-round-on-recovery-report]] Closing round on the recovery report (interview)

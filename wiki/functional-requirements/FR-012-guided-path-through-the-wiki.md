@@ -4,9 +4,9 @@ type: functional-requirement
 title: Guided path through the wiki
 status: draft
 created: 2026-11-11
-updated: 2026-11-11
+updated: 2026-11-24
 sources: ["[[SRC-009-guided-path-through-the-wiki]]", "[[SRC-008-grilling-session-on-showing-the-method]]"]
-related: ["[[FR-011-explain-the-three-loops]]", "[[STK-001-readers]]", "[[STK-008-workshop-participants-and-facilitators]]", "[[STK-013-people-learning-or-presenting-systems42]]", "[[STK-023-keyholder]]"]
+related: ["[[FR-011-explain-the-five-loops]]", "[[STK-001-readers]]", "[[STK-008-workshop-participants-and-facilitators]]", "[[STK-013-people-learning-or-presenting-systems42]]", "[[STK-023-keyholder]]"]
 tags: ["functional-requirement", "method"]
 notation: agile
 level: feature
@@ -28,7 +28,7 @@ As a [[STK-001-readers|newcomer]] I want **a guided path through the wiki, step 
 
 One path serves newcomers who read alone and presenters who walk it out loud.
 
-- **Order.** Fixed by the method: vision, goals, stakeholders, scope and context, requirements, architecture, decisions, open issues, and finally how the wiki came about ([[FR-011-explain-the-three-loops]]).
+- **Order.** Fixed by the method: vision, goals, stakeholders, scope and context, requirements, architecture, decisions, open issues, and finally how the wiki came about ([[FR-011-explain-the-five-loops]]).
 - **Content.** Each step shows the wiki's own pages, so the path stays current without upkeep.
 - **Empty and hidden steps.** A step with no pages is left out. So is a section the [[STK-023-keyholder|Keyholder]] has hidden in Configure.
 - **Each step** shows one or two sentences on what the reader sees and why it matters, the same for every project. Example: "Goals: what the system should achieve, and how we measure it. Every requirement names the goal it serves."
