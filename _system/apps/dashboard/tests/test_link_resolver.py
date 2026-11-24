@@ -83,6 +83,7 @@ import links  # noqa: E402
 import project.terms  # noqa: E402
 import project.requirements  # noqa: E402
 import project.goals  # noqa: E402
+import project.architecture  # noqa: E402
 
 client = app.app.test_client()
 
@@ -200,16 +201,16 @@ def test_typed_fields_follow_an_id_only_link():
         assert [f["id"] for f in epic["features"]] == ["FR-009"], epic
         assert [a["id"] for a in project.requirements._fr_ancestors("FR-009-child")] == ["FR-002"]
         # drivers, realizes, uses, parent and steps of the architecture pages
-        assert _ids(app.build_drivers("BB-001-core")) == ["FR-001"]
-        assert _ids(app.build_addressed_by("FR-001-stem")) == ["BB-001"]
-        assert _ids(app.build_realized_by("FR-001-stem")) == ["RS-001"]
+        assert _ids(project.architecture.build_drivers("BB-001-core")) == ["FR-001"]
+        assert _ids(project.architecture.build_addressed_by("FR-001-stem")) == ["BB-001"]
+        assert _ids(project.architecture.build_realized_by("FR-001-stem")) == ["RS-001"]
         blocks = {p.stem: p for p in wiki.load_folder("building-blocks")}
         assert links.links_of(blocks["BB-001-core"], "uses") == ["BB-003-store"]
-        top = app.build_bb_tree()
+        top = project.architecture.build_bb_tree()
         assert [n["stem"] for n in top] == ["BB-001-core", "BB-003-store"], top
         assert [c["stem"] for c in top[0]["children"]] == ["BB-002-part"], top[0]
         scenario = next(iter(wiki.load_folder("runtime-scenarios")))
-        steps = app.steps_of(scenario)
+        steps = project.architecture.steps_of(scenario)
         assert (steps[0]["from_stem"], steps[0]["to_stem"]) == ("BB-001-core", "BB-003-store"), steps
     print("OK: parent, drivers, realizes, uses and steps follow an ID-only link")
 

@@ -25,6 +25,7 @@ ALLOWED = {
     "links": {"wiki"},
     "render": {"wiki", "links", "metamodel", "markdown", "nh3", "markupsafe"},
     "search": {"wiki", "links", "render", "catalog", "project.terms"},
+    "project.architecture": {"wiki", "links", "render", "catalog", "project.common"},
     "project.common": {"wiki", "links", "metamodel"},
     "project.context": {"wiki", "links", "project.common"},
     "project.goals": {"wiki", "links", "render", "project.requirements"},

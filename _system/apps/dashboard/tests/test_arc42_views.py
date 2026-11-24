@@ -26,6 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
 import wiki  # noqa: E402
+import project.architecture  # noqa: E402
 
 
 def _page(folder, stem):
@@ -39,61 +40,61 @@ def _ids(groups):
 # --- state, supersession, inverse panels --------------------------------------
 
 def test_state_default_target():
-    assert app.page_state(_page("building-blocks", "BB-001-portal")) == "target"
-    assert app.page_state(_page("building-blocks", "BB-003-console")) == "current"
+    assert project.architecture.page_state(_page("building-blocks", "BB-001-portal")) == "target"
+    assert project.architecture.page_state(_page("building-blocks", "BB-003-console")) == "current"
 
 
 def test_state_unknown_is_target():
-    assert app.page_state(_page("building-blocks", "BB-002-identity")) == "target"   # state: ist
+    assert project.architecture.page_state(_page("building-blocks", "BB-002-identity")) == "target"   # state: ist
 
 
 def test_superseded_both_ways():
-    old = app.build_trace("DN-003-ldap", "deployment-nodes")
-    new = app.build_trace("DN-004-keycloak", "deployment-nodes")
+    old = project.architecture.build_trace("DN-003-ldap", "deployment-nodes")
+    new = project.architecture.build_trace("DN-004-keycloak", "deployment-nodes")
     assert _ids(old["replaced_by"]) == {"DN": ["DN-004"]}, old["replaced_by"]
     assert _ids(new["replaces"]) == {"DN": ["DN-003"]}, new["replaces"]
     assert old["replaces"] == [] and new["replaced_by"] == []
 
 
 def test_inverses_on_block():
-    t = app.build_trace("BB-004-account", "building-blocks")
+    t = project.architecture.build_trace("BB-004-account", "building-blocks")
     assert _ids(t["governed_by"]) == {"CC": ["CC-001"]}, t["governed_by"]
     assert _ids(t["deployed_on"]) == {"DN": ["DN-002"]}, t["deployed_on"]
     assert _ids(t["takes_part_in"]) == {"RS": ["RS-001"]}, t["takes_part_in"]
 
 
 def test_forward_panels_on_concept_and_node():
-    assert _ids(app.build_trace("CC-001-identity", "crosscutting-concepts")["applies_to"]) == {
+    assert _ids(project.architecture.build_trace("CC-001-identity", "crosscutting-concepts")["applies_to"]) == {
         "BB": ["BB-004"], "DN": ["DN-002"]}
-    assert _ids(app.build_trace("DN-002-app-server", "deployment-nodes")["hosts"]) == {
+    assert _ids(project.architecture.build_trace("DN-002-app-server", "deployment-nodes")["hosts"]) == {
         "BB": ["BB-003", "BB-004"]}
-    assert _ids(app.build_trace("DN-002-app-server", "deployment-nodes")["governed_by"]) == {"CC": ["CC-001"]}
-    assert _ids(app.build_trace("CC-001-identity", "crosscutting-concepts")["shaped_by"]) == {"DR": ["DR-001"]}
+    assert _ids(project.architecture.build_trace("DN-002-app-server", "deployment-nodes")["governed_by"]) == {"CC": ["CC-001"]}
+    assert _ids(project.architecture.build_trace("CC-001-identity", "crosscutting-concepts")["shaped_by"]) == {"DR": ["DR-001"]}
 
 
 def test_addressed_by_includes_arch():
-    assert _ids(app.build_addressed_by("QR-001-secure-login")) == {
+    assert _ids(project.architecture.build_addressed_by("QR-001-secure-login")) == {
         "SOL": ["SOL-001", "SOL-002"], "CC": ["CC-001"], "DN": ["DN-003"]}
     # a runtime scenario realizes requirements, it does not address them
-    assert app.build_addressed_by("UC-001-reset-credentials") == []
-    assert app.build_trace("ACT-001-self-service", "activity-models")["addressed_by"] == []
+    assert project.architecture.build_addressed_by("UC-001-reset-credentials") == []
+    assert project.architecture.build_trace("ACT-001-self-service", "activity-models")["addressed_by"] == []
 
 
 # --- realizes / realized by (A4 -> requirements) ------------------------------
 
 def test_realizes_on_scenario():
-    t = app.build_trace("RS-001-reset-credentials", "runtime-scenarios")
+    t = project.architecture.build_trace("RS-001-reset-credentials", "runtime-scenarios")
     assert _ids(t["realizes"]) == {"UC": ["UC-001"], "ACT": ["ACT-001"]}, t["realizes"]
     assert t["drivers"] == [], t["drivers"]
-    assert app.build_trace("RS-003-edge-cases", "runtime-scenarios")["realizes"] == []
+    assert project.architecture.build_trace("RS-003-edge-cases", "runtime-scenarios")["realizes"] == []
 
 
 def test_realized_by_on_requirement_and_activity_model():
-    fr = app.build_trace("UC-001-reset-credentials", "functional-requirements")
+    fr = project.architecture.build_trace("UC-001-reset-credentials", "functional-requirements")
     assert _ids(fr["realized_by"]) == {"RS": ["RS-001", "RS-002"]}, fr["realized_by"]
-    act = app.build_trace("ACT-001-self-service", "activity-models")
+    act = project.architecture.build_trace("ACT-001-self-service", "activity-models")
     assert _ids(act["realized_by"]) == {"RS": ["RS-001"]}, act["realized_by"]
-    assert app.build_trace("QR-001-secure-login", "quality-requirements")["realized_by"] == []
+    assert project.architecture.build_trace("QR-001-secure-login", "quality-requirements")["realized_by"] == []
 
 
 def test_realizes_panels_render():
@@ -111,8 +112,8 @@ def test_realizes_panels_render():
 # --- solution strategy (A1) ---------------------------------------------------
 
 def test_strategy_trace():
-    old = app.build_trace("SOL-001-strategy-today", "solution-strategy")
-    new = app.build_trace("SOL-002-strategy-target", "solution-strategy")
+    old = project.architecture.build_trace("SOL-001-strategy-today", "solution-strategy")
+    new = project.architecture.build_trace("SOL-002-strategy-target", "solution-strategy")
     assert _ids(old["replaced_by"]) == {"SOL": ["SOL-002"]}, old["replaced_by"]
     assert _ids(new["replaces"]) == {"SOL": ["SOL-001"]}, new["replaces"]
     assert _ids(old["drivers"]) == {"QR": ["QR-001"]}, old["drivers"]
@@ -169,7 +170,7 @@ def _arrow(mm, a, b):
 
 
 def test_sequence_participants_in_order():
-    mm = app.build_sequence_diagram("RS-001-reset-credentials")
+    mm = project.architecture.build_sequence_diagram("RS-001-reset-credentials")
     assert mm.startswith("sequenceDiagram"), mm
     assert [l for _, _, l in _participants(mm)] == [
         "Mitglied", "BB-003 · Mitgliederkonsole", "BB-004 · Kontodienst", "Mailversand",
@@ -178,7 +179,7 @@ def test_sequence_participants_in_order():
 
 
 def test_sequence_messages():
-    mm = app.build_sequence_diagram("RS-001-reset-credentials")
+    mm = project.architecture.build_sequence_diagram("RS-001-reset-credentials")
     assert mm.count("->>") == 6, mm
     assert _arrow(mm, "Mitglied", "BB-003 · Mitgliederkonsole").endswith(": Passwort vergessen"), mm
     eif = dict((l, n) for n, _, l in _participants(mm))["Mailversand"]
@@ -186,25 +187,25 @@ def test_sequence_messages():
 
 
 def test_sequence_dangling_participant():
-    mm = app.build_sequence_diagram("RS-001-reset-credentials")
+    mm = project.architecture.build_sequence_diagram("RS-001-reset-credentials")
     assert _arrow(mm, "BB-004 · Kontodienst", "BB-999-ghost").endswith(": Protokoll"), mm
 
 
 def test_sequence_escapes_message():
-    mm = app.build_sequence_diagram("RS-001-reset-credentials")
+    mm = project.architecture.build_sequence_diagram("RS-001-reset-credentials")
     line = next(l for l in mm.splitlines() if "Reset-Link" in l)
     assert ";" not in line.replace("#59;", "").replace("#35;", ""), line
     assert "#59;" in line, line
 
 
 def test_sequence_hash_escaped_once():
-    mm = app.build_sequence_diagram("RS-003-edge-cases")
+    mm = project.architecture.build_sequence_diagram("RS-003-edge-cases")
     line = next(l for l in mm.splitlines() if "Ticket" in l)
     assert "Ticket #35;5 öffnen" in line and "#35#" not in line, line
 
 
 def test_sequence_participant_ids_are_safe_and_distinct():
-    mm = app.build_sequence_diagram("RS-003-edge-cases")
+    mm = project.architecture.build_sequence_diagram("RS-003-edge-cases")
     lls = _participants(mm)
     assert all(nid.startswith("L") and nid[1:].isdigit() for nid, _, _ in lls), lls
     labels = [l for _, _, l in lls]
@@ -215,18 +216,18 @@ def test_sequence_participant_ids_are_safe_and_distinct():
 
 def test_unquoted_wikilinks_resolve():
     # `to: [[BB-003-console]]` without quotes is a nested YAML list
-    hints = app.runtime_hints("RS-003-edge-cases")
+    hints = project.architecture.runtime_hints("RS-003-edge-cases")
     assert not any("BB-003-console" in h for h in hints), hints
-    assert _ids(app.build_trace("BB-003-console", "building-blocks")["takes_part_in"]) == {"RS": ["RS-001", "RS-003"]}
-    assert 'DN001 -- "HTTPS" --> DN003' in app.build_deployment_diagram()
+    assert _ids(project.architecture.build_trace("BB-003-console", "building-blocks")["takes_part_in"]) == {"RS": ["RS-001", "RS-003"]}
+    assert 'DN001 -- "HTTPS" --> DN003' in project.architecture.build_deployment_diagram()
 
 
 def test_sequence_none_without_steps():
-    assert app.build_sequence_diagram("RS-002-reset-credentials-new") is None
+    assert project.architecture.build_sequence_diagram("RS-002-reset-credentials-new") is None
 
 
 def test_runtime_hint_missing_uses():
-    hints = app.runtime_hints("RS-001-reset-credentials")
+    hints = project.architecture.runtime_hints("RS-001-reset-credentials")
     assert "BB-002 → BB-004: no uses: edge" in hints, hints
     assert not any(h.startswith("BB-003 → BB-004") for h in hints), hints
     assert "BB-999-ghost: no such page" in hints, hints
@@ -234,7 +235,7 @@ def test_runtime_hint_missing_uses():
 
 def test_runtime_hint_ancestor_uses_counts():
     # BB-003's parent BB-001 uses BB-002, the parent of BB-005
-    hints = app.runtime_hints("RS-001-reset-credentials")
+    hints = project.architecture.runtime_hints("RS-001-reset-credentials")
     assert not any(h.startswith("BB-003 → BB-005") for h in hints), hints
     assert len(hints) == 2, hints
 
@@ -258,34 +259,34 @@ def _subgraph(mm, nid):
 
 
 def test_deployment_nesting():
-    mm = app.build_deployment_diagram()
+    mm = project.architecture.build_deployment_diagram()
     assert mm.startswith("flowchart"), mm
     assert "subgraph DN002[" in _subgraph(mm, "DN001"), mm
 
 
 def test_deployment_hosts_blocks():
-    mm = app.build_deployment_diagram()
+    mm = project.architecture.build_deployment_diagram()
     inner = _subgraph(mm, "DN002")
     assert "BB-004 · Kontodienst" in inner and "BB-003 · Mitgliederkonsole" in inner, inner
     assert "BB-005 · Passwortspeicher" in _subgraph(mm, "DN003"), mm
 
 
 def test_deployment_protocol_label():
-    mm = app.build_deployment_diagram()
+    mm = project.architecture.build_deployment_diagram()
     assert 'DN002 -- "LDAPS · nur lesend" --> DN003' in mm, mm
     assert 'DN002 -- "OIDC" --> DN004' in mm, mm              # existing → planned is drawn
     assert 'DN002 -- "SMTP" --> EIF001' in mm and 'EIF001["Mailversand"]' in mm, mm
 
 
 def test_deployment_survives_parent_cycle():
-    ids = [n["id"] for n in _flat(app.build_node_tree())]
+    ids = [n["id"] for n in _flat(project.architecture.build_node_tree())]
     assert sorted(ids) == ["DN-001", "DN-002", "DN-003", "DN-004", "DN-005", "DN-006", "DN-007", "DN-008"], ids
-    mm = app.build_deployment_diagram()
+    mm = project.architecture.build_deployment_diagram()
     assert "DN006" in mm and "DN007" in mm, mm
 
 
 def test_deployment_escapes_protocol():
-    tgt = app.build_deployment_diagram()
+    tgt = project.architecture.build_deployment_diagram()
     line = next(l for l in tgt.splitlines() if "DN004 --" in l)
     label = line.split(" -- ", 1)[1].rsplit(" -->", 1)[0]
     assert label.startswith('"') and label.endswith('"') and '"' not in label[1:-1], line
@@ -294,9 +295,9 @@ def test_deployment_escapes_protocol():
 
 
 def test_node_subtree():
-    mm = app.build_deployment_diagram("DN-001-isaqb-cloud")
+    mm = project.architecture.build_deployment_diagram("DN-001-isaqb-cloud")
     assert "DN002" in mm and "DN003" in mm and "DN004" not in mm, mm
-    assert app.build_deployment_diagram("DN-005-new-platform") is not None
+    assert project.architecture.build_deployment_diagram("DN-005-new-platform") is not None
 
 
 def test_a2_split_by_state():
@@ -304,16 +305,16 @@ def test_a2_split_by_state():
     assert code == 200 and body.count('class="mermaid"') == 1, body.count('class="mermaid"')
     assert 'state-badge state-outdated' in body and 'state-badge state-target' in body
     assert "grey: outdated or deprecated" in body
-    whole = app.build_whitebox("BB-001-portal")               # its parts are current
+    whole = project.architecture.build_whitebox("BB-001-portal")               # its parts are current
     assert "  style " not in whole, whole                   # its parts are all existing
-    allbb = app.build_whitebox(None)
+    allbb = project.architecture.build_whitebox(None)
     assert "style BB001 stroke-dasharray" in allbb and "style BB006 fill:#eceef2" in allbb, allbb
     assert "· outdated" in allbb, allbb
     assert 'BB006 -. "replaced by" .-> BB001' in allbb, allbb
 
 
 def test_deployment_one_diagram_for_everything():
-    mm = app.build_deployment_diagram()
+    mm = project.architecture.build_deployment_diagram()
     for nid in ("DN001", "DN002", "DN003", "DN004", "DN005", "DN008"):
         assert nid in mm, nid
     assert "style DN004 stroke-dasharray" in mm and "style DN008 stroke-dasharray" in mm, mm   # target, planned
@@ -328,14 +329,14 @@ def test_deployment_one_diagram_for_everything():
 
 
 def test_four_states():
-    assert [app.page_state(_page("deployment-nodes", s)) for s in
+    assert [project.architecture.page_state(_page("deployment-nodes", s)) for s in
             ("DN-007-loop-b", "DN-002-app-server", "DN-008-keycloak-host", "DN-004-keycloak")] == [
         "outdated", "current", "planned", "target"]
 
 
 def test_decision_replaced_by_panels():
-    old = app.build_trace("DR-002-ldap-login", "decisions")
-    new = app.build_trace("DR-001-sso", "decisions")
+    old = project.architecture.build_trace("DR-002-ldap-login", "decisions")
+    new = project.architecture.build_trace("DR-001-sso", "decisions")
     assert _ids(old["replaced_by"]) == {"DR": ["DR-001"]}, old
     assert _ids(new["replaces"]) == {"DR": ["DR-002"]}, new
     code, body = _get("/page/decisions/DR-001-sso")
@@ -343,7 +344,7 @@ def test_decision_replaced_by_panels():
 
 
 def test_subtree_marks_planned_inside_existing():
-    mm = app.build_deployment_diagram("DN-001-isaqb-cloud")
+    mm = project.architecture.build_deployment_diagram("DN-001-isaqb-cloud")
     assert "style DN008 stroke-dasharray" in mm, mm
     assert "style DN001 " not in mm and "style DN002 " not in mm, mm
 
@@ -358,7 +359,7 @@ def test_single_lifecycle_draws_plain():
     wiki.WIKI_DIR = tmp
     try:
         wiki._PARSE_CACHE.clear()
-        mm = app.build_deployment_diagram()
+        mm = project.architecture.build_deployment_diagram()
         assert "stroke-dasharray" not in mm and "· planned" not in mm, mm
     finally:
         wiki.WIKI_DIR = saved
@@ -367,19 +368,19 @@ def test_single_lifecycle_draws_plain():
 
 
 def test_malformed_steps_warn():
-    hints = app.runtime_hints("RS-003-edge-cases")
+    hints = project.architecture.runtime_hints("RS-003-edge-cases")
     assert "step 5: not a {from, to, message} entry, not drawn" in hints, hints
     assert "step 6: from: is empty" in hints, hints
     assert not any(h.startswith("?") for h in hints), hints
 
 
 def test_free_text_keeps_slash():
-    mm = app.build_sequence_diagram("RS-003-edge-cases")
+    mm = project.architecture.build_sequence_diagram("RS-003-edge-cases")
     assert "as TCP/IP Gateway" in mm, mm
-    assert "TCP/IP Gateway: no such page" in app.runtime_hints("RS-003-edge-cases")
+    assert "TCP/IP Gateway: no such page" in project.architecture.runtime_hints("RS-003-edge-cases")
     # a path to a real page still resolves
     by_stem = {q.stem: q for q in wiki.load_all_pages()}
-    assert app._endpoint("wiki/building-blocks/BB-003-console", by_stem)[0] == "BB-003-console"
+    assert project.architecture._endpoint("wiki/building-blocks/BB-003-console", by_stem)[0] == "BB-003-console"
 
 
 def test_concept_category_ignores_case():
@@ -391,12 +392,12 @@ def test_concept_category_ignores_case():
 
 
 def test_deployment_hints_name_what_is_not_drawn():
-    h = app.deployment_hints("DN-002-app-server")
+    h = project.architecture.deployment_hints("DN-002-app-server")
     assert "DN-002 connects entry 3: not a {to, protocol} entry, not drawn" in h, h
     assert "DN-002 connects DN-999-ghost: no such page" in h, h
     assert not any("other state" in x for x in h), h
-    assert "DN-005 hosts STK-001-member: not a building block, not drawn" in app.deployment_hints("DN-005-new-platform")
-    every = app.deployment_hints()
+    assert "DN-005 hosts STK-001-member: not a building block, not drawn" in project.architecture.deployment_hints("DN-005-new-platform")
+    every = project.architecture.deployment_hints()
     assert set(h) <= set(every) and len(every) == 3, every
     code, body = _get("/arc42/deployment")
     assert "DN-002 connects DN-999-ghost: no such page" in body

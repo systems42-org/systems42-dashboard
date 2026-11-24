@@ -23,6 +23,7 @@ import app  # noqa: E402
 import wiki  # noqa: E402
 import links  # noqa: E402
 import project.terms  # noqa: E402
+import project.architecture  # noqa: E402
 
 
 def _flat(nodes):
@@ -38,7 +39,7 @@ def _page(folder, stem):
 # --- projections -------------------------------------------------------------
 
 def test_tree_levels():
-    tree = app.build_bb_tree()
+    tree = project.architecture.build_bb_tree()
     roots = [n["id"] for n in tree]
     # BB-001 has no parent; BB-002's parent is a context page (missing here)
     assert "BB-001" in roots and "BB-002" in roots, roots
@@ -49,19 +50,19 @@ def test_tree_levels():
 
 
 def test_tree_survives_parent_cycle():
-    ids = [n["id"] for n in _flat(app.build_bb_tree())]
+    ids = [n["id"] for n in _flat(project.architecture.build_bb_tree())]
     assert sorted(ids) == ["BB-001", "BB-002", "BB-003", "BB-004", "BB-005", "BB-006", "BB-007-noid"], ids
     assert len(ids) == len(set(ids)), ids        # every block exactly once
 
 
 def test_level_one_without_context():
     assert not (_FIXTURE / "context").exists()
-    roots = [n["id"] for n in app.build_bb_tree()]
+    roots = [n["id"] for n in project.architecture.build_bb_tree()]
     assert "BB-002" in roots, roots
 
 
 def test_whitebox_has_children_and_uses():
-    mm = app.build_whitebox("BB-001-booking")
+    mm = project.architecture.build_whitebox("BB-001-booking")
     assert mm and mm.startswith("flowchart")
     assert "BB003" in mm and "BB004" in mm, mm
     assert "BB003 --> BB004" in mm, mm           # BB-003 uses BB-004
@@ -69,11 +70,11 @@ def test_whitebox_has_children_and_uses():
 
 
 def test_whitebox_none_for_leaf():
-    assert app.build_whitebox("BB-003-booking-ui") is None
+    assert project.architecture.build_whitebox("BB-003-booking-ui") is None
 
 
 def test_whitebox_level_one():
-    mm = app.build_whitebox(None)
+    mm = project.architecture.build_whitebox(None)
     assert "BB001 --> BB002" in mm, mm
 
 
@@ -92,17 +93,17 @@ def test_dangling_links_are_skipped():
 
 
 def test_drivers_grouped_by_type():
-    groups = app.build_drivers("BB-001-booking")
+    groups = project.architecture.build_drivers("BB-001-booking")
     assert [g["type"] for g in groups] == ["FR", "UC", "QR"], groups
     assert groups[2]["links"][0]["url"] == "/page/quality-requirements/QR-001-fast-search"
 
 
 def test_addressed_by_lists_dr_and_bb():
-    groups = app.build_addressed_by("QR-001-fast-search")
+    groups = project.architecture.build_addressed_by("QR-001-fast-search")
     got = {g["type"]: [l["id"] for l in g["links"]] for g in groups}
     assert got == {"DR": ["DR-001"], "BB": ["BB-001", "BB-004", "BB-007-noid"]}, got
-    assert app.build_addressed_by("UC-001-find-course")[0]["links"][0]["id"] == "BB-001"
-    assert app.build_addressed_by("DT-001-booking") == []
+    assert project.architecture.build_addressed_by("UC-001-find-course")[0]["links"][0]["id"] == "BB-001"
+    assert project.architecture.build_addressed_by("DT-001-booking") == []
 
 
 # --- routes ------------------------------------------------------------------
@@ -190,7 +191,7 @@ def test_blank_id_falls_back_to_the_stem_and_never_500s():
                 "/page/quality-requirements/QR-001-fast-search", "/search", "/metamodel"):
         code, _ = _get(url)
         assert code == 200, url
-    assert "BB-007-noid" in [l["id"] for g in app.build_addressed_by("QR-001-fast-search") for l in g["links"]]
+    assert "BB-007-noid" in [l["id"] for g in project.architecture.build_addressed_by("QR-001-fast-search") for l in g["links"]]
 
 
 def test_decisions_list_shows_drivers():
@@ -201,7 +202,7 @@ def test_decisions_list_shows_drivers():
 
 def test_whitebox_shows_outside_blocks_as_neighbours():
     # BB-003 (inside BB-001) uses BB-002, a level-1 block outside BB-001
-    mm = app.build_whitebox("BB-001-booking")
+    mm = project.architecture.build_whitebox("BB-001-booking")
     assert "BB003 --> BB002" in mm, mm
     assert 'BB002["BB-002 · Katalog"]:::outside' in mm, mm
 
