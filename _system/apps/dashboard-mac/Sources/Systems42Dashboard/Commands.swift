@@ -92,7 +92,7 @@ struct PageCommands: Commands {
     }
 }
 
-/// Help > Systems42 Dashboard Help. Metamodel, The Method and Guided Tour follow from their own commands.
+/// Help > Systems42 Dashboard Help. Metamodel and The Method follow from their own commands.
 struct HelpCommands: Commands {
     @Environment(\.openWindow) private var openWindow
 

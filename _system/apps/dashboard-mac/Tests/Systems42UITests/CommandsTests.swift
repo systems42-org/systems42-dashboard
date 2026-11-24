@@ -111,13 +111,10 @@ import Systems42TestSupport
     }
 
     @Test func shortcutsDoNotClashWithEachOtherOrWithTheSystem() {
-        let keys = Shortcuts.all.flatMap(\.keyList)
+        let keys = Shortcuts.all.map(\.keys)
         #expect(Set(keys).count == keys.count, "\(keys)")
         let system: Set<String> = ["⌘Q", "⌘W", "⌘H", "⌘M", "⌘C", "⌘V", "⌘X", "⌘Z", "⇧⌘Z", "⌘A", "⌘,", "⌘N", "⌘S", "⌘P", "⌘T", "⌘`",
                                    "⌥⌘H", "⌥⌘M", "⌃⌘F", "⌘0", "⌘=", "⌘-", "⌘Space"]
-        #expect(Shortcuts.stopTour.isCancelAction)
-        #expect(Shortcuts.stopTour.keyList == ["⎋", "⌘."])
-        #expect(keys.contains("⌘."))
         #expect(Set(keys).isDisjoint(with: system), "\(Set(keys).intersection(system))")
         // Cmd-1 to Cmd-9 are the sections.
         #expect(Shortcuts.all.filter { $0.keys.hasPrefix("⌘") && $0.keys.count == 2 && $0.keys.last?.isNumber == true }.count == 9)

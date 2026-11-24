@@ -20,9 +20,8 @@ public struct MethodWindow: View {
     }
 }
 
-/// Help > The Method and Help > Guided Tour.
+/// Help > The Method.
 public struct MethodCommands: Commands {
-    @FocusedValue(\.wikiFolder) private var folder
     @Environment(\.openWindow) private var openWindow
 
     public init() {}
@@ -30,10 +29,6 @@ public struct MethodCommands: Commands {
     public var body: some Commands {
         CommandGroup(after: .help) {
             Button("The Method") { openWindow(id: MethodWindow.windowID) }
-            Button("Guided Tour") {
-                if let folder, let session = OpenSessions.shared.session(for: folder) { session.tour.start() }
-            }
-            .disabled(folder == nil)
         }
     }
 }

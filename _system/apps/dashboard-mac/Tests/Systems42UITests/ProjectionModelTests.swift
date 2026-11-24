@@ -336,22 +336,6 @@ private func loaded(_ s: WikiSession, agreedOnly: Bool = false) async throws -> 
         #expect(s.mode == mode && s.selectedPage == nil)
     }
 
-    @Test func aTourStepDoesNotChangeTheRememberedMode() async throws {
-        let s = try await session("basic")
-        let fr = try section(containing: "functional-requirements", in: s)
-        let goals = try section(containing: "goals", in: s)
-        s.select(section: fr.id)
-        s.select(mode: "story-map")
-        s.showUnrecorded(section: goals.id, page: nil)
-        s.showUnrecorded(section: fr.id, page: nil)
-        #expect(s.mode == "story-map")
-        s.showUnrecorded(section: fr.id, page: PageRef(folder: "functional-requirements", stem: "FR-002-checkout"))
-        #expect(s.mode == "story-map")
-        s.select(section: goals.id)
-        s.select(section: fr.id)
-        #expect(s.mode == "story-map")
-    }
-
     @Test func aModeTheSectionNoLongerOffersShowsTheList() async throws {
         let wiki = try Fixture.tempCopy("basic")
         defer { try? FileManager.default.removeItem(at: wiki.deletingLastPathComponent()) }

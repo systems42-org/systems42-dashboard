@@ -163,6 +163,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
   without dashboard code (ISS-005).
 
 ### Removed
+- Mac app: the guided tour is gone, with its Help menu command and shortcuts. The guided path (FR-012) is not offered for now.
 - Wiki: 23 stakeholders merged into 7 (meta issue #38). Retired IDs, never
   reused: STK-002, STK-003, STK-004, STK-005, STK-006, STK-007, STK-009,
   STK-011, STK-014, STK-015, STK-016, STK-017, STK-018, STK-019, STK-021,
