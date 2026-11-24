@@ -36,6 +36,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
   text and diagrams scroll inside their own box. `/metamodel`, `/join` and the
   About page fit the screen.
 - Dashboard: on a functional requirement page the sources row no longer overlaps the row of pills above it.
+- Dashboard: a functional requirement page shows its created date, updated date and tags under the title, like every other page. The requirement view left them out. A blank `created:` or `updated:` no longer shows as "None" (#183).
 
 ### Added
 - Website: a "42" button in the header opens the 42 family, as on systems42.org: arc42, req42 and Systems42, each with its link. On a phone the three links are in the menu.

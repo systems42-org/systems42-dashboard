@@ -521,6 +521,16 @@ func sectionCrumb(cat *metamodel.Catalog, folder string) (crumb any, crumbHref a
 	return nil, nil
 }
 
+// withPageHead adds created date, updated date and tags to a detail view's
+// template data (FR-034), matching app.py's page_head(). Every detail view
+// takes them from here and renders them with the page_meta macro.
+func withPageHead(page *wiki.Page, data map[string]any) map[string]any {
+	data["created"] = page.MetaString("created")
+	data["updated"] = page.MetaString("updated")
+	data["tags"] = page.AsStringList("tags")
+	return data
+}
+
 func (s *Server) handlePageDetail(w http.ResponseWriter, r *http.Request) {
 	// Reject percent-encoded path separators inside segments (e.g. ..%2Foutside).
 	if raw := r.URL.RawPath; raw != "" {
@@ -625,14 +635,11 @@ func (s *Server) handlePageDetail(w http.ResponseWriter, r *http.Request) {
 
 	needsMermaid := contextDiagram != nil || whitebox != nil || sequence != nil || deployment != nil || strings.Contains(bodyHTML, "language-mermaid")
 
-	s.renderHTML(w, r, http.StatusOK, "detail.html", cat, map[string]any{
+	s.renderHTML(w, r, http.StatusOK, "detail.html", cat, withPageHead(page, map[string]any{
 		"kind":            kind,
 		"id":              page.ID(),
 		"title":           page.Title(),
 		"status":          page.Status(),
-		"created":         page.MetaString("created"),
-		"updated":         page.MetaString("updated"),
-		"tags":            page.AsStringList("tags"),
 		"body_html":       bodyHTML,
 		"crumb":           crumb,
 		"crumb_href":      crumbHref,
@@ -653,7 +660,7 @@ func (s *Server) handlePageDetail(w http.ResponseWriter, r *http.Request) {
 		"issue":           issueVal,
 		"page_issues":     openIssuesFor(sn, stem, vocab),
 		"formats":         render.FormatLabels(page.Body, linkCtx),
-	}, now)
+	}), now)
 }
 
 func firstRunes(s string, max int) string {
@@ -717,14 +724,11 @@ func (s *Server) handleSourceDetail(w http.ResponseWriter, r *http.Request) {
 	bodyHTML := fmt.Sprintf(`<dl class="source-facts">%s<dt>Ingested pages</dt><dd>%s</dd></dl>%s`,
 		factsHTML.String(), ingested, render.RenderMarkdown(body, linkCtx))
 
-	s.renderHTML(w, r, http.StatusOK, "detail.html", cat, map[string]any{
+	s.renderHTML(w, r, http.StatusOK, "detail.html", cat, withPageHead(src, map[string]any{
 		"kind":            "Source",
 		"id":              src.ID(),
 		"title":           src.Title(),
 		"status":          src.Status(),
-		"created":         src.MetaString("created"),
-		"updated":         src.MetaString("updated"),
-		"tags":            src.AsStringList("tags"),
 		"body_html":       bodyHTML,
 		"crumb":           nil,
 		"crumb_href":      nil,
@@ -744,5 +748,5 @@ func (s *Server) handleSourceDetail(w http.ResponseWriter, r *http.Request) {
 		"sources":         nil,
 		"issue":           nil,
 		"formats":         nil,
-	}, now)
+	}), now)
 }

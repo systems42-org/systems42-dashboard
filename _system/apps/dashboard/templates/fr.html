@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_provenance.html" import provenance_chips %}
-{% from "_macros.html" import plural, format_labels %}
+{% from "_macros.html" import plural, format_labels, page_meta %}
 {% from "_trace.html" import trace_panel %}
 {% from "_relations.html" import relations_panel %}
 {% from "_page_issues.html" import page_issues as page_issues_panel %}
@@ -22,6 +22,7 @@
 </div>
 {% if sources is not none %}{{ provenance_chips(sources) }}{% endif %}
 <h1 class="page-h1">{{ fr.title }}</h1>
+{{ page_meta(created, updated, tags) }}
 
 {% if diagram %}
 <figure class="goals-diagram">
