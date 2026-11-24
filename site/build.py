@@ -82,6 +82,16 @@ SEED_ROUTES = [
     "/brand/mark-light.svg",
 ]
 
+# Added to the exported issue list, which holds every issue (see site/demo/issue-filters.js).
+DEMO_ISSUE_FILTERS = f'<script src="{DEMO_PREFIX}/static/demo-issue-filters.js"></script>'
+
+# A script that sends the browser to a path from the site root: a string
+# literal in location.assign(), location.replace() or an assignment to location.
+ROOT_NAVIGATION_RE = re.compile(
+    r"""location\s*\.\s*(?:assign|replace)\(\s*["'`](/[^"'`]*)|location(?:\s*\.\s*href)?\s*=\s*["'`](/[^"'`]*)"""
+)
+ISSUE_ROW_VALUES = ("status", "open", "category", "severity", "sections", "owner")
+
 DEMO_BANNER_CSS = """
 <style id="s42-site-demo-style">
 .s42-demo-bar {
@@ -318,6 +328,10 @@ def export_demo(repo_dir: Path, demo_wiki: Path, out_dir: Path) -> dict:
         js_text = js_text.replace("'/search?q=", f"'{DEMO_PREFIX}/search/?q=")
         popup_js.write_text(js_text, encoding="utf-8")
 
+    # The demo's own script: it filters the issue list in the browser, because
+    # no server answers /issues?status=... here.
+    shutil.copy2(repo_dir / "site" / "demo" / "issue-filters.js", static_dst / "demo-issue-filters.js")
+
     client = dash_app.app.test_client()
     queue: deque[str] = deque(SEED_ROUTES)
     seen: set[str] = set()
@@ -389,6 +403,8 @@ def export_demo(repo_dir: Path, demo_wiki: Path, out_dir: Path) -> dict:
                 enqueue(m.group(1))
 
             fixed_html = transform_demo_html(raw_html, demo_name)
+            if route == "/issues":
+                fixed_html = fixed_html.replace("</body>", DEMO_ISSUE_FILTERS + "\n</body>", 1)
             if route == "/":
                 dest = demo_out / "index.html"
             else:
@@ -407,6 +423,40 @@ def export_demo(repo_dir: Path, demo_wiki: Path, out_dir: Path) -> dict:
         "pages": wiki_page_count,
         "routes": exported_routes,
     }
+
+
+def root_navigation(text: str) -> list[str]:
+    """The paths outside /demo/ that a script in this text navigates to."""
+    paths = [m.group(1) or m.group(2) for m in ROOT_NAVIGATION_RE.finditer(text)]
+    return [p for p in paths if p != DEMO_PREFIX and not p.startswith(DEMO_PREFIX + "/")]
+
+
+def verify_demo_filters(out_dir: Path) -> None:
+    """Fail when a demo script leaves /demo/, or when the exported issue list
+    cannot filter in the browser: no filter script, or rows without the values
+    it reads. The export holds one response per path, so nothing else filters."""
+    demo = out_dir / "demo"
+    scripts = sorted((demo / "static").glob("*.js"))
+    leaving: list[tuple[str, str]] = []
+    for f in sorted(demo.rglob("*.html")) + scripts:
+        for path in root_navigation(f.read_text(encoding="utf-8", errors="ignore")):
+            leaving.append((f.relative_to(out_dir).as_posix(), path))
+    if leaving:
+        sample = "\n".join(f"  {src} -> {dst}" for src, dst in leaving[:20])
+        raise RuntimeError(f"Found {len(leaving)} demo scripts that navigate outside {DEMO_PREFIX}/:\n{sample}")
+
+    issues = demo / "issues" / "index.html"
+    text = issues.read_text(encoding="utf-8") if issues.is_file() else ""
+    if 'class="issue-filters"' not in text:
+        return  # a wiki without issues has no filters
+    if DEMO_ISSUE_FILTERS not in text or not (demo / "static" / "demo-issue-filters.js").is_file():
+        raise RuntimeError("The demo's issue list does not load its filter script")
+    if f'action="{DEMO_PREFIX}/issues/"' not in text:
+        raise RuntimeError("The demo's issue filters do not submit to the demo's issue list")
+    for row in re.findall(r'<tr class="issue-row"[^>]*>', text):
+        missing = [v for v in ISSUE_ROW_VALUES if f' data-{v}="' not in row]
+        if missing:
+            raise RuntimeError(f"An issue row of the demo lacks the filter values {missing}: {row}")
 
 
 def verify_output(out_dir: Path) -> None:
@@ -451,6 +501,7 @@ def verify_output(out_dir: Path) -> None:
             if not target_ok:
                 broken.append((rel, raw))
 
+    verify_demo_filters(out_dir)
     if live_leaks:
         raise RuntimeError(f"Live heartbeat script leaked into static demo pages: {live_leaks[:5]}")
     if broken:

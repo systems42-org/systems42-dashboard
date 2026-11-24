@@ -429,6 +429,12 @@ image. To run it in the venv, install them there:
 Without them it prints `SKIP` and exits 77. `run-all.sh` counts a script that
 exits 77 as skipped, not passed, and names it in the summary.
 
+`tests/test_demo_issue_filters.py` exports a small wiki as the site's static
+demo (`site/build.py`) and checks that its issue filters stay under `/demo/`
+and pick the issues the server picks. `tests/test_demo_issue_filters_browser.py`
+changes the filters of that export in headless Chromium, with no dashboard
+running. It needs Playwright as well.
+
 pytest can run one script (`pytest tests/test_reload.py`), but not the whole
 folder: each script points the app at its own throwaway vault before
 `import app`, so in one shared process only the first one counts.

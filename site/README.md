@@ -6,11 +6,11 @@ Static showcase, documentation, downloads and interactive `/demo/` export for th
 
 The site has its own build, `site/build.py`. It is a Python script, and it uses no site generator. `make site` runs it in the dashboard's Docker image (`site/build.sh`), so it needs Docker and no local Python. The script does five things, in this order:
 
-1. **Demo.** It loads the dashboard's own code (`_system/apps/dashboard/app.py`) on the demo wiki and asks it for every page, starting from a list of routes and following the links it finds. Each page is saved as a file under `/demo/`, with its links rewritten and everything removed that needs a running dashboard (joining, connected tabs, View dialog, Reload).
+1. **Demo.** It loads the dashboard's own code (`_system/apps/dashboard/app.py`) on the demo wiki and asks it for every page, starting from a list of routes and following the links it finds. Each page is saved as a file under `/demo/`, with its links rewritten and everything removed that needs a running dashboard (joining, connected tabs, View dialog, Reload). The dashboard filters its issue list on the server, so the exported list holds every issue and `site/demo/issue-filters.js` filters it in the browser from the address.
 2. **Files.** It copies the site's stylesheet, the marks of the `systems42` brand, `dashboard.sh` and `CNAME`, and works out the SHA-256 checksum of `dashboard.sh`.
 3. **Pages.** It renders the pages of the site from the Jinja templates in `site/templates/`: overview, downloads, docs and imprint. The release number comes from `_system/apps/dashboard/VERSION`, the changelog excerpt from `CHANGELOG.md`.
 4. **Guides.** It renders four Markdown files from `docs/` as pages under `/docs/`: `INSTALL.md`, `GETTING-STARTED.md`, `prompts/brand-mark-and-intro.md` and `go-dashboard-requirements-summary.md`.
-5. **Checks.** It fails when a required page is missing, when a link inside the site leads nowhere, or when a demo page still calls a running dashboard.
+5. **Checks.** It fails when a required page is missing, when a link inside the site leads nowhere, when a demo page still calls a running dashboard, when a demo script navigates outside `/demo/`, or when the demo's issue list cannot filter in the browser.
 
 The result is the folder `site/_site/`. The `site` workflow (`.github/workflows/site.yml`) runs the same `make site` and hands that folder to GitHub Pages as it is. GitHub does no build of its own.
 
