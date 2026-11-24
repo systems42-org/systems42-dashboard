@@ -364,8 +364,9 @@ status-strip source count already reads.
 ```
 _system/apps/dashboard/
   app.py             Flask app, the routes, what the views put together (tiles, lists, issue
-                     fields) and the two diagrams that read wiki_config(): the context diagram
-                     and the goal tree. May import every module below
+                     fields), the two diagrams that read wiki_config() (the context diagram
+                     and the goal tree), the watchdog and the shutdown. May import every
+                     module below
   catalog.py         the three areas, and the sections from the metamodel with routes and colours
   metamodel.py       reader for _system/metamodel/ (the /metamodel page, ADR-0008)
   inputs.py          reads text and YAML from wiki, wiki.yaml and metamodel, and logs what is invalid
@@ -396,6 +397,9 @@ _system/apps/dashboard/
     terms.py         the domain terms: the term network, the links of a page ("Links to",
                      "Linked from"), a term's fields and the entity diagram. May import wiki,
                      links, render, catalog and project.common
+  session.py         the session: the view, the grace periods, the presence of the connected
+                     tabs, their names and the Keyholder role. May import catalog, never Flask
+                     or app
   help.md            source of the /help page
   templates/         base, index, _empty (shared empty state), _macros (plural()),
                      _maturity (maturity bar/legend), _mermaid (loader),

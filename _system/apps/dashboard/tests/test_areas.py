@@ -28,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import app  # noqa: E402
 import wiki  # noqa: E402
+import session  # noqa: E402
 
 STK = """---
 id: STK-001
@@ -56,7 +57,7 @@ def _tiles(body):
 
 
 def test_requirements_area_lists_its_sections_in_order():
-    app.set_view([])
+    session.set_view([])
     code, body = _get("/req42")
     assert code == 200
     assert _tiles(body) == ["r1", "r2", "r3", "r4", "r5", "r6"], _tiles(body)
@@ -80,21 +81,21 @@ def test_commons_area_lists_c1_to_c7():
 
 
 def test_hidden_section_drops_tile_but_route_stays():
-    app.set_view(["C4", "R2"])
+    session.set_view(["C4", "R2"])
     _, body = _get("/commons")
     assert "c4" not in _tiles(body) and "c1" in _tiles(body)
     _, body = _get("/req42")
     assert "r2" not in _tiles(body)
     code, _ = _get("/stakeholders")
     assert code == 200
-    app.set_view([])
+    session.set_view([])
 
 
 def test_hidden_area_page_still_renders_by_url():
-    app.set_view(["architecture"])
+    session.set_view(["architecture"])
     code, body = _get("/arc42")
     assert code == 200 and _tiles(body) == ["a1", "a2", "a3", "a4", "a5"]
-    app.set_view([])
+    session.set_view([])
 
 
 def test_breadcrumbs_carry_the_area():

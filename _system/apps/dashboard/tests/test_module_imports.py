@@ -31,6 +31,7 @@ ALLOWED = {
     "project.goals": {"wiki", "links", "render", "project.requirements"},
     "project.requirements": {"wiki", "links", "render", "project.common"},
     "project.terms": {"wiki", "links", "render", "catalog", "project.common"},
+    "session": {"catalog"},
     "preflight": set(),
 }
 # These sit above the modules: the app itself and what starts it.

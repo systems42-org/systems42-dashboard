@@ -37,6 +37,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import session  # noqa: E402
 
 
 def _ping(client, client_id, **kw):
@@ -47,13 +48,13 @@ def _ping(client, client_id, **kw):
 def _reset_presence():
     """Presence state is module-global (mirrors production); each test
     starts from a clean slate rather than depending on run order."""
-    with app._lifecycle_lock:
-        app._clients.clear()
-        app._leaving.clear()
-        app._first_seen.clear()
-        app._user_agents.clear()
-        app._names.clear()
-        app._facilitator = None
+    with session._lifecycle_lock:
+        session._clients.clear()
+        session._leaving.clear()
+        session._first_seen.clear()
+        session._user_agents.clear()
+        session._names.clear()
+        session._facilitator = None
 
 
 def test_ping_without_a_body_does_not_500():
@@ -81,8 +82,8 @@ def test_presence_count_excludes_clients_outside_the_active_window():
     _reset_presence()
     client = app.app.test_client()
     _ping(client, "carol")
-    with app._lifecycle_lock:
-        app._clients["carol"] = app.time.monotonic() - (app._PRESENCE_WINDOW + 5)
+    with session._lifecycle_lock:
+        session._clients["carol"] = app.time.monotonic() - (session._PRESENCE_WINDOW + 5)
     assert client.get("/presence/count").get_json()["count"] == 0
 
 
@@ -93,8 +94,8 @@ def test_leaving_then_repinging_the_same_client_cancels_the_leave():
     client.post("/leaving", data=json.dumps({"client_id": "dana"}),
                 content_type="application/json")
     _ping(client, "dana")  # same tab, in-page navigation
-    with app._lifecycle_lock:
-        assert "dana" not in app._leaving
+    with session._lifecycle_lock:
+        assert "dana" not in session._leaving
 
 
 def test_first_client_is_the_facilitator_not_the_second():
@@ -136,8 +137,8 @@ def test_facilitator_role_transfers_when_yoda_disconnects():
     client = app.app.test_client()
     _ping(client, "yoda")
     _ping(client, "luke")
-    with app._lifecycle_lock:
-        app._forget_client("yoda")  # yoda's tab is gone (evicted by the watchdog)
+    with session._lifecycle_lock:
+        session._forget_client("yoda")  # yoda's tab is gone (evicted by the watchdog)
     resp = _ping(client, "luke").get_json()
     assert resp["is_facilitator"] is True
 
@@ -146,22 +147,22 @@ def _go_stale(client_id):
     """Push a client's last ping just past the heartbeat grace, as when its
     browser quits without a goodbye. The watchdog evicts it on its next
     tick, but the role must not wait for that."""
-    with app._lifecycle_lock:
-        app._clients[client_id] = app.time.monotonic() - (app._HEARTBEAT_GRACE + 5)
+    with session._lifecycle_lock:
+        session._clients[client_id] = app.time.monotonic() - (session._HEARTBEAT_GRACE + 5)
 
 
 def _go_background(client_id):
     """Push a client's last ping just past the presence window, as when a
     background tab is throttled to about one ping a minute (issue #56)."""
-    with app._lifecycle_lock:
-        app._clients[client_id] = app.time.monotonic() - (app._PRESENCE_WINDOW + 5)
+    with session._lifecycle_lock:
+        session._clients[client_id] = app.time.monotonic() - (session._PRESENCE_WINDOW + 5)
 
 
 def _evict(client_id):
     """What the watchdog does to a tab that stayed silent past the grace."""
     _go_stale(client_id)
-    with app._lifecycle_lock:
-        app._forget_client(client_id)
+    with session._lifecycle_lock:
+        session._forget_client(client_id)
 
 
 def _post(client, path, client_id, **body):
@@ -196,8 +197,8 @@ def test_the_role_passes_to_the_next_earliest_tab_once_the_holder_is_evicted():
     _ping(client, "luke")
     _ping(client, "leia")
     _go_stale("yoda")
-    with app._lifecycle_lock:
-        app._forget_client("yoda")  # what the watchdog does on its next tick
+    with session._lifecycle_lock:
+        session._forget_client("yoda")  # what the watchdog does on its next tick
     _go_background("luke")
     assert _ping(client, "leia").get_json()["is_facilitator"] is False
     assert _ping(client, "luke").get_json()["is_facilitator"] is True
@@ -212,8 +213,8 @@ def test_the_heir_keeps_the_role_when_the_old_holder_returns():
     _ping(client, "yoda")
     _ping(client, "luke")
     _go_stale("yoda")
-    with app._lifecycle_lock:
-        app._forget_client("yoda")
+    with session._lifecycle_lock:
+        session._forget_client("yoda")
     assert _ping(client, "luke").get_json()["is_facilitator"] is True
     back = _ping(client, "yoda").get_json()
     assert back["is_facilitator"] is False and back["nickname"] == "Yoda"
@@ -293,8 +294,8 @@ def test_a_name_survives_eviction_and_return():
     client = app.app.test_client()
     _ping(client, "yoda")
     name = _ping(client, "mickey").get_json()["nickname"]
-    with app._lifecycle_lock:
-        app._forget_client("mickey")
+    with session._lifecycle_lock:
+        session._forget_client("mickey")
     assert _ping(client, "mickey").get_json()["nickname"] == name
 
 
@@ -328,7 +329,7 @@ def test_presence_list_reports_nickname_browser_and_duration():
 
 
 def test_nickname_is_stable_for_the_same_client_id():
-    assert app._nickname("same-id") == app._nickname("same-id")
+    assert session._nickname("same-id") == session._nickname("same-id")
 
 
 def test_presence_list_shows_the_facilitator_as_yoda():
@@ -349,7 +350,7 @@ def test_disconnect_all_rejects_a_non_facilitator():
     resp = client.post("/disconnect-all", data=json.dumps({"client_id": "luke"}),
                         content_type="application/json")
     assert resp.status_code == 403
-    with app._lifecycle_lock:
+    with session._lifecycle_lock:
         assert app._shutting_down is False
 
 
@@ -367,7 +368,7 @@ def test_disconnect_all_accepts_the_facilitator():
         resp = client.post("/disconnect-all", data=json.dumps({"client_id": "yoda"}),
                             content_type="application/json")
         assert resp.status_code == 204
-        with app._lifecycle_lock:
+        with session._lifecycle_lock:
             assert app._shutting_down is True
         # No Gunicorn hook has named a master here, so `_terminate` signals
         # this process only, never the parent (the test runner). The case
