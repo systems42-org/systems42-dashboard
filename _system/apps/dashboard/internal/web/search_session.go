@@ -2,9 +2,7 @@ package web
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
 	"mime"
 	"net/http"
 	"net/url"
@@ -17,7 +15,6 @@ import (
 	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/metamodel"
 	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/render"
 	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/search"
-	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/session"
 	"github.com/systems42-org/systems42-dashboard/_system/apps/dashboard/internal/wiki"
 )
 
@@ -291,18 +288,11 @@ func (s *Server) handleSettingsGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleSettingsPost(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-	body, _ := io.ReadAll(io.LimitReader(r.Body, 1<<20))
-	var payload map[string]any
-	_ = json.Unmarshal(body, &payload)
-	if payload == nil {
-		payload = map[string]any{}
+	payload, ok := readJSONObject(w, r)
+	if !ok {
+		return
 	}
-	rawCID := ""
-	if v, ok := payload["client_id"]; ok && v != nil {
-		rawCID = fmt.Sprint(v)
-	}
-	cid := session.NormalizeClientID(rawCID)
+	cid := clientIDOf(payload)
 	if !s.Session.IsFacilitator(cid) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return

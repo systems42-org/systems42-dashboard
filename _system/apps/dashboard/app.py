@@ -4717,16 +4717,28 @@ def _ensure_watchdog():
     threading.Thread(target=_watchdog, daemon=True).start()
 
 
+def _json_object(req) -> dict:
+    """The JSON object in the body of a session request (/ping, /leaving,
+    /settings, /disconnect-all). No body, an unreadable body and `null` count
+    as an empty object. Any other JSON value (array, string, number, boolean)
+    ends the request with a 400, before the endpoint touches session state."""
+    try:
+        data = req.get_json(silent=True, force=True)
+    except Exception:
+        data = None
+    if data is None:
+        return {}
+    if not isinstance(data, dict):
+        abort(make_response({"error": "not-an-object"}, 400))
+    return data
+
+
 def _client_id(req) -> str:
     """The per-tab id a page sends with /ping and /leaving (generated once in
     base.html, kept in sessionStorage so it survives in-tab navigation but
     not a closed tab). Defaulted and length-capped so a missing or malformed
     body can't wedge the presence dict."""
-    try:
-        data = req.get_json(silent=True, force=True) or {}
-    except Exception:
-        data = {}
-    cid = str(data.get("client_id") or "").strip()[:64]
+    cid = str(_json_object(req).get("client_id") or "").strip()[:64]
     return cid or "anon"
 
 
@@ -4935,10 +4947,7 @@ def settings_post():
     with _lifecycle_lock:
         if cid != _facilitator_client_id():
             abort(403)
-    try:
-        data = request.get_json(silent=True, force=True) or {}
-    except Exception:
-        data = {}
+    data = _json_object(request)
     valid, unknown = _validate_hidden(data.get("hidden"))
     if unknown or not isinstance(data.get("hidden"), list):
         return {"error": "unknown", "unknown": unknown}, 400
