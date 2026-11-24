@@ -400,17 +400,17 @@ _system/apps/dashboard/
     architecture.py  the decision records, building blocks and white box, runtime scenarios,
                      deployment, state, drivers and trace panels. May import wiki, links,
                      render, catalog and project.common
-    common.py        what several projections share: open issues, the maturity bar, provenance,
-                     the pages of a section, diagram node ids, labels and links. May import
-                     wiki, links and metamodel
+    common.py        what several projections share: open issues, the delivery states the
+                     metamodel allows, the maturity bar, provenance, the pages of a section,
+                     diagram node ids, labels and links. May import wiki, links and metamodel
     context.py       the context diagram, its flows and what the two share. May import wiki,
                      links and project.common
     goals.py         the vision, the objectives, the requirements that serve them, the goal
                      coverage matrix and the goal tree. May import wiki, links, render,
                      project.common and project.requirements
-    requirements.py  the functional requirements: notation and level, the hierarchy with the
-                     story map, its Mermaid trees, and the quality scenarios. May import wiki,
-                     links, render and project.common
+    requirements.py  the functional requirements: notation, level and delivery status, the
+                     hierarchy with the story map, its Mermaid trees, and the quality scenarios.
+                     May import wiki, links, render and project.common
     terms.py         the domain terms: the term network, the links of a page ("Links to",
                      "Linked from"), a term's fields and the entity diagram. May import wiki,
                      links, render, catalog and project.common
@@ -432,8 +432,8 @@ _system/apps/dashboard/
   static/list-view.js        the shared list layer: a th[data-sort] sorts by its
                              cells' data-sort-value (else their text), a
                              table[data-list] adds sort orders, "agreed only" and
-                             a kind filter, and keeps them in the address
-                             (?sort=, ?status=, ?kind=)
+                             a kind filter and a delivery filter, and keeps them in
+                             the address (?sort=, ?status=, ?kind=, ?delivery=)
   static/metamodel-graph.js  the cytoscape metamodel network on /metamodel
   static/settings.js   the View dialog
   static/systems42-sections.svg   the sections diagram shown on /help

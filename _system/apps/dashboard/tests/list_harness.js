@@ -7,9 +7,12 @@
 //         columns: [{key, numeric}],                 the sortable columns, in order
 //         rows: [{status, kind, cells: [text]}],     one text per column
 //         kinds: ["", "entity", "none"],             the values of the kind picker, [] = no picker
-//         actions: [{kind: "none"} | {status: "accepted"} | {sort: "title"}]}
-// An action picks a kind, clicks a status button or clicks a column header.
-// Prints {shown: [first cell of each visible row, in order], search, kind, emptyHint, events}.
+//         deliveries: ["", "implemented", "none"],   the same for the delivery picker (optional),
+//                                                    with `delivery` on each row
+//         list: "functional-requirement",            the list's type (default "domain-term")
+//         actions: [{kind: "none"} | {delivery: "none"} | {status: "accepted"} | {sort: "title"}]}
+// An action picks a kind or a delivery state, clicks a status button or clicks a column header.
+// Prints {shown: [first cell of each visible row, in order], search, kind, delivery, emptyHint, events}.
 var fs = require("fs");
 var path = require("path");
 
@@ -58,6 +61,7 @@ var rows = spec.rows.map(function (r) {
   var tr = element({cells: r.cells.map(function (t) { return {dataset: {}, textContent: t}; })});
   tr.dataset.status = r.status;
   tr.dataset.kind = r.kind;
+  if (r.delivery !== undefined) tr.dataset.delivery = r.delivery;
   return tr;
 });
 var tbody = {
@@ -84,11 +88,15 @@ var table = element({
   },
   dispatchEvent: function (e) { if (e.type === "listfilter") events.push(e.detail); }
 });
-table.dataset.list = "domain-term";
+var listType = spec.list || "domain-term";
+table.dataset.list = listType;
 table.dataset.sortOrders = "[]";
 
 var kindPicker = spec.kinds.length
   ? element({value: "", options: spec.kinds.map(function (v) { return {value: v}; })})
+  : null;
+var deliveryPicker = (spec.deliveries || []).length
+  ? element({value: "", options: spec.deliveries.map(function (v) { return {value: v}; })})
   : null;
 var statusButtons = ["all", "accepted"].map(function (v) {
   var b = element();
@@ -99,6 +107,7 @@ var controls = element({
   querySelector: function (sel) {
     if (sel === "select[data-list-order]") return null;
     if (sel === "select[data-list-kind]") return kindPicker;
+    if (sel === "select[data-list-delivery]") return deliveryPicker;
     throw new Error("controls.querySelector: " + sel);
   },
   querySelectorAll: function (sel) {
@@ -110,7 +119,7 @@ var controls = element({
 var document = {
   querySelectorAll: function (sel) {
     if (sel === "table") return [table];
-    if (sel === '[data-list-controls="domain-term"]') return [controls];
+    if (sel === '[data-list-controls="' + listType + '"]') return [controls];
     throw new Error("document.querySelectorAll: " + sel);
   },
   createElement: function () { return element(); }
@@ -132,6 +141,9 @@ new Function("window", "document", "location", "history", "CustomEvent", src)({}
   if (a.kind !== undefined) {
     kindPicker.value = a.kind;
     kindPicker.fire("change");
+  } else if (a.delivery !== undefined) {
+    deliveryPicker.value = a.delivery;
+    deliveryPicker.fire("change");
   } else if (a.status !== undefined) {
     statusButtons.filter(function (b) { return b.dataset.listStatus === a.status; })[0].fire("click");
   } else if (a.sort !== undefined) {
@@ -145,6 +157,7 @@ console.log(JSON.stringify({
     .map(function (r) { return r.cells[0].textContent; }),
   search: location.search,
   kind: kindPicker ? kindPicker.value : null,
+  delivery: deliveryPicker ? deliveryPicker.value : null,
   emptyHint: !hint.hidden,
   events: events
 }));

@@ -21,3 +21,7 @@
   {% if updated and updated != '—' %}<span>· updated {{ updated }}</span>{% endif %}
   {% if tags %}<span>· {% for t in tags %}<span class="tag-chip">{{ t }}</span>{% endfor %}</span>{% endif %}
 </p>{% endif %}{% endmacro %}
+{# A requirement's delivery status as a badge (FR-048). `d` comes from
+   `delivery_badge()` in web/common.py. No value, no badge. A value the
+   metamodel does not allow on the page shows as written, without a state's colour. #}
+{% macro delivery_badge(d) %}{% if d and d.value %}<span class="delivery{% if d.known %} delivery-{{ d.value }}{% endif %}"{% if not d.known %} title="The metamodel does not allow this delivery value for this requirement"{% endif %}>{{ d.label }}</span>{% endif %}{% endmacro %}

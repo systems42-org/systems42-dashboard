@@ -3,7 +3,7 @@
 {% block crumbs %}<nav class="crumbs"><a href="/">Home</a> <span>›</span> {% if current_area %}<a href="{{ current_area.href }}">{{ current_area.label }}</a> <span>›</span> {% endif %}Functional Requirements</nav>{% endblock %}
 {% from "_empty.html" import empty_state %}
 {% from "_diagram_links.html" import node_links %}
-{% from "_macros.html" import plural, status_rank, priority_rank %}
+{% from "_macros.html" import plural, status_rank, priority_rank, delivery_badge %}
 {% from "_list.html" import list_attrs, list_controls, list_empty %}
 {% set spec = list_spec("functional-requirement") %}
 {% block content %}
@@ -80,7 +80,7 @@
 
 {% if rows %}
 <h2 class="mm-h2">All requirements</h2>
-{{ list_controls(spec) }}
+{{ list_controls(spec, deliveries=deliveries) }}
 <div class="table-card">
 <table{{ list_attrs(spec) }}>
   <thead>
@@ -92,12 +92,13 @@
       <th class="c-status" data-sort="numeric" data-key="priority">Priority</th>
       <th class="c-status" data-sort="text" data-key="release">Release</th>
       <th class="c-status" data-sort="numeric" data-key="order">Order</th>
+      {% if deliveries %}<th class="c-status" data-sort="text" data-key="delivery">Delivery</th>{% endif %}
       <th class="c-status" data-sort="numeric" data-key="status">Status</th>
     </tr>
   </thead>
   <tbody>
     {% for r in rows %}
-    <tr data-status="{{ r.status }}">
+    <tr data-status="{{ r.status }}"{% if deliveries %} data-delivery="{{ r.delivery.value }}"{% endif %}>
       <td class="c-id"><code>{{ r.id }}</code></td>
       <td class="c-status">{{ r.notation }}</td>
       <td class="c-status">{% if r.level %}<span class="stereo stereo-{{ r.level }}">{{ r.level }}</span>{% endif %}</td>
@@ -105,6 +106,7 @@
       <td class="c-status" data-sort-value="{{ priority_rank(r.priority) }}">{% if r.priority %}<span class="badge badge-prio">{{ r.priority }}</span>{% endif %}</td>
       <td class="c-status">{{ r.release }}</td>
       <td class="c-status">{{ r.order }}</td>
+      {% if deliveries %}<td class="c-status" data-sort-value="{{ r.delivery.value }}">{{ delivery_badge(r.delivery) }}</td>{% endif %}
       <td class="c-status" data-sort-value="{{ status_rank(r.status) }}">{% if r.status %}<span class="status status-{{ r.status }}">{{ r.status }}</span>{% endif %}</td>
     </tr>
     {% endfor %}

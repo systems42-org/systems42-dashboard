@@ -48,6 +48,53 @@ func (s *Server) loadIssueVocab() issueVocab {
 	}
 }
 
+// deliveryLabels is how a delivery state reads on a badge and in the filter
+// (FR-048), matching web/common.py's DELIVERY_LABELS. A state without an
+// entry shows under its own name.
+var deliveryLabels = map[string]string{
+	"partial":     "partly implemented",
+	"implemented": "implemented",
+	"outdated":    "implementation outdated",
+	"removed":     "implementation removed",
+}
+
+func deliveryLabel(state string) string {
+	if label, ok := deliveryLabels[state]; ok {
+		return label
+	}
+	return state
+}
+
+// loadDeliveryVocab reads what the metamodel allows for a requirement's
+// delivery (CON-006).
+func (s *Server) loadDeliveryVocab() project.DeliveryVocab {
+	return project.BuildDeliveryVocab(
+		s.Metamodel.FieldValues("functional-requirement", "delivery"), s.Metamodel.Notations())
+}
+
+// deliveryBadge matches web/common.py's delivery_badge(): a requirement's
+// delivery status plus label, the state in plain words. A value the metamodel
+// does not allow on the page keeps its own text.
+func deliveryBadge(p *wiki.Page, vocab project.DeliveryVocab) map[string]any {
+	d := project.FRDelivery(p, vocab)
+	value, _ := d["value"].(string)
+	d["label"] = value
+	if known, _ := d["known"].(bool); known {
+		d["label"] = deliveryLabel(value)
+	}
+	return d
+}
+
+// deliveryOptions matches web/common.py's delivery_options(): the states the
+// delivery filter of the requirement list offers.
+func deliveryOptions(vocab project.DeliveryVocab) []map[string]any {
+	out := make([]map[string]any, 0, len(vocab.States))
+	for _, state := range vocab.States {
+		out = append(out, map[string]any{"value": state, "label": deliveryLabel(state)})
+	}
+	return out
+}
+
 func (s *Server) linkContext(sn *requestSnapshot) render.LinkContext {
 	if sn.anchors == nil {
 		sn.anchors = metamodel.AnchorIndex(s.Metamodel.MethodAnchors())

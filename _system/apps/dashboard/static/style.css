@@ -440,6 +440,14 @@ h2 { letter-spacing: -.01em; }
 .state-current { color: var(--ink); border-color: var(--ink-soft); }
 .state-planned, .state-target { border-style: dashed; color: var(--accent); border-color: var(--accent); }
 .state-outdated { color: var(--ink-soft); background: var(--bg-soft); text-decoration: line-through; }
+/* delivery status of a requirement (FR-048): the status pill, one colour per
+   state. A value the metamodel does not allow keeps the plain pill. */
+.delivery { font-size: .75rem; padding: .12rem .5rem; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-soft); white-space: nowrap; }
+.delivery-implemented { color: var(--accent-2); border-color: rgba(70,211,176,.4); }
+.delivery-partial { color: var(--accent); border-color: rgba(62,166,255,.35); }
+.delivery-outdated { color: var(--warn); border-color: rgba(255,180,84,.4); background: rgba(255,180,84,.1); }
+.delivery-removed { color: var(--ink-dim); }
+.delivery-checked { font-size: .75rem; color: var(--ink-dim); }
 
 /* ---- data tables (glossary, stakeholders, issues) ---- */
 /* overflow: clip (not hidden) clips for rounded corners WITHOUT making this a

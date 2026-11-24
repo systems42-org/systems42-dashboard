@@ -453,10 +453,12 @@ def functional_requirements_view():
                      "priority": str(p.meta.get("priority") or "").strip(),
                      "release": str(p.meta.get("release") or "").strip(),
                      "order": str(p.meta.get("order") if p.meta.get("order") is not None else "").strip(),
-                     "status": p.status})
+                     "status": p.status, "delivery": web.common.delivery_badge(p)})
+    # the delivery column and its filter show only in a wiki that tracks delivery (FR-048)
+    deliveries = web.common.delivery_options() if any(r["delivery"]["value"] for r in rows) else []
     return render_template(
         "functional-requirements.html", hierarchy=hierarchy, diagram=diagram, diagram_links=diagram_links,
-        block=block, needs_mermaid=bool(diagram), rows=rows,
+        block=block, needs_mermaid=bool(diagram), rows=rows, deliveries=deliveries,
     )
 
 
@@ -511,5 +513,6 @@ def fr_view(stem):
         sources=project.common.provenance(page),
         page_issues=web.common.open_issues_for(stem),
         formats=render.format_labels(page.body),
+        delivery=web.common.delivery_badge(page),
         **web.common.page_head(page),
     )

@@ -12,6 +12,9 @@ Unreleased changes sit at the top until the next Starter Kit release.
 
 ## [Unreleased]
 
+### Added
+- Dashboard: a requirement page shows the requirement's delivery status as a badge next to its status, with the day it was last checked: implemented, partly implemented, implementation outdated or implementation removed. The list of all requirements gets a Delivery column and a delivery filter (`?delivery=implemented`, `?delivery=none` for requirements without a delivery record). The filter runs in the browser, combines with the status filter and the sort, and works in the exported demo. Column and filter show only when at least one requirement has a `delivery:` value. The states come from the repository's metamodel. A value it does not allow on that page, such as `implemented` on an epic, shows as written without a state's colour (FR-048, #91).
+
 ### Fixed
 - Dashboard: the specialized views read each type's folder, ID prefix and label from the type pages of the repository's metamodel. A repository that declares `folder: wiki/terms` for domain terms gets the same pages in the tile count, the term list, the search, the detail pages and the term network, and a page's address names the folder it lives in (`/page/terms/<stem>`). Before, only the tile followed the declaration, so it counted pages the list behind it did not show (#180).
 - Dashboard: a framework block without `title:` shows its ID wherever a block's name shows, in the section navigation and on `/metamodel`. Before, the navigation showed the ID and `/metamodel` answered with a server error. A block without an ID and a block entry that is no mapping are left out of `/metamodel` as they are left out of the navigation (#205).

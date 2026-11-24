@@ -455,7 +455,8 @@ def _discover_wikis(tmp: Path) -> list[tuple[str, dict[str, str], Path, Path]]:
     """Return (label, env_overrides, wiki_dir, raw_sources_dir) for every
     fixture wiki under tests/fixtures/, a synthetic notices/intro-off wiki,
     a synthetic wiki whose metamodel moves every type folder and declares a
-    block without a title, and this
+    block without a title, a synthetic wiki whose requirements carry delivery
+    values, and this
     repository's own wiki."""
     wikis: list[tuple[str, dict[str, str], Path, Path]] = []
 
@@ -535,6 +536,59 @@ def _discover_wikis(tmp: Path) -> list[tuple[str, dict[str, str], Path, Path]]:
         {"REPO_DIR": str(moved)},
         moved / "wiki",
         moved / "raw" / "sources",
+    ))
+
+    # Requirements with delivery values (issue #91, FR-048): every state, values
+    # the metamodel does not allow, the forms of a check timestamp, and a
+    # project notation that rules on delivery itself.
+    delivery = tmp / "delivery"
+    fr = delivery / "wiki" / "functional-requirements"
+    fr.mkdir(parents=True)
+    (delivery / "raw" / "sources").mkdir(parents=True)
+    shutil.copytree(REPO / "_system" / "metamodel", delivery / "_system" / "metamodel")
+    shutil.copytree(REPO / "_system" / "anchors", delivery / "_system" / "anchors")
+    (delivery / "_system" / "wiki.yaml").write_text('system_name: "Tracking"\n', encoding="utf-8")
+    (delivery / "_system" / "notations").mkdir()
+    (delivery / "_system" / "notations" / "shall.md").write_text(
+        "---\ntype: metamodel\nconstruct: notation\nname: Shall\ntitle: Shall\nextends: functional-requirement\n"
+        "levels: [rule, group]\nimplementable_levels: [rule]\ndelivery_states: [implemented]\n---\n\n# {{title}}\n",
+        encoding="utf-8")
+    story = "status: draft\nnotation: agile\nlevel: story\n"
+    hostile = "'\"><script>alert(1)</script>'"
+    for i, (name, frontmatter) in enumerate([
+        ("implemented", "status: accepted\nnotation: agile\nlevel: story\n"
+                        "delivery: implemented\ndelivery-checked: 2026-11-20T00:30:00+01:00"),
+        ("outdated", story + "delivery: outdated\ndelivery-checked: 2026-10-01"),
+        ("removed", story + "delivery: removed\ndelivery-checked: '2026-09-02T08:00:00Z'"),
+        ("no-record", story),
+        ("blank", story + "delivery:\ndelivery-checked:"),
+        ("unknown-state", story + "delivery: done\ndelivery-checked: soon"),
+        ("epic", "status: draft\nnotation: agile\nlevel: epic\ndelivery: implemented"),
+        ("partial-story", story + "delivery: partial"),
+        ("hostile", story + f"delivery: {hostile}\ndelivery-checked: {hostile}"),
+        ("checked-only", story + "delivery-checked: 2026-11-20"),
+        ("list-value", story + "delivery: [implemented, outdated]\ndelivery-checked: [2026-11-20]"),
+        ("use-case", "status: draft\nnotation: use-case\nlevel: sea\ndelivery: partial\n"
+                     "delivery-checked: 2026-11-19 23:30:00 -05:00"),
+        ("kite", "status: draft\nnotation: use-case\nlevel: kite\ndelivery: implemented"),
+        ("no-notation", "status: draft\ndelivery: partial\ndelivery-checked: 2026-11-20t10:00:00.5Z"),
+        ("utc", story + "delivery: implemented\ndelivery-checked: 2026-11-20T23:59:59Z"),
+        ("no-zone", story + "delivery: implemented\ndelivery-checked: 2026-11-20T10:00:00"),
+        ("impossible-date", story + "delivery: implemented\ndelivery-checked: 2026-13-01T10:00:00Z"),
+        ("upper-case", story + "delivery: Implemented"),
+        ("number", story + "delivery: 3\ndelivery-checked: 20261120"),
+        ("shall-rule", "status: draft\nnotation: shall\nlevel: rule\ndelivery: implemented"),
+        ("shall-outdated", "status: draft\nnotation: shall\nlevel: rule\ndelivery: outdated"),
+        ("shall-group", "status: draft\nnotation: shall\nlevel: group\ndelivery: implemented"),
+    ], start=1):
+        (fr / f"FR-{i:03d}-{name}.md").write_text(
+            f"---\nid: FR-{i:03d}\ntype: functional-requirement\ntitle: {name}\n{frontmatter}\n---\n\n# {name}\n\nText.\n",
+            encoding="utf-8")
+    wikis.append((
+        "synthetic:delivery",
+        {"REPO_DIR": str(delivery)},
+        delivery / "wiki",
+        delivery / "raw" / "sources",
     ))
 
     # This repository's own wiki (uses REPO_DIR only, exercising full layout + CON-005 preflight).

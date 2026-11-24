@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_provenance.html" import provenance_chips %}
-{% from "_macros.html" import plural, format_labels, page_meta %}
+{% from "_macros.html" import plural, format_labels, page_meta, delivery_badge %}
 {% from "_trace.html" import trace_panel %}
 {% from "_relations.html" import relations_panel %}
 {% from "_page_issues.html" import page_issues as page_issues_panel %}
@@ -13,6 +13,8 @@
   <span class="stereo stereo-{{ fr.level or 'none' }}">{{ fr.notation or 'no notation' }} · {{ fr.level|capitalize if fr.level else 'no level' }}</span>
   <code class="detail-id">{{ fr.id }}</code>
   {% if fr.status %}<span class="status status-{{ fr.status }}">{{ fr.status }}</span>{% endif %}
+  {{ delivery_badge(delivery) }}{% if delivery and delivery.value and delivery.checked %}
+  <span class="delivery-checked">checked {{ delivery.checked }}</span>{% endif %}
   {% if fr.priority %}<span class="badge badge-prio">{{ fr.priority }}</span>{% endif %}
   {% if fr.release %}<span class="badge">{{ fr.release }}</span>{% endif %}
   {% if (fr.notation == 'agile' and fr.level in ('epic', 'feature') or fr.notation == 'use-case') and (fr.n_stories or fr.n_features) %}
