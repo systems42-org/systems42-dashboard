@@ -45,7 +45,9 @@ _BELOW_WEB = {"inputs", "metamodel", "catalog", "wiki", "links", "render", "sear
 # The route groups: module in web/ -> what it may import besides the standard
 # library. Flask is allowed here, `app` never.
 WEB = {
+    "web.brand": _BELOW_WEB | {"flask"},
     "web.common": _BELOW_WEB | {"flask", "segno"},
+    "web.help": _BELOW_WEB | {"flask", "web.common"},
     "web.pages": _BELOW_WEB | {"flask", "web.common"},
     "web.projections": _BELOW_WEB | {"flask", "web.common"},
     "web.search_session": _BELOW_WEB | {"flask", "web.common"},

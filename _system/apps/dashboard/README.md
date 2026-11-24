@@ -363,13 +363,17 @@ status-strip source count already reads.
 
 ```
 _system/apps/dashboard/
-  app.py             Flask app, the routes not yet moved into web/, and what applies to
-                     every route. Registers the blueprints. May import every module below
+  app.py             Flask app and what applies to every route: the request cache, the page
+                     policy, the template context, the navigation and the 404 page.
+                     Registers the blueprints. May import every module below
   web/               the routes, one module and one Flask blueprint per group. May import
                      Flask and every module below, never app
+    brand.py         the active brand's marks and intro, the about page and the files it
+                     links to, and the policy that keeps such a file inert
     common.py        what several groups share: the static file URL, the sort presets, the
                      head and section path of a detail page, the issue fields and the issues
                      that link to a page, the address and QR code for joining
+    help.py          the help page, the method page and the /metamodel page with its builders
     pages.py         home with its tiles and the state of the vault, the area pages, the
                      generic section list, the page and source detail, the changes
     projections.py   the goals, the functional requirements and the page of one requirement,

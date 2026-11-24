@@ -31,6 +31,7 @@ HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(HERE))
 
 import app  # noqa: E402
+import web.help  # noqa: E402
 import render  # noqa: E402
 
 
@@ -135,7 +136,7 @@ def test_wikilink_next_to_code_is_still_a_link():
 
 
 def test_metamodel_wikilink_in_code_stays_literal():
-    html = app._mm_html("Cite `[[MADR]]` like [[FR-002|this]].\n\n~~~\n[[FR-001]]\n~~~", {})
+    html = web.help._mm_html("Cite `[[MADR]]` like [[FR-002|this]].\n\n~~~\n[[FR-001]]\n~~~", {})
     assert "<code>[[MADR]]</code>" in html, html
     assert "<code>[[FR-001]]\n</code>" in html, html
     assert '<span class="mm-anchor">this</span>' in html, html

@@ -58,6 +58,7 @@ _page("issues", "ISS-001-about-con", "About the constraint", "open", related='["
 _page("issues", "ISS-002-about-qr", "About the QR", "open", related='["[[QR-001-fast]]"]')
 
 import app  # noqa: E402
+import web.help  # noqa: E402
 import render  # noqa: E402
 import project.requirements  # noqa: E402
 
@@ -127,17 +128,17 @@ def test_req42_route_refuses_arc42_slugs():
 
 def test_metamodel_route_link_stays_on_the_site():
     for good in ("/goals", "/req42/quality", "/"):
-        m = app._MM_ROUTE_RE.match(good)
+        m = web.help._MM_ROUTE_RE.match(good)
         assert m and m.group(1) == good, good
     for raw, want in (
         ("/arc42/deployment, /page/deployment-nodes/<DN> (subtree)", "/arc42/deployment"),
         ("/goals (covering-epic counts)", "/goals"),
         ("/goals; /other", "/goals"),
     ):
-        m = app._MM_ROUTE_RE.match(raw)
+        m = web.help._MM_ROUTE_RE.match(raw)
         assert m and m.group(1) == want, (raw, m.group(1) if m else None)
     for bad in ("//evil.example/x", "/\\evil.example/x", "https://evil.example/", "none"):
-        assert not app._MM_ROUTE_RE.match(bad), bad
+        assert not web.help._MM_ROUTE_RE.match(bad), bad
 
 
 def test_issue_section_filter_ignores_case():

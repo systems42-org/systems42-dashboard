@@ -29,6 +29,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import app  # noqa: E402
+import web.help  # noqa: E402
 import metamodel  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -52,7 +53,7 @@ def test_loader_reads_every_construct():
 
 def test_graph_is_a_projection_of_types_and_relations():
     mm = metamodel.load()
-    g = app.build_metamodel_graph(mm)
+    g = web.help.build_metamodel_graph(mm)
     nodes = {n["data"]["id"]: n["data"] for n in g["nodes"]}
     type_ids = {t["name"] for t in mm["types"]}
     assert type_ids <= set(nodes)
@@ -99,7 +100,7 @@ def test_page_renders_tables_graph_and_examples():
     # their page (when the vault has it), method anchors to their entry (FR-035)
     assert 'href="#rel-parent"' in body
     with app.app.test_request_context("/metamodel"):
-        assert 'href="/page/decisions/DR-001-carts-expire-after-a-day">DR-001</a>' in app._mm_wikilinks(
+        assert 'href="/page/decisions/DR-001-carts-expire-after-a-day">DR-001</a>' in web.help._mm_wikilinks(
             "[[DR-001-carts-expire-after-a-day|DR-001]]", {})
     assert '<a class="mm-anchor" href="#anchor-pam"' in body and 'id="anchor-pam"' in body
     assert "Requirement notations" in body
@@ -124,12 +125,12 @@ def test_decision_records_link_only_to_the_exact_page():
     # DR-001-carts-expire-after-a-day: an ID that collides with it must not
     # link there.
     with app.app.test_request_context("/metamodel"):
-        exact = app._mm_dr_link("DR-001-carts-expire-after-a-day", "DR-001")
+        exact = web.help._mm_dr_link("DR-001-carts-expire-after-a-day", "DR-001")
         assert 'href="/page/decisions/DR-001-carts-expire-after-a-day">DR-001</a>' in exact
-        assert app._mm_dr_link("DR-001") == "DR-001"                        # bare ID: never linked
-        assert app._mm_dr_link("DR-001-context-diagram") == "DR-001-context-diagram"  # same ID, other decision
-        assert "href" not in app._mm_wikilinks("[[DR-001]]", {})
-        assert "href" not in app._mm_wikilinks("[[DR-035-explicit-metamodel|DR-035]]", {})  # not in this vault
+        assert web.help._mm_dr_link("DR-001") == "DR-001"                        # bare ID: never linked
+        assert web.help._mm_dr_link("DR-001-context-diagram") == "DR-001-context-diagram"  # same ID, other decision
+        assert "href" not in web.help._mm_wikilinks("[[DR-001]]", {})
+        assert "href" not in web.help._mm_wikilinks("[[DR-035-explicit-metamodel|DR-035]]", {})  # not in this vault
     # the page's own projections cite meta's decisions, which this vault lacks
     body = app.app.test_client().get("/metamodel").get_data(as_text=True)
     for meta_stem in ("DR-013-data-flows-as-edges-context-diagram-as-projection", "DR-035-explicit-metamodel"):

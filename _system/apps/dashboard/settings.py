@@ -1,8 +1,9 @@
 """The settings of one dashboard: `_system/wiki.yaml`, the brand and the view.
 
 Owns `wiki_config()` and its warnings, the about page and the files under
-`docs/` (DOCS_DIR), the brand folders and their files, and what the view
-hides (`dashboard_config()`, `is_hidden()`, the visible areas and sections).
+`docs/` (DOCS_DIR), the brand folders and their files, the path of `help.md`,
+and what the view hides (`dashboard_config()`, `is_hidden()`, the visible
+areas and sections).
 A problem in wiki.yaml is logged once per process on the logger
 `systems42.settings`.
 
@@ -175,3 +176,6 @@ def _brand_checksum(path: Path | None) -> str:
         return f"{zlib.crc32(path.read_bytes()):08x}"
     except (OSError, AttributeError):
         return ""
+
+
+HELP_PATH = Path(__file__).resolve().parent / "help.md"
