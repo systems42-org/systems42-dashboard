@@ -375,6 +375,9 @@ _system/apps/dashboard/
     projections.py   the goals, the functional requirements and the page of one requirement,
                      the term list, the term network and the entity diagram, the arc42 views,
                      the decisions, the stakeholders and the issue list
+    search_session.py  the search page and the search index, the join page, the heartbeat and
+                     presence endpoints, the reload, the View dialog's data and its saving,
+                     Disconnect all
   catalog.py         the three areas, and the sections from the metamodel with routes and colours
   metamodel.py       reader for _system/metamodel/ (the /metamodel page, ADR-0008)
   inputs.py          reads text and YAML from wiki, wiki.yaml and metamodel, and logs what is invalid

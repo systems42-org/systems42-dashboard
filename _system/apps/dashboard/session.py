@@ -5,7 +5,7 @@ Owns the view (the hide list and its validation), the grace periods from the
 names of the clients and the facilitator role, and the server lifecycle: the
 watchdog, the shutdown and the flags they keep.
 
-The session endpoints stay in `app.py`: they read the request.
+The session endpoints are in `web/search_session.py`: they read the request.
 
 Standard library plus `catalog`, which says what the view may hide. No Flask
 import and no import of `app` here (tests/test_module_imports.py).

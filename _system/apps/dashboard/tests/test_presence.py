@@ -83,7 +83,7 @@ def test_presence_count_excludes_clients_outside_the_active_window():
     client = app.app.test_client()
     _ping(client, "carol")
     with session._lifecycle_lock:
-        session._clients["carol"] = app.time.monotonic() - (session._PRESENCE_WINDOW + 5)
+        session._clients["carol"] = time.monotonic() - (session._PRESENCE_WINDOW + 5)
     assert client.get("/presence/count").get_json()["count"] == 0
 
 
@@ -148,14 +148,14 @@ def _go_stale(client_id):
     browser quits without a goodbye. The watchdog evicts it on its next
     tick, but the role must not wait for that."""
     with session._lifecycle_lock:
-        session._clients[client_id] = app.time.monotonic() - (session._HEARTBEAT_GRACE + 5)
+        session._clients[client_id] = time.monotonic() - (session._HEARTBEAT_GRACE + 5)
 
 
 def _go_background(client_id):
     """Push a client's last ping just past the presence window, as when a
     background tab is throttled to about one ping a minute (issue #56)."""
     with session._lifecycle_lock:
-        session._clients[client_id] = app.time.monotonic() - (session._PRESENCE_WINDOW + 5)
+        session._clients[client_id] = time.monotonic() - (session._PRESENCE_WINDOW + 5)
 
 
 def _evict(client_id):
