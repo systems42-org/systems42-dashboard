@@ -30,6 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
 import wiki  # noqa: E402
+import project.architecture  # noqa: E402
 
 KNOWN_STATUSES = {"draft", "review", "accepted", "deprecated"}
 FIXTURE_STEM = "DR-001-carts-expire-after-a-day"
@@ -40,7 +41,7 @@ def _project_decisions():
     saved, wiki.WIKI_DIR = wiki.WIKI_DIR, PROJECT_WIKI
     try:
         with app.app.test_request_context():
-            return app.load_decisions()
+            return project.architecture.load_decisions()
     finally:
         wiki.WIKI_DIR = saved
 
@@ -49,7 +50,7 @@ def _project_decisions():
 
 def test_every_decision_has_a_known_status_and_kind():
     bad = [(d["id"], d["status"], d["kind"]) for d in _project_decisions()
-           if d["status"] not in KNOWN_STATUSES or d["kind"] not in app.DECISION_KINDS]
+           if d["status"] not in KNOWN_STATUSES or d["kind"] not in project.architecture.DECISION_KINDS]
     assert not bad, f"decisions with an unknown status or kind: {bad}"
 
 
@@ -80,7 +81,7 @@ def test_a_former_adr_alias_matches_the_decision_number():
 
 def test_fixture_title_is_plain_text():
     with app.app.test_request_context():
-        (d,) = app.load_decisions()
+        (d,) = project.architecture.load_decisions()
     assert d["title"] == "Carts expire after one day" and d["kind"] == "business", d
 
 

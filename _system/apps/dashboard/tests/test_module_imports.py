@@ -2,8 +2,9 @@
 
 `app.py` holds the Flask app and the routes. Every module below it is usable
 without a web request, so it imports neither Flask nor `app`, and only the
-sibling modules the table names. The check reads the sources with `ast` and
-imports nothing.
+sibling modules the table names. The projections are the package `project/`,
+one row per module in it (`project.context`). The check reads the sources with
+`ast` and imports nothing.
 
 Run from the dashboard dir:
     .venv/bin/python tests/test_module_imports.py
@@ -21,29 +22,66 @@ ALLOWED = {
     "metamodel": {"inputs", "yaml"},
     "catalog": {"metamodel"},
     "wiki": {"inputs", "metamodel", "catalog", "yaml"},
+    "links": {"wiki"},
+    "render": {"wiki", "links", "metamodel", "markdown", "nh3", "markupsafe"},
+    "search": {"wiki", "links", "render", "catalog", "project.terms"},
+    "project.architecture": {"wiki", "links", "render", "catalog", "project.common"},
+    "project.common": {"wiki", "links", "metamodel"},
+    "project.context": {"wiki", "links", "project.common"},
+    "project.goals": {"wiki", "links", "render", "project.requirements"},
+    "project.requirements": {"wiki", "links", "render", "project.common"},
+    "project.terms": {"wiki", "links", "render", "catalog", "project.common"},
+    "session": {"catalog"},
     "preflight": set(),
 }
 # These sit above the modules: the app itself and what starts it.
 ABOVE = {"app", "cli", "gunicorn.conf"}
 NEVER = {"flask", "app"}
+# Package folders. A module in one is named with its package: `project.context`.
+PACKAGES = {"project"}
+
+
+def _source(module: str) -> Path:
+    return HERE / (module.replace(".", "/") + ".py")
+
+
+def _name(dotted: str) -> str:
+    """`urllib.parse` is `urllib`, `project.context` stays `project.context`."""
+    parts = dotted.split(".")
+    return ".".join(parts[:2]) if parts[0] in PACKAGES else parts[0]
 
 
 def _imports(module: str) -> set[str]:
-    """The top-level names a module imports, anywhere in its source."""
-    tree = ast.parse((HERE / f"{module}.py").read_text(encoding="utf-8"))
+    """The names a module imports, anywhere in its source: the top-level name,
+    and for a module of a package the package and the module."""
+    tree = ast.parse(_source(module).read_text(encoding="utf-8"))
     names = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
-            names |= {a.name.split(".")[0] for a in node.names}
+            names |= {_name(a.name) for a in node.names}
         elif isinstance(node, ast.ImportFrom):
             assert node.level == 0, f"{module}.py: relative import"
-            names.add(node.module.split(".")[0])
+            if node.module in PACKAGES:        # from project import context
+                names |= {f"{node.module}.{a.name}" for a in node.names}
+            else:
+                names.add(_name(node.module))
     return names
 
 
 def test_every_module_has_a_row():
     found = {p.name[:-len(".py")] for p in HERE.glob("*.py")}
+    for package in PACKAGES:
+        found |= {f"{package}.{p.name[:-len('.py')]}" for p in (HERE / package).glob("*.py")
+                  if p.name != "__init__.py"}
     assert found == set(ALLOWED) | ABOVE, sorted(found ^ (set(ALLOWED) | ABOVE))
+
+
+def test_a_package_itself_holds_no_code():
+    """`project/__init__.py` is a docstring. Code there would run on the import
+    of any of its modules, outside the table."""
+    for package in PACKAGES:
+        body = ast.parse((HERE / package / "__init__.py").read_text(encoding="utf-8")).body
+        assert all(isinstance(st, ast.Expr) and isinstance(st.value, ast.Constant) for st in body), package
 
 
 def test_no_module_below_app_imports_flask_or_app():

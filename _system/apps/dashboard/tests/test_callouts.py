@@ -27,11 +27,12 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import render  # noqa: E402
 
 
 def _render(body: str) -> str:
     with app.app.app_context():
-        return app.render_markdown(body, {})
+        return render.render_markdown(body, {})
 
 
 def test_a_callout_without_title_gets_its_type_as_label():

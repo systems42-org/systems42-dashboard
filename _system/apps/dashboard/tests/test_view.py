@@ -39,14 +39,15 @@ HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(HERE))  # import app.py
 
 import app  # noqa: E402
+import session  # noqa: E402
 
 
 def _reset_presence():
-    with app._lifecycle_lock:
-        app._clients.clear()
-        app._leaving.clear()
-        app._first_seen.clear()
-        app._user_agents.clear()
+    with session._lifecycle_lock:
+        session._clients.clear()
+        session._leaving.clear()
+        session._first_seen.clear()
+        session._user_agents.clear()
 
 
 def _ping(client, cid):
@@ -66,14 +67,14 @@ def _snapshot():
 
 
 def test_nothing_is_hidden_at_the_start():
-    app.set_view([])
+    session.set_view([])
     assert app.dashboard_config() == {"hidden": []}
     assert [a["key"] for a in app.visible_areas()] == ["requirements", "architecture", "commons"]
     assert len(app.visible_sections("commons")) == 7
 
 
 def test_the_view_is_normalised_and_ordered():
-    app.set_view(["C6", "bogus", "architecture", "C6", "r2"])
+    session.set_view(["C6", "bogus", "architecture", "C6", "r2"])
     try:
         assert app.dashboard_config()["hidden"] == ["architecture", "R2", "C6"]  # catalog order, deduped
         assert app.is_hidden("C6") and app.is_hidden("A3") and app.is_hidden("architecture")
@@ -81,15 +82,15 @@ def test_the_view_is_normalised_and_ordered():
         assert [a["key"] for a in app.visible_areas()] == ["requirements", "commons"]
         assert [s["id"] for s in app.visible_sections("requirements")] == ["R1", "R3", "R4", "R5", "R6"]
     finally:
-        app.set_view([])
+        session.set_view([])
 
 
 def test_the_dialog_lists_the_catalog_and_the_view():
-    app.set_view(["R2"])
+    session.set_view(["R2"])
     try:
         data = app.app.test_client().get("/settings").get_json()
     finally:
-        app.set_view([])
+        session.set_view([])
     assert [a["key"] for a in data["areas"]] == ["requirements", "architecture", "commons"]
     assert [s["id"] for s in data["areas"][2]["sections"]] == ["C1", "C2", "C3", "C4", "C5", "C6", "C7"]
     assert data["hidden"] == ["R2"]
@@ -101,7 +102,7 @@ def test_the_dialog_lists_the_catalog_and_the_view():
 
 def test_only_the_keyholder_changes_the_view():
     _reset_presence()
-    app.set_view([])
+    session.set_view([])
     c = app.app.test_client()
     _ping(c, "yoda")            # first connected: holds the keys
     _ping(c, "padawan")
@@ -110,27 +111,27 @@ def test_only_the_keyholder_changes_the_view():
     r = _post_view(c, "yoda", ["C1", "A2"])
     assert r.status_code == 200 and r.get_json() == {"ok": True, "hidden": ["A2", "C1"]}
     assert app.dashboard_config()["hidden"] == ["A2", "C1"]
-    app.set_view([])
+    session.set_view([])
 
 
 def test_unknown_ids_are_refused_and_change_nothing():
     _reset_presence()
-    app.set_view(["C1"])
+    session.set_view(["C1"])
     c = app.app.test_client()
     _ping(c, "yoda")
     r = _post_view(c, "yoda", ["C1", "nope"])
     assert r.status_code == 400 and r.get_json()["unknown"] == ["nope"]
     assert app.dashboard_config()["hidden"] == ["C1"]
     assert c.post("/settings").status_code in (400, 403)   # no body: no error page
-    app.set_view([])
+    session.set_view([])
 
 
 def test_hidden_section_and_area_leave_the_top_bar():
-    app.set_view(["C4", "commons"])
+    session.set_view(["C4", "commons"])
     try:
         html = app.app.test_client().get("/issues").get_data(as_text=True)
     finally:
-        app.set_view([])
+        session.set_view([])
     nav = re.search(r'<nav class="mainnav"[^>]*>(.*?)</nav>', html, re.S).group(1)
     assert re.findall(r">([^<]+)</a>", nav) == ["Requirements", "Architecture"], nav
     assert 'href="/commons"' not in html and 'href="/req42"' in html
@@ -141,7 +142,7 @@ def test_three_devices_share_the_view_and_no_file_changes():
     section, it is gone from the home page on all three after a reload, and
     the wiki's repository holds no changed file."""
     _reset_presence()
-    app.set_view([])
+    session.set_view([])
     before = _snapshot()
     devices = {cid: app.app.test_client() for cid in ("yoda", "second", "third")}
     for cid, client in devices.items():
@@ -156,7 +157,7 @@ def test_three_devices_share_the_view_and_no_file_changes():
         # hidden, not gone: the address still answers
         assert devices["third"].get("/stakeholders").status_code == 200
     finally:
-        app.set_view([])
+        session.set_view([])
     assert _snapshot() == before, "the dashboard changed a file in the repository"
 
 

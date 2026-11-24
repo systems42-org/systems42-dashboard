@@ -85,6 +85,15 @@ Unreleased changes sit at the top until the next Starter Kit release.
   next.
 
 ### Changed
+- Dashboard release 0.14.22 (`_system/apps/dashboard/VERSION`).
+- Dashboard release 0.14.21 (`_system/apps/dashboard/VERSION`).
+- Dashboard release 0.14.20 (`_system/apps/dashboard/VERSION`).
+- Dashboard release 0.14.19 (`_system/apps/dashboard/VERSION`).
+- Dashboard release 0.14.18 (`_system/apps/dashboard/VERSION`).
+- Dashboard release 0.14.17 (`_system/apps/dashboard/VERSION`).
+- Dashboard release 0.14.16 (`_system/apps/dashboard/VERSION`).
+- Dashboard release 0.14.15 (`_system/apps/dashboard/VERSION`).
+- Dashboard release 0.14.14 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.13 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.12 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.11 (`_system/apps/dashboard/VERSION`).
@@ -96,6 +105,15 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - Dashboard release 0.14.5 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.4 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.3 (`_system/apps/dashboard/VERSION`).
+- Dashboard: the view, the grace periods, the presence of the connected tabs, their names and the Keyholder role move from `app.py` into the new module `session.py`, which imports neither Flask nor `app`. The watchdog and the shutdown stay in `app.py`. No behaviour change (#185).
+- Dashboard: the decision records, the building block levels and white box, the runtime scenarios, the deployment diagram, the drivers and the trace panels move from `app.py` into the new module `project/architecture.py`. No behaviour change (#185).
+- Dashboard: the vision, the objectives, the enabler lanes and the goal coverage move from `app.py` into the new module `project/goals.py`. No behaviour change (#185).
+- Dashboard: the requirement hierarchy with the story map, its Mermaid trees and the quality scenarios move from `app.py` into the new module `project/requirements.py`. No behaviour change (#185).
+- Dashboard: the term network, the links of a page, the term fields and the entity diagram move from `app.py` into the new module `project/terms.py`, and the search synonyms and the search index into `search.py`. No behaviour change (#185).
+- Dashboard: the context flows and the helpers several projections share (open issues, the maturity bar, provenance, diagram labels and node ids) move from `app.py` into the new package `project/`, modules `context.py` and `common.py`, which import neither Flask nor `app`. No behaviour change (#185).
+- Dashboard: the search records, with the searched fields and a page's text for search, move from `app.py` into the new module `search.py`, which imports neither Flask nor `app`. No behaviour change (#185).
+- Dashboard: the sanitizer, the wikilink, method-anchor and "follows" helpers, callouts and the Markdown rendering move from `app.py` into the new module `render.py`, which imports neither Flask nor `app`. No behaviour change (#185).
+- Dashboard: the link resolver, the title, page, link and source indexes and the page URL move from `app.py` into the new module `links.py`, which imports neither Flask nor `app`. No behaviour change (#185).
 - Dashboard: the repository paths, the `Page` class, parsing, the parse cache, the folder loaders and the per-request memo move from `app.py` into the new module `wiki.py`, which imports neither Flask nor `app`. No behaviour change (#185).
 - Dashboard: the home page, Help and the README no longer call Requirements and Architecture "peaks" or the column between them the "valley", since the Chart mark replaced the Peaks mark. Commons is "shared by both areas" (Python and Go).
 - Website: the line under the hero buttons says how many pages of requirements and architecture the demo holds. It no longer counts "views", the exported HTML files.

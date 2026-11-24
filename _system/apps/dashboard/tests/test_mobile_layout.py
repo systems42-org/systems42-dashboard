@@ -96,6 +96,7 @@ import json, sys
 sys.path.insert(0, sys.argv[1])
 import app
 import wiki
+import links
 from werkzeug.serving import WSGIRequestHandler, make_server
 
 class Quiet(WSGIRequestHandler):
@@ -110,7 +111,7 @@ paths += sorted(s["href"] for s in app.catalog.SECTION_BY_SLUG.values()
                if s["href"] and s["href"].startswith("/req42/"))
 for d in sorted(wiki.WIKI_DIR.iterdir()):
     pages = sorted(wiki.load_folder(d.name), key=lambda p: p.stem) if d.is_dir() else []
-    paths += [app._page_url(d.name, p.stem) for p in pages[:2]]
+    paths += [links._page_url(d.name, p.stem) for p in pages[:2]]
 srv = make_server("127.0.0.1", 0, app.app, threaded=True, request_handler=Quiet)
 print(json.dumps({"port": srv.server_port, "paths": paths}), flush=True)
 srv.serve_forever()

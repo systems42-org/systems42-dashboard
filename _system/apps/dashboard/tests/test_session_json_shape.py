@@ -33,6 +33,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import session  # noqa: E402
 
 ROUTES = ["/ping", "/leaving", "/settings", "/disconnect-all"]
 # Truthy and falsy values of every JSON type that is not an object. The falsy
@@ -45,22 +46,22 @@ app._shutdown = _shutdowns.append  # never signal the test process
 
 
 def _reset():
-    with app._lifecycle_lock:
-        app._clients.clear()
-        app._leaving.clear()
-        app._first_seen.clear()
-        app._user_agents.clear()
-        app._names.clear()
-        app._facilitator = None
+    with session._lifecycle_lock:
+        session._clients.clear()
+        session._leaving.clear()
+        session._first_seen.clear()
+        session._user_agents.clear()
+        session._names.clear()
+        session._facilitator = None
         app._ever_connected = False
-    app.set_view([])
+    session.set_view([])
     del _shutdowns[:]
 
 
 def _state():
-    with app._lifecycle_lock:
-        return (dict(app._clients), dict(app._leaving), dict(app._first_seen),
-                dict(app._user_agents), dict(app._names), app._facilitator,
+    with session._lifecycle_lock:
+        return (dict(session._clients), dict(session._leaving), dict(session._first_seen),
+                dict(session._user_agents), dict(session._names), session._facilitator,
                 app._ever_connected, list(app.dashboard_config()["hidden"]), list(_shutdowns))
 
 
@@ -84,7 +85,7 @@ def test_a_rejected_body_changes_no_session_state():
     _reset()
     client = app.app.test_client()
     assert client.post("/ping").get_json()["is_facilitator"] is True
-    app.set_view(["C6"])
+    session.set_view(["C6"])
     before = _state()
     for route in ROUTES:
         for body in NOT_OBJECTS:
@@ -99,8 +100,8 @@ def test_a_rejected_first_request_does_not_count_as_a_connected_page():
     client = app.app.test_client()
     for body in NOT_OBJECTS:
         _post(client, "/ping", body)
-    with app._lifecycle_lock:
-        assert app._clients == {} and app._ever_connected is False
+    with session._lifecycle_lock:
+        assert session._clients == {} and app._ever_connected is False
 
 
 def test_no_body_an_unreadable_body_and_null_still_mean_an_empty_object():
@@ -110,12 +111,12 @@ def test_no_body_an_unreadable_body_and_null_still_mean_an_empty_object():
         resp = client.post("/ping") if body is None else _post(client, "/ping", body)
         assert resp.status_code == 200, (body, resp.status_code)
         assert resp.get_json() == {"nickname": "Yoda", "is_facilitator": True}
-        with app._lifecycle_lock:
-            assert list(app._clients) == ["anon"]
+        with session._lifecycle_lock:
+            assert list(session._clients) == ["anon"]
         resp = client.post("/leaving") if body is None else _post(client, "/leaving", body)
         assert resp.status_code == 204, (body, resp.status_code)
-        with app._lifecycle_lock:
-            assert list(app._leaving) == ["anon"]
+        with session._lifecycle_lock:
+            assert list(session._leaving) == ["anon"]
         # "anon" holds the role, `hidden` is missing: the documented 400.
         resp = client.post("/settings") if body is None else _post(client, "/settings", body)
         assert resp.status_code == 400, (body, resp.status_code)
@@ -136,8 +137,8 @@ def test_valid_objects_still_work():
     assert _post(client, "/ping", luke).get_json()["is_facilitator"] is False
 
     assert _post(client, "/leaving", luke).status_code == 204
-    with app._lifecycle_lock:
-        assert list(app._leaving) == ["luke"]
+    with session._lifecycle_lock:
+        assert list(session._leaving) == ["luke"]
 
     body = json.dumps({"client_id": "luke", "hidden": ["C6"]})
     assert _post(client, "/settings", body).status_code == 403

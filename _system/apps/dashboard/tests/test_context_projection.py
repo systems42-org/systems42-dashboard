@@ -45,6 +45,8 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import project.common  # noqa: E402
+import project.context  # noqa: E402
 
 _EIF = _wiki / "external-interfaces"
 
@@ -148,7 +150,7 @@ def test_tiers_become_subgraphs_and_rank_nodes_around_the_centre():
 
 
 def test_the_table_carries_the_detail_the_diagram_dropped():
-    flows = app.build_context_flows()
+    flows = project.context.build_context_flows()
     by_id = {g["id"]: g for g in flows}
     assert len(flows) == 4, \
         f"every live interface with flows needs a table group, got {len(flows)}"
@@ -178,15 +180,15 @@ def test_a_deprecated_neighbour_is_not_drawn():
 def test_a_deprecated_neighbour_has_no_flow_table_group():
     """The table beneath the diagram is the same projection in prose; leaving
     the row in would contradict the picture it explains."""
-    ids = [g["id"] for g in app.build_context_flows()]
+    ids = [g["id"] for g in project.context.build_context_flows()]
     assert "EIF-005" not in ids, ids
     assert "EIF-001" in ids, f"the live interfaces must still be listed: {ids}"
 
 
 def test_an_ampersand_is_never_silently_deleted():
     # "Museums & owners" used to render as "Museums owners" in every diagram
-    assert app._clean_label("Fraud & Security") == "Fraud and Security", \
-        f"'&' must become 'and', got {app._clean_label('Fraud & Security')!r}"
+    assert project.common._clean_label("Fraud & Security") == "Fraud and Security", \
+        f"'&' must become 'and', got {project.common._clean_label('Fraud & Security')!r}"
 
 
 if __name__ == "__main__":

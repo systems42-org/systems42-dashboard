@@ -30,6 +30,7 @@ sys.path.insert(0, str(HERE))
 
 import app  # noqa: E402
 import wiki  # noqa: E402
+import project.common  # noqa: E402
 
 TERM = """---
 id: DT-001
@@ -136,7 +137,7 @@ kind: question
 
 def test_open_issue_counts_by_folder():
     wiki._PARSE_CACHE.clear()
-    counts = app.open_issue_counts()
+    counts = project.common.open_issue_counts()
     assert {k: len(v) for k, v in counts.items()} == {"domain-terms": 1}
     assert counts == {"domain-terms": {"ISS-001"}}
 

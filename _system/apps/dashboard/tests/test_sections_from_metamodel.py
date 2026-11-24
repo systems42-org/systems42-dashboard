@@ -64,6 +64,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 
 sys.path.insert(0, str(HERE))
 import app  # noqa: E402
+import session  # noqa: E402
 
 client = app.app.test_client()
 
@@ -148,11 +149,11 @@ def test_lists_offer_both():
     commons = next(a for a in data["areas"] if a["key"] == "commons")
     assert next(s for s in commons["sections"] if s["id"] == "C6")["title"] == RENAMED
     # the view can hide the added section
-    app.set_view(["A6"])
+    session.set_view(["A6"])
     try:
         assert "A6" not in [s["id"] for s in app.visible_sections("architecture")]
     finally:
-        app.set_view([])
+        session.set_view([])
 
 
 def test_an_edit_shows_on_the_next_request():

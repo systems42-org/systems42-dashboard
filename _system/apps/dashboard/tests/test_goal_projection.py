@@ -42,6 +42,8 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import project.common  # noqa: E402
+import project.goals  # noqa: E402
 
 _GOALS = _wiki / "goals"
 _FRS = _wiki / "functional-requirements"
@@ -139,7 +141,7 @@ ALL_OBJECTIVES = ["GOAL-002", "GOAL-003", "GOAL-004", "GOAL-005", "GOAL-006"]
 
 def test_every_objective_page_is_projected():
     with app.app.app_context():
-        data = app.load_goals()
+        data = project.goals.load_goals()
     assert data["vision"] is not None, "no vision found"
     assert data["vision"].id == "GOAL-001", data["vision"].id
     ids = [p.id for p in data["objectives"]]
@@ -148,7 +150,7 @@ def test_every_objective_page_is_projected():
 
 def test_coverage_reaches_the_fifth_objective():
     with app.app.app_context():
-        data = app.load_goals()
+        data = project.goals.load_goals()
     covered = {gid: [p.id for p in frs] for gid, frs in data["coverage"].items()}
     assert set(covered) == set(ALL_OBJECTIVES), sorted(covered)
     assert covered["GOAL-006"] == ["FR-001"], covered
@@ -189,7 +191,7 @@ def test_the_vision_is_chosen_by_stereotype_not_by_id():
                                                 "The Late Vision"),
                                encoding="utf-8")
         with app.app.app_context():
-            data = app.load_goals()
+            data = project.goals.load_goals()
         assert data["vision"].id == "GOAL-009", data["vision"].id
         ids = [p.id for p in data["objectives"]]
         assert ids == ["GOAL-001"] + ALL_OBJECTIVES, ids
@@ -238,12 +240,12 @@ def test_a_parenthesised_system_name_survives_into_the_diagrams():
     try:
         cfg.write_text('system_name: "System X (v2)"\n', encoding="utf-8")
         with app.app.app_context():
-            data = app.load_goals()
+            data = project.goals.load_goals()
             tree = app._mermaid_goal_tree(data["vision"], data["objectives"])
         assert "System X (v2)" in tree, tree.splitlines()[:2]
         # square brackets are mermaid node delimiters and must still go
-        assert app._clean_label("Acme [Beta]") == "Acme Beta"
-        assert app._clean_label("Member's card") == "Member's card"
+        assert project.common._clean_label("Acme [Beta]") == "Acme Beta"
+        assert project.common._clean_label("Member's card") == "Member's card"
     finally:
         cfg.write_text(original, encoding="utf-8")
 

@@ -156,6 +156,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
 import wiki  # noqa: E402
+import links  # noqa: E402
 
 
 def _get(path):
@@ -172,7 +173,7 @@ def _plain_get_routes():
 
 
 def test_no_route_breaks_on_a_bad_page():
-    pages = [app._page_url(p.parent.name, p.stem) for p in _wiki.glob("*/*.md")
+    pages = [links._page_url(p.parent.name, p.stem) for p in _wiki.glob("*/*.md")
              if not p.parent.name.startswith(".") and p.parent.name != "linked"
              and p.stem != "DT-105-linked-out"]
     failed = []

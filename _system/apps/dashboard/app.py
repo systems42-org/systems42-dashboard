@@ -15,7 +15,6 @@ import signal
 import socket
 import threading
 import time
-import unicodedata
 import zlib
 from datetime import datetime
 from pathlib import Path
@@ -23,14 +22,23 @@ from urllib.parse import quote, unquote, urlsplit
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import markdown as md
-import nh3
 from flask import (Flask, abort, g, has_request_context, jsonify, make_response,
                    redirect, render_template, request, send_file, url_for)
 from markupsafe import Markup, escape
 
 import catalog  # the section catalog (DR-033)
 import metamodel  # reader for _system/metamodel/ (DR-035)
+import render  # sanitizer, wikilinks and Markdown
+import search  # search records
+import session  # presence, the Keyholder role and the view
+import links as links_module  # link resolver and indexes. "links" is a local name in many functions here
 import wiki  # paths, pages, parse cache and loaders
+import project.architecture  # decisions, building blocks, runtime, deployment, traces
+import project.common  # what several projections share
+import project.context  # the context flows
+import project.goals  # vision, objectives and goal coverage
+import project.requirements  # requirement hierarchy, its Mermaid trees, quality scenarios
+import project.terms  # term network, relations and entity diagram
 
 # some slim base images lack a webp entry in their mime.types
 mimetypes.add_type("image/webp", ".webp")
@@ -43,30 +51,6 @@ app = Flask(__name__)
 DISPLAY_TZ = os.environ.get("TZ") or ""
 
 
-# The view (FR-046, DR-002): what the Keyholder hides for this session. A hide
-# list of area keys / section IDs; everything is visible by default. It lives
-# in this process only: no file holds it, and it ends when the dashboard
-# stops. One gunicorn worker serves every request (Dockerfile), so this one
-# list is the view for everyone.
-_view_hidden: list[str] = []
-
-
-def _valid_hide_keys() -> list[str]:
-    return [a["key"] for a in catalog.AREAS] + [s["id"] for s in catalog.SECTIONS]
-
-
-def _normalise_hide_entry(raw) -> str | None:
-    """'c6' → 'C6', ' Architecture ' → 'architecture'; None if not in the catalog."""
-    s = str(raw or "").strip()
-    if not s:
-        return None
-    if s.lower() in catalog.AREA_BY_KEY:
-        return s.lower()
-    if s.upper() in catalog.SECTION_BY_ID:
-        return s.upper()
-    return None
-
-
 def _build_cache() -> dict | None:
     """The builder cache of the current request (wiki._request_cached), or
     None outside a request."""
@@ -76,23 +60,9 @@ def _build_cache() -> dict | None:
 wiki.use_request_cache(_build_cache)
 
 
-def _validate_hidden(entries) -> tuple[list[str], list[str]]:
-    """Split raw entries into (valid in catalog order, unknown as given)."""
-    valid, unknown = set(), []
-    if isinstance(entries, str):          # `hidden: C6` is a one-item list
-        entries = [entries]
-    for raw in entries if isinstance(entries, list) else []:
-        key = _normalise_hide_entry(raw)
-        if key:
-            valid.add(key)
-        else:
-            unknown.append(str(raw))
-    return [k for k in _valid_hide_keys() if k in valid], unknown
-
-
 def dashboard_config() -> dict:
     """`hidden`: the view's area keys / section IDs, in catalog order."""
-    return {"hidden": list(_view_hidden)}
+    return {"hidden": list(session._view_hidden)}
 
 
 def is_hidden(key_or_id: str) -> bool:
@@ -109,12 +79,6 @@ def visible_areas() -> list[dict]:
 
 def visible_sections(area_key: str) -> list[dict]:
     return [s for s in catalog.sections_of(area_key) if not is_hidden(s["id"])]
-
-
-def set_view(hidden: list[str]) -> None:
-    """Replace the view. Unknown entries are dropped. Nothing is written."""
-    global _view_hidden
-    _view_hidden, _ = _validate_hidden(list(hidden))
 
 
 @app.context_processor
@@ -562,7 +526,7 @@ def recent_changes(n: int | None = 5) -> list[dict]:
     workshop, nobody watches it live)."""
     pages = sorted(wiki.load_all_pages(), key=lambda p: -p.mtime)[:n]
     return [{"id": p.id, "title": p.title, "kind": catalog.label(p.folder),
-             "url": _page_url(p.folder, p.stem), "when": _relative_when(p.mtime)} for p in pages]
+             "url": links_module._page_url(p.folder, p.stem), "when": _relative_when(p.mtime)} for p in pages]
 
 
 def vault_status() -> dict:
@@ -573,637 +537,9 @@ def vault_status() -> dict:
     issues = wiki.load_type("issue")
     last = max((p.mtime for p in pages), default=0.0)
     return {"pages": len(pages),
-            "open_issues": sum(1 for i in issues if is_open_issue(i.status)),
+            "open_issues": sum(1 for i in issues if project.common.is_open_issue(i.status)),
             "sources": len(wiki.load_sources()),
             "last_change": _relative_when(last) if last else "—"}
-
-
-@wiki._request_cached
-def title_index() -> dict[str, str]:
-    """Map every page stem -> human title, for resolving wikilinks to text.
-    Built from load_all_pages(), so it knows exactly the pages link_index()
-    and the lists know (a nested or root-level .md is none of them)."""
-    return {p.stem: p.title for p in wiki.load_all_pages()}
-
-
-def _page_url(folder: str, stem: str) -> str:
-    """Canonical dashboard URL for a wiki page. FRs have their own rich route;
-    everything else uses the generic /page view."""
-    if wiki._is(folder, "functional-requirement"):
-        return f"/functional-requirements/{stem}"
-    return f"/page/{folder}/{stem}"
-
-
-@wiki._request_cached
-def page_index() -> dict[str, wiki.Page]:
-    """Map each page's stem and id -> its Page: the names a link may use for
-    a page. A file name always names its own page. An ID names the first page
-    that carries it, unless it is another page's file name."""
-    idx: dict[str, wiki.Page] = {}
-    pages = wiki.load_all_pages()
-    for p in pages:
-        idx[p.stem] = p
-    for p in pages:
-        idx.setdefault(p.id, p)
-    return idx
-
-
-@wiki._request_cached
-def link_index() -> dict[str, tuple[str, str]]:
-    """page_index() as (folder, stem), so body wikilinks like
-    `[[STK-006-…|Backoffice]]` or `[[FR-008]]` resolve to a real target URL."""
-    return {name: (p.folder, p.stem) for name, p in page_index().items()}
-
-
-def link_name(spelling: object) -> str:
-    """The page name inside a link: '[[wiki/goals/GOAL-002#Metric|waiting]]'
-    -> 'GOAL-002'. Drops the brackets, the alias, the heading and the path. A
-    value without brackets is read the same way."""
-    t = str(spelling or "").strip()
-    m = re.search(r"\[\[([^\]]+)\]\]", t)
-    if m:
-        t = m.group(1)
-    t = t.split("|")[0].split("#")[0].strip()
-    return t.split("/")[-1].strip()
-
-
-def resolve_link(spelling: object, index: dict):
-    """The one resolver for links (#178): what `index` holds for the page a
-    link names, or None. The body text, the relations panel and every
-    projection over a link field call it, so a link that opens a page in the
-    text counts for that page everywhere. `index` is page_index() or
-    link_index(): a full file name or an ID alone, case-sensitive. One dict
-    lookup per link, because the relations panel asks every page (#68)."""
-    return index.get(link_name(spelling))
-
-
-def _link_stem(spelling: object) -> str:
-    """The file name of the page a link names, or the name as written when no
-    page has it (a hint can then say which name is missing)."""
-    p = resolve_link(spelling, page_index())
-    return p.stem if p else link_name(spelling)
-
-
-def linked_stems(page: wiki.Page) -> set[str]:
-    """The pages `page` links to, each once however often and however it is
-    spelled, without itself. A name no page has stays as written."""
-    return {s for s in map(_link_stem, page.link_targets()) if s != page.stem}
-
-
-def links_to(page: wiki.Page, target: wiki.Page) -> bool:
-    """Whether `page` links to `target`, by any name that resolves to it."""
-    index = page_index()
-    names = {n for n in (target.stem, target.id) if index.get(n) is target}
-    return page is not target and not names.isdisjoint(page.link_targets())
-
-
-@wiki._request_cached
-def source_index() -> dict[str, wiki.Page]:
-    """Map each raw/sources/ record's stem and id -> its Page, so a page's
-    `sources:` wikilinks (and the /source/<stem> route) can resolve either
-    form."""
-    idx: dict[str, wiki.Page] = {}
-    for p in wiki.load_sources():
-        idx.setdefault(p.stem, p)
-        idx.setdefault(p.id, p)
-    return idx
-
-
-def provenance(page: wiki.Page) -> list[dict]:
-    """Resolve a page's `sources:` wikilinks to provenance records. Unresolved
-    entries are kept (url=None) so the chip can say so instead of vanishing."""
-    idx = source_index()
-    rows = []
-    refs = page.as_list("sources")          # a bare string is one entry, not a list of characters
-    for ref in refs:
-        base = _fr_stem_from_ref(ref)           # '[[raw/sources/SRC-001-x]]' -> 'SRC-001-x'
-        if not base:
-            continue                             # None / empty after stripping — nothing to show
-        src = idx.get(base)
-        if src:
-            rows.append({"id": src.id, "title": src.title, "stem": src.stem,
-                         "type": str(src.meta.get("source-type") or ""),
-                         "origin": str(src.meta.get("origin") or ""),
-                         "captured": str(src.meta.get("captured") or ""),
-                         "url": f"/source/{src.stem}"})
-        else:
-            rows.append({"id": base, "title": base, "stem": base, "type": "", "origin": "", "captured": "", "url": None})
-    return rows
-
-
-@wiki._request_cached
-def open_issue_counts() -> dict[str, set[str]]:
-    """folder -> ids of OPEN issues whose links (frontmatter `related:` or body
-    wikilinks) resolve to a page in that folder. One issue's id can appear in
-    several folders' sets; an issue that links nothing resolvable appears in
-    none. Sets (not counts) so a caller spanning several folders — e.g. Scope's
-    context + external-interfaces — can union them and count each issue once,
-    even if it links pages in more than one of those folders."""
-    links = link_index()
-    out: dict[str, set[str]] = {}
-    for iss in wiki.load_type("issue"):
-        if not is_open_issue(iss.status):
-            continue
-        for folder in {links[t][0] for t in iss.link_targets() if t in links}:
-            out.setdefault(folder, set()).add(iss.id)
-    return out
-
-
-# --- rendering helpers -----------------------------------------------------
-#
-# Wiki text is not trusted markup. Pages are written by agents from sources in
-# raw/ (emails, tickets, transcripts), and the dashboard is served to the whole
-# room, so a `<script>` or `onerror=` that arrives with a source must never run
-# in a viewer's browser. Every HTML fragment built from wiki content goes
-# through sanitize_html() before a template renders it with `| safe`; a
-# wikilink's label is escaped where it is built; plain-text frontmatter values
-# are escaped outright (render_wikilinks_text).
-
-# Allow-list on top of nh3's defaults: titles for abbr/footnotes and anchor
-# links, and `text-align` only for the alignment the tables extension writes
-# as inline style. Comments (the `<!-- levels: … -->` markers) are stripped,
-# which they already were visually.
-#
-# `id` and `class` are allowed only with the values our own markup and
-# Python-Markdown emit. The content sits in the page *before* the settings
-# dialog and the footer, and the page scripts look elements up by id
-# (getElementById returns the first match) and by class across the whole
-# document (`.fbtn`, `.sresult`, `.layer-btn` …): a free `id="settings-dialog"`
-# or `class="fbtn"` in a wiki page would take over the page's own controls.
-_SANITIZE_ATTRIBUTES = {tag: set(attrs) for tag, attrs in nh3.ALLOWED_ATTRIBUTES.items()}
-_SANITIZE_ATTRIBUTES["*"] = {"class", "id", "title"}
-for _cell in ("th", "td"):
-    _SANITIZE_ATTRIBUTES[_cell] = _SANITIZE_ATTRIBUTES.get(_cell, set()) | {"style"}
-_SANITIZE_TAGS = set(nh3.ALLOWED_TAGS) | {"tfoot"}
-# footnotes: fn:1, fnref:1, fnref2:1 (a second reference to the same note)
-_CONTENT_ID_RE = re.compile(r"fn(?:ref\d*)?:[\w.-]+")
-# wikilinks and anchor links (render_wikilinks, /metamodel), fenced code incl.
-# mermaid, footnotes, the scroll box around tables (wrap_tables)
-_CONTENT_CLASS_RE = re.compile(r"wl|wl-anchor|mm-anchor|language-[\w+-]+|footnote(?:-ref|-backref)?"
-                               r"|table-scroll")
-
-
-# Wiki content must not make a viewer's browser fetch from outside: a remote
-# image or a `background: url(…)` is a beacon that tells its server who looks
-# at the page, and the dashboard runs offline anyway. An image keeps its `src`
-# only when it names a path of the dashboard itself. A style declaration that
-# can load something (url(), image-set(), image(), or a CSS escape that could
-# spell one of them) is dropped.
-_URL_SCHEME_RE = re.compile(r"[a-z][a-z0-9+.-]*:", re.I)
-_CSS_FETCH_RE = re.compile(r"url\s*\(|image-set|image\s*\(|\\", re.I)
-
-
-def _local_url(value: str) -> bool:
-    # a browser drops tabs and newlines inside a URL and reads "\" as "/"
-    url = re.sub(r"[\t\n\r]", "", value).strip("".join(map(chr, range(33))))
-    return not (_URL_SCHEME_RE.match(url) or "\\" in url or url.startswith("//"))
-
-
-def _content_attribute(tag: str, attr: str, value: str) -> str | None:
-    if attr == "id":
-        return value if _CONTENT_ID_RE.fullmatch(value) else None
-    if attr == "class":
-        kept = [c for c in value.split() if _CONTENT_CLASS_RE.fullmatch(c)]
-        return " ".join(kept) or None
-    if attr == "src":
-        return value if _local_url(value) else None
-    if attr == "style":
-        kept = [d for d in value.split(";") if d.strip() and not _CSS_FETCH_RE.search(d)]
-        return ";".join(kept) or None
-    return value
-
-
-# The About page is the project's own documentation (docs/), laid out by hand:
-# it may also place and colour boxes with inline styles. Property names only;
-# CSS in a style attribute cannot run script.
-_ABOUT_STYLES = {"text-align", "display", "gap", "flex", "flex-wrap", "align-items",
-                 "justify-content", "background", "background-color", "color",
-                 "padding", "margin", "border", "border-radius", "width", "max-width",
-                 "height"}
-_ABOUT_ATTRIBUTES = {tag: attrs | {"style"} for tag, attrs in _SANITIZE_ATTRIBUTES.items()}
-
-
-def sanitize_html(html: str, about: bool = False) -> str:
-    """Strip scripts, event handlers, `javascript:` URLs, every tag or
-    attribute outside the allow-list, ids or classes the page's own
-    markup could collide with, and anything that fetches from outside
-    (a remote image, a style with `url()`), from an HTML fragment. `about` keeps the
-    inline layout styles of the About page (_ABOUT_STYLES)."""
-    return nh3.clean(html, tags=_SANITIZE_TAGS,
-                     attributes=_ABOUT_ATTRIBUTES if about else _SANITIZE_ATTRIBUTES,
-                     attribute_filter=_content_attribute,
-                     filter_style_properties=_ABOUT_STYLES if about else {"text-align"},
-                     link_rel=None)
-
-
-_TABLE_OPEN_RE = re.compile(r"<table\b", re.I)
-_TABLE_CLOSE_RE = re.compile(r"</table\s*>", re.I)
-
-
-def wrap_tables(html: str) -> str:
-    """Put every table of rendered markdown in a box that scrolls sideways on
-    its own, so a wide table never makes the page scroll at 320 px (QR-001)."""
-    html = _TABLE_OPEN_RE.sub('<div class="table-scroll"><table', html)
-    return _TABLE_CLOSE_RE.sub("</table></div>", html)
-
-
-def render_wikilinks(text: str, titles: dict[str, str],
-                     links: dict[str, tuple[str, str]] | None = None) -> str:
-    """Replace [[..]] with its alias (or resolved title). When `links` is given
-    and the target resolves to a wiki page, a source record or a method anchor,
-    emit a real hyperlink; otherwise (inline snippets, or an unresolved target)
-    keep the styled-text span.
-
-    The label is escaped (a title is data, not markup); the text around the
-    links is left as it is, because callers pass markdown here and sanitize
-    the result (render_markdown) or escape it (render_wikilinks_text)."""
-    def repl(m: re.Match) -> str:
-        target, alias = m.group(1).strip(), m.group(2)
-        base = target.split("/")[-1]
-        label = escape(alias.strip() if alias else titles.get(base, base))
-        if links is not None and (target.startswith("raw/") or base.startswith("SRC-")):
-            # a source cited in the text leads to its record (FR-034)
-            if src := source_index().get(base):
-                return (f'<a class="wl" href="{escape("/source/" + src.stem)}">'
-                        f'{escape(alias.strip() if alias else src.title)}</a>')
-        elif links:
-            dest = resolve_link(target, links)
-            if dest:
-                return f'<a class="wl" href="{escape(_page_url(*dest))}">{label}</a>'
-        if links is not None and (a := anchor_lookup().get(base.lower())):
-            return _anchor_link(a, str(escape(alias.strip() if alias else a["name"])))
-        return f'<span class="wl">{label}</span>'
-    return wiki.WIKILINK_RE.sub(repl, text)
-
-
-def render_wikilinks_text(text: str, titles: dict[str, str],
-                          links: dict[str, tuple[str, str]] | None = None) -> str:
-    """render_wikilinks for a plain-text value (a frontmatter string): the
-    text between the links is escaped too, so `<b>` shows as written."""
-    parts, pos = [], 0
-    for m in wiki.WIKILINK_RE.finditer(text):
-        parts.append(str(escape(text[pos:m.start()])))
-        parts.append(render_wikilinks(m.group(0), titles, links))
-        pos = m.end()
-    parts.append(str(escape(text[pos:])))
-    return "".join(parts)
-
-
-# --- method anchors (FR-035) -------------------------------------------------
-#
-# `[[MADR]]` names a method anchor, not a wiki page. It leads to the anchor's
-# entry on /metamodel, with the short definition as the link's title, so a
-# reader learns what the page follows without leaving it.
-
-@wiki._request_cached
-def anchor_lookup() -> dict[str, dict]:
-    """Lower-cased anchor title, alias and file name → the anchor."""
-    return metamodel.anchor_index(metamodel.method_anchors())
-
-
-# `[text](url)` too: a link inside the `title=""` of an anchor link would be
-# turned into an <a> by Markdown and break the attribute open
-_PLAIN_MD_RE = re.compile(r"\*\*([^*]+)\*\*|`([^`]+)`|<(https?://[^>]+)>|\[([^\]]+)\]\([^)\s]+\)")
-
-
-def anchor_title(a: dict) -> str:
-    """An anchor's definition as plain text, for a `title` attribute."""
-    text = wiki.WIKILINK_RE.sub(lambda m: (m.group(2) or m.group(1)).strip(), a.get("definition") or "")
-    return _PLAIN_MD_RE.sub(lambda m: m.group(1) or m.group(2) or m.group(3) or m.group(4), text)
-
-
-def anchor_url(a: dict) -> str:
-    return f"/metamodel#{a['id']}"
-
-
-def _anchor_link(a: dict, label: str) -> str:
-    return (f'<a class="wl wl-anchor" href="{anchor_url(a)}" '
-            f'title="{escape(anchor_title(a))}">{label}</a>')
-
-
-# A page's note that it follows a standard, a quote line of its own that
-# starts with a lowercase "follows": "> follows [[MADR]]", "> follows [[arc42]]
-# (section 5, black box)". More than 3 spaces before the ">" is indented code.
-_FOLLOWS_RE = re.compile(r"^ {0,3}>[ \t]*follows[ \t]+(\S.*?)[ \t]*$")
-_FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
-# an inline code span: a run of backticks closed by a run of the same length,
-# within one paragraph. A backslash before the opening run escapes it.
-_CODE_SPAN_RE = re.compile(r"(?<![`\\])(`+)(?!`)((?:[^\n]|\n(?![ \t]*\n))+?)(?<!`)\1(?!`)")
-# a note without a link names its format in a few words, not a sentence
-_FOLLOWS_PLAIN_MAX_WORDS = 6
-
-
-def _fenced_lines(lines: list[str]) -> list[bool]:
-    """For each line, whether it belongs to fenced code (``` or ~~~), the
-    fence lines included. A fence closes on a fence of the same character at
-    least as long as the opening one. An unclosed fence runs to the end."""
-    out = []
-    fence = ""
-    for line in lines:
-        f = _FENCE_RE.match(line)
-        if fence:
-            if f and f.group(1)[0] == fence[0] and len(f.group(1)) >= len(fence):
-                fence = ""
-            out.append(True)
-        elif f:
-            fence = f.group(1)
-            out.append(True)
-        else:
-            out.append(False)
-    return out
-
-
-def outside_code(text: str, sub) -> str:
-    """Apply `sub` to the markdown outside fenced code and inline code spans,
-    so a wikilink quoted as code stays literal text."""
-    lines = text.split("\n")
-    fenced = _fenced_lines(lines)
-    blocks: list[tuple[bool, list[str]]] = []
-    for line, f in zip(lines, fenced):
-        if blocks and blocks[-1][0] == f:
-            blocks[-1][1].append(line)
-        else:
-            blocks.append((f, [line]))
-    out = []
-    for f, block_lines in blocks:
-        block = "\n".join(block_lines)
-        if f:
-            out.append(block)
-            continue
-        parts, pos = [], 0
-        for m in _CODE_SPAN_RE.finditer(block):
-            parts += [sub(block[pos:m.start()]), m.group(0)]
-            pos = m.end()
-        parts.append(sub(block[pos:]))
-        out.append("".join(parts))
-    return "\n".join(out)
-
-
-def _follows_notes(body: str) -> list[tuple[int, str]]:
-    """(line number, text after "follows") of every "follows" note, outside
-    fenced code. The one test both the page (drop_follows, format_labels) and
-    search (search_plain) use, so both leave out exactly the same lines."""
-    out = []
-    lines = body.split("\n")
-    for i, (line, fenced) in enumerate(zip(lines, _fenced_lines(lines))):
-        if fenced:
-            continue
-        m = _FOLLOWS_RE.match(line)
-        if not m:
-            continue
-        text = m.group(1)
-        if not wiki.WIKILINK_RE.search(text) and (len(text.split()) > _FOLLOWS_PLAIN_MAX_WORDS
-                                              or re.search(r"[.!?;:]", text)):
-            continue                         # an ordinary sentence in a quote
-        out.append((i, text))
-    return out
-
-
-def drop_follows(body: str) -> str:
-    """The body without its "follows" notes, each line removed with its line
-    break, so a callout around it stays whole. They show as labels in the
-    page head (format_labels), never as a box before the content."""
-    drop = {i for i, _ in _follows_notes(body)}
-    if not drop:
-        return body
-    return "\n".join(line for i, line in enumerate(body.split("\n")) if i not in drop)
-
-
-def format_labels(body: str) -> list[dict]:
-    """The "follows" notes of a page as head labels, one per standard named,
-    deduplicated: `label`, `url` and `title` (empty for a standard that is no
-    anchor) and `note`, the rest of the line such as "section 5, black box"."""
-    titles, links = title_index(), link_index()
-    out: list[dict] = []
-    seen: set[str] = set()
-    for _, line in _follows_notes(body):
-        note = wiki.WIKILINK_RE.sub("", line).strip(" ,;.").strip()
-        note = re.sub(r"^\((.*)\)$", r"\1", note).strip()
-        found = []
-        for wm in wiki.WIKILINK_RE.finditer(line):
-            base = wm.group(1).strip().split("/")[-1]
-            a = anchor_lookup().get(base.lower())
-            if a:
-                found.append({"label": a["name"], "url": anchor_url(a), "title": anchor_title(a)})
-            elif base in links:
-                found.append({"label": titles.get(base, base), "url": _page_url(*links[base]), "title": ""})
-            else:
-                found.append({"label": (wm.group(2) or base).strip(), "url": "", "title": ""})
-        if not found:
-            found, note = [{"label": re.sub(r"^the\s+", "", line, flags=re.I), "url": "", "title": ""}], ""
-        for i, f in enumerate(found):
-            if f["label"].lower() in seen:
-                continue
-            seen.add(f["label"].lower())
-            out.append({**f, "note": note if i == 0 else ""})
-    return out
-
-
-# `[ \t]*`, not `\s*`, after the marker: `\s` would cross the line break and
-# take the callout's first text line as its title (`> [!note]` alone on a line)
-CALLOUT_RE = re.compile(r"^>[ \t]*\[!(\w+)\][ \t]*(.*)$", re.MULTILINE)
-
-# Lines that START a markdown block. A prose line that follows one of these
-# is left for Markdown's own lazy-continuation rules; a prose line that
-# follows another prose line is a hard wrap in the source file and is joined.
-_BLOCK_START_RE = re.compile(r"^(\s*([-*+]|\d+[.)])\s|\s*#|\s*>|\s*\||\s*```|\s*~~~|\s{4,}\S|\t|\s*<)")
-_LIST_START_RE = re.compile(r"^\s*([-*+]|\d+[.)])\s")
-# A GFM table separator row: "---|---", "|---|:---:|", "| --- | --- |". Must
-# contain at least one "|" — a bare "---" is a thematic break, not a table.
-_TABLE_SEP_RE = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$")
-
-
-def _unwrap_prose(body: str) -> str:
-    """Join hard-wrapped prose lines into one line per paragraph, and give a
-    list that follows a prose line the blank line Python-Markdown needs.
-    Agents write wiki pages wrapped at ~80 columns; rendering those wraps as
-    <br> (the old `nl2br` extension) produced ragged paragraphs. Fenced code,
-    explicit two-space line breaks, lists, quotes, tables and headings are
-    passed through untouched. A wrapped *list item* (a plain continuation
-    line right after a `- `/`1. ` line) is tracked via `in_list` so it stays
-    a lazy continuation of that item — dedented, but without inserting the
-    blank line that would turn a tight list into a loose one.
-
-    Tables are recognised by their separator row (`---|---`, `|:---:|…|`),
-    not by the mere presence of a "|" — ordinary prose containing a spaced
-    pipe (e.g. a wikilink alias `[[FEAT-001|Feature | With Pipe]]`) must
-    still be joined. A separator row pulls in the header line right above it
-    and every following non-blank row containing "|" as table lines."""
-    lines = body.split("\n")
-
-    table_lines: set[int] = set()
-    for i, line in enumerate(lines):
-        if "|" in line and _TABLE_SEP_RE.match(line):
-            table_lines.add(i)
-            if i > 0 and "|" in lines[i - 1]:
-                table_lines.add(i - 1)
-            j = i + 1
-            while j < len(lines) and lines[j].strip() and "|" in lines[j]:
-                table_lines.add(j)
-                j += 1
-
-    fenced = _fenced_lines(lines)
-    out: list[str] = []
-    in_list = False
-    for idx, line in enumerate(lines):
-        stripped = line.strip()
-        if fenced[idx]:
-            in_list = False
-            out.append(line)
-            continue
-        if not stripped:
-            in_list = False
-            out.append(line)
-            continue
-
-        is_list_start = bool(_LIST_START_RE.match(line))
-        is_block_start = (is_list_start or _BLOCK_START_RE.match(line)
-                           or idx in table_lines)
-
-        if in_list and not is_block_start:
-            # lazy continuation of the current list item — dedent it, stay in the list
-            out.append(line.lstrip())
-            continue
-
-        prev = out[-1] if out else ""
-        prev_is_prose = (bool(prev.strip()) and not _BLOCK_START_RE.match(prev)
-                          and (idx - 1) not in table_lines and not in_list)
-
-        if is_block_start:
-            if prev_is_prose and is_list_start:
-                out.append("")            # prose → list needs a separating blank line
-            out.append(line)
-            in_list = is_list_start
-            continue
-
-        if prev_is_prose and not prev.endswith("  "):
-            out[-1] = prev.rstrip() + " " + stripped
-        else:
-            out.append(line)
-    return "\n".join(out)
-
-
-def render_markdown(body: str, titles: dict[str, str]) -> str:
-    # a "follows" note is a head label, never a box in the text (FR-035)
-    body = drop_follows(body)
-    # unwrap hard-wrapped prose first — before wikilinks turn a leading
-    # [[...]] into an <a>, which would otherwise look like an HTML block start
-    body = _unwrap_prose(body)
-    # full-text bodies get real hyperlinks; inline-snippet helpers keep spans
-    # a wikilink quoted as code stays as written
-    links = link_index()
-    body = outside_code(body, lambda t: render_wikilinks(t, titles, links))
-    # turn Obsidian callouts `> [!type] title` into a bold label line
-    body = CALLOUT_RE.sub(lambda m: f"> **{m.group(2) or m.group(1).title()}**", body)
-    return sanitize_html(wrap_tables(md.markdown(body, extensions=["extra", "sane_lists"])))
-
-
-def extract_labeled(page: wiki.Page, label: str, titles: dict[str, str],
-                    links: dict[str, tuple[str, str]] | None = None) -> str:
-    """Pull the paragraph introduced by a bold lead like **Definition.** or
-    **Snapshot.**, collapse whitespace, and render its wikilinks. Pass `links`
-    (a link index) to turn resolvable targets into real hyperlinks instead of
-    styled-text spans."""
-    rx = re.compile(r"\*\*" + re.escape(label) + r"\.\*\*\s*(.+?)(?=\n\s*\n|\n\s*\*\*|$)", re.DOTALL)
-    m = rx.search(page.body)
-    raw = m.group(1).strip() if m else ""
-    raw = re.sub(r"\s+", " ", raw)
-    return sanitize_html(render_wikilinks(raw, titles, links))
-
-
-_PAM_BULLET_RE = re.compile(
-    r"^[ \t]*-\s+\*\*(?P<label>[A-Za-z]+)\.\*\*\s+"
-    r"(?P<body>.+?)(?=\n[ \t]*-\s+\*\*|\n##\s|\n\s*\n|\Z)",
-    re.DOTALL | re.MULTILINE,
-)
-
-
-def extract_pam_bullet(page: wiki.Page, label: str, titles: dict[str, str],
-                       links: dict[str, tuple[str, str]] | None = None) -> str:
-    """Pull a bullet-style PAM field (`- **Purpose.** …`) from a goal body.
-    Bullets can wrap onto continuation lines; stops at the next sibling bullet,
-    a new heading, or a blank line. Pass `links` to emit real hyperlinks."""
-    for m in _PAM_BULLET_RE.finditer(page.body):
-        if m.group("label").lower() == label.lower():
-            raw = re.sub(r"\s+", " ", m.group("body")).strip()
-            return sanitize_html(render_wikilinks(raw, titles, links))
-    return ""
-
-
-# Status values that count as "closed" for the issues filter.
-CLOSED_STATUSES = {"resolved", "wontfix"}
-
-
-def is_open_issue(status: object) -> bool:
-    """The one meaning of "open" for an issue: every status except resolved
-    and wontfix. A missing or unknown status stays visible as open."""
-    return str(status or "").strip().lower() not in CLOSED_STATUSES
-
-
-# The four-step lifecycle every content type shares (AGENTS.md: draft → review →
-# accepted → deprecated). Issue statuses are mapped onto it so one thin
-# bar reads the same on every tile.
-MATURITY_ORDER = ["accepted", "review", "draft", "deprecated"]
-_MATURITY_ALIASES = {
-    "proposed": "review", "in-progress": "review",
-    "resolved": "accepted", "ingested": "accepted",
-    "open": "draft",
-    "superseded": "deprecated", "rejected": "deprecated", "wontfix": "deprecated",
-}
-
-
-def maturity(statuses) -> dict:
-    """Bucket status strings into MATURITY_ORDER and return the segments of a
-    stacked bar (percent widths) plus a text label for the tooltip/aria."""
-    counts = {k: 0 for k in MATURITY_ORDER}
-    for s in statuses:
-        s = _MATURITY_ALIASES.get(str(s or "").strip().lower(), str(s or "").strip().lower())
-        counts[s if s in counts else "draft"] += 1
-    total = sum(counts.values())
-    segments = [{"status": k, "n": counts[k], "pct": round(100 * counts[k] / total)}
-                for k in MATURITY_ORDER if counts[k]]
-    label = " · ".join(f'{s["n"]} {s["status"]}' for s in segments) or "nothing yet"
-    return {"total": total, "segments": segments, "label": label}
-
-
-# --- decision records (wiki/decisions/, MADR, DR-034) ----------------------
-
-DECISION_KINDS = ["architecture", "business", "undefined"]
-
-
-_INLINE_MD_RE = re.compile(r"\*\*(?P<b>[^*]+)\*\*|`(?P<c>[^`]+)`|\*(?P<i>[^*]+)\*")
-
-
-def _strip_inline_markdown(text: str) -> str:
-    """Titles are read as raw text, not rendered, so `**bold**` and
-    `` `code` `` would reach the /decisions list with their asterisks and
-    backticks on screen. Titles are plain text there."""
-    return _INLINE_MD_RE.sub(lambda m: m.group("b") or m.group("c") or m.group("i"),
-                             text).strip()
-
-
-@wiki._request_cached
-def load_decisions() -> list[dict]:
-    """Decision records (wiki/decisions/) as list rows with rendered bodies, in
-    ID order. `kind` outside architecture|business falls back to undefined."""
-    titles = title_index()
-    out = []
-    for p in sorted(wiki.load_type("decision-record"), key=lambda p: p.id):
-        kind = str(p.meta.get("kind") or "").strip().lower()
-        decided = p.meta.get("decided") or p.meta.get("created") or ""
-        out.append({
-            "id": p.id,
-            "stem": p.stem,
-            "title": _strip_inline_markdown(str(p.title)),
-            "status": str(p.status or "draft").strip().lower(),
-            "kind": kind if kind in DECISION_KINDS else "undefined",
-            "decided": str(decided) or "—",
-            "aliases": p.aliases,
-            "url": _page_url(p.folder, p.stem),
-            "drivers": [l for g in build_drivers(p.stem) for l in g["links"]],
-            "html": render_markdown(p.body, titles),
-        })
-    return out
 
 
 # --- Systems42 sections (DR-033) ------------------------------------------
@@ -1216,13 +552,6 @@ def load_decisions() -> list[dict]:
 # /req42/<slug> list for the other known sections, and /section/<id> for a
 # section the dashboard has no view for.
 
-def _block_pages(block: dict) -> list[wiki.Page]:
-    """All wiki pages feeding one req42 block, sorted by id."""
-    pages: list[wiki.Page] = []
-    for folder in block["folders"]:
-        pages.extend(wiki.load_folder(folder))
-    return sorted(pages, key=lambda p: p.id)
-
 
 # --- context diagram (req42 block 03) --------------------------------------
 #
@@ -1232,86 +561,6 @@ def _block_pages(block: dict) -> list[wiki.Page]:
 # Center = the system (blueish box); systems/organizations = light-grey boxes;
 # human roles = actor symbol ("Person"). Stakeholders are merged/hidden/shaped per their
 # `context_role`/`nature` fields (DR-014). No node links (not needed yet).
-
-_NID_RE = re.compile(r"[^A-Za-z0-9]")
-
-
-def _diagram_node_id(raw: str) -> str:
-    return _NID_RE.sub("", str(raw)) or "N"
-
-
-def _clean_label(s: object, drop_parenthetical: bool = True) -> str:
-    """Resolve [[a|b]]→b / [[a]]→a, optionally drop a trailing (parenthetical),
-    strip chars that would break the mermaid/HTML text so labels are always
-    render-safe.
-
-    `drop_parenthetical=False` for the system name: a vault called
-    "Bookshelf (v2)" showed in full in the hero but as "Bookshelf" in every
-    diagram, which reads as two different systems on the same screen.
-    Square brackets are stripped because mermaid uses them as node-shape
-    delimiters; apostrophes are kept — labels are emitted inside double
-    quotes, and "Member's card" should stay readable.
-    """
-    t = str(s or "")
-    t = re.sub(r"\[\[[^\]|]+\|([^\]]+)\]\]", r"\1", t)                       # [[a|b]] -> b
-    t = re.sub(r"\[\[([^\]]+)\]\]", lambda m: m.group(1).split("/")[-1], t)  # [[a]]   -> a
-    if drop_parenthetical:
-        t = re.sub(r"\s*\([^)]*\)\s*$", "", t)                               # trailing (…)
-    t = t.replace("&", " and ")          # never silently delete: "A & B" -> "A and B"
-    t = re.sub(r'[<>"|\[\]]', "", t)
-    return re.sub(r"\s+", " ", t).strip()
-
-
-# Layout bands (DR-026 `tier:`). Neighbours that feed the system are ranked
-# BEFORE the centre, those it serves AFTER it, so mermaid's LR layout puts
-# supply/support on the left and demand/operations on the right instead of
-# scattering fourteen nodes around one box.
-_TIER_BANDS = [
-    ("supply", "Supply", "left"),
-    ("support", "Support", "left"),
-    ("demand", "Demand", "right"),
-    ("core-operations", "Core operations", "right"),
-]
-_TIER_LABEL = {k: lbl for k, lbl, _ in _TIER_BANDS}
-
-
-def _eif_node_label(p) -> str:
-    """Short label for a diagram node: `short_title` wins, then `title`, and
-    `partner` only as a last resort — `partner` is a full sentence by design and
-    is what made the projection unreadable at fourteen nodes."""
-    return _clean_label(p.meta.get("short_title") or p.title or p.meta.get("partner"))
-
-
-def _flow_edge_label(flows: list[dict]) -> str:
-    """One label for one line. Each flow's `label:` is a word or two; duplicates
-    collapse (a round trip about the same thing reads once), and a flow with no
-    label falls back to its `data`, clipped."""
-    seen: list[str] = []
-    for f in flows:
-        lab = _clean_label(f.get("label") or "")
-        if not lab:
-            lab = _clean_label(f.get("data") or "")
-            if len(lab) > 24:
-                lab = lab[:23].rstrip() + "…"
-        if lab and lab not in seen:
-            seen.append(lab)
-    return " · ".join(seen)
-
-
-def _eif_flows(p) -> tuple[list[dict], list[dict], list[dict]]:
-    """(inbound, outbound, all-in-document-order) flow dicts for one interface.
-    The third is what labels the edge, so the label reads in the order the author
-    wrote the flows rather than in-then-out."""
-    flows = [f for f in p.as_list("flows") if isinstance(f, dict)]
-    d = lambda f: str(f.get("direction", "")).lower()
-    return ([f for f in flows if d(f) in ("inbound", "bidirectional")],
-            [f for f in flows if d(f) in ("outbound", "bidirectional")],
-            flows)
-
-
-def _node_link(p: wiki.Page) -> dict:
-    """A page drawn as a diagram node, as the text link beside the diagram."""
-    return {"id": p.id, "title": p.title, "url": _page_url(p.folder, p.stem)}
 
 
 def build_context_diagram(center: str | None = None,
@@ -1324,7 +573,7 @@ def build_context_diagram(center: str | None = None,
     (build_context_flows). Returns None when no edges exist yet. Pure and
     string-only, so it can be reused outside the request cycle. `links`, when
     given, receives every page drawn as a node (QR-001)."""
-    center = center or _clean_label(wiki_config()["system_name"], drop_parenthetical=False)
+    center = center or project.common._clean_label(wiki_config()["system_name"], drop_parenthetical=False)
     drawn: list[dict] = []
     core = "CORE"
     bands: dict[str, list[tuple[str, str, str]]] = {}   # tier -> [(nid, label, cls)]
@@ -1335,12 +584,12 @@ def build_context_diagram(center: str | None = None,
         """`side` decides which end of the edge the neighbour sits on, which is
         what actually positions it: mermaid ranks the source before the target."""
         if ins and outs:
-            lab = _flow_edge_label(ordered if ordered is not None else ins + outs)
+            lab = project.context._flow_edge_label(ordered if ordered is not None else ins + outs)
             src, arrow, dst = (nid, "<-->", core) if side == "left" else (core, "<-->", nid)
         elif ins:
-            lab, src, arrow, dst = _flow_edge_label(ins), nid, "-->", core
+            lab, src, arrow, dst = project.context._flow_edge_label(ins), nid, "-->", core
         elif outs:
-            lab, src, arrow, dst = _flow_edge_label(outs), core, "-->", nid
+            lab, src, arrow, dst = project.context._flow_edge_label(outs), core, "-->", nid
         else:
             return
         edges.append(f'  {src} {arrow}|"{lab}"| {dst}' if lab else f"  {src} {arrow} {dst}")
@@ -1351,16 +600,16 @@ def build_context_diagram(center: str | None = None,
     for p in wiki.load_type("external-interface"):
         if p.status == "deprecated":
             continue
-        ins, outs, ordered = _eif_flows(p)
+        ins, outs, ordered = project.context._eif_flows(p)
         if not (ins or outs):
             continue
-        nid = _diagram_node_id(p.id)
+        nid = project.common._diagram_node_id(p.id)
         tier = str(p.meta.get("tier") or "").strip().lower()
-        side = next((s for k, _, s in _TIER_BANDS if k == tier), "left")
-        (bands.setdefault(tier, []) if tier in _TIER_LABEL else loose).append(
-            (nid, _eif_node_label(p), "system"))
+        side = next((s for k, _, s in project.context._TIER_BANDS if k == tier), "left")
+        (bands.setdefault(tier, []) if tier in project.context._TIER_LABEL else loose).append(
+            (nid, project.context._eif_node_label(p), "system"))
         add_edge(nid, ins, outs, side, ordered)
-        drawn.append(_node_link(p))
+        drawn.append(project.common._node_link(p))
 
     # user roles — flows live on the stakeholder, not as EIF nodes. DR-014:
     # several stakeholders sharing a `context_role` merge into ONE node (union of
@@ -1379,7 +628,7 @@ def build_context_diagram(center: str | None = None,
         raw_role = p.meta.get("context_role")
         if isinstance(raw_role, str) and raw_role.strip().lower() == "none":
             continue
-        label = _clean_label(raw_role) if raw_role else _clean_label(p.title)
+        label = project.common._clean_label(raw_role) if raw_role else project.common._clean_label(p.title)
         is_org = str(p.meta.get("nature", "person")).strip().lower() == "organization"
         g = groups.get(label)
         if g is None:
@@ -1388,10 +637,10 @@ def build_context_diagram(center: str | None = None,
             g["cls"] = "system"          # organizations/systems share the box style
         _union(g["prov"], prov)
         _union(g["recv"], recv)
-        drawn.append(_node_link(p))   # a merged role node links each of its stakeholders
+        drawn.append(project.common._node_link(p))   # a merged role node links each of its stakeholders
 
     for label, g in sorted(groups.items(), key=lambda kv: kv[1]["order"]):
-        nid = _diagram_node_id(label)
+        nid = project.common._diagram_node_id(label)
         loose.append((nid, label, g["cls"]))
         ins = [{"data": x} for x in g["prov"]]
         outs = [{"data": x} for x in g["recv"]]
@@ -1408,14 +657,14 @@ def build_context_diagram(center: str | None = None,
                 else f'  {nid}["{label}"]:::{cls}')
 
     lines = ["flowchart LR"]
-    for tier, tier_label, _ in _TIER_BANDS:
+    for tier, tier_label, _ in project.context._TIER_BANDS:
         if not bands.get(tier):
             continue
-        lines.append(f'  subgraph {_diagram_node_id(tier)}["{tier_label}"]')
+        lines.append(f'  subgraph {project.common._diagram_node_id(tier)}["{tier_label}"]')
         lines.append("    direction TB")
         lines += ["  " + node_line(*n) for n in bands[tier]]
         lines.append("  end")
-    lines.append(f'  {core}["{_clean_label(center)}"]:::core')
+    lines.append(f'  {core}["{project.common._clean_label(center)}"]:::core')
     lines += [node_line(*n) for n in loose]
     lines += edges
     lines += [
@@ -1426,1392 +675,6 @@ def build_context_diagram(center: str | None = None,
     return "\n".join(lines)
 
 
-def build_context_flows() -> list[dict]:
-    """The diagram's edges, spelled out. One group per neighbour, both
-    directions listed — this is where the detail that was removed from the
-    node and edge labels goes (DR-026). `unknown`/empty cells come back as
-    None so the template can render a dash instead of the word."""
-    def cell(v) -> str | None:
-        s = _clean_label(v or "")
-        return None if not s or s.lower() in ("unknown", "n/a", "none") else s
-
-    groups: list[dict] = []
-    for p in wiki.load_type("external-interface"):
-        if p.status == "deprecated":
-            continue
-        ins, outs, ordered = _eif_flows(p)
-        if not (ins or outs):
-            continue
-        rows = []
-        for f, direction in [(f, "in") for f in ins] + [(f, "out") for f in outs]:
-            rows.append({"direction": direction, "data": cell(f.get("data")) or "—",
-                         "format": cell(f.get("format")), "trigger": cell(f.get("trigger"))})
-        groups.append({
-            "id": p.id, "stem": p.stem, "url": _page_url(p.folder, p.stem), "name": _eif_node_label(p),
-            "partner": _clean_label(p.meta.get("partner") or ""),
-            "tier": _TIER_LABEL.get(str(p.meta.get("tier") or "").strip().lower(), ""),
-            "label": _flow_edge_label(ordered), "rows": rows,
-        })
-    return groups
-
-
-# --- domain term network (DR-023) ----------------------------------------
-#
-# A force-directed graph of the domain terms, projected from the `related:` edges.
-# The server emits cytoscape elements ({nodes, edges}); the browser lays them
-# out (cytoscape.js). Single source of truth stays the typed edges — only the
-# layout is client-side. Default view is terms only; cross-type neighbours (1-hop)
-# are revealed per type by buttons. Edges are undirected & deduplicated and come
-# ONLY from `related:` frontmatter (body wikilinks would add uncurated noise, so
-# link_targets() is deliberately NOT used here).
-
-def _stem_of_link(raw: object) -> str:
-    """A `related:` entry like '[[DT-026-eaqua|EAquA]]' -> 'DT-026-eaqua'."""
-    return link_name(raw)
-
-
-def _type_of(stem: str) -> str:
-    return stem.split("-")[0] if "-" in stem else stem
-
-
-def domain_terms() -> list[wiki.Page]:
-    return wiki.load_type("domain-term")
-
-
-def build_glossary_graph(edge_filter: str = "all") -> dict:
-    """Project simple links and structured relationships over the terminology."""
-    glossary = domain_terms()
-    glo_stems = {p.stem for p in glossary}
-    by_stem = {p.stem: p for p in wiki.load_all_pages()}   # existence + title/folder
-
-    seen_pairs: set[frozenset] = set()
-    edges: list[dict] = []
-    glo_degree: dict[str, int] = {s: 0 for s in glo_stems}
-    neighbour_stems: set[str] = set()
-
-    for p in glossary:                       # src is always a domain term
-        src = p.stem
-        for raw in p.as_list("related") if edge_filter != "structured" else []:
-            tgt = _link_stem(raw)
-            if not tgt or tgt == src or tgt not in by_stem:
-                continue                     # self / dangling / non-page
-            pair = frozenset((src, tgt))
-            if pair in seen_pairs:
-                continue                     # undirected dedup
-            seen_pairs.add(pair)
-            cross = tgt not in glo_stems
-            edge = {"id": f"e{len(edges)}", "source": src, "target": tgt, "cross": cross, "kind": "related"}
-            if cross:
-                edge["ntype"] = _type_of(tgt)
-                neighbour_stems.add(tgt)
-            else:
-                glo_degree[src] += 1
-                glo_degree[tgt] += 1
-            edges.append(edge)
-
-    if edge_filter != "related":
-        seen_structure = set()
-        for relation in data_model_edges():
-            src, tgt = relation["source"], relation["target"]
-            if src not in glo_stems or tgt not in glo_stems:
-                continue
-            kind, label = relation["kind"], relation["verb"]
-            key = (src, tgt, kind, label, relation["cardinality"])
-            if key in seen_structure:
-                continue
-            seen_structure.add(key)
-            edges.append({"id": f"e{len(edges)}", "source": src, "target": tgt,
-                          "cross": False, "kind": kind, "label": label or kind})
-            glo_degree[src] += 1
-            glo_degree[tgt] += 1
-
-    nodes: list[dict] = []
-    for p in glossary:
-        state = ("deprecated" if p.status == "deprecated"
-                 else "agreed" if p.meta.get("agreed") is True
-                 else "draft")
-        nodes.append({
-            "id": p.stem, "label": p.title, "type": "DT", "core": True,
-            "url": f"/page/{p.folder}/{p.stem}",
-            "degree": glo_degree.get(p.stem, 0),
-            "state": state,
-            "assumption": "[!assumption]" in p.body,
-            "aliases": ", ".join(p.aliases),
-        })
-    named = {"STK", "EIF", "GOAL", "BB"}   # types with their own colour + button
-    for stem in sorted(neighbour_stems):
-        pg = by_stem[stem]
-        ntype = _type_of(stem)
-        node = {
-            "id": stem, "label": pg.title, "type": ntype, "core": False,
-            "url": f"/page/{pg.folder}/{stem}",
-        }
-        if ntype not in named:
-            node["rest"] = 1   # CTX/FR/CON/ISS/… → grey, selected via node[rest]
-        nodes.append(node)
-
-    layer_counts: dict[str, int] = {}
-    for e in edges:
-        if e["cross"]:
-            layer_counts[e["ntype"]] = layer_counts.get(e["ntype"], 0) + 1
-
-    return {
-        "nodes": [{"data": n} for n in nodes],
-        "edges": [{"data": e} for e in edges],
-        "layer_counts": layer_counts,
-    }
-
-
-# Neighbour types the per-term ego snippet offers as buttons (DR-023): terms shown by
-# default, STK/GOAL/BB revealed on demand. A focused 1-hop slice for a term's detail page.
-_EGO_TYPES = {"DT", "STK", "GOAL", "BB"}
-
-
-def build_glossary_ego_graph(stem: str) -> dict | None:
-    """1-hop ego network of a single domain term for the detail-page snippet
-    (DR-023): the focal term + its immediate neighbours of type DT/STK/GOAL/BB
-    and the edges among them. A pure filtered projection of build_glossary_graph();
-    returns None if the term has no node (not a domain term page)."""
-    full = build_glossary_graph()
-    node_by_id = {n["data"]["id"]: n["data"] for n in full["nodes"]}
-    if stem not in node_by_id:
-        return None
-
-    nbrs: set[str] = set()
-    for e in full["edges"]:
-        d = e["data"]
-        if d["source"] == stem:
-            nbrs.add(d["target"])
-        elif d["target"] == stem:
-            nbrs.add(d["source"])
-
-    ego_ids = {stem} | {n for n in nbrs
-                        if node_by_id.get(n, {}).get("type") in _EGO_TYPES}
-
-    nodes = []
-    for nid in ego_ids:
-        data = dict(node_by_id[nid])
-        if nid == stem:
-            data["focus"] = True
-        nodes.append({"data": data})
-    edges = [e for e in full["edges"]
-             if e["data"]["source"] in ego_ids and e["data"]["target"] in ego_ids]
-
-    layer_counts: dict[str, int] = {}
-    for e in edges:
-        d = e["data"]
-        if d.get("cross") and d.get("ntype") in _EGO_TYPES:
-            layer_counts[d["ntype"]] = layer_counts.get(d["ntype"], 0) + 1
-
-    return {"nodes": nodes, "edges": edges, "layer_counts": layer_counts}
-
-
-def build_relations_panel(stem: str, exclude: set[str] | None = None) -> dict:
-    """Outbound links (this page's `related:` + body wikilinks) and inbound
-    backlinks (other pages that reference it), grouped by type, as link dicts.
-    A pure projection over the link graph (DR-018) — powers the outbound
-    / inbound relations section on a detail page. `exclude` drops stems the
-    page already lists in a typed panel (drivers, addressed by, …). A linked
-    issue carries its `status` and whether it is `closed`."""
-    exclude = exclude or set()
-    titles = title_index()
-    pages = wiki.load_all_pages()
-    by_stem = {p.stem: p for p in pages}
-
-    def info(s: str) -> dict:
-        ntype = _type_of(s)
-        folder = by_stem[s].folder if s in by_stem else catalog.folder_for_prefix(ntype)
-        if folder and wiki._is(folder, "functional-requirement"):
-            url = f"/functional-requirements/{s}"
-        elif folder:
-            url = f"/page/{folder}/{s}"
-        else:
-            url = f"/page/{by_stem[s].folder}/{s}"
-        item = {"id": by_stem[s].id if s in by_stem else s,
-                "label": titles.get(s, s), "url": url, "type": ntype,
-                "status": "", "closed": False}
-        if s in by_stem and wiki._is(by_stem[s].folder, "issue"):
-            # a linked issue says how firm it is, closed the way the issues
-            # panel says it (FR-034, FR-027)
-            st = by_stem[s].status
-            item["status"] = st if st in _issue_vocab()["status"] else ""
-            item["closed"] = not is_open_issue(st)
-        return item
-
-    me = by_stem.get(stem)
-    outbound = sorted(s for s in (linked_stems(me) if me else ())
-                      if s in by_stem and s not in exclude)
-    # every page that links here, also one this page links to (FR-034)
-    inbound = sorted(q.stem for q in (pages if me else ())
-                     if q.stem not in exclude and links_to(q, me))
-
-    def grouped(stems: list) -> list:
-        buckets: dict[str, list] = {}
-        for s in stems:
-            i = info(s)
-            buckets.setdefault(i["type"], []).append(i)
-        order = catalog.prefix_order()
-        ordered = order + [t for t in buckets if t not in order]
-        return [{"type": t, "label": catalog.group_label(t), "links": buckets[t]}
-                for t in ordered if t in buckets]
-
-    return {"outbound": grouped(outbound), "inbound": grouped(inbound)}
-
-
-# --- goals (req42 block 01: vision + objectives) ---------------------------
-#
-# One content type `goal` with stereotype `vision | objective` (DR-016).
-# The vision is the goal page carrying `stereotype: vision` (bootstrap.md step 3
-# writes it as GOAL-001); every other goal page is an objective. Nothing is
-# keyed off an ID list — a vault may hold any number of objectives at any IDs,
-# and all of them must reach the screen.
-# The Goal↔Epic edge is pinned at the Epic (`goal:` field on each FR, DR-018),
-# and a use case carries the same field (DR-038); coverage is a pure projection
-# from those edges.
-
-
-def _goal_id_from_ref(ref: object) -> str:
-    """From '[[GOAL-002-foo]]' / 'GOAL-002-foo' / 'GOAL-002', return 'GOAL-002'."""
-    s = str(ref or "").strip()
-    m = re.match(r"\[\[([^\]\|#]+)", s)
-    stem = (m.group(1) if m else s).split("/")[-1].strip()
-    parts = stem.split("-", 2)
-    if len(parts) >= 2 and parts[0].upper() == "GOAL":
-        return f"GOAL-{parts[1]}"
-    return stem
-
-
-def _goal_maturity(p: wiki.Page) -> str:
-    """PAM until `horizon:` is set, then promotion to SMART (DR-016 / anchor)."""
-    return "SMART" if str(p.meta.get("horizon") or "").strip() else "PAM"
-
-
-_VISION_SECTION_RE = re.compile(r"##\s+Vision\b[^\n]*\n+(.+?)(?=\n##\s|\Z)", re.DOTALL)
-# notes, comments and the template's hints under `## Vision` are not prose
-_VISION_SKIP = (">", "<!--", "**Objectives.**", "*Optional:*")
-# a sentence ends at . ! or ? followed by the end or by a word that does not
-# start in lower case, so "e.g. the" does not end it
-_SENTENCE_RE = re.compile(r"^(.+?[.!?])(?=\s+[^a-z\s]|\s*$)", re.DOTALL)
-
-
-def _vision_paragraphs(page: wiki.Page, titles: dict[str, str],
-                       links: dict[str, tuple[str, str]] | None = None) -> list[str]:
-    """Every prose paragraph under `## Vision` in the Vision page, inline
-    markdown (`**bold**`, wikilinks) rendered, no <p> wrapper. Pass `links` to
-    emit real hyperlinks for resolvable targets.
-
-    Skipped: notes and callouts (`> …`), HTML comments, and the template's
-    `*Optional:*` hint and `**Objectives.**` pointer. Only the first paragraph used to be shown, so a
-    vision that opened with "> follows the Geoffrey Moore format" showed that
-    note and nothing else."""
-    if not page:
-        return []
-    m = _VISION_SECTION_RE.search(page.body)
-    if not m:
-        return []
-    out = []
-    for para in m.group(1).split("\n\n"):
-        para = para.strip()
-        if not para or para.startswith(_VISION_SKIP):
-            continue
-        para = re.sub(r"\s+", " ", para)
-        para = render_wikilinks(para, titles, links)
-        out.append(sanitize_html(re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", para)))
-    return out
-
-
-def vision_sentence(page: wiki.Page | None, titles: dict[str, str]) -> str:
-    """The first sentence of the vision as plain text, for the home hero
-    (FR-018). A wikilink reads as its alias or its target's title. Empty when
-    there is no vision or no prose under `## Vision`."""
-    m = _VISION_SECTION_RE.search(page.body) if page else None
-    if not m:
-        return ""
-    for para in m.group(1).split("\n\n"):
-        para = para.strip()
-        if not para or para.startswith(_VISION_SKIP):
-            continue
-        text = wiki.WIKILINK_RE.sub(
-            lambda w: (w.group(2) or titles.get(w.group(1).strip().split("/")[-1], w.group(1))).strip(),
-            re.sub(r"\s+", " ", para))
-        text = _strip_inline_markdown(text)
-        first = _SENTENCE_RE.match(text)
-        return (first.group(1) if first else text).strip()
-    return ""
-
-
-ENABLER_LANES = ("platform", "display")
-
-
-def _in_enabler_lane(fr: wiki.Page) -> bool:
-    return str(fr.meta.get("lane") or "").strip().lower() in ENABLER_LANES
-
-
-def is_enabler(fr: wiki.Page, goals: list) -> bool:
-    """rel-goal: an FR that serves no goal (`goals`, its own or its use-case
-    parent's) and sits in lane platform or display is an explicit enabler."""
-    return not goals and _in_enabler_lane(fr)
-
-
-def breaks_fr_traces_to_goal(fr: wiki.Page, goals: list) -> bool:
-    """rule-fr-traces-to-goal: an Agile epic or feature serves a goal (`goals`,
-    its own or its use-case parent's) or is an enabler. Advisory only."""
-    if _fr_notation(fr) != "agile" or _fr_level(fr) not in ("epic", "feature"):
-        return False
-    return not goals and not _in_enabler_lane(fr)
-
-
-def vision_page() -> wiki.Page | None:
-    """The goal page with `stereotype: vision`, picked by stereotype and never
-    by ID. If two pages claim it, the lowest ID wins."""
-    goals = sorted(wiki.load_type("goal"), key=lambda p: p.id)
-    return next((p for p in goals
-                 if str(p.meta.get("stereotype") or "").strip().lower() == "vision"), None)
-
-
-def load_goals() -> dict:
-    """Return everything /goals and the functional-requirements goal map need.
-
-    Shape:
-      vision     — the goal Page with `stereotype: vision`, or None
-      objectives — every other goal Page, ordered by id (GOAL-002, -003, …)
-      coverage   — { 'GOAL-NNN': [FR-Page, ...] } from goal: backlinks
-      enablers   — FR-Pages that serve no goal, in lane platform or display
-      untraced   — FR-Pages that break rule-fr-traces-to-goal
-      frs        — every FR-Page that is not a use case, sorted by id
-      ucs        — the FR-Pages in the use-case notation, sorted by id
-                   (DR-038; a use case with goal: [] is simply untraced, not
-                   an enabler)
-
-    Derived entirely from the vault, never from a fixed ID list: a group may
-    capture any number of objectives at any IDs and every one of them shows up.
-    Anything that is not *the* vision counts as an objective, so a goal page
-    with a missing or misspelt `stereotype:` is still rendered rather than
-    silently dropped. If two pages claim `stereotype: vision`, the
-    lowest-id one is the vision and the rest fall through to objectives.
-    """
-    goals = sorted(wiki.load_type("goal"), key=lambda p: p.id)
-    vision = vision_page()
-    objectives = [p for p in goals if p is not vision]
-
-    all_frs = sorted(wiki.load_type("functional-requirement"), key=lambda p: p.id)
-    ucs = [p for p in all_frs if _fr_notation(p) == "use-case"]
-    frs = [p for p in all_frs if _fr_notation(p) != "use-case"]
-    # the use cases Agile features and stories may refine (DR-038 amendment),
-    # the same set the story map roots them under
-    uc_by_stem = {u.stem: u for u in ucs if _fr_level(u) in UC_REFINABLE_LEVELS}
-    coverage: dict[str, list[wiki.Page]] = {o.id: [] for o in objectives}
-    objective_by_stem = {o.stem: o for o in objectives}
-
-    def served(p: wiki.Page) -> list[str]:
-        # only links that resolve to an objective count: the vision, a missing
-        # page or a mangled value serves no goal (rule-fr-traces-to-goal)
-        return [objective_by_stem[s].id for s in links_of(p, "goal") if s in objective_by_stem]
-
-    enablers: list[wiki.Page] = []
-    untraced: list[wiki.Page] = []
-    for fr in frs:
-        gids = served(fr)
-        if not gids and _fr_notation(fr) == "agile" and _fr_level(fr) in ("feature", "story"):
-            # an Agile feature/story whose first parent is a sea- or fish-level
-            # use case serves that use case's goals (rule-fr-traces-to-goal)
-            first = _fr_first_parent(fr)
-            gids = served(uc_by_stem[first]) if first in uc_by_stem else []
-        if is_enabler(fr, gids):
-            enablers.append(fr)
-        elif breaks_fr_traces_to_goal(fr, gids):
-            untraced.append(fr)
-        for gid in gids:
-            coverage[gid].append(fr)
-    for uc in ucs:
-        for gid in served(uc):
-            if uc not in coverage[gid]:
-                coverage[gid].append(uc)
-    return {"vision": vision, "objectives": objectives,
-            "coverage": coverage, "enablers": enablers, "untraced": untraced,
-            "frs": frs, "ucs": ucs}
-
-
-# --- functional requirements (req42 block 04) ----------------------------
-#
-# One content type `functional-requirement`; every page stores its `notation:`
-# (agile, use-case, ears, prose or a project's own) and one of that notation's
-# `level:` values (DR-038). The hierarchy edge is the `parent:` wikilink field,
-# a graph independent of notation and level. build_fr_hierarchy is the story
-# map: a pure projection over the Agile epic/feature/story pages (plus the use
-# cases Agile features and stories refine) — the single source for the
-# /req42/functional-requirements page. Everything it cannot
-# place is listed under the other notations.
-
-def _fr_stem_from_ref(ref: object) -> str:
-    """From '[[FR-009-foo]]' / 'FR-009-foo' / a bare stem, return the page stem
-    (children are matched to parents by stem)."""
-    s = str(ref or "").strip()
-    m = re.match(r"\[\[([^\]\|#]+)", s)
-    return (m.group(1) if m else s).split("/")[-1].strip()
-
-
-def _fr_level(p: "wiki.Page") -> str:
-    return str(p.meta.get("level") or "").strip().lower()
-
-
-def _fr_notation(p: "wiki.Page") -> str:
-    # No fallback: a page without `notation:` is unplaced, not silently Agile.
-    return str(p.meta.get("notation") or "").strip().lower()
-
-
-AGILE_LEVELS = ("epic", "feature", "story")
-# use-case levels an Agile feature or story may refine (DR-038 amendment): a
-# kite-level use case summarises others and takes no Agile children
-UC_REFINABLE_LEVELS = ("sea", "fish")
-
-
-def _fr_first_parent(p: "wiki.Page") -> str | None:
-    """The stem of an FR's first `parent:`. The story map is a tree: a page
-    with several parents is placed under its first; multi-parent graphs are
-    out of scope for this view. Goal inheritance from a use case reads the
-    same edge, so the two always agree."""
-    for ref in p.as_list("parent"):
-        stem = _link_stem(ref)
-        if stem:
-            return stem
-    return None
-
-
-def _fr_sort_key(p: "wiki.Page"):
-    """Hierarchy order: numeric `order:` field, then id as a stable tiebreak."""
-    try:
-        order = int(p.meta.get("order"))
-    except (TypeError, ValueError):
-        order = 9999
-    return (order, p.id)
-
-
-def _fr_node(p: "wiki.Page") -> dict:
-    """Slim per-page record shared by cards and the diagram."""
-    return {
-        "id": p.id, "title": p.title, "stem": p.stem,
-        "priority": str(p.meta.get("priority") or "").strip(),
-        "level": _fr_level(p), "notation": _fr_notation(p),
-        "status": p.status,
-    }
-
-
-def build_fr_hierarchy() -> dict:
-    """Project the Epic→Feature→Story hierarchy from each FR's `parent:` field.
-
-    Returns:
-      epics          — list of epic dicts in `order` then id order; each carries
-                       `features` (with nested `stories`), `direct_stories`
-                       (stories hung straight off the epic), `n_features`
-                       (direct feature children) and `n_stories` (its direct
-                       stories plus the stories of its direct features — exactly
-                       what the page renders), plus priority/release/status.
-      total_epics / total_features / total_stories — aggregate counters:
-                       every feature and story the roots and the orphans show.
-      use_cases      — use cases (use-case notation, level sea or fish) that
-                       Agile features or stories name as `parent:` (DR-038
-                       amendment), shaped like an epic row (features,
-                       direct_stories, counts); a use case without such
-                       children stays under other_notations only.
-      orphans        — Agile feature/story pages no root shows: a feature
-                       whose parent is not an epic or a refinable use case,
-                       a story whose parent is none of epic, feature and
-                       refinable use case (no parent, a dangling or retired
-                       one, a cycle, a self-parent). An orphaned feature
-                       carries its `stories`. Normally empty.
-      other_notations — every live FR the story map cannot place: other
-                       notations, and pages with a missing or unknown notation
-                       or level (still visible, never silently Agile).
-    """
-    # A deprecated item has been retired — split, superseded or withdrawn — so it
-    # is not part of the live hierarchy and must not be counted, drawn, or listed as
-    # an orphan. Same rule as the context projection applies to a deprecated
-    # interface. A live child of a retired parent correctly becomes an orphan.
-    all_pages = [p for p in wiki.load_type("functional-requirement")
-                 if p.status != "deprecated"]
-    pages = [p for p in all_pages
-             if _fr_notation(p) == "agile" and _fr_level(p) in AGILE_LEVELS]
-    by_stem = {p.stem: p for p in pages}
-    uc_by_stem = {p.stem: p for p in all_pages
-                  if _fr_notation(p) == "use-case" and _fr_level(p) in UC_REFINABLE_LEVELS}
-
-    parent_stem = _fr_first_parent
-
-    children: dict[str, list["wiki.Page"]] = {}
-    for p in pages:
-        ps = parent_stem(p)
-        if ps:
-            children.setdefault(ps, []).append(p)
-
-    def kids(stem: str, level: str) -> list["wiki.Page"]:
-        return sorted((c for c in children.get(stem, []) if _fr_level(c) == level),
-                      key=_fr_sort_key)
-
-    epics = sorted((p for p in pages if _fr_level(p) == "epic"), key=_fr_sort_key)
-    epic_rows = []
-    total_features = total_stories = 0
-
-    def breakdown(root: "wiki.Page") -> dict:
-        feats = kids(root.stem, "feature")
-        feature_rows = [
-            {**_fr_node(f), "stories": [_fr_node(s) for s in kids(f.stem, "story")]}
-            for f in feats
-        ]
-        direct_stories = [_fr_node(s) for s in kids(root.stem, "story")]
-        # n_stories counts exactly what the page renders — the root's direct
-        # stories plus the stories of its direct features (the model is two
-        # levels: root→feature→story / root→story, the root an epic or a use
-        # case). Computed from the built
-        # structure, not by recursion, so a malformed/cyclic parent: edge can
-        # never run away and 500 the dashboard.
-        return {
-            "n_features": len(feats),
-            "n_stories": len(direct_stories) + sum(len(f["stories"]) for f in feature_rows),
-            "features": feature_rows,
-            "direct_stories": direct_stories,
-        }
-
-    for e in epics:
-        b = breakdown(e)
-        total_features += b["n_features"]
-        total_stories += b["n_stories"]
-        epic_rows.append({**_fr_node(e),
-                          "release": str(e.meta.get("release") or "").strip(), **b})
-
-    # A use case at level sea or fish that Agile features or stories refine
-    # (DR-038 amendment) is a root beside the epics; an epic never names a use
-    # case. Use cases without such children are listed under other_notations.
-    uc_rows = []
-    for u in sorted(uc_by_stem.values(), key=_fr_sort_key):
-        if not (kids(u.stem, "feature") or kids(u.stem, "story")):
-            continue
-        b = breakdown(u)
-        total_features += b["n_features"]
-        total_stories += b["n_stories"]
-        uc_rows.append({**_fr_node(u), "url": _page_url(u.folder, u.stem), **b})
-
-    # A parent that exists does not place a page: only a root shows features,
-    # and only a root or a feature shows stories. A feature no root shows is an
-    # orphan and keeps its stories, so every story of a feature shows once.
-    def level_of(stem: str | None) -> str:
-        return _fr_level(by_stem[stem]) if stem in by_stem else ""
-
-    orphans = []
-    for p in pages:
-        st = _fr_level(p)
-        ps = parent_stem(p)
-        under_root = ps in uc_by_stem or level_of(ps) == "epic"
-        if st == "feature" and not under_root:
-            stories = [_fr_node(s) for s in kids(p.stem, "story")]
-            orphans.append({**_fr_node(p), "stories": stories})
-            total_features += 1
-            total_stories += len(stories)
-        elif st == "story" and not under_root and level_of(ps) != "feature":
-            orphans.append(_fr_node(p))
-            total_stories += 1
-
-    placed = set(by_stem) | {u["stem"] for u in uc_rows}
-    return {
-        "epics": epic_rows,
-        "use_cases": uc_rows,
-        "total_epics": len(epics),
-        "total_features": total_features,
-        "total_stories": total_stories,
-        "orphans": orphans,
-        "other_notations": sorted((_fr_node(p) for p in all_pages if p.stem not in placed),
-                                  key=lambda r: r["id"]),
-    }
-
-
-def _mermaid_goal_epic_tree(goals: dict, hierarchy: dict,
-                            links: list[dict] | None = None) -> str | None:
-    """Compact top-of-hierarchy map: each Objective links down to the Epics that
-    contribute to it (FR `goal:` coverage, DR-018). Enabler epics (lane
-    platform or display) hang under a shared `Platform / Enabler` node, epics
-    that name no goal under `No goal`, so both stay visible. Two
-    levels only — it must stay readable as the hierarchy grows, which is exactly
-    why the old full Epic→Feature→Story tree was split out to the epic pages.
-    Goal nodes jump to their card on /goals; epic nodes open their epic page.
-    Use cases with a `goal:` (DR-038) hang under their goals beside the epics.
-    Returns None when there are neither epics nor goal-linked use cases.
-    `links`, when given, receives every node that opens a page (QR-001)."""
-    epics = hierarchy.get("epics") or []
-    coverage = goals.get("coverage") or {}
-    has_uc = any(_fr_notation(p) == "use-case" for ps in coverage.values() for p in ps)
-    if not epics and not has_uc:
-        return None
-    epic_by_id = {e["id"]: e for e in epics}
-    objectives = goals.get("objectives") or []
-    enablers = goals.get("enablers") or []
-
-    lines = ["graph TD"]
-    seen: set[str] = set()
-    drawn: list[dict] = []
-
-    def epic_edge(parent_nid: str, e: dict) -> None:
-        # An epic may contribute to several goals (a DAG): declare its node with
-        # label + click once, then reference it by id on every further edge.
-        nid = _diagram_node_id(e["id"])
-        if e["id"] in seen:
-            lines.append(f'  {parent_nid} --> {nid}')
-            return
-        label = _clean_label(e["title"])
-        lines.append(f'  {parent_nid} --> {nid}["{e["id"]}<br/>{label}"]:::epic')
-        lines.append(f'  click {nid} "/functional-requirements/{e["stem"]}"')
-        drawn.append({"id": e["id"], "title": e["title"], "url": f'/functional-requirements/{e["stem"]}'})
-        seen.add(e["id"])
-
-    def uc_edge(parent_nid: str, uc: wiki.Page) -> None:
-        nid = _diagram_node_id(uc.id)
-        if uc.id in seen:
-            lines.append(f'  {parent_nid} --> {nid}')
-            return
-        label = _clean_label(uc.title)
-        lines.append(f'  {parent_nid} --> {nid}["{uc.id}<br/>{label}"]:::usecase')
-        lines.append(f'  click {nid} "{_page_url(uc.folder, uc.stem)}"')
-        drawn.append(_node_link(uc))
-        seen.add(uc.id)
-
-    for o in objectives:
-        gid = _diagram_node_id(o.id)
-        glabel = _clean_label(_short_title(o))
-        lines.append(f'  {gid}["{o.id}<br/>{glabel}"]:::goal')
-        lines.append(f'  click {gid} "/goals#{o.id}"')
-        drawn.append({"id": o.id, "title": o.title, "url": f"/goals#{o.id}"})
-        for fr in coverage.get(o.id, []):
-            if _fr_notation(fr) == "use-case":
-                uc_edge(gid, fr)
-                continue
-            e = epic_by_id.get(fr.id)
-            if e:  # only epics belong on this map (features/stories carry no goal:)
-                epic_edge(gid, e)
-
-    enabler_epics = [epic_by_id[fr.id] for fr in enablers if fr.id in epic_by_id]
-    if enabler_epics:
-        lines.append('  ENABLER["Platform / Enabler"]:::enabler')
-        for e in enabler_epics:
-            epic_edge("ENABLER", e)
-
-    # epics that break rule-fr-traces-to-goal: no enabler, but still on the map
-    untraced_epics = [epic_by_id[fr.id] for fr in goals.get("untraced") or []
-                      if fr.id in epic_by_id and fr.id not in seen]
-    if untraced_epics:
-        lines.append('  NOGOAL["No goal"]:::nogoal')
-        for e in untraced_epics:
-            epic_edge("NOGOAL", e)
-
-    lines += [
-        "  classDef goal fill:#2f6fb3,stroke:#7fc0ff,color:#ffffff,stroke-width:2px,font-weight:bold;",
-        "  classDef enabler fill:#3a3f4b,stroke:#7a8497,color:#ffffff,font-weight:bold;",
-        "  classDef epic fill:#d7dbe3,stroke:#9aa3b2,color:#15202e;",
-        "  classDef usecase fill:#eef1f6,stroke:#9aa3b2,color:#15202e,stroke-dasharray:4 3;",
-        # the warning colour of the matrix's "no goal" flag (--warn)
-        "  classDef nogoal fill:#5a3d0c,stroke:#ffb454,color:#ffffff,stroke-width:2px,font-weight:bold;",
-    ]
-    if links is not None:
-        links.extend(drawn)
-    return "\n".join(lines)
-
-
-def fr_building_blocks(stem: str) -> list[wiki.Page]:
-    """The building blocks whose `drivers:` name this requirement (rel-drivers),
-    by id. The link is stored on the block only, never on the requirement."""
-    return [p for p in sorted(wiki.load_type("building-block"), key=lambda q: q.id)
-            if stem in links_of(p, "drivers")]
-
-
-def _mermaid_fr_subtree(node: dict | None, blocks: list[wiki.Page] | None = None,
-                        links: list[dict] | None = None) -> str | None:
-    """One FR's detail diagram (FR-047), drawn on its FR page so the hierarchy
-    overview can stay compact: its breakdown and its building blocks. Handles
-    an epic root (→ its Features → their Stories, plus stories hung straight
-    off the epic), a feature root (→ its Stories) and a leaf. `blocks` are the
-    root's own building blocks, joined by a dashed edge. Every node but the
-    root clicks through to its page and is added to `links`, the text links
-    beside the diagram (QR-001). `node` needs `id` and `title` only.
-    Returns None when the root has neither children nor building blocks."""
-    if not node:
-        return None
-    blocks = blocks or []
-    feats = node.get("features") or []
-    own_stories = node.get("stories") or []          # set when the root is a feature
-    direct = node.get("direct_stories") or []        # epic's stories without a feature
-    if not feats and not own_stories and not direct and not blocks:
-        return None
-    rid = _diagram_node_id(node["id"])
-    lines = ["graph TD", f'  {rid}["{node["id"]}<br/>{_clean_label(node["title"])}"]:::root']
-    drawn: list[dict] = []
-
-    def child(parent_nid: str, rec: dict, css: str) -> str:
-        nid = _diagram_node_id(rec["id"])
-        label = _clean_label(rec["title"])
-        url = f'/functional-requirements/{rec["stem"]}'
-        lines.append(f'  {parent_nid} --> {nid}["{rec["id"]}<br/>{label}"]:::{css}')
-        lines.append(f'  click {nid} "{url}"')
-        drawn.append({"id": rec["id"], "title": rec["title"], "url": url})
-        return nid
-
-    for f in feats:
-        fid = child(rid, f, "feature")
-        for s in f.get("stories") or []:
-            child(fid, s, "story")
-    for s in own_stories:
-        child(rid, s, "story")
-    for s in direct:
-        child(rid, s, "story")
-    for b in blocks:
-        nid = _diagram_node_id(b.id)
-        lines.append(f'  {rid} -.-> {nid}[["{b.id}<br/>{_clean_label(b.title)}"]]:::block')
-        lines.append(f'  click {nid} "{_page_url(b.folder, b.stem)}"')
-        drawn.append(_node_link(b))
-
-    lines += [
-        "  classDef root fill:#2f6fb3,stroke:#7fc0ff,color:#ffffff,stroke-width:2px,font-weight:bold;",
-        "  classDef feature fill:#d7dbe3,stroke:#9aa3b2,color:#15202e;",
-        "  classDef story fill:#f3f6fb,stroke:#c4ccd9,color:#15202e;",
-        "  classDef block fill:#e3efe6,stroke:#6f9b7c,color:#15202e;",
-    ]
-    if links is not None:
-        links.extend(drawn)
-    return "\n".join(lines)
-
-
-def _fr_hierarchy_node(hierarchy: dict, stem: str) -> tuple[dict | None, str | None]:
-    """Locate the built hierarchy node for a stem within build_fr_hierarchy()'s tree.
-    Returns (node, level) with level ∈ {epic, feature, story}, or the use case's
-    own level (sea, fish) for a use case that roots Agile children. An orphan
-    is found too, with its stories if it is a feature. (None, None) if the
-    stem is not an FR in the hierarchy (another notation, or an unknown page)."""
-    use_cases = hierarchy.get("use_cases") or []
-    for root, is_uc in [(e, False) for e in hierarchy["epics"]] + [(u, True) for u in use_cases]:
-        if root["stem"] == stem:
-            return root, (root["level"] if is_uc else "epic")
-        for f in root["features"]:
-            if f["stem"] == stem:
-                return f, "feature"
-            for s in f["stories"]:
-                if s["stem"] == stem:
-                    return s, "story"
-        for s in root["direct_stories"]:
-            if s["stem"] == stem:
-                return s, "story"
-    for o in hierarchy.get("orphans") or []:
-        if o["stem"] == stem:
-            return o, o["level"]
-        for s in o.get("stories") or []:
-            if s["stem"] == stem:
-                return s, "story"
-    return None, None
-
-
-def _fr_ancestors(stem: str) -> list[dict]:
-    """The parent chain for an FR (root first), walked over the first-parent
-    `parent:` edge across notations (a story may sit under a use case,
-    DR-038). Powers the FR-page breadcrumb. Cycle-guarded."""
-    pages = {p.stem: p for p in wiki.load_type("functional-requirement")}
-    out: list[dict] = []
-    cur, seen = pages.get(stem), {stem}
-    while cur:
-        ps = None
-        for ref in cur.as_list("parent"):
-            ps = _link_stem(ref)
-            if ps:
-                break
-        if not ps or ps in seen:
-            break
-        seen.add(ps)
-        parent = pages.get(ps)
-        if not parent:
-            break
-        out.append({"id": parent.id, "title": parent.title, "stem": parent.stem,
-                    "url": f"/functional-requirements/{parent.stem}"})
-        cur = parent
-    return list(reversed(out))
-
-
-# --- arc42 building blocks (A2) and the `drivers` link ----------------------
-#
-# One page per building block; levels come from `parent:` (a block whose parent
-# is empty, a context page or missing is level 1). The tree, a block's white box
-# and the "addressed by" side of `drivers:` are projections, never stored.
-
-def links_of(page: wiki.Page, field: str) -> list[str]:
-    """Existing target stems of a link field, in order, without duplicates.
-    Accepts '[[stem]]', '[[stem|alias]]', a bare stem, a single value or a
-    list, and the nested list YAML makes of an unquoted [[stem]]."""
-    by_stem = {p.stem for p in wiki.load_all_pages()}
-    out: list[str] = []
-
-    def walk(v: object) -> None:
-        if isinstance(v, (list, tuple)):
-            for x in v:
-                walk(x)
-            return
-        s = _link_stem(v) if v else ""
-        if s and s in by_stem and s not in out:
-            out.append(s)
-
-    walk(page.meta.get(field))
-    return out
-
-
-def _bb_parent(p: wiki.Page, bb_stems: set[str]) -> str | None:
-    return next((s for s in links_of(p, "parent") if s in bb_stems), None)
-
-
-def _level_tree(type_name: str, keep=None) -> list[dict]:
-    """The `parent:` levels of one type as nested dicts, level 1 first, by ID.
-    A page whose parent is empty, of another type, missing or filtered out by
-    `keep` is level 1. Every page appears exactly once: one caught in a
-    `parent:` cycle has no level-1 ancestor, so it is promoted to level 1
-    instead of vanishing."""
-    pages = {p.stem: p for p in wiki.load_type(type_name) if keep is None or keep(p)}
-    stems = set(pages)
-    children: dict[str | None, list[str]] = {}
-    for s, p in pages.items():
-        parent = next((x for x in links_of(p, "parent") if x in stems), None)
-        children.setdefault(parent, []).append(s)
-    seen: set[str] = set()
-
-    def node(s: str) -> dict:
-        seen.add(s)
-        p = pages[s]
-        kids = sorted((k for k in children.get(s, []) if k not in seen), key=lambda k: pages[k].id)
-        return {"stem": s, "id": p.id, "title": p.title, "status": p.status,
-                "state": page_state(p), "url": _page_url(p.folder, s),
-                "children": [node(k) for k in kids if k not in seen]}
-
-    roots = [node(s) for s in sorted(children.get(None, []), key=lambda k: pages[k].id)]
-    for s in sorted(stems - seen, key=lambda k: pages[k].id):
-        if s not in seen:
-            roots.append(node(s))
-    return sorted(roots, key=lambda n: n["id"])
-
-
-def build_bb_tree() -> list[dict]:
-    """The building-block levels (see _level_tree)."""
-    return _level_tree("building-block")
-
-
-def _bb_find(nodes: list[dict], stem: str) -> dict | None:
-    for n in nodes:
-        if n["stem"] == stem:
-            return n
-        hit = _bb_find(n["children"], stem)
-        if hit:
-            return hit
-    return None
-
-
-# Lifecycle marks on architecture diagrams (DR-010): planned and target
-# elements dashed when the diagram also shows others, outdated or deprecated
-# ones grey, a dotted edge from a replaced element to its successor.
-_DASHED = "stroke-dasharray:5 4"
-_GREYED = "fill:#eceef2,stroke:#9aa3b2,color:#6b7280"
-_FUTURE = ("planned", "target")
-
-
-def lifecycle(p: wiki.Page) -> str:
-    """The page's state, with `status: deprecated` counting as outdated."""
-    return "outdated" if p.status == "deprecated" else page_state(p)
-
-
-def _mixed(pages: list[wiki.Page]) -> bool:
-    lcs = {lifecycle(p) for p in pages}
-    return bool(lcs & set(_FUTURE)) and bool(lcs - set(_FUTURE))
-
-
-def _lifecycle_lines(shown: dict[str, tuple[str, wiki.Page]]) -> list[str]:
-    """Style lines and replaced-by edges for the elements of one diagram,
-    given as {stem: (mermaid id, page)}."""
-    mixed = _mixed([p for _, p in shown.values()])
-    lines: list[str] = []
-    for s, (nid, p) in shown.items():
-        lc = lifecycle(p)
-        if lc == "outdated":
-            lines.append(f"  style {nid} {_GREYED}")
-        elif lc in _FUTURE and mixed:
-            lines.append(f"  style {nid} {_DASHED}")
-        lines += [f'  {nid} -. "replaced by" .-> {shown[x][0]}'
-                  for x in links_of(p, "superseded-by") if x in shown]
-    return lines
-
-
-def _lifecycle_suffix(p: wiki.Page, mixed: bool) -> str:
-    lc = lifecycle(p)
-    if lc == "outdated" or (lc in _FUTURE and mixed):
-        return f" · {lc}"
-    return " · being replaced" if links_of(p, "superseded-by") else ""
-
-
-def build_whitebox(stem: str | None) -> str | None:
-    """Mermaid flowchart of a block's inside (stem=None: the whole system, i.e.
-    level 1): its children as boxes, their `uses:` among each other as arrows,
-    external interfaces they use as neighbour boxes; lifecycle marks per
-    _lifecycle_lines. None for a leaf."""
-    tree = build_bb_tree()
-    if stem is None:
-        kids = tree
-    else:
-        me = _bb_find(tree, stem)
-        kids = me["children"] if me else []
-    if not kids:
-        return None
-    inside = {n["stem"] for n in kids}
-    pages = {p.stem: p for p in wiki.load_type("building-block")}
-    eifs = {p.stem: p for p in wiki.load_type("external-interface")}
-    lines = ["flowchart LR"]
-    mixed = _mixed([pages[n["stem"]] for n in kids])
-    for n in kids:
-        sfx = _lifecycle_suffix(pages[n["stem"]], mixed)
-        lines.append(f'  {_diagram_node_id(n["id"])}["{n["id"]} · {_clean_label(n["title"])}{sfx}"]:::block')
-    neighbours: list[str] = []
-    edges: list[str] = []
-    outside: list[str] = []
-    for n in kids:
-        for t in links_of(pages[n["stem"]], "uses"):
-            if t in inside:
-                edges.append(f'  {_diagram_node_id(n["id"])} --> {_diagram_node_id(pages[t].id)}')
-            elif t in pages:
-                # a block elsewhere in the tree: drawn as a neighbour, so the
-                # dependency stays visible on this level
-                if t not in outside:
-                    outside.append(t)
-                edges.append(f'  {_diagram_node_id(n["id"])} --> {_diagram_node_id(pages[t].id)}')
-            elif t in eifs:
-                if t not in neighbours:
-                    neighbours.append(t)
-                edges.append(f'  {_diagram_node_id(n["id"])} --> {_diagram_node_id(eifs[t].id)}')
-    for t in outside:
-        lines.append(f'  {_diagram_node_id(pages[t].id)}["{pages[t].id} · {_clean_label(pages[t].title)}'
-                     f'{_lifecycle_suffix(pages[t], mixed)}"]:::outside')
-    for t in neighbours:
-        lines.append(f'  {_diagram_node_id(eifs[t].id)}["{_clean_label(eifs[t].title)}"]:::system')
-    lines += edges
-    lines += _lifecycle_lines({s: (_diagram_node_id(pages[s].id), pages[s])
-                               for s in [n["stem"] for n in kids] + outside})
-    lines += [
-        "  classDef block fill:#2f6fb3,stroke:#7fc0ff,color:#ffffff;",
-        "  classDef outside fill:#e3ecf7,stroke:#2f6fb3,stroke-dasharray:4 3,color:#15202e;",
-        "  classDef system fill:#d7dbe3,stroke:#9aa3b2,color:#15202e;",
-    ]
-    return "\n".join(lines)
-
-
-def _link_groups(stems: list[str]) -> list[dict]:
-    """Stems as link dicts grouped by type prefix, in the relations-panel order."""
-    by_stem = {p.stem: p for p in wiki.load_all_pages()}
-    buckets: dict[str, list] = {}
-    for s in stems:
-        p = by_stem[s]
-        t = _type_of(s)
-        buckets.setdefault(t, []).append({"id": p.id, "label": p.title, "type": t,
-                                          "url": _page_url(p.folder, s)})
-    order = catalog.prefix_order()
-    ordered = order + [t for t in buckets if t not in order]
-    return [{"type": t, "label": catalog.group_label(t), "links": buckets[t]}
-            for t in ordered if t in buckets]
-
-
-def build_drivers(stem: str) -> list[dict]:
-    """The requirements a decision record or building block rests on."""
-    p = next((q for q in wiki.load_all_pages() if q.stem == stem), None)
-    return _link_groups(links_of(p, "drivers")) if p else []
-
-
-# --- arc42 A1/A3/A4/A5 and `state` (DR-010) ----------------------------------
-#
-# Every architecture page says whether it describes today's landscape or the
-# target (`state:`); a replaced current-state page names its successor in
-# `superseded-by:`. Crosscutting concepts govern blocks and nodes
-# (`applies-to:`), runtime scenarios order interactions (`steps:`) and name the
-# requirement they carry out (`realizes:`), nodes host blocks and connect to
-# each other. All reverse sides are projected here, never stored.
-
-ARCH_TYPES = ("solution-strategy", "building-block", "crosscutting-concept", "runtime-scenario",
-              "deployment-node")
-# The types whose `drivers:` the Addressed-by panel reads (proj-addressed-by).
-# A runtime scenario names its requirement in `realizes:` instead.
-_DRIVER_TYPES = ("decision-record",) + tuple(t for t in ARCH_TYPES if t != "runtime-scenario")
-_STATES = ("outdated", "current", "planned", "target")
-
-
-def page_state(p: wiki.Page) -> str:
-    """'current' or 'target'; empty or unknown values count as target."""
-    v = str(p.meta.get("state") or "").strip().lower()
-    return v if v in _STATES else "target"
-
-
-def _scalar(v: object) -> object:
-    """An unquoted `[[stem]]` in YAML is a nested list [['stem']]: unwrap it to
-    'stem' so structured entries accept the same link forms as links_of."""
-    while isinstance(v, (list, tuple)):
-        v = v[0] if v else ""
-    return v
-
-
-def _struct_targets(p: wiki.Page, field: str, keys: tuple[str, ...]) -> list[str]:
-    """Existing target stems named under `keys` in a structured-list field
-    (`steps:` from/to, `connects:` to), in order, without duplicates."""
-    by_stem = {q.stem for q in wiki.load_all_pages()}
-    out: list[str] = []
-    entries = p.meta.get(field) or []
-    for e in entries if isinstance(entries, list) else []:
-        if not isinstance(e, dict):
-            continue
-        for k in keys:
-            v = _scalar(e.get(k))
-            t = _link_stem(v) if v else ""
-            if t and t in by_stem and t not in out:
-                out.append(t)
-    return out
-
-
-def build_addressed_by(stem: str) -> list[dict]:
-    """Decision records and architecture pages whose `drivers:` name this page."""
-    hits = [p.stem for t in _DRIVER_TYPES for p in sorted(wiki.load_type(t), key=lambda q: q.id)
-            if stem in links_of(p, "drivers")]
-    return _link_groups(hits)
-
-
-def build_realized_by(stem: str) -> list[dict]:
-    """The runtime scenarios whose `realizes:` name this page (rel-realizes)."""
-    return _link_groups([p.stem for p in sorted(wiki.load_type("runtime-scenario"), key=lambda q: q.id)
-                         if stem in links_of(p, "realizes")])
-
-
-# Requirement types a `drivers:` link may point at (rel-drivers).
-_ADDRESSABLE = ("goal", "functional-requirement", "quality-requirement", "constraint",
-                "activity-model")
-# Types a runtime scenario's `realizes:` may point at (rel-realizes).
-_REALIZABLE = ("functional-requirement", "activity-model")
-
-
-def build_trace(stem: str, folder: str) -> dict:
-    """The typed traceability panels of one page: drivers + shaped-by on
-    architecture pages and decision records, the arc42 forward and reverse
-    links, addressed-by and realized-by on a requirement. Empty lists where a
-    panel does not apply."""
-    keys = ("drivers", "realizes", "shaped_by", "used_by", "addressed_by", "realized_by", "replaced_by",
-            "replaces", "applies_to", "governed_by", "hosts", "deployed_on", "takes_part_in")
-    trace: dict = {k: [] for k in keys}
-    me = (next((p for p in wiki.load_folder(folder) if p.stem == stem), None)
-          if wiki._is(folder, *ARCH_TYPES, "decision-record") else None)
-    if wiki._is(folder, *_DRIVER_TYPES):
-        trace["drivers"] = build_drivers(stem)
-    if wiki._is(folder, "runtime-scenario") and me:
-        trace["realizes"] = _link_groups(links_of(me, "realizes"))
-    if me and not wiki._is(folder, "decision-record"):
-        trace["shaped_by"] = _link_groups(links_of(me, "decisions"))
-    if me:
-        trace["replaced_by"] = _link_groups(links_of(me, "superseded-by"))
-        trace["replaces"] = _link_groups([p.stem for p in sorted(wiki.load_folder(folder), key=lambda q: q.id)
-                                          if stem in links_of(p, "superseded-by")])
-    if wiki._is(folder, "building-block"):
-        trace["used_by"] = _link_groups([p.stem for p in sorted(wiki.load_folder(folder), key=lambda q: q.id)
-                                         if stem in links_of(p, "uses")])
-        trace["deployed_on"] = _link_groups([p.stem for p in sorted(wiki.load_type("deployment-node"), key=lambda q: q.id)
-                                             if stem in links_of(p, "hosts")])
-    if wiki._is(folder, "building-block", "deployment-node"):
-        trace["governed_by"] = _link_groups([p.stem for p in sorted(wiki.load_type("crosscutting-concept"), key=lambda q: q.id)
-                                             if stem in links_of(p, "applies-to")])
-    if wiki._is(folder, "building-block", "deployment-node", "external-interface", "stakeholder"):
-        trace["takes_part_in"] = _link_groups(
-            [p.stem for p in sorted(wiki.load_type("runtime-scenario"), key=lambda q: q.id)
-             if stem in _struct_targets(p, "steps", ("from", "to"))])
-    if wiki._is(folder, "crosscutting-concept") and me:
-        trace["applies_to"] = _link_groups(links_of(me, "applies-to"))
-    if wiki._is(folder, "deployment-node") and me:
-        trace["hosts"] = _link_groups(links_of(me, "hosts"))
-    if wiki._is(folder, *_ADDRESSABLE):
-        trace["addressed_by"] = build_addressed_by(stem)
-    if wiki._is(folder, *_REALIZABLE):
-        trace["realized_by"] = build_realized_by(stem)
-    # the stories that realize a use case are its breakdown on the FR page
-    # (DR-038); realized_by holds the runtime scenarios only
-    return trace
-
-
-# Runtime scenario (A4): the `steps:` list is the model, the sequence diagram
-# its projection.
-
-def _endpoint_stem(text: str, by_stem: dict) -> str:
-    """The stem a `from`/`to` names: a wikilink's target, or plain text that is
-    a page stem or a path ending in one. Other plain text keeps every
-    character, `/` included ("TCP/IP Gateway")."""
-    if "[[" in text:
-        return _link_stem(text)
-    if text in by_stem:
-        return text
-    last = text.rsplit("/", 1)[-1].strip()
-    return last if last in by_stem else text
-
-
-def _endpoint(raw: object, by_stem: dict) -> tuple[str | None, str]:
-    """(stem or None, label) of one `from`/`to`: an existing page gives its
-    stem and 'ID · title' (a stakeholder or interface just its title); a
-    dangling link or plain text keeps its text as the label."""
-    text = str(_scalar(raw) or "").strip()
-    stem = _endpoint_stem(text, by_stem) if text else ""
-    p = by_stem.get(stem)
-    if not p:
-        return None, stem or "?"
-    if wiki._is(p.folder, "stakeholder", "external-interface"):
-        return stem, _clean_label(p.title)
-    return stem, f"{p.id} · {_clean_label(p.title)}"
-
-
-def _entries(p: wiki.Page, field: str) -> list:
-    v = p.meta.get(field) or []
-    return v if isinstance(v, list) else [v]
-
-
-def steps_of(p: wiki.Page) -> list[dict]:
-    """The scenario's steps in order, each with its 1-based position in
-    `steps:`. Entries that are not mappings are not steps; runtime_hints
-    names them."""
-    by_stem = {q.stem: q for q in wiki.load_all_pages()}
-    out: list[dict] = []
-    for n, e in enumerate(_entries(p, "steps"), 1):
-        if not isinstance(e, dict):
-            continue
-        fs, fl = _endpoint(e.get("from"), by_stem)
-        ts, tl = _endpoint(e.get("to"), by_stem)
-        out.append({"n": n, "from_stem": fs, "from_label": fl, "to_stem": ts, "to_label": tl,
-                    "message": str(e.get("message") or ""), "note": str(e.get("note") or "")})
-    return out
-
-
-_MM_ENTITY = {"#": "#35;", ";": "#59;"}
-
-
-def _mm_escape(s: str) -> str:
-    """`#` and `;` as mermaid entity codes, in one pass (a second pass would
-    re-escape the `;` of `#35;`), whitespace collapsed."""
-    return re.sub(r"[#;]", lambda m: _MM_ENTITY[m.group()], " ".join(s.split()))
-
-
-def _seq_text(s: str) -> str:
-    """Message/note text that cannot end the mermaid statement early."""
-    return _mm_escape(s)
-
-
-def build_sequence_diagram(stem: str) -> str | None:
-    """Mermaid sequenceDiagram of a runtime scenario: one participant per distinct
-    end in order of first appearance (stakeholders as actors), one arrow per
-    step, the step's note over the receiver. None without steps."""
-    p = next((q for q in wiki.load_type("runtime-scenario") if q.stem == stem), None)
-    steps = steps_of(p) if p else []
-    if not steps:
-        return None
-    by_stem = {q.stem: q for q in wiki.load_all_pages()}
-    # Ids are L1, L2, … per distinct end — an existing page by its stem, any
-    # other end by its text — so no name can collide with a mermaid keyword
-    # (`end`, `box`, `note` …) or sanitise onto another end's id.
-    order: list[tuple[str, str, str]] = []          # (participant id, label, keyword)
-    nid_of: dict[str, str] = {}
-
-    def key(sstem: str | None, label: str) -> str:
-        return f"page:{sstem}" if sstem else f"text:{label}"
-
-    for st in steps:
-        for sstem, label in ((st["from_stem"], st["from_label"]), (st["to_stem"], st["to_label"])):
-            k = key(sstem, label)
-            if k in nid_of:
-                continue
-            nid_of[k] = f"L{len(nid_of) + 1}"
-            kw = "actor" if sstem and wiki._is(by_stem[sstem].folder, "stakeholder") else "participant"
-            order.append((nid_of[k], _seq_text(label), kw))
-    lines = ["sequenceDiagram"] + [f"  {kw} {nid} as {label}" for nid, label, kw in order]
-    for st in steps:
-        a = nid_of[key(st["from_stem"], st["from_label"])]
-        b = nid_of[key(st["to_stem"], st["to_label"])]
-        lines.append(f"  {a}->>{b}: {_seq_text(st['message']) or ' '}")
-        if st["note"]:
-            lines.append(f"  Note over {b}: {_seq_text(st['note'])}")
-    return "\n".join(lines)
-
-
-def _bb_ancestors(stem: str, pages: dict) -> list[str]:
-    """The block and its `parent:` chain, cycle-safe."""
-    out: list[str] = []
-    while stem and stem not in out and stem in pages:
-        out.append(stem)
-        stem = _bb_parent(pages[stem], set(pages))
-    return out
-
-
-def runtime_hints(stem: str) -> list[str]:
-    """Where a scenario disagrees with the rest of the wiki
-    (rule-runtime-matches-uses): entries that are not steps, empty ends, ends
-    that name no page, and steps between two blocks with no `uses:` edge
-    between them or their ancestors. Advisory."""
-    p = next((q for q in wiki.load_type("runtime-scenario") if q.stem == stem), None)
-    if not p:
-        return []
-    blocks = {q.stem: q for q in wiki.load_type("building-block")}
-    hints: list[str] = []
-    for n, e in enumerate(_entries(p, "steps"), 1):
-        if not isinstance(e, dict):
-            hints.append(f"step {n}: not a {{from, to, message}} entry, not drawn")
-    for st in steps_of(p):
-        for end in ("from", "to"):
-            label, sstem = st[f"{end}_label"], st[f"{end}_stem"]
-            h = f"step {st['n']}: {end}: is empty" if label == "?" else f"{label}: no such page"
-            if not sstem and h not in hints:
-                hints.append(h)
-        a, b = st["from_stem"], st["to_stem"]
-        if a in blocks and b in blocks and a != b:
-            targets = set(_bb_ancestors(b, blocks))
-            if not any(set(links_of(blocks[x], "uses")) & targets for x in _bb_ancestors(a, blocks)):
-                h = f"{blocks[a].id} → {blocks[b].id}: no uses: edge"
-                if h not in hints:
-                    hints.append(h)
-    return hints
-
-
-# Deployment view (A3): nodes nested by `parent:`, the blocks they host inside
-# them, `connects:` as protocol-labelled edges. One diagram per state, so
-# today's landscape and the target are never mixed.
-
-def build_node_tree() -> list[dict]:
-    """The deployment-node levels."""
-    return _level_tree("deployment-node")
-
-
-def _edge_text(s: object) -> str:
-    """Edge label text that survives inside mermaid's double quotes."""
-    return _mm_escape(str(s or "")).replace('"', "'")
-
-
-def build_deployment_diagram(root: str | None = None,
-                             links: list[dict] | None = None) -> str | None:
-    """Mermaid flowchart of every deployment node — existing, planned and
-    replaced in one picture, marked per _lifecycle_lines — or of the subtree
-    under `root`. A node with children or hosted blocks is a subgraph; hosted
-    blocks are boxes inside it; `connects:` edges carry their protocol;
-    external interfaces are neighbour boxes. None when no node matches. Edges
-    to nodes outside a subtree are left out; deployment_hints names the
-    entries that cannot be drawn. `links`, when given, receives every page
-    drawn as a node: deployment nodes, then blocks, then interfaces (QR-001)."""
-    tree = build_node_tree()
-    if root is not None:
-        me = _bb_find(tree, root)
-        tree = [me] if me else []
-    if not tree:
-        return None
-    nodes = {p.stem: p for p in wiki.load_type("deployment-node")}
-    blocks = {p.stem: p for p in wiki.load_type("building-block")}
-    eifs = {p.stem: p for p in wiki.load_type("external-interface")}
-    shown: set[str] = set()
-    marked: dict[str, tuple[str, wiki.Page]] = {}
-    lines = ["flowchart TB"]
-
-    def walk(ns: list[dict]):
-        for n in ns:
-            yield n
-            yield from walk(n["children"])
-
-    inside = [nodes[n["stem"]] for n in walk(tree)]
-    inside += [blocks[b] for p in inside for b in links_of(p, "hosts") if b in blocks]
-    mixed = _mixed(inside)
-
-    def emit(n: dict, depth: int) -> None:
-        p, pad = nodes[n["stem"]], "  " * depth
-        nid = _diagram_node_id(p.id)
-        label = f'{p.id} · {_clean_label(p.title)}'
-        tech = _clean_label(p.meta.get("technology") or "")
-        if tech:
-            label += f" ({tech})"
-        label += _lifecycle_suffix(p, mixed)
-        shown.add(n["stem"])
-        marked[n["stem"]] = (nid, p)
-        hosted = [b for b in links_of(p, "hosts") if b in blocks]
-        if not n["children"] and not hosted:
-            lines.append(f'{pad}{nid}["{label}"]:::infra')
-            return
-        lines.append(f'{pad}subgraph {nid}["{label}"]')
-        for b in hosted:
-            bp = blocks[b]
-            bid = f"{nid}_{_diagram_node_id(bp.id)}"
-            marked[f"{n['stem']}/{b}"] = (bid, bp)
-            lines.append(f'{pad}  {bid}["{bp.id} · {_clean_label(bp.title)}{_lifecycle_suffix(bp, mixed)}"]:::block')
-        for c in n["children"]:
-            emit(c, depth + 1)
-        lines.append(f"{pad}end")
-
-    for n in tree:
-        emit(n, 1)
-    neighbours: list[str] = []
-    edges: list[str] = []
-    for s in sorted(shown, key=lambda k: nodes[k].id):
-        for e in _entries(nodes[s], "connects"):
-            if not isinstance(e, dict):
-                continue
-            v = _scalar(e.get("to"))
-            t = _link_stem(v) if v else ""
-            if t in shown:
-                target = _diagram_node_id(nodes[t].id)
-            elif t in eifs:
-                target = _diagram_node_id(eifs[t].id)
-                if t not in neighbours:
-                    neighbours.append(t)
-            else:
-                continue
-            proto = " · ".join(x for x in (_edge_text(e.get("protocol")), _edge_text(e.get("note"))) if x)
-            arrow = f' -- "{proto}" --> ' if proto else " --> "
-            edges.append(f"  {_diagram_node_id(nodes[s].id)}{arrow}{target}")
-    for t in neighbours:
-        lines.append(f'  {_diagram_node_id(eifs[t].id)}["{_clean_label(eifs[t].title)}"]:::system')
-    lines += edges
-    if links is not None:
-        hosted = {b for s in shown for b in links_of(nodes[s], "hosts") if b in blocks}
-        links.extend(_node_link(nodes[s]) for s in sorted(shown, key=lambda k: nodes[k].id))
-        links.extend(_node_link(blocks[b]) for b in sorted(hosted, key=lambda k: blocks[k].id))
-        links.extend(_node_link(eifs[t]) for t in neighbours)
-    lines += _lifecycle_lines(dict(sorted(marked.items(), key=lambda kv: kv[1][0])))
-    lines += [
-        "  classDef infra fill:#e3ecf7,stroke:#2f6fb3,color:#15202e;",
-        "  classDef block fill:#2f6fb3,stroke:#7fc0ff,color:#ffffff;",
-        "  classDef system fill:#d7dbe3,stroke:#9aa3b2,color:#15202e;",
-    ]
-    return "\n".join(lines)
-
-
-def deployment_hints(stem: str | None = None) -> list[str]:
-    """What the deployment diagrams leave out, for one node or all: `connects:`
-    entries that are not mappings or name no page, `hosts:` entries that are
-    not building blocks. Advisory."""
-    nodes = {p.stem: p for p in wiki.load_type("deployment-node")}
-    blocks = {p.stem for p in wiki.load_type("building-block")}
-    pages = {p.stem for p in wiki.load_all_pages()}
-    hints: list[str] = []
-    for s in sorted(nodes, key=lambda k: nodes[k].id) if stem is None else [stem]:
-        p = nodes.get(s)
-        if not p:
-            continue
-        for n, e in enumerate(_entries(p, "connects"), 1):
-            if not isinstance(e, dict):
-                hints.append(f"{p.id} connects entry {n}: not a {{to, protocol}} entry, not drawn")
-                continue
-            v = _scalar(e.get("to"))
-            t = _link_stem(v) if v else ""
-            if not t:
-                hints.append(f"{p.id} connects entry {n}: to: is empty, not drawn")
-            elif t not in pages:
-                hints.append(f"{p.id} connects {t}: no such page")
-        for b in links_of(p, "hosts"):
-            if b not in blocks:
-                hints.append(f"{p.id} hosts {b}: not a building block, not drawn")
-    return hints
-
-
-def trace_stems(trace: dict) -> set[str]:
-    """Every page a trace panel already shows, to keep it out of the generic one."""
-    return {Path(l["url"]).name for groups in trace.values() for g in groups for l in g["links"]}
-
-
 @app.route("/arc42/building-blocks")
 def building_blocks_view():
     """A2 Building Block View: the level tree and the level-1 white box."""
@@ -2819,8 +682,8 @@ def building_blocks_view():
     pages = wiki.load_type("building-block")
     rows = [_arch_row(p) for p in sorted(pages, key=lambda q: q.id)]
     return render_template(
-        "building_blocks.html", block=block, tree=build_bb_tree(), total=len(pages),
-        whitebox=build_whitebox(None), maturity=maturity(p.status for p in pages), rows=rows,
+        "building_blocks.html", block=block, tree=project.architecture.build_bb_tree(), total=len(pages),
+        whitebox=project.architecture.build_whitebox(None), maturity=project.common.maturity(p.status for p in pages), rows=rows,
     )
 
 
@@ -2832,8 +695,8 @@ _CONCEPT_CATEGORIES = [
 
 
 def _arch_row(p: wiki.Page) -> dict:
-    return {"id": p.id, "title": p.title, "status": p.status, "state": page_state(p),
-            "url": _page_url(p.folder, p.stem)}
+    return {"id": p.id, "title": p.title, "status": p.status, "state": project.architecture.page_state(p),
+            "url": links_module._page_url(p.folder, p.stem)}
 
 
 @app.route("/arc42/strategy")
@@ -2845,12 +708,12 @@ def strategy_view():
     rows = []
     for p in pages:
         row = _arch_row(p)
-        row["drivers"] = _link_groups(links_of(p, "drivers"))
-        row["decisions"] = _link_groups(links_of(p, "decisions"))
-        row["replaced_by"] = _link_groups(links_of(p, "superseded-by"))
+        row["drivers"] = project.architecture._link_groups(links_module.links_of(p, "drivers"))
+        row["decisions"] = project.architecture._link_groups(links_module.links_of(p, "decisions"))
+        row["replaced_by"] = project.architecture._link_groups(links_module.links_of(p, "superseded-by"))
         rows.append(row)
     return render_template("strategy.html", block=block, rows=rows, total=len(pages),
-                           maturity=maturity(p.status for p in pages))
+                           maturity=project.common.maturity(p.status for p in pages))
 
 
 @app.route("/arc42/concepts")
@@ -2869,7 +732,7 @@ def concepts_view():
                 continue
             row = _arch_row(p)
             row["unknown_category"] = raw if raw and cat not in known else ""
-            row["applies_to"] = _link_groups(links_of(p, "applies-to"))
+            row["applies_to"] = project.architecture._link_groups(links_module.links_of(p, "applies-to"))
             rows.append(row)
         if rows:
             groups.append({"label": label, "rows": rows})
@@ -2880,7 +743,7 @@ def concepts_view():
         row["category"] = known.get(raw.lower(), raw)
         flat.append(row)
     return render_template("concepts.html", block=block, groups=groups, total=len(pages),
-                           rows=flat, maturity=maturity(p.status for p in pages))
+                           rows=flat, maturity=project.common.maturity(p.status for p in pages))
 
 
 @app.route("/arc42/runtime")
@@ -2891,11 +754,11 @@ def runtime_view():
     rows = []
     for p in pages:
         row = _arch_row(p)
-        row["realizes"] = _link_groups(links_of(p, "realizes"))
-        row["steps"] = len(steps_of(p))
+        row["realizes"] = project.architecture._link_groups(links_module.links_of(p, "realizes"))
+        row["steps"] = len(project.architecture.steps_of(p))
         rows.append(row)
     return render_template("runtime.html", block=block, rows=rows, total=len(pages),
-                           maturity=maturity(p.status for p in pages))
+                           maturity=project.common.maturity(p.status for p in pages))
 
 
 @app.route("/arc42/deployment")
@@ -2910,133 +773,13 @@ def deployment_view():
         row["stereotype"] = str(p.meta.get("stereotype") or "").strip()
         rows.append(row)
     diagram_links: list[dict] = []
-    diagram = build_deployment_diagram(links=diagram_links)
+    diagram = project.architecture.build_deployment_diagram(links=diagram_links)
     return render_template("deployment.html", block=block, diagram=diagram,
                            diagram_links=[l for l in diagram_links
                                           if not l["url"].startswith(f"/page/{catalog.folder('deployment-node')}/")],
-                           hints=deployment_hints(), rows=rows,
-                           tree=build_node_tree(), total=len(pages),
-                           maturity=maturity(p.status for p in pages))
-
-
-# --- global search ---------------------------------------------------------
-
-# Frontmatter fields searched as plain words (FR-006). Link fields (parent,
-# sources, related, drivers …) are left out: their values are file names.
-SEARCH_FIELDS = ["tags", "status", "stereotype", "notation", "level", "priority", "kind", "state",
-                 "category", "dimensions"]
-
-_MD_LINK_RE = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")
-_HTML_TAG_RE = re.compile(r"<[^>]+>")
-_SOURCE_ID_RE = re.compile(r"[A-Z]+-\d+")
-# Lines that label a page's structure rather than say something: headings,
-# callout titles and bold-only lines such as **PROBLEM / GOAL**. A bold lead
-# label such as **Snapshot.** goes too, the text after it stays. The note
-# "> follows [[MADR]]" goes before, by the page's own test (drop_follows).
-_HEADING_LINE_RE = re.compile(r"^\s*(?:#{1,6}\s|>\s*\[![\w-]+\]|\*\*[^*]+\*\*\s*$)")
-_LEAD_LABEL_RE = re.compile(r"^(\s*(?:[-*+]\s+)?)\*\*[^*]{1,60}[.:]\*\*\s+")
-_LINE_MARK_RE = re.compile(r"^\s*(?:#{1,6}\s+|>\s*(?:\[![\w-]+\][-+]?\s*)?|[-*+]\s+(?:\[[ xX]\]\s+)?|\d+[.)]\s+)+")
-_EMPHASIS_RE = re.compile(r"\*\*|__|~~|`|(?<!\w)\*(?=\S)|(?<=\S)\*(?!\w)")
-
-
-def search_plain(page: wiki.Page, titles: dict[str, str]) -> str:
-    """A page body as the reader sees it, for search: wikilinks become their
-    label (or the target's title), markdown and HTML markup go, hard-wrapped
-    prose is joined. One line per paragraph or list item, so the ranker can
-    cut passages. Headings and labels go (`_HEADING_LINE_RE`), and so do the
-    "follows" notes the page shows as head labels (`drop_follows`).
-    An unlabelled provenance link to raw/sources becomes the source's ID
-    (`SRC-006`): its file name or title would match words such as
-    "grilling" on most pages, and dropping it leaves "came from ." holes."""
-    def link_text(m: re.Match) -> str:
-        target, label = m.group(1).strip(), m.group(2)
-        base = target.split("/")[-1]
-        if label:
-            return label.strip()
-        if target.startswith("raw/") or base.startswith("SRC-"):
-            src = source_index().get(base)
-            return src.id if src else _SOURCE_ID_RE.match(base).group(0) if _SOURCE_ID_RE.match(base) else ""
-        return titles.get(base, target)
-
-    body = _unwrap_prose(drop_follows(page.body))
-    body = wiki.WIKILINK_RE.sub(link_text, body)
-    body = _MD_LINK_RE.sub(lambda m: m.group(1), body)
-    body = _HTML_TAG_RE.sub(" ", body)
-    lines = []
-    for line in body.splitlines():
-        if line.strip().startswith("```") or _TABLE_SEP_RE.match(line) or _HEADING_LINE_RE.match(line):
-            continue
-        line = _LEAD_LABEL_RE.sub(r"\1", line)
-        line = _LINE_MARK_RE.sub("", line)
-        line = _EMPHASIS_RE.sub("", line).replace("|", " ")
-        line = re.sub(r"\s+", " ", line).strip()
-        if line and line != "---":
-            lines.append(line)
-    return "\n".join(lines)
-
-
-def _search_fields(page: wiki.Page) -> dict[str, list[str]]:
-    out: dict[str, list[str]] = {}
-    for key in SEARCH_FIELDS:
-        v = page.meta.get(key)
-        vals = v if isinstance(v, list) else [v]
-        vals = [str(x).strip().lower() for x in vals if x is not None and str(x).strip()]
-        if vals:
-            out[key] = vals
-    return out
-
-
-def _search_links(pages: list[wiki.Page]) -> dict[str, set[str]]:
-    """page id -> ids one link step away, in either direction (FR-008)."""
-    idx = link_index()
-    by_stem = {p.stem: p for p in pages}
-    out: dict[str, set[str]] = {p.id: set() for p in pages}
-    for p in pages:
-        for t in p.link_targets():
-            dest = idx.get(t)
-            if not dest or dest[1] not in by_stem:
-                continue
-            other = by_stem[dest[1]].id
-            if other != p.id:
-                out[p.id].add(other)
-                out.setdefault(other, set()).add(p.id)
-    return out
-
-
-def build_search_records() -> list[dict]:
-    """A flat index over every wiki page, ranked client-side by
-    static/search-rank.js. Each record links to that unit's own detail page
-    and carries the reader's text (`plain`), `aliases`, the searched `fields`
-    (lower-cased) and the ids of its neighbours (`links`)."""
-    pages = wiki.load_all_pages()
-    titles = title_index()
-    neighbours = _search_links(pages)
-    records = []
-    for p in pages:
-        records.append({
-            "id": p.id,
-            "type": catalog.label(p.folder),
-            "title": p.title,
-            "status": p.status,
-            "url": _page_url(p.folder, p.stem),
-            "aliases": [str(a) for a in p.aliases],
-            "plain": search_plain(p, titles),
-            "fields": _search_fields(p),
-            "links": sorted(neighbours.get(p.id, ())),
-        })
-    return records
-
-
-def search_synonyms() -> list[list[str]]:
-    """Each domain term's title plus its aliases, lower-cased. The search
-    treats a group as one word (FR-003)."""
-    return [[str(w).strip().lower() for w in [p.title, *p.aliases] if str(w).strip()]
-            for p in domain_terms()]
-
-
-def build_search_index() -> dict:
-    """What /search.json serves and /search embeds: {records, synonyms}."""
-    return {"records": build_search_records(), "synonyms": search_synonyms()}
+                           hints=project.architecture.deployment_hints(), rows=rows,
+                           tree=project.architecture.build_node_tree(), total=len(pages),
+                           maturity=project.common.maturity(p.status for p in pages))
 
 
 # --- views -----------------------------------------------------------------
@@ -3055,14 +798,14 @@ def build_section_tile(section: dict) -> dict:
             "links": [], "active": section["scope"] == "in",
             "unit": "page", "unit_many": None, "count": 0}
     if section["scope"] != "in":
-        base["maturity"] = maturity([])
+        base["maturity"] = project.common.maturity([])
         base["open_issues"] = 0
         return base
     pages = [p for f in folders for p in wiki.load_folder(f)]
-    flags = open_issue_counts()
+    flags = project.common.open_issue_counts()
     # union, not sum: an issue linking pages in two of this section's folders
     # must count once, not twice.
-    t = {**base, "count": len(pages), "maturity": maturity(p.status for p in pages),
+    t = {**base, "count": len(pages), "maturity": project.common.maturity(p.status for p in pages),
          "open_issues": len(set().union(*(flags.get(f, set()) for f in folders))),
          "open_issues_href": f"/issues?section={sid}",
          "open_issues_title": "Show the open issues that point at pages of this section"}
@@ -3073,7 +816,7 @@ def build_section_tile(section: dict) -> dict:
         t["unit"] = "requirement"
     elif sid == "R4":
         t.update({"unit": "model page",
-                  "count": supporting_model_count()})
+                  "count": project.terms.supporting_model_count()})
     elif sid == "C1":
         t["unit"] = "scenario"
     elif sid == "C2":
@@ -3090,7 +833,7 @@ def build_section_tile(section: dict) -> dict:
                             {"label": "Term network", "href": "/graph/domain-terms"}]})
     elif sid == "C6":
         t.update({"unit": "issue",
-                  "open_issues": sum(1 for i in pages if is_open_issue(i.status)),
+                  "open_issues": sum(1 for i in pages if project.common.is_open_issue(i.status)),
                   "open_issues_href": "/issues?status=open",
                   "open_issues_title": "Show the open issues"})
     return t
@@ -3103,12 +846,12 @@ def build_area_tile(area: dict) -> dict:
     sections = visible_sections(area["key"])
     folders = [f for s in sections for f in s["folders"]]
     pages = [p for f in folders for p in wiki.load_folder(f)]
-    flags = open_issue_counts()
+    flags = project.common.open_issue_counts()
     tiles = {s["id"]: build_section_tile(s) for s in sections if s["scope"] == "in"}
     return {
         "key": area["key"], "label": area["label"], "subtitle": area["subtitle"],
         "href": area["href"], "colors": area["colors"],
-        "count": len(pages), "maturity": maturity(p.status for p in pages),
+        "count": len(pages), "maturity": project.common.maturity(p.status for p in pages),
         "open_issues": len(set().union(*(flags.get(f, set()) for f in folders if not wiki._is(f, "issue")))),
         "sections": [{"id": s["id"], "title": s["title"], "href": s["href"], "scope": s["scope"],
                       **({"count": tiles[s["id"]]["count"], "unit": tiles[s["id"]]["unit"],
@@ -3122,14 +865,14 @@ def build_valley() -> dict:
     """What the agent did: the vault's state, what moved last, what is open.
     Sits between the two peaks on the home page (DR-033)."""
     issues = wiki.load_type("issue")
-    open_issues = sorted((i for i in issues if is_open_issue(i.status)),
+    open_issues = sorted((i for i in issues if project.common.is_open_issue(i.status)),
                          key=lambda i: ({"blocker": 0, "major": 1, "minor": 2}
                                         .get(str(i.meta.get("severity") or ""), 3), i.id))
     return {
         "status": vault_status(),
         "changes": recent_changes(4),
         "open_issues": [{"id": i.id, "title": i.title, "stem": i.stem,
-                         "url": _page_url(i.folder, i.stem),
+                         "url": links_module._page_url(i.folder, i.stem),
                          "severity": str(i.meta.get("severity") or "")} for i in open_issues[:5]],
         "open_total": len(open_issues),
         "decision_count": len(wiki.load_type("decision-record")),
@@ -3143,7 +886,7 @@ def index():
     areas = {a["key"]: build_area_tile(a) for a in visible_areas()}
     join_url = public_url()
     return render_template("index.html", areas=areas, valley=build_valley(),
-                           vision_sentence=vision_sentence(vision_page(), title_index()),
+                           vision_sentence=project.goals.vision_sentence(project.goals.vision_page(), links_module.title_index()),
                            join_url=join_url, join_qr=qr_svg(join_url))
 
 
@@ -3158,8 +901,8 @@ def method_view():
     """The three loops, capture, inspect and clarify, by their principles
     (FR-011). Clarify links its issue while that issue is open."""
     issue = next((p for p in wiki.load_type("issue")
-                  if p.stem == CLARIFY_ISSUE and is_open_issue(p.status)), None)
-    clarify = ({"id": issue.id, "title": issue.title, "url": _page_url(issue.folder, issue.stem)}
+                  if p.stem == CLARIFY_ISSUE and project.common.is_open_issue(p.status)), None)
+    clarify = ({"id": issue.id, "title": issue.title, "url": links_module._page_url(issue.folder, issue.stem)}
                if issue else None)
     return render_template("method.html", clarify_issue=clarify)
 
@@ -3180,20 +923,20 @@ def changes_view():
 
 @app.route("/domain-terms")
 def glossary_view():
-    titles = title_index()
-    links = link_index()       # so definition wikilinks render as real hyperlinks
-    pages = domain_terms()
+    titles = links_module.title_index()
+    links = links_module.link_index()       # so definition wikilinks render as real hyperlinks
+    pages = project.terms.domain_terms()
     rows = []
     for p in pages:
         rows.append({
             "id": p.id,
-            "kind": term_kind(p),
+            "kind": project.terms.term_kind(p),
             "stem": p.stem,
             "folder": p.folder,
             "title": p.title,
             "aliases": p.aliases,
-            "definition": extract_labeled(p, "Definition", titles, links),
-            "relations": len(linked_stems(p)),
+            "definition": render.extract_labeled(p, "Definition", titles, links),
+            "relations": len(links_module.linked_stems(p)),
             "status": p.status,
             "created": str(p.meta.get("created", "")),
             "updated": str(p.meta.get("updated", "")),
@@ -3203,8 +946,8 @@ def glossary_view():
     rows.sort(key=lambda r: r["title"].lower())
     # the kind filter runs in the browser (static/list-view.js, FR-038)
     return render_template("glossary.html", rows=rows, total=len(rows),
-                           kinds=list(DOMAIN_MODEL_STEREOTYPES),
-                           maturity=maturity(p.status for p in pages))
+                           kinds=list(project.terms.DOMAIN_MODEL_STEREOTYPES),
+                           maturity=project.common.maturity(p.status for p in pages))
 
 
 @app.route("/graph/domain-terms")
@@ -3214,7 +957,7 @@ def glossary_graph_view():
     edge_filter = request.args.get("edges", "all")
     if edge_filter not in {"all", "related", "structured"}:
         edge_filter = "all"
-    graph = build_glossary_graph(edge_filter)
+    graph = project.terms.build_glossary_graph(edge_filter)
     counts = graph["layer_counts"]
     NAMED = [("STK", "Stakeholder"), ("EIF", "Interface"), ("GOAL", "Goals"),
              ("BB", "Building block")]
@@ -3228,7 +971,7 @@ def glossary_graph_view():
     # pages the layer buttons add
     def node_links(core: bool) -> list[dict]:
         found = [n["data"] for n in graph["nodes"] if bool(n["data"].get("core")) == core]
-        return [{"id": (_SOURCE_ID_RE.match(d["id"]) or [""])[0], "title": d["label"], "url": d["url"]}
+        return [{"id": (search._SOURCE_ID_RE.match(d["id"]) or [""])[0], "title": d["label"], "url": d["url"]}
                 for d in sorted(found, key=lambda d: d["label"].lower())]
     return render_template("graph.html", graph=graph, n_glo=n_glo,
                            term_links=node_links(True), nearby_links=node_links(False),
@@ -3240,7 +983,7 @@ def _issue_owner(p: wiki.Page, titles: dict[str, str],
     """Who is expected to answer an issue (FR-028): `key` for the filter,
     `label` to show, `url` when it names a wiki page. An empty owner gives
     key "" (nobody yet)."""
-    raw = str(_scalar(p.meta.get("owner")) or "").strip()
+    raw = str(project.architecture._scalar(p.meta.get("owner")) or "").strip()
     if raw.lower() in ("", "none", "null"):
         return {"key": "", "label": "", "url": None}
     # "[[stem|label]]" quoted, or "stem|label" when YAML read the unquoted
@@ -3251,7 +994,7 @@ def _issue_owner(p: wiki.Page, titles: dict[str, str],
     target = target.split("#")[0].strip()
     if target in links:
         folder, stem = links[target]
-        return {"key": stem, "label": alias or titles.get(stem, stem), "url": _page_url(folder, stem)}
+        return {"key": stem, "label": alias or titles.get(stem, stem), "url": links_module._page_url(folder, stem)}
     if linked or alias:
         return {"key": raw, "label": alias or target, "url": None}
     return {"key": raw, "label": raw, "url": None}
@@ -3262,24 +1005,16 @@ def _issue_owner(p: wiki.Page, titles: dict[str, str],
 _ISSUE_STATUS_GROUPS = ("open", "closed")
 
 
-@wiki._request_cached
-def _issue_vocab() -> dict[str, list[str]]:
-    """The values the metamodel allows for an issue's status and enum fields,
-    read once per request."""
-    return {"status": metamodel.lifecycle("issue"),
-            **{f: metamodel.field_values("issue", f) for f in ("severity", "kind", "category")}}
-
-
 def issue_fields(p: wiki.Page, titles: dict[str, str], links: dict[str, tuple[str, str]]) -> dict:
     """An issue's own fields as the list and its page show them (FR-025 to
     FR-028). A value outside the metamodel's list comes back empty."""
-    vocab = _issue_vocab()
+    vocab = project.common._issue_vocab()
     def known(field: str) -> str:
         v = str(p.meta.get(field) or "").strip()
         return v if v in vocab[field] else ""
     status = p.status if p.status in vocab["status"] else ""
     owner = _issue_owner(p, titles, links)
-    return {"status": status, "is_open": is_open_issue(p.status),
+    return {"status": status, "is_open": project.common.is_open_issue(p.status),
             "severity": known("severity"), "kind": known("kind"), "category": known("category"),
             "owner": owner["label"], "owner_key": owner["key"], "owner_url": owner["url"]}
 
@@ -3291,12 +1026,12 @@ _SEVERITY_RANK = {"blocker": 0, "major": 1, "minor": 2}
 def _issue_backlinks() -> dict[str, list[dict]]:
     """page stem -> the issues that link to it, by frontmatter or body
     wikilink (FR-027). A mere mention without a link does not count."""
-    titles, links = title_index(), link_index()
+    titles, links = links_module.title_index(), links_module.link_index()
     out: dict[str, list[dict]] = {}
     for iss in wiki.load_type("issue"):
         f = issue_fields(iss, titles, links)
         item = {"id": iss.id, "title": iss.title, "status": f["status"], "severity": f["severity"],
-                "is_open": f["is_open"], "url": _page_url(iss.folder, iss.stem)}
+                "is_open": f["is_open"], "url": links_module._page_url(iss.folder, iss.stem)}
         for stem in {links[t][1] for t in iss.link_targets() if t in links}:
             out.setdefault(stem, []).append(item)
     return out
@@ -3314,7 +1049,7 @@ def issues_view():
     """C6: every issue, filtered on the server by status, category, severity,
     section and owner (FR-025). Filters combine and live in the address, so a
     copied link shows the same issues. Unknown values are ignored."""
-    titles, links = title_index(), link_index()
+    titles, links = links_module.title_index(), links_module.link_index()
     pages = sorted(wiki.load_type("issue"), key=lambda x: x.id)
     lifecycle_values = metamodel.lifecycle("issue")
     categories = metamodel.field_values("issue", "category")
@@ -3326,7 +1061,7 @@ def issues_view():
         sections = sorted({folder_section[links[t][0]] for t in p.link_targets()
                            if t in links and links[t][0] in folder_section})
         items.append({"id": p.id, "title": p.title, **issue_fields(p, titles, links),
-                      "sections": sections, "url": _page_url(p.folder, p.stem)})
+                      "sections": sections, "url": links_module._page_url(p.folder, p.stem)})
 
     # the filters: only known values count, anything else shows every issue
     # one option per owner: a page by its title, whatever alias an issue uses
@@ -3376,14 +1111,14 @@ def issues_view():
         options={"status": lifecycle_values, "category": categories, "severity": severities,
                  "section": sections, "owner": owners},
         sort=arg("sort"),
-        maturity=maturity(p.status for p in pages),
+        maturity=project.common.maturity(p.status for p in pages),
     )
 
 
 @app.route("/stakeholders")
 def stakeholders_view():
-    titles = title_index()
-    links = link_index()       # snapshot wikilinks become real hyperlinks
+    titles = links_module.title_index()
+    links = links_module.link_index()       # snapshot wikilinks become real hyperlinks
     by_stem = {q.stem: q for q in wiki.load_all_pages()}   # resolve related domain terms
     pages = sorted(wiki.load_type("stakeholder"), key=lambda x: x.id)
     _REL_MAX = 6               # cap chips per row; rest is one click away on the detail page
@@ -3392,7 +1127,7 @@ def stakeholders_view():
         # domain terms the stakeholder points at — quick links to "additional
         # info" (the snapshot's inline links + `related:`), by id.
         rel = []
-        for s in sorted(linked_stems(p)):
+        for s in sorted(links_module.linked_stems(p)):
             q = by_stem.get(s)
             if q and wiki._is(q.folder, "domain-term"):
                 rel.append({"id": q.id, "label": q.title, "type": "DT",
@@ -3401,10 +1136,10 @@ def stakeholders_view():
         rows.append({
             "id": p.id,
             "stem": p.stem,
-            "url": _page_url(p.folder, p.stem),
+            "url": links_module._page_url(p.folder, p.stem),
             "title": p.title,
             "role": p.meta.get("role", ""),
-            "snapshot": extract_labeled(p, "Snapshot", titles, links),
+            "snapshot": render.extract_labeled(p, "Snapshot", titles, links),
             "influence": str(p.meta.get("influence") or ""),
             "interest": str(p.meta.get("interest") or ""),
             "rel_links": rel[:_REL_MAX],
@@ -3412,18 +1147,18 @@ def stakeholders_view():
             "status": p.status,
         })
     return render_template("stakeholders.html", rows=rows, total=len(rows),
-                           maturity=maturity(p.status for p in pages))
+                           maturity=project.common.maturity(p.status for p in pages))
 
 
 @app.route("/decisions")
 def decisions_view():
     """C7 Decisions: every decision record, filterable by kind (FR-009)."""
-    items = load_decisions()
+    items = project.architecture.load_decisions()
     labels = {"architecture": "Architecture", "business": "Business", "undefined": "Undefined"}
     buckets = [{"key": k, "label": labels[k], "count": sum(1 for d in items if d["kind"] == k)}
-               for k in DECISION_KINDS]
+               for k in project.architecture.DECISION_KINDS]
     return render_template("decisions.html", items=items, total=len(items), buckets=buckets,
-                           maturity=maturity(d["status"] for d in items))
+                           maturity=project.common.maturity(d["status"] for d in items))
 
 
 def _is_wiki_folder(folder: str) -> bool:
@@ -3439,7 +1174,7 @@ def _is_wiki_folder(folder: str) -> bool:
 def page_detail(folder, stem):
     """Detail page for a single content unit (any wiki page). Search results
     link here."""
-    titles = title_index()
+    titles = links_module.title_index()
     # FRs have their own rich page (full text + hierarchy breakdown) under the
     # functional-requirements/ path; send any /page link there so the whole
     # hierarchy stays on one route.
@@ -3459,19 +1194,19 @@ def page_detail(folder, stem):
     kind = catalog.label(folder)
     # drop the leading "# Title" heading from the body — shown in the page header
     body = re.sub(r"^\s*#\s+.*(?:\n|$)", "", page.body, count=1)
-    body_html = render_markdown(body, titles)
+    body_html = render.render_markdown(body, titles)
     # context pages carry the system-context diagram, projected live (DR-013)
     diagram_links: list[dict] = []
     context_diagram = build_context_diagram(links=diagram_links) if wiki._is(folder, "context") else None
-    context_flows = build_context_flows() if wiki._is(folder, "context") else None
+    context_flows = project.context.build_context_flows() if wiki._is(folder, "context") else None
     # domain terms carry a focused ego-graph snippet above the definition (DR-023)
-    ego_graph = build_glossary_ego_graph(stem) if wiki._is(folder, "domain-term") else None
-    trace = build_trace(stem, folder)
-    whitebox = build_whitebox(stem) if wiki._is(folder, "building-block") else None
-    sequence = build_sequence_diagram(stem) if wiki._is(folder, "runtime-scenario") else None
-    hints = (runtime_hints(stem) if wiki._is(folder, "runtime-scenario")
-             else deployment_hints(stem) if wiki._is(folder, "deployment-node") else [])
-    deployment = build_deployment_diagram(stem, diagram_links) if wiki._is(folder, "deployment-node") else None
+    ego_graph = project.terms.build_glossary_ego_graph(stem) if wiki._is(folder, "domain-term") else None
+    trace = project.architecture.build_trace(stem, folder)
+    whitebox = project.architecture.build_whitebox(stem) if wiki._is(folder, "building-block") else None
+    sequence = project.architecture.build_sequence_diagram(stem) if wiki._is(folder, "runtime-scenario") else None
+    hints = (project.architecture.runtime_hints(stem) if wiki._is(folder, "runtime-scenario")
+             else project.architecture.deployment_hints(stem) if wiki._is(folder, "deployment-node") else [])
+    deployment = project.architecture.build_deployment_diagram(stem, diagram_links) if wiki._is(folder, "deployment-node") else None
     ego_layers = None
     if ego_graph:
         c = ego_graph["layer_counts"]
@@ -3485,17 +1220,17 @@ def page_detail(folder, stem):
         status=page.status, **page_head(page),
         body_html=body_html, **_section_crumb(folder),
         context_diagram=context_diagram, context_flows=context_flows,
-        relations=build_relations_panel(stem, exclude=trace_stems(trace)),
+        relations=project.terms.build_relations_panel(stem, exclude=project.architecture.trace_stems(trace)),
         trace=trace, whitebox=whitebox,
-        state=page_state(page) if wiki._is(folder, *ARCH_TYPES) else None,
+        state=project.architecture.page_state(page) if wiki._is(folder, *project.architecture.ARCH_TYPES) else None,
         sequence=sequence, hints=hints, deployment=deployment, diagram_links=diagram_links,
         ego_graph=ego_graph, ego_layers=ego_layers,
         needs_mermaid=bool(context_diagram or whitebox or sequence or deployment) or "language-mermaid" in body_html,
-        sources=provenance(page),
-        issue=issue_fields(page, titles, link_index()) if wiki._is(folder, "issue") else None,
+        sources=project.common.provenance(page),
+        issue=issue_fields(page, titles, links_module.link_index()) if wiki._is(folder, "issue") else None,
         page_issues=open_issues_for(stem),
-        formats=format_labels(page.body),
-        term=term_fields(page) if wiki._is(folder, "domain-term") else None,
+        formats=render.format_labels(page.body),
+        term=project.terms.term_fields(page) if wiki._is(folder, "domain-term") else None,
     )
 
 
@@ -3527,10 +1262,10 @@ def source_detail(stem):
     came from, and which wiki pages it fed (`ingested-pages:`). Reached from a
     provenance chip on any sourced page; no standalone sources list exists yet,
     so its path is Home › source (FR-020)."""
-    src = source_index().get(stem)
+    src = links_module.source_index().get(stem)
     if not src:
         abort(404)
-    titles = title_index()
+    titles = links_module.title_index()
     body = re.sub(r"^\s*#\s+.*(?:\n|$)", "", src.body, count=1)
     # frontmatter values are human-entered and never trusted: escape every one
     # before it lands in body_html, which the template renders with `| safe`.
@@ -3542,8 +1277,8 @@ def source_detail(stem):
     # each ref is plain text: escaped around its wikilinks, label escaped
     # inside them, so a hostile one comes out as inert entities whether or
     # not it resolves to a real page.
-    ingested = ", ".join(render_wikilinks_text(str(r), titles, link_index()) for r in src.as_list("ingested-pages")) or "—"
-    body_html = f'<dl class="source-facts">{facts_html}<dt>Ingested pages</dt><dd>{ingested}</dd></dl>' + render_markdown(body, titles)
+    ingested = ", ".join(render.render_wikilinks_text(str(r), titles, links_module.link_index()) for r in src.as_list("ingested-pages")) or "—"
+    body_html = f'<dl class="source-facts">{facts_html}<dt>Ingested pages</dt><dd>{ingested}</dd></dl>' + render.render_markdown(body, titles)
     return render_template("detail.html", kind="Source", id=src.id, title=src.title, status=src.status,
                            **page_head(src), body_html=body_html, crumb=None, crumb_href=None,
                            context_diagram=None, context_flows=None,
@@ -3556,14 +1291,14 @@ def search_index():
     """The search index for the topbar's incremental search popup
     (static/search-popup.js); ranked client-side by static/search-rank.js,
     the same code the /search page uses."""
-    return jsonify(build_search_index())
+    return jsonify(search.build_search_index())
 
 
 @app.route("/search")
 def search_view():
     """Global search across all wiki content. Results render once and are
     filtered incrementally client-side; type facets allow browsing by content type."""
-    index = build_search_index()
+    index = search.build_search_index()
     tally: dict[str, int] = {}
     for r in index["records"]:
         tally[r["type"]] = tally.get(r["type"], 0) + 1
@@ -3596,13 +1331,6 @@ def _search_filters() -> dict[str, list[dict]]:
     return {"status": opts("status"), "priority": opts("priority", _PRIORITY_ORDER), "tag": opts("tags")}
 
 
-def _short_title(p: wiki.Page) -> str:
-    """Concise label for diagram nodes / tile rows. `short_title:` frontmatter
-    field wins; falls back to the full title. Defined per goal so the same label
-    is used everywhere a compact form is needed."""
-    return str(p.meta.get("short_title") or p.title).strip()
-
-
 def _mermaid_goal_tree(vision: wiki.Page, objectives: list[wiki.Page]) -> str | None:
     """Project the Vision→Objectives tree from `parent:` edges (DR-018 style).
     Top-down, short-name nodes; clicking a goal jumps to its anchor below.
@@ -3610,12 +1338,12 @@ def _mermaid_goal_tree(vision: wiki.Page, objectives: list[wiki.Page]) -> str | 
     desktop widths (≥1000 px) without horizontal scrolling."""
     if not vision or not objectives:
         return None
-    root = _clean_label(wiki_config()["system_name"], drop_parenthetical=False)
+    root = project.common._clean_label(wiki_config()["system_name"], drop_parenthetical=False)
     lines = ["graph TD", f'  V["Vision {root}"]:::vision',
              f'  click V "/goals#{vision.id}"']
     for o in objectives:
-        nid = _diagram_node_id(o.id)
-        label = _clean_label(_short_title(o))
+        nid = project.common._diagram_node_id(o.id)
+        label = project.common._clean_label(project.common._short_title(o))
         lines.append(f'  V --> {nid}["{o.id}<br/>{label}"]:::goal')
         # absolute target so the same diagram works on /goals (in-page anchor)
         # and on /req42 (cross-page navigation to the matching goal card)
@@ -3627,406 +1355,17 @@ def _mermaid_goal_tree(vision: wiki.Page, objectives: list[wiki.Page]) -> str | 
     return "\n".join(lines)
 
 
-# --- entity diagram projection (R4, DR-027) -------------------------------
-#
-# A domain term with `stereotype: entity | value-object | sum-type` is a class
-# in the diagram: identity, `attributes:` and a `relationships:` list in
-# frontmatter, which is where the edges come from. Body prose is for humans;
-# frontmatter is for the projection, the same split that makes the context
-# diagram work (`flows:`, DR-026).
-
-DOMAIN_MODEL_STEREOTYPES = ("entity", "value-object", "sum-type")
-
-
-def data_model_pages() -> list[wiki.Page]:
-    """The structured domain terms, by id."""
-    return sorted((page for page in wiki.load_type("domain-term")
-                   if str(page.meta.get("stereotype") or "").strip().lower() in DOMAIN_MODEL_STEREOTYPES),
-                  key=lambda page: page.id)
-
-
-# `kind:` -> (mermaid arrow, cardinalities are meaningful). Inheritance is the
-# odd one out: mermaid wants `Base <|-- Derived`, i.e. the edge is emitted
-# backwards from how the page states it, and a multiplicity on it is nonsense.
-_DM_ARROWS = {
-    "association": ("-->", True),
-    "aggregation": ("o--", True),
-    "composition": ("*--", True),
-    "inheritance": ("<|--", False),
-}
-
-
-# German umlauts and ß have a conventional ASCII spelling; every other accent
-# is dropped via NFKD below (é→e). Without this, the ASCII split treated "ü" as
-# a word boundary and the glossary term "Durchführungsart" was drawn as
-# "DurchfHrungsart" — legal mermaid, nonsense on a wall (atrium, 2026-10-14).
-_DM_TRANSLIT = str.maketrans({
-    "ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss",
-    "Ä": "Ae", "Ö": "Oe", "Ü": "Ue", "ẞ": "Ss",
-})
-
-
-def _dm_ascii(label: str) -> str:
-    """`label` with umlauts transliterated and remaining diacritics stripped."""
-    s = label.translate(_DM_TRANSLIT)
-    s = unicodedata.normalize("NFKD", s)
-    return "".join(c for c in s if not unicodedata.combining(c))
-
-
-def _dm_class_name(label: str, taken: set) -> str:
-    """A mermaid-safe class name that still reads like the entity. Collisions
-    are resolved rather than silently merged — two entities sharing a sanitised
-    name would otherwise become one box."""
-    # Capitalise each word BEFORE stripping separators, or "Piece for sale"
-    # becomes "Pieceforsale" — legal mermaid, unreadable on a wall.
-    words = re.split(r"[^A-Za-z0-9]+", _dm_ascii(_clean_label(label)))
-    base = "".join(w[:1].upper() + w[1:] for w in words if w) or "Entity"
-    if base[0].isdigit():
-        base = "E" + base
-    name, n = base, 2
-    while name in taken:
-        name, n = f"{base}{n}", n + 1
-    taken.add(name)
-    return name
-
-
-@wiki._request_cached
-def data_model_nodes() -> list[dict]:
-    """Every class in the model: one per structured domain term."""
-    return [{
-        "key": p.stem,
-        "id": p.id,
-        "label": p.title,
-        "context": str(p.meta.get("bounded-context") or "").strip(),
-        "stereotype": str(p.meta.get("stereotype") or "").strip().lower(),
-        "attributes": _extract_dm_attribute_names(p),
-        "aliases": p.aliases,
-        "url": f"/page/{p.folder}/{p.stem}",
-    } for p in data_model_pages()]
-
-
-@wiki._request_cached
-def data_model_edges() -> list[dict]:
-    """Relationships, read from `relationships:` frontmatter on structured terms. An
-    entry pointing at a page that does not exist is dropped, not drawn as a
-    dangling stub — a typo should leave a gap you notice, not a ghost class."""
-    by_stem = {n["key"] for n in data_model_nodes()}
-    out = []
-    for p in data_model_pages():
-        # A sum-type variant already names its sum type in `parent:` (DR-019).
-        # Draw that as the inheritance it is, rather than make the author repeat
-        # it as a relationship entry — one fact, one place.
-        for raw in p.as_list("parent"):
-            tgt = _link_stem(raw)
-            if tgt and tgt in by_stem and tgt != p.stem:
-                out.append({"source": p.stem, "target": tgt, "verb": "",
-                            "cardinality": "", "kind": "inheritance"})
-        out.extend(r for r in _dm_relationships(p) if r["target"] in by_stem)
-    return out
-
-
-def _dm_relationships(page: wiki.Page) -> list[dict]:
-    """The entries of a term's `relationships:` that name a target, as edges.
-    The target may be a stem no structured term has: the entity diagram drops
-    those, the term page lists them (FR-039)."""
-    out = []
-    for entry in page.as_list("relationships"):
-        if not isinstance(entry, dict):
-            continue
-        tgt = _link_stem(entry.get("to"))
-        if not tgt:
-            continue
-        kind = str(entry.get("kind") or "association").strip().lower()
-        if kind == "generalization":
-            kind = "inheritance"
-        multiplicity = entry.get("multiplicity")
-        if tgt == page.stem and kind == "inheritance":
-            continue                   # a term may refer to itself, not inherit from itself
-        out.append({
-            "source": page.stem,
-            "target": tgt,
-            "verb": _clean_label(str(entry.get("label") or "")),
-            "cardinality": str(multiplicity if multiplicity is not None else "").strip(),
-            "kind": kind if kind in _DM_ARROWS else "association",
-        })
-    return out
-
-
-@wiki._request_cached
-def data_model_contexts() -> list[str]:
-    """The bounded contexts present in the model, for the filter control."""
-    return sorted({n["context"] for n in data_model_nodes() if n["context"]})
-
-
-def build_data_model_full_diagram(context: str | None = None,
-                                  focus: str | None = None) -> str | None:
-    """Project a mermaid class diagram of the model (DR-027).
-
-    `context` narrows to one bounded context; `focus` narrows to one entity and
-    its direct neighbours, which is what makes this readable in a room — the
-    context diagram's own regression was fourteen nodes drawn at once (DR-026)
-    and this model will get larger than that.
-
-    Returns None when nothing survives the filter. `data_model.html` guards on
-    `entities`, not on this diagram, so None stays a valid answer.
-    """
-    nodes = data_model_nodes()
-    edges = data_model_edges()
-    if context:
-        keep = {n["key"] for n in nodes if n["context"] == context}
-    else:
-        keep = {n["key"] for n in nodes}
-    if focus:
-        if focus not in keep:
-            return None
-        neighbours = {focus}
-        for e in edges:
-            if e["source"] == focus:
-                neighbours.add(e["target"])
-            elif e["target"] == focus:
-                neighbours.add(e["source"])
-        keep &= neighbours
-    nodes = [n for n in nodes if n["key"] in keep]
-    if not nodes:
-        return None
-
-    taken: set[str] = set()
-    name_of = {n["key"]: _dm_class_name(n["label"], taken) for n in nodes}
-
-    def _decl(n) -> str:
-        # The identifier is ASCII; the box shows the page's real title via a
-        # mermaid class label (`class Id["Title"]`) whenever the two differ, so
-        # "Durchführungsart" is drawn as written, not as "Durchfuehrungsart".
-        ident = name_of[n["key"]]
-        label = _clean_label(n["label"]).replace('"', "'")
-        return f'{ident}["{label}"]' if label != ident else ident
-
-    lines = ["classDiagram"]
-    for n in nodes:
-        body = []
-        if n["stereotype"] and n["stereotype"] != "entity":
-            body.append(f"    <<{n['stereotype']}>>")
-        for name in n["attributes"]:
-            # Encode punctuation so Mermaid reads it as part of the member name.
-            member = re.sub(r"[^\w -]", lambda m: f"#{ord(m[0])};", " ".join(name.split()))
-            body.append(f"    +{member}")
-        if body:
-            lines.append(f"  class {_decl(n)} {{")
-            lines += ["  " + b for b in body]
-            lines.append("  }")
-        else:
-            lines.append(f"  class {_decl(n)}")
-
-    for e in edges:
-        if e["source"] not in keep or e["target"] not in keep:
-            continue
-        arrow, carded = _DM_ARROWS[e["kind"]]
-        src, dst = name_of[e["source"]], name_of[e["target"]]
-        if e["kind"] == "inheritance":
-            # mermaid draws `Base <|-- Derived`; the page says "Derived is-a Base"
-            src, dst = dst, src
-        # `cardinality:` describes the TARGET end only. Deriving a source
-        # multiplicity from it looked tidier and was wrong: "0..*" would have
-        # drawn a zero on the owning side, which means nothing.
-        multiplicity = _clean_label(e["cardinality"], drop_parenthetical=False).replace('\\', "")
-        if carded and multiplicity:
-            line = f'  {src} {arrow} "{multiplicity}" {dst}'
-        else:
-            line = f"  {src} {arrow} {dst}"
-        if e["verb"]:
-            line += f" : {e['verb']}"
-        lines.append(line)
-
-    return "\n".join(lines)
-
-
-# Section/callout extractors for the /entity-diagram catalog: each structured term is
-# rendered as bold-led sections (**Purpose.**, **Attributes.**, **Relationships.**,
-# **Invariants / rules.** …) plus 0..n `> [!note] X` callouts (Open points,
-# deliberately omitted). Order from the file is preserved so the on-page detail
-# reads the same as the markdown source.
-
-_DM_SECTION_RE = re.compile(
-    r"^\*\*(?P<label>[^*\n]+?)\.\*\*\s*\n?(?P<body>.*?)"
-    r"(?=^\*\*[^*\n]+?\.\*\*|^>\s*\[!|^##\s|\Z)",
-    re.DOTALL | re.MULTILINE,
-)
-
-_DM_NOTE_RE = re.compile(
-    r"^>\s*\[!note\]\s*(?P<title>[^\n]+)\n(?P<body>(?:^>.*\n?)+)",
-    re.MULTILINE,
-)
-
-def _extract_dm_attribute_names(page: wiki.Page) -> list[str]:
-    """Just the attribute *names* from frontmatter `attributes:` — used for the
-    compact summary table at the top of /entity-diagram and the class boxes."""
-    return [a["name"] for a in _dm_attributes(page)]
-
-
-def _dm_scalar(value: object) -> str:
-    """A frontmatter value as text if it is a string or a whole number, else ""."""
-    if isinstance(value, str) or isinstance(value, int) and not isinstance(value, bool):
-        return str(value).strip()
-    return ""
-
-
-def _dm_attributes(page: wiki.Page) -> list[dict]:
-    """The entries of frontmatter `attributes:` that carry a name, as
-    `{name, type, multiplicity, identifier}`."""
-    attributes = page.meta.get("attributes")
-    if not isinstance(attributes, list):
-        return []
-    return [{"name": name, "type": _dm_scalar(entry.get("type")),
-             "multiplicity": _dm_scalar(entry.get("multiplicity")),
-             "identifier": entry.get("identifier") is True}
-            for entry in attributes if isinstance(entry, dict)
-            and isinstance(name := entry.get("name"), str) and name.strip()]
-
-
-def term_kind(page: wiki.Page) -> str:
-    """A domain term's kind: its stereotype, or "" for a plain term (FR-038)."""
-    stereotype = str(page.meta.get("stereotype") or "").strip().lower()
-    return stereotype if stereotype in DOMAIN_MODEL_STEREOTYPES else ""
-
-
-def term_fields(page: wiki.Page) -> dict:
-    """What the term page shows beside its text (FR-039): kind, aliases,
-    attributes and relationships. A relationship whose target is a page
-    names it by id and title and links it. Any other target stays as written."""
-    links = link_index()
-    by_stem = {p.stem: p for p in wiki.load_all_pages()}
-    relationships = []
-    for r in _dm_relationships(page):
-        target = by_stem.get(links.get(r["target"], ("", ""))[1])
-        relationships.append({
-            "kind": "generalization" if r["kind"] == "inheritance" else r["kind"],
-            "label": r["verb"],
-            "target": target.title if target else r["target"],
-            "target_id": target.id if target else "",
-            "url": _page_url(target.folder, target.stem) if target else "",
-            # a multiplicity on a generalization means nothing, as in the diagram
-            "multiplicity": r["cardinality"] if _DM_ARROWS[r["kind"]][1] else "",
-        })
-    return {"kind": term_kind(page), "aliases": page.aliases,
-            "attributes": _dm_attributes(page), "relationships": relationships}
-
-
-def _extract_dm_sections(page: wiki.Page, titles: dict[str, str]) -> list[tuple[str, str]]:
-    """`(label, rendered-html)` pairs for every `**Label.**` section in a term's body,
-    in source order. Bullets / inline code are preserved by routing the section
-    body back through `render_markdown`."""
-    out = []
-    for m in _DM_SECTION_RE.finditer(page.body):
-        label = m.group("label").strip()
-        body = m.group("body").rstrip()
-        out.append((label, render_markdown(body, titles)))
-    return out
-
-
-def _extract_dm_notes(page: wiki.Page, titles: dict[str, str]) -> list[dict]:
-    """`> [!note] Title` callouts as `{title, html}` records. Quote markers
-    (`> `) are stripped before the body is re-rendered as markdown."""
-    out = []
-    for m in _DM_NOTE_RE.finditer(page.body):
-        title = m.group("title").strip()
-        body_lines = m.group("body").splitlines()
-        cleaned = "\n".join(re.sub(r"^>\s?", "", line) for line in body_lines).strip()
-        out.append({"title": title, "html": render_markdown(cleaned, titles)})
-    return out
-
-
-def data_model_entities() -> list[dict]:
-    """One record per structured term with its sections + notes ready to render —
-    the per-entity catalog rendered below the projection diagram on /entity-diagram."""
-    titles = title_index()
-    pages = data_model_pages()
-    out = []
-    for p in pages:
-        out.append({
-            "id": p.id,
-            "stem": p.stem,
-            "url": f"/page/{p.folder}/{p.stem}",
-            "title": p.title,
-            "status": p.status,
-            "stereotype": str(p.meta.get("stereotype") or "").strip(),
-            "source_of_truth": str(p.meta.get("source-of-truth") or "").strip(),
-            "attributes": _extract_dm_attribute_names(p),
-            "sections": _extract_dm_sections(p, titles),
-            "notes": _extract_dm_notes(p, titles),
-        })
-    return out
-
-
-def supporting_model_count() -> int:
-    """R4's headline: the structured domain terms plus the activity models."""
-    return len(data_model_pages()) + len(wiki.load_type("activity-model"))
-
-
-def _goal_matrix(data: dict) -> tuple[list[dict], list[dict]]:
-    """proj-goal-coverage as (columns, rows) for /goals (FR-036).
-
-    Columns are the epics and use cases: epics that serve a goal or break
-    rule-fr-traces-to-goal (`nogoal`), then use cases, then the enabler epics
-    as their own group. Rows are the objectives. Per filter view (`views`, all
-    pages or accepted only) a row is a `gap` when no requirement at all serves
-    it, and a row without a mark lists the features and stories that serve it
-    (`served`). Columns and rows carry their status for the filter."""
-    enabler_ids = {fr.id for fr in data["enablers"]}
-    untraced_ids = {fr.id for fr in data["untraced"]}
-    epics = [fr for fr in data["frs"]
-             if _fr_notation(fr) == "agile" and _fr_level(fr) == "epic"]
-
-    def col(p: wiki.Page) -> dict:
-        return {"id": p.id, "title": p.title, "url": _page_url(p.folder, p.stem),
-                "status": p.status, "enabler": p.id in enabler_ids,
-                "nogoal": p.id in untraced_ids}
-
-    cols = ([col(e) for e in epics if e.id not in enabler_ids]
-            + [col(uc) for uc in data["ucs"]]
-            + [col(e) for e in epics if e.id in enabler_ids])
-    col_ids = {c["id"] for c in cols}
-
-    def view(serving: list[wiki.Page]) -> dict:
-        # gap: nothing serves the goal. served: a row without a mark names the
-        # features and stories that serve it, grouped by kind
-        groups = []
-        if not any(p.id in col_ids for p in serving):
-            for kind, label in (("feature", "features"), ("story", "stories")):
-                links = [{"id": p.id, "url": _page_url(p.folder, p.stem)} for p in serving
-                         if _fr_notation(p) == "agile" and _fr_level(p) == kind]
-                if links:
-                    groups.append({"label": label, "links": links})
-            # requirements in another notation (EARS, prose …) are no column either
-            others = [{"id": p.id, "url": _page_url(p.folder, p.stem)} for p in serving
-                      if _fr_notation(p) not in ("agile", "use-case")]
-            if others:
-                groups.append({"label": "other requirements", "links": others})
-        return {"gap": not serving, "served": groups}
-
-    rows = []
-    for o in data["objectives"]:
-        serving = data["coverage"].get(o.id, [])
-        covered = {p.id for p in serving}
-        cells = [c["id"] in covered for c in cols]
-        rows.append({"id": o.id, "title": o.title, "url": _page_url(o.folder, o.stem),
-                     "status": o.status, "cells": cells,
-                     "views": {"all": view(serving),
-                               # for "Agreed only": counts accepted pages only
-                               "accepted": view([p for p in serving if p.status == "accepted"])}})
-    return cols, rows
-
-
 @app.route("/goals")
 def goals_view():
     """req42 Block 01 — Vision + Objectives. Three sections top-down:
     Mermaid tree, full-text cards (vision then objectives), goal-coverage matrix.
     Goal↔Epic edges are read from each FR's `goal:` field (DR-018)."""
-    titles = title_index()
-    links = link_index()       # vision/objective prose wikilinks become real links
-    data = load_goals()
+    titles = links_module.title_index()
+    links = links_module.link_index()       # vision/objective prose wikilinks become real links
+    data = project.goals.load_goals()
     vision, objectives = data["vision"], data["objectives"]
     # the flat, sortable list of every goal page (FR-021)
-    goal_rows = [{"id": g.id, "title": g.title, "url": _page_url(g.folder, g.stem),
+    goal_rows = [{"id": g.id, "title": g.title, "url": links_module._page_url(g.folder, g.stem),
                   "stereotype": str(g.meta.get("stereotype") or "").strip().lower(),
                   "horizon": str(g.meta.get("horizon") or "").strip(), "status": g.status}
                  for g in ([vision] if vision else []) + objectives]
@@ -4048,14 +1387,14 @@ def goals_view():
         vision_card = {
             "id": vision.id,
             "title": vision.title,
-            "url": _page_url(vision.folder, vision.stem),
+            "url": links_module._page_url(vision.folder, vision.stem),
             "stereotype": "Vision",
             "maturity": None,
             "beneficiary": _wikilink_list(vision.as_list("beneficiary")),
             # Vision card shows the prose of the `## Vision` section — the
             # objectives list and impact block from the wiki page are projected
             # below as separate objective cards and the coverage matrix.
-            "html": "".join(f"<p>{p}</p>" for p in _vision_paragraphs(vision, titles, links)),
+            "html": "".join(f"<p>{p}</p>" for p in project.goals._vision_paragraphs(vision, titles, links)),
         }
     else:
         # No `stereotype: vision` page yet: a hint takes the vision's place,
@@ -4071,26 +1410,26 @@ def goals_view():
     def _inline(s) -> str:
         """Frontmatter strings may contain `[[wikilinks]]` — render them as
         real hyperlinks when the target resolves."""
-        return render_wikilinks_text(str(s or "").strip(), titles, links)
+        return render.render_wikilinks_text(str(s or "").strip(), titles, links)
 
-    fr_cols, matrix_rows = _goal_matrix(data)
+    fr_cols, matrix_rows = project.goals._goal_matrix(data)
 
     objective_cards = []
     for o in objectives:
         objective_cards.append({
             "id": o.id,
             "title": o.title,
-            "url": _page_url(o.folder, o.stem),
+            "url": links_module._page_url(o.folder, o.stem),
             "stereotype": "Goal",
-            "purpose": extract_pam_bullet(o, "Purpose", titles, links),
-            "advantage": extract_pam_bullet(o, "Advantage", titles, links),
+            "purpose": render.extract_pam_bullet(o, "Purpose", titles, links),
+            "advantage": render.extract_pam_bullet(o, "Advantage", titles, links),
             "metric": _inline(o.meta.get("metric")),
             "target": _inline(o.meta.get("target")),
             "baseline": _inline(o.meta.get("baseline")),
             "beneficiary": _wikilink_list(o.as_list("beneficiary")),
             # every requirement that serves the goal, features and stories
             # too: a superset of its matrix marks, as text (FR-036)
-            "epics": [{"id": p.id, "title": p.title, "url": _page_url(p.folder, p.stem)}
+            "epics": [{"id": p.id, "title": p.title, "url": links_module._page_url(p.folder, p.stem)}
                       for p in data["coverage"].get(o.id, [])],
         })
 
@@ -4112,18 +1451,18 @@ def data_model_view():
     """R4 entity diagram: the class diagram of the structured domain terms
     (build_data_model_full_diagram()) plus the per-entity catalog below, every
     section and callout of every structured term on one page."""
-    contexts = data_model_contexts()
+    contexts = project.terms.data_model_contexts()
     context = request.args.get("context") or None
     if context not in contexts:
         context = None                     # an unknown filter shows everything
-    nodes = data_model_nodes()
+    nodes = project.terms.data_model_nodes()
     focus = request.args.get("focus") or None
     if focus and focus not in {n["key"] for n in nodes}:
         matches = [n["key"] for n in nodes if focus in n["aliases"]]
         focus = matches[0] if len(matches) == 1 else None
-    diagram = build_data_model_full_diagram(context=context, focus=focus)
+    diagram = project.terms.build_data_model_full_diagram(context=context, focus=focus)
     return render_template("data_model.html", diagram=diagram, **_crumb_of(catalog.section_for_path("/entity-diagram")),
-                           entities=data_model_entities(), nodes=nodes,
+                           entities=project.terms.data_model_entities(), nodes=nodes,
                            contexts=contexts, context=context, focus=focus,
                            needs_mermaid=True)
 
@@ -4142,7 +1481,7 @@ def area_view(area_key):
              if s["id"] not in dashboard_config()["hidden"]]
     pages = [p for t in tiles for f in t["folders"] for p in wiki.load_folder(f)]
     return render_template("area.html", area=area, tiles=tiles, count=len(pages),
-                           maturity=maturity(p.status for p in pages), needs_mermaid=False)
+                           maturity=project.common.maturity(p.status for p in pages), needs_mermaid=False)
 
 
 @app.route("/req42/functional-requirements")
@@ -4153,10 +1492,10 @@ def functional_requirements_view():
     A dedicated rich view for the `functional-requirements` slug (the other /req42/<slug> blocks
     use the generic list). Flask matches this static rule ahead of the dynamic
     /req42/<slug>. Doubles as the home `functional-requirements` tile's click-target."""
-    hierarchy = build_fr_hierarchy()
-    goals = load_goals()
+    hierarchy = project.requirements.build_fr_hierarchy()
+    goals = project.goals.load_goals()
     diagram_links: list[dict] = []
-    diagram = _mermaid_goal_epic_tree(goals, hierarchy, diagram_links)
+    diagram = project.requirements._mermaid_goal_epic_tree(goals, hierarchy, diagram_links)
     block = catalog.SECTION_BY_SLUG.get("functional-requirements") or abort(404)
     # the flat list under the hierarchy (FR-021): every requirement of every
     # notation once, sortable by priority, release and order
@@ -4164,7 +1503,7 @@ def functional_requirements_view():
     for p in sorted(wiki.load_type("functional-requirement"), key=lambda q: q.id):
         rows.append({"id": p.id, "title": p.title,
                      "url": f"/functional-requirements/{p.stem}",
-                     "notation": _fr_notation(p), "level": _fr_level(p),
+                     "notation": project.requirements._fr_notation(p), "level": project.requirements._fr_level(p),
                      "priority": str(p.meta.get("priority") or "").strip(),
                      "release": str(p.meta.get("release") or "").strip(),
                      "order": str(p.meta.get("order") if p.meta.get("order") is not None else "").strip(),
@@ -4190,16 +1529,16 @@ def fr_view(stem):
     page = wiki._parse(path, fr_folder) if fr_folder and path.is_file() else None
     if not page:
         abort(404)
-    titles = title_index()
+    titles = links_module.title_index()
     body = re.sub(r"^\s*#\s+.*(?:\n|$)", "", page.body, count=1)  # drop leading "# Title"
-    body_html = render_markdown(body, titles)
+    body_html = render.render_markdown(body, titles)
 
-    hierarchy = build_fr_hierarchy()
-    node, kind = _fr_hierarchy_node(hierarchy, stem)
+    hierarchy = project.requirements.build_fr_hierarchy()
+    node, kind = project.requirements._fr_hierarchy_node(hierarchy, stem)
     fr = {
         "id": page.id, "title": page.title, "stem": stem,
-        "notation": _fr_notation(page),
-        "level": kind or _fr_level(page),
+        "notation": project.requirements._fr_notation(page),
+        "level": kind or project.requirements._fr_level(page),
         "priority": str(page.meta.get("priority") or "").strip(),
         "release": str(page.meta.get("release") or "").strip(),
         "status": page.status,
@@ -4214,47 +1553,20 @@ def fr_view(stem):
 
     diagram_links: list[dict] = []
     # a requirement outside the hierarchy (another notation) still shows its blocks
-    diagram = _mermaid_fr_subtree(node or {"id": page.id, "title": page.title},
-                                  fr_building_blocks(stem), diagram_links)
-    trace = build_trace(stem, fr_folder)
+    diagram = project.requirements._mermaid_fr_subtree(node or {"id": page.id, "title": page.title},
+                                  project.requirements.fr_building_blocks(stem), diagram_links)
+    trace = project.architecture.build_trace(stem, fr_folder)
     return render_template(
         "fr.html", fr=fr, body_html=body_html, diagram=diagram, diagram_links=diagram_links,
-        ancestors=_fr_ancestors(stem),
+        ancestors=project.requirements._fr_ancestors(stem),
         trace=trace,
-        relations=build_relations_panel(stem, exclude=trace_stems(trace)),
+        relations=project.terms.build_relations_panel(stem, exclude=project.architecture.trace_stems(trace)),
         needs_mermaid=bool(diagram) or "language-mermaid" in body_html,
-        sources=provenance(page),
+        sources=project.common.provenance(page),
         page_issues=open_issues_for(stem),
-        formats=format_labels(page.body),
+        formats=render.format_labels(page.body),
         **page_head(page),
     )
-
-
-_QR_SCENARIO = ("Source", "Stimulus", "Environment", "Response", "Measure")
-_INLINE_EMPHASIS_RE = re.compile(r"\*(\S[^*]*?)\*")
-
-
-def _emphasis(html: str) -> str:
-    """Turn `*text*` into <em>text</em> in sanitised HTML. Only the text
-    between tags is touched, so a `*` inside a tag or an attribute stays as it
-    is, and an emphasis never spans a tag."""
-    return "".join(part if part.startswith("<") else _INLINE_EMPHASIS_RE.sub(r"<em>\1</em>", part)
-                   for part in re.split(r"(<[^>]*>)", html))
-
-
-def _qr_details(page: wiki.Page, titles: dict[str, str],
-                links: dict[str, tuple[str, str]]) -> dict:
-    """What a quality requirement needs on the block list besides its title:
-    its Q42 dimensions (DR-003), the priority and its Q42 quality scenario, so
-    the list reads without opening every page. Empty scenario parts are left out."""
-    scenario = [(label, _emphasis(html)) for label in _QR_SCENARIO
-                if (html := extract_pam_bullet(page, label, titles, links))]
-    dims = page.meta.get("dimensions") or []
-    if isinstance(dims, str):
-        dims = [dims]
-    return {"dimensions": [str(d).strip() for d in dims if str(d).strip()],
-            "priority": str(page.meta.get("priority") or "").strip(),
-            "scenario": scenario}
 
 
 @app.route("/req42/<slug>")
@@ -4280,25 +1592,25 @@ def section_view(sid):
 
 
 def _block_list(block: dict, slug: str | None):
-    titles, links = title_index(), link_index()
+    titles, links = links_module.title_index(), links_module.link_index()
     rows = [
         {"id": p.id, "type": catalog.label(p.folder),
-         "title": p.title, "url": _page_url(p.folder, p.stem),
-         "status": p.status, "relations": len(linked_stems(p)),
-         **(_qr_details(p, titles, links) if wiki._is(p.folder, "quality-requirement") else {})}
-        for p in _block_pages(block)
+         "title": p.title, "url": links_module._page_url(p.folder, p.stem),
+         "status": p.status, "relations": len(links_module.linked_stems(p)),
+         **(project.requirements._qr_details(p, titles, links) if wiki._is(p.folder, "quality-requirement") else {})}
+        for p in project.common._block_pages(block)
     ]
     # the Scope block (03) shows the same live-projected system-context diagram
     diagram_links: list[dict] = []
     context_diagram = build_context_diagram(links=diagram_links) if slug == "scope" else None
-    context_flows = build_context_flows() if slug == "scope" else None
-    entity_diagram = build_data_model_full_diagram() if slug == "models" else None
+    context_flows = project.context.build_context_flows() if slug == "scope" else None
+    entity_diagram = project.terms.build_data_model_full_diagram() if slug == "models" else None
     return render_template(
         "req42_block.html", block=block, rows=rows, total=len(rows),
         list_type=catalog.type_of(block["folders"][0]) if block["folders"] else "page",
         context_diagram=context_diagram, context_flows=context_flows, diagram_links=diagram_links,
         entity_diagram=entity_diagram, needs_mermaid=bool(context_diagram or entity_diagram),
-        maturity=maturity(r["status"] for r in rows),
+        maturity=project.common.maturity(r["status"] for r in rows),
     )
 
 
@@ -4380,48 +1692,6 @@ def join_page():
 # process-coherent (Dockerfile: --workers 1). See DR-022 and its addendum.
 # ---------------------------------------------------------------------------
 
-
-def _grace(env_name: str, default: float) -> float:
-    """Grace period in seconds, overridable via env var (for tests/tuning)."""
-    try:
-        return float(os.environ.get(env_name, default))
-    except (TypeError, ValueError):
-        return default
-
-
-# Shut down once no client has pinged for longer than this. Larger than the
-# browser's background-tab throttling (~60 s), so a merely hidden tab does
-# not falsely trigger a shutdown; only a genuinely closed tab drops out.
-_HEARTBEAT_GRACE = _grace("DASH_HEARTBEAT_GRACE", 90.0)
-# Grace period at startup, until the first heartbeat arrives (a slower first
-# build / first render). If one never comes, the server shuts down afterwards
-# instead of running on as an orphan.
-_STARTUP_GRACE = _grace("DASH_STARTUP_GRACE", 90.0)
-# Short grace period after a client's "tab is leaving" signal (`/leaving`,
-# via a pagehide beacon) before dropping that client. On navigation the next
-# page connects right away (`/ping` clears the signal); if none arrives (tab
-# closed), the client is dropped after this — much faster than the heartbeat
-# grace period.
-_LEAVE_GRACE = _grace("DASH_LEAVE_GRACE", 5.0)
-# How recently a client must have pinged to count as "connected" in the
-# footer's live counter. Deliberately tighter than _HEARTBEAT_GRACE: the
-# counter is a live-feeling UI nicety, not the shutdown trip wire, so it
-# should not wait out the full 90 s tolerance built in for background-tab
-# throttling.
-_PRESENCE_WINDOW = _grace("DASH_PRESENCE_WINDOW", 30.0)
-
-_lifecycle_lock = threading.Lock()
-_clients: dict[str, float] = {}   # client_id -> monotonic time of last /ping
-_leaving: dict[str, float] = {}   # client_id -> monotonic time /leaving arrived
-_first_seen: dict[str, float] = {}   # client_id -> monotonic time of its first-ever /ping
-_user_agents: dict[str, str] = {}    # client_id -> User-Agent header from its latest /ping
-# Sticky identity for the whole dashboard session (= server lifetime): a
-# client_id's name is fixed at its first /ping and never changes, and the
-# facilitator role moves on only when its holder is gone — never back.
-# Neither is cleared by `_forget_client`, so a tab that drops out and
-# returns with the same client_id is still the same person.
-_names: dict[str, str] = {}          # client_id -> name, fixed at first /ping
-_facilitator: str | None = None      # client_id currently holding the role
 _ever_connected = False
 _shutting_down = False
 _watchdog_started = False
@@ -4430,60 +1700,6 @@ _server_started = time.monotonic()
 # (`start_lifecycle`). None everywhere else: under the development server, in
 # the site export and in tests the parent is a shell or a test runner.
 _gunicorn_master: int | None = None
-
-
-def _forget_client(cid):
-    """Drop a client_id from every presence structure at once — called from
-    the watchdog's two eviction paths so none of them can go out of sync."""
-    _clients.pop(cid, None)
-    _leaving.pop(cid, None)
-    _first_seen.pop(cid, None)
-    _user_agents.pop(cid, None)
-
-
-def _facilitator_client_id():
-    """The facilitator: the first client to connect ("Yoda"), and it keeps
-    the role for as long as it is *currently connected*. No shared secret —
-    just connection order. A reload/navigation keeps the same client_id
-    (sessionStorage), so it doesn't cost the role.
-
-    Sticky: the role is not recomputed per call. Only when its holder is
-    no longer connected does it pass, once, to whoever is left with the
-    earliest first_seen; it does not return when the old holder's tab
-    reappears. Recomputing it on every call made the role (and with it the
-    name "Yoda") flip back and forth between two tabs whenever the first
-    one hovered around the presence window (reported 2026-10-28).
-
-    "Currently connected" means the watchdog has not dropped the client:
-    it is still in `_clients` and pinged within `_HEARTBEAT_GRACE`, the same
-    bar the watchdog evicts on. A tab in the background pings only about
-    once a minute, so the tighter `_PRESENCE_WINDOW` of the footer counter
-    and /who would take the role from a holder who merely switched tabs
-    (issue #56). The heir is picked by the same bar, so a background tab is
-    not skipped either. The price: a crashed tab holds the role for up to
-    `_HEARTBEAT_GRACE`. A closed tab sends /leaving and drops out after
-    `_LEAVE_GRACE`. The grace check here, not only the eviction, keeps the
-    answer independent of when the watchdog last ran.
-    Call under `_lifecycle_lock`."""
-    global _facilitator
-    now = time.monotonic()
-    active = {cid: fs for cid, fs in _first_seen.items()
-              if cid in _clients and now - _clients[cid] <= _HEARTBEAT_GRACE}
-    if _facilitator in active:
-        return _facilitator
-    _facilitator = min(active, key=active.get) if active else None
-    return _facilitator
-
-
-def _name_for(cid):
-    """This client_id's name for the whole session, fixed on first call:
-    "Yoda" for the very first facilitator, a random-looking nickname for
-    everyone else. A client that later inherits the role keeps its own
-    name. Call under `_lifecycle_lock`."""
-    if cid not in _names:
-        is_first = not _names and cid == _facilitator_client_id()
-        _names[cid] = "Yoda" if is_first else _nickname(cid)
-    return _names[cid]
 
 
 def _shutdown(reason):
@@ -4497,7 +1713,7 @@ def _shutdown(reason):
     server (Werkzeug 3.x), whereas SIGTERM is reliably handled via the default
     signal action."""
     global _shutting_down
-    with _lifecycle_lock:
+    with session._lifecycle_lock:
         if _shutting_down:
             return
         _shutting_down = True
@@ -4519,30 +1735,30 @@ def _watchdog_pass(auto_stop: bool) -> bool:
     """One pass of the watchdog: drop the clients that are gone, then stop the
     server when nobody is left and `auto_stop` is on. Returns True when the
     watchdog has nothing more to do."""
-    with _lifecycle_lock:
+    with session._lifecycle_lock:
         if _shutting_down:
             return True
         now = time.monotonic()
         # A client said goodbye and never pinged again: drop it (fast
         # path on tab close). A fresher ping after the goodbye cancels it
         # (was just in-page navigation).
-        for cid, left_at in list(_leaving.items()):
-            last = _clients.get(cid)
+        for cid, left_at in list(session._leaving.items()):
+            last = session._clients.get(cid)
             if last is not None and last > left_at:
-                _leaving.pop(cid, None)
-            elif now - left_at > _LEAVE_GRACE:
-                _forget_client(cid)
+                session._leaving.pop(cid, None)
+            elif now - left_at > session._LEAVE_GRACE:
+                session._forget_client(cid)
         # A client simply went stale (no goodbye, no more pings either).
-        for cid, last in list(_clients.items()):
-            if now - last > _HEARTBEAT_GRACE:
-                _forget_client(cid)
-        anyone_left = bool(_clients)
+        for cid, last in list(session._clients.items()):
+            if now - last > session._HEARTBEAT_GRACE:
+                session._forget_client(cid)
+        anyone_left = bool(session._clients)
         ever = _ever_connected
     if not auto_stop:
         return False
     if not ever:
         # Nobody has ever pinged -> startup grace period.
-        if now - _server_started > _STARTUP_GRACE:
+        if now - _server_started > session._STARTUP_GRACE:
             _shutdown("no browser heartbeat within the startup grace period")
             return True
     elif not anyone_left:
@@ -4566,7 +1782,7 @@ def start_lifecycle(gunicorn_master: int | None = None) -> None:
     (FR-050): the watchdog still drops clients that are gone, and "Disconnect
     all" still stops the server. The Go dashboard reads the same variable."""
     global _watchdog_started, _gunicorn_master, _server_started
-    with _lifecycle_lock:
+    with session._lifecycle_lock:
         if _watchdog_started:
             return
         _watchdog_started = True
@@ -4617,16 +1833,16 @@ def heartbeat_ping():
     global _ever_connected
     cid = _client_id(request)
     ua = request.headers.get("User-Agent", "")[:200]
-    with _lifecycle_lock:
+    with session._lifecycle_lock:
         now = time.monotonic()
-        if cid not in _clients:
-            _first_seen[cid] = now
-        _clients[cid] = now
-        _user_agents[cid] = ua
-        _leaving.pop(cid, None)
+        if cid not in session._clients:
+            session._first_seen[cid] = now
+        session._clients[cid] = now
+        session._user_agents[cid] = ua
+        session._leaving.pop(cid, None)
         _ever_connected = True
-        is_facilitator = cid == _facilitator_client_id()
-        nickname = _name_for(cid)
+        is_facilitator = cid == session._facilitator_client_id()
+        nickname = session._name_for(cid)
     return {"nickname": nickname, "is_facilitator": is_facilitator}
 
 
@@ -4637,8 +1853,8 @@ def heartbeat_leaving():
     the next page's immediate `/ping` (same client_id) clears the signal
     again before it expires."""
     cid = _client_id(request)
-    with _lifecycle_lock:
-        _leaving[cid] = time.monotonic()
+    with session._lifecycle_lock:
+        session._leaving[cid] = time.monotonic()
     return ("", 204)
 
 
@@ -4651,60 +1867,10 @@ def presence_count():
     2026-09-08 note). Polled every few seconds; cheap (an in-memory dict
     scan, no I/O, no thread held)."""
     now = time.monotonic()
-    with _lifecycle_lock:
-        count = sum(1 for last in _clients.values()
-                    if now - last <= _PRESENCE_WINDOW)
+    with session._lifecycle_lock:
+        count = sum(1 for last in session._clients.values()
+                    if now - last <= session._PRESENCE_WINDOW)
     return {"count": count}
-
-
-_NICKNAME_ADJECTIVES = ["Curious", "Swift", "Quiet", "Bold", "Sunny", "Clever",
-                         "Gentle", "Brisk", "Merry", "Wandering", "Sharp", "Calm"]
-_NICKNAME_ANIMALS = ["Otter", "Falcon", "Fox", "Heron", "Lynx", "Puffin",
-                      "Badger", "Wren", "Marten", "Ibex", "Hare", "Tern"]
-
-
-def _nickname(client_id: str) -> str:
-    """A stable, fun, non-identifying label for a client_id, for the "who's
-    here" page — deterministic (the same tab always gets the same nickname
-    across polls) but derived from nothing more than the random id the tab
-    already generated itself, so there's no real identity behind it."""
-    h = zlib.crc32(client_id.encode("utf-8"))
-    adjective = _NICKNAME_ADJECTIVES[h % len(_NICKNAME_ADJECTIVES)]
-    animal = _NICKNAME_ANIMALS[(h // len(_NICKNAME_ADJECTIVES)) % len(_NICKNAME_ANIMALS)]
-    return f"{adjective} {animal}"
-
-
-def _parse_user_agent(ua: str) -> tuple[str, str]:
-    """Coarse browser/OS labels for the "who's here" page. Good enough for
-    the handful of browsers a workshop room actually shows up with — not a
-    real user-agent-parsing library, and doesn't need to be."""
-    ua = ua or ""
-    if "Edg/" in ua:
-        browser = "Edge"
-    elif "OPR/" in ua or "Opera" in ua:
-        browser = "Opera"
-    elif "Firefox/" in ua:
-        browser = "Firefox"
-    elif "CriOS" in ua or ("Chrome/" in ua and "Safari/" in ua):
-        browser = "Chrome"
-    elif "Safari/" in ua:
-        browser = "Safari"
-    else:
-        browser = "a browser"
-
-    if "iPhone" in ua or "iPad" in ua:
-        os_name = "iOS"
-    elif "Android" in ua:
-        os_name = "Android"
-    elif "Mac OS X" in ua:
-        os_name = "macOS"
-    elif "Windows" in ua:
-        os_name = "Windows"
-    elif "Linux" in ua:
-        os_name = "Linux"
-    else:
-        os_name = ""
-    return browser, os_name
 
 
 @app.route("/presence/list")
@@ -4716,19 +1882,19 @@ def presence_list():
     viewer, not facilitator-gated — it's meant as a bit of a moment for
     everyone else, not an admin tool."""
     now = time.monotonic()
-    with _lifecycle_lock:
-        yoda = _facilitator_client_id()
+    with session._lifecycle_lock:
+        yoda = session._facilitator_client_id()
         rows = []
-        for cid, last in _clients.items():
-            if now - last > _PRESENCE_WINDOW:
+        for cid, last in session._clients.items():
+            if now - last > session._PRESENCE_WINDOW:
                 continue
-            browser, os_name = _parse_user_agent(_user_agents.get(cid, ""))
+            browser, os_name = session._parse_user_agent(session._user_agents.get(cid, ""))
             rows.append({
-                "nickname": _name_for(cid),
+                "nickname": session._name_for(cid),
                 "is_facilitator": cid == yoda,
                 "browser": browser,
                 "os": os_name,
-                "connected_seconds": round(now - _first_seen.get(cid, last)),
+                "connected_seconds": round(now - session._first_seen.get(cid, last)),
             })
     rows.sort(key=lambda r: r["connected_seconds"], reverse=True)
     return {"clients": rows}
@@ -4802,14 +1968,14 @@ def settings_post():
     nothing changes; the dialog only ever sends catalog IDs, so a 400 here
     means a stale page or a hand-crafted request."""
     cid = _client_id(request)
-    with _lifecycle_lock:
-        if cid != _facilitator_client_id():
+    with session._lifecycle_lock:
+        if cid != session._facilitator_client_id():
             abort(403)
     data = _json_object(request)
-    valid, unknown = _validate_hidden(data.get("hidden"))
+    valid, unknown = session._validate_hidden(data.get("hidden"))
     if unknown or not isinstance(data.get("hidden"), list):
         return {"error": "unknown", "unknown": unknown}, 400
-    set_view(valid)
+    session.set_view(valid)
     _clear_caches()
     return {"ok": True, "hidden": valid}
 
@@ -4834,8 +2000,8 @@ def disconnect_all():
     next /ping then fails, which the footer script turns into a plain
     "session ended" notice (base.html)."""
     cid = _client_id(request)
-    with _lifecycle_lock:
-        if cid != _facilitator_client_id():
+    with session._lifecycle_lock:
+        if cid != session._facilitator_client_id():
             abort(403)
     _shutdown("disconnect-all requested by facilitator")
     return ("", 204)
@@ -4854,7 +2020,7 @@ def help_view():
         text = "# Help\n\nhelp.md is missing from the image."
     img = (f'<figure class="help-diagram"><img src="{static_url("systems42-sections.svg")}" '
            f'alt="Systems42 sections: req42, arc42 and Common" width="660" height="608"></figure>')
-    html = wrap_tables(md.markdown(text.replace("{{DIAGRAM}}", img), extensions=["extra", "sane_lists"]))
+    html = render.wrap_tables(md.markdown(text.replace("{{DIAGRAM}}", img), extensions=["extra", "sane_lists"]))
     return render_template("help.html", html=html)
 
 
@@ -4882,7 +2048,7 @@ def _mm_dr_link(ref: str, label: str = "") -> str:
     vault lacks stays plain text instead of a link that 404s."""
     text = escape(label or ref)
     if ref in {p.stem for p in wiki.load_type("decision-record")}:
-        return f'<a class="wl" href="{escape(_page_url(catalog.folder("decision-record"), ref))}">{text}</a>'
+        return f'<a class="wl" href="{escape(links_module._page_url(catalog.folder("decision-record"), ref))}">{text}</a>'
     return str(text)
 
 
@@ -4897,20 +2063,20 @@ def _mm_wikilinks(text: str, anchors: dict[str, str]) -> str:
         # a framework has no row of its own, so `[[req42]]` means the anchor
         if base in anchors and not anchors[base].startswith("fw-"):
             return f'<a class="wl" href="#{anchors[base]}">{escape(alias or base)}</a>'
-        if a := anchor_lookup().get(base.lower()):
+        if a := render.anchor_lookup().get(base.lower()):
             return (f'<a class="wl wl-anchor" href="#{a["id"]}" '
-                    f'title="{escape(anchor_title(a))}">{escape(alias or a["name"])}</a>')
+                    f'title="{escape(render.anchor_title(a))}">{escape(alias or a["name"])}</a>')
         if base in anchors:
             return f'<a class="wl" href="#{anchors[base]}">{escape(alias or base)}</a>'
         if _MM_DR_RE.match(base):
             return _mm_dr_link(base, alias)
         return f'<span class="mm-anchor">{escape(alias or base)}</span>'
-    return outside_code(text, lambda t: wiki.WIKILINK_RE.sub(repl, t))
+    return render.outside_code(text, lambda t: wiki.WIKILINK_RE.sub(repl, t))
 
 
 def _mm_html(text: str, anchors: dict[str, str]) -> str:
     """A metamodel page body (or a summary line) as HTML."""
-    return sanitize_html(wrap_tables(md.markdown(_mm_wikilinks(_unwrap_prose(text or ""), anchors),
+    return render.sanitize_html(render.wrap_tables(md.markdown(_mm_wikilinks(render._unwrap_prose(text or ""), anchors),
                                                  extensions=["extra", "sane_lists"])))
 
 
@@ -4939,7 +2105,7 @@ def _mm_example(t: dict) -> dict:
     else:
         name = Path(folder).name
         pages = wiki.load_folder(name)
-        url = lambda p: _page_url(name, p.stem)         # noqa: E731
+        url = lambda p: links_module._page_url(name, p.stem)         # noqa: E731
     if not pages:
         return {"count": 0}
     best = min(pages, key=lambda p: (_MM_EXAMPLE_RANK.get(p.status, 9), p.id))
@@ -4997,10 +2163,10 @@ def build_metamodel_graph(mm: dict) -> dict:
 def _mm_anchor_ref(name: object) -> dict:
     """An anchor a metamodel page names (`anchors:`, `anchor:`): its label and,
     when `_system/anchors/` has it, the in-page link to its entry."""
-    a = anchor_lookup().get(str(name).strip().lower())
+    a = render.anchor_lookup().get(str(name).strip().lower())
     if not a:
         return {"name": str(name), "href": "", "title": ""}
-    return {"name": a["name"], "href": f"#{a['id']}", "title": anchor_title(a)}
+    return {"name": a["name"], "href": f"#{a['id']}", "title": render.anchor_title(a)}
 
 
 def build_mm_anchors(mm: dict, anchors: dict[str, str]) -> list[dict]:
@@ -5193,7 +2359,7 @@ def about_view():
     path = _about_path()
     if path is None:
         abort(404)
-    html = sanitize_html(wrap_tables(md.markdown(path.read_text(encoding="utf-8", errors="replace"),
+    html = render.sanitize_html(render.wrap_tables(md.markdown(path.read_text(encoding="utf-8", errors="replace"),
                                                  extensions=["extra", "sane_lists"])), about=True)
     html = _REL_URL.sub(lambda m: f'{m.group(1)}{_about_url(path, m.group(2))}"', html)
     title = wiki_config()["about_label"]

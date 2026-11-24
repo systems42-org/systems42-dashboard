@@ -27,6 +27,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import project.goals  # noqa: E402
 
 (_wiki / "goals" / "GOAL-001-vision.md").write_text("""---
 id: GOAL-001
@@ -96,7 +97,7 @@ def test_goal_cards_link_to_their_pages():
 
 
 def test_the_vision_node_of_the_goal_tree_is_clickable():
-    data = app.load_goals()
+    data = project.goals.load_goals()
     tree = app._mermaid_goal_tree(data["vision"], data["objectives"])
     assert 'click V "/goals#GOAL-001"' in tree
 

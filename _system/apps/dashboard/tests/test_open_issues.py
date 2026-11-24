@@ -44,6 +44,7 @@ _issue("ISS-003-erledigt", "status: resolved\n")
 _issue("ISS-004-offen", "status: open\n")
 
 import app  # noqa: E402
+import project.common  # noqa: E402
 
 client = app.app.test_client()
 OPEN = ["ISS-001", "ISS-002", "ISS-004"]
@@ -61,9 +62,9 @@ def _ids(q):
 
 def test_one_helper():
     for s in ("", None, "open", "in-progress", "draft", "bogus", "Open"):
-        assert app.is_open_issue(s), s
+        assert project.common.is_open_issue(s), s
     for s in ("resolved", "wontfix", "Resolved", " wontfix "):
-        assert not app.is_open_issue(s), s
+        assert not project.common.is_open_issue(s), s
 
 
 def test_section_tile_and_section_filter_agree():

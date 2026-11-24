@@ -89,6 +89,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import app  # noqa: E402
+import project.requirements  # noqa: E402
 
 LIVE = sorted(p.stem for p in _FR.glob("*.md") if p.stem != "FR-020-retired-epic")
 
@@ -110,7 +111,7 @@ def _shown(bl):
 
 
 def test_every_live_requirement_shows_exactly_once():
-    bl = app.build_fr_hierarchy()
+    bl = project.requirements.build_fr_hierarchy()
     shown = _shown(bl)
     stems = sorted(s for s, _ in shown)
     assert stems == LIVE, (sorted(set(LIVE) - set(stems)),
@@ -120,7 +121,7 @@ def test_every_live_requirement_shows_exactly_once():
 
 
 def test_orphans_keep_their_stories():
-    bl = app.build_fr_hierarchy()
+    bl = project.requirements.build_fr_hierarchy()
     orphans = {o["id"]: o for o in bl["orphans"]}
     assert sorted(orphans) == ["FR-010", "FR-021", "FR-040", "FR-041", "FR-043", "FR-044",
                                "FR-050", "FR-051", "FR-070", "FR-071", "FR-073", "FR-074"], sorted(orphans)
@@ -144,7 +145,7 @@ def test_orphans_keep_their_stories():
 
 
 def test_counters_equal_what_is_shown():
-    bl = app.build_fr_hierarchy()
+    bl = project.requirements.build_fr_hierarchy()
     shown = _shown(bl)
     n_feat = sum(1 for _, lvl in shown if lvl == "feature")
     n_story = sum(1 for _, lvl in shown if lvl == "story")
@@ -179,7 +180,7 @@ def test_detail_page_of_an_orphan_feature_lists_its_story():
                         ("FR-021-reports", "FR-022-monthly-report"),
                         ("FR-040-ping", "FR-042-rally"),
                         ("FR-071-feature-of-a-feature", "FR-072-its-story")):
-        node, kind = app._fr_hierarchy_node(app.build_fr_hierarchy(), stem)
+        node, kind = project.requirements._fr_hierarchy_node(project.requirements.build_fr_hierarchy(), stem)
         assert kind == "feature" and [s["stem"] for s in node["stories"]] == [story], (stem, node)
         r = client.get(f"/functional-requirements/{stem}")
         assert r.status_code == 200, stem

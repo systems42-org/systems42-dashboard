@@ -30,6 +30,7 @@ sys.path.insert(0, str(HERE))
 
 import app  # noqa: E402
 import wiki  # noqa: E402
+import project.common  # noqa: E402
 
 TERM = """---
 id: {id}
@@ -50,13 +51,13 @@ tags: [domain-term]
 
 
 def test_maturity_buckets_and_aliases():
-    m = app.maturity(["draft", "accepted", "proposed", "superseded", "resolved", "weird", ""])
+    m = project.common.maturity(["draft", "accepted", "proposed", "superseded", "resolved", "weird", ""])
     by = {s["status"]: s["n"] for s in m["segments"]}
     assert by == {"accepted": 2, "review": 1, "draft": 3, "deprecated": 1}, by
     assert m["total"] == 7
     assert sum(s["pct"] for s in m["segments"]) in (99, 100, 101)
     assert [s["status"] for s in m["segments"]] == ["accepted", "review", "draft", "deprecated"]
-    assert app.maturity([]) == {"total": 0, "segments": [], "label": "nothing yet"}
+    assert project.common.maturity([]) == {"total": 0, "segments": [], "label": "nothing yet"}
 
 
 def test_bar_renders_on_home_tile_and_list_page():

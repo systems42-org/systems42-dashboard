@@ -33,6 +33,7 @@ sys.path.insert(0, str(HERE))
 
 import app  # noqa: E402
 import wiki  # noqa: E402
+import project.common  # noqa: E402
 
 (_src / "SRC-001-brief.md").write_text("""---
 id: SRC-001
@@ -130,7 +131,7 @@ Frontmatter with HTML in it.
 def test_provenance_resolves_source_records():
     wiki._PARSE_CACHE.clear()
     page = wiki._parse(_wiki / "domain-terms" / "DT-001-tour.md", "domain-terms")
-    rows = app.provenance(page)
+    rows = project.common.provenance(page)
     assert rows == [{"id": "SRC-001", "title": "Project brief", "stem": "SRC-001-brief", "type": "document",
                      "origin": "raw/ingested/brief.md", "captured": "2026-09-06", "url": "/source/SRC-001-brief"}], rows
 
@@ -168,7 +169,7 @@ def test_unresolved_and_empty_source_refs():
     wiki._PARSE_CACHE.clear()
     page = wiki._parse(_wiki / "domain-terms" / "DT-001-tour.md", "domain-terms")
     page.meta["sources"] = ["[[raw/sources/SRC-404-ghost]]", None, "", "   "]
-    rows = app.provenance(page)
+    rows = project.common.provenance(page)
     assert len(rows) == 1, rows
     assert rows[0]["id"] == "SRC-404-ghost" and rows[0]["url"] is None, rows
 
@@ -176,7 +177,7 @@ def test_unresolved_and_empty_source_refs():
 def test_provenance_accepts_bare_string_sources():
     wiki._PARSE_CACHE.clear()
     page = wiki._parse(_wiki / "domain-terms" / "DT-003-single.md", "domain-terms")
-    rows = app.provenance(page)
+    rows = project.common.provenance(page)
     assert len(rows) == 1, rows
     assert rows[0]["url"] == "/source/SRC-001-brief", rows
 

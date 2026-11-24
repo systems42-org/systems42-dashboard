@@ -51,6 +51,7 @@ for _name in ("DASH_STARTUP_GRACE", "DASH_HEARTBEAT_GRACE", "DASH_LEAVE_GRACE",
 sys.path.insert(0, str(HERE))  # import app.py
 
 import app  # noqa: E402
+import session  # noqa: E402
 
 FAKE_MASTER = 4242  # never signalled: the children stub os.kill
 
@@ -60,6 +61,7 @@ _PRELUDE = """
 import importlib.util, json, os, signal, sys, threading, time
 sys.path.insert(0, sys.argv[1])
 import app
+import session
 kills = []
 app.os.kill = lambda pid, sig: kills.append([pid, int(sig)])
 
@@ -200,8 +202,8 @@ time.sleep(1.5)                     # 7 startup graces without a page
 after_startup = (list(kills), app._shutting_down)
 post(client, "/ping", "tab")
 post(client, "/leaving", "tab")     # the last page closes
-wait_for(lambda: not app._clients)  # the watchdog still drops it
-dropped = dict(app._clients)
+wait_for(lambda: not session._clients)  # the watchdog still drops it
+dropped = dict(session._clients)
 time.sleep(1.5)
 after_last_page = (list(kills), app._shutting_down)
 # "Disconnect all" is outside the switch (FR-050, scope).
@@ -235,12 +237,12 @@ def test_a_watchdog_pass_with_a_moved_clock():
         # A page connected and went stale: dropped in both modes, a stop only
         # with the automatic stop on.
         del reasons[:]
-        with app._lifecycle_lock:
-            app._clients["tab"] = time.monotonic() - 3 * 3600
-            app._first_seen["tab"] = app._clients["tab"]
+        with session._lifecycle_lock:
+            session._clients["tab"] = time.monotonic() - 3 * 3600
+            session._first_seen["tab"] = session._clients["tab"]
             app._ever_connected = True
         assert app._watchdog_pass(auto_stop=False) is False
-        assert app._clients == {} and reasons == []
+        assert session._clients == {} and reasons == []
         assert app._watchdog_pass(auto_stop=True) is True
         assert reasons == ["no more browser heartbeat (all tabs closed)"]
     finally:

@@ -47,6 +47,9 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import links  # noqa: E402
+import render  # noqa: E402
+import project.goals  # noqa: E402
 
 _FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 _KEY_RE = re.compile(r"^([a-zA-Z][a-zA-Z0-9_-]*)\s*:", re.MULTILINE)
@@ -74,7 +77,10 @@ def test_every_key_app_reads_is_declared_by_some_template():
     declared: set[str] = set()
     for f in _templates():
         declared |= set(_KEY_RE.findall(_frontmatter(f)))
-    source = (Path(__file__).resolve().parent.parent / "app.py").read_text(encoding="utf-8")
+    # app.py and the modules its code moved into (issue #185)
+    here = Path(__file__).resolve().parent.parent
+    source = "".join(f.read_text(encoding="utf-8")
+                     for f in [*sorted(here.glob("*.py")), *sorted(here.glob("project/*.py"))])
     read = set(re.findall(r'\.meta\.get\(\s*"([^"]+)"', source))
     assert read, "found no .meta.get() reads — did app.py move?"
     undeclared = sorted(read - declared)
@@ -143,17 +149,17 @@ def test_goal_template_body_markers_are_extractable():
     op.write_text(objective, encoding="utf-8")
     try:
         with app.app.app_context():
-            data = app.load_goals()
-            titles = app.title_index()
+            data = project.goals.load_goals()
+            titles = links.title_index()
             assert data["vision"] is not None, "the template's vision is not recognised"
-            para = " ".join(app._vision_paragraphs(data["vision"], titles))
+            para = " ".join(project.goals._vision_paragraphs(data["vision"], titles))
             assert "System X" in para, f"`## Vision` did not parse: {para!r}"
-            sentence = app.vision_sentence(data["vision"], titles)
+            sentence = project.goals.vision_sentence(data["vision"], titles)
             assert sentence == ("For Role B who need Entity A handled, System X is a "
                                 "platform that does the bookkeeping."), sentence
             obj = data["objectives"][0]
             for label in ("Purpose", "Advantage", "Metric"):
-                got = app.extract_pam_bullet(obj, label, titles)
+                got = render.extract_pam_bullet(obj, label, titles)
                 assert got.strip(), f"`- **{label}.**` did not parse from the template"
     finally:
         vp.unlink()

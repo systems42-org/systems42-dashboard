@@ -19,6 +19,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import app  # noqa: E402
 import wiki  # noqa: E402
+import links  # noqa: E402
+import project.terms  # noqa: E402
 
 
 def _flat(groups):
@@ -27,7 +29,7 @@ def _flat(groups):
 
 def test_relations_panel_outbound_inbound_and_dedup():
     with app.app.test_request_context("/"):
-        rel = app.build_relations_panel("STK-001-librarian")
+        rel = project.terms.build_relations_panel("STK-001-librarian")
 
     out = _flat(rel["outbound"])
     inb = _flat(rel["inbound"])
@@ -38,7 +40,7 @@ def test_relations_panel_outbound_inbound_and_dedup():
     with app.app.test_request_context("/"):
         pages = {p.id: p for p in wiki.load_all_pages()}
         me = pages["STK-001"]
-        both = {i for i in out_ids if app.links_to(pages[i], me)}
+        both = {i for i in out_ids if links.links_to(pages[i], me)}
     assert out_ids & inb_ids == both, (out_ids & inb_ids, both)
     # never links to itself
     assert "STK-001" not in out_ids and "STK-001" not in inb_ids

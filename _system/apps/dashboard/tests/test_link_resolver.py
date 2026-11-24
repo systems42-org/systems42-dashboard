@@ -79,6 +79,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
 import wiki  # noqa: E402
+import links  # noqa: E402
+import project.terms  # noqa: E402
+import project.requirements  # noqa: E402
+import project.goals  # noqa: E402
+import project.architecture  # noqa: E402
 
 client = app.app.test_client()
 
@@ -107,18 +112,18 @@ def test_fixture_holds_the_spellings():
 
 def test_resolver_accepts_every_spelling_the_body_accepts():
     with app.app.test_request_context("/"):
-        index = app.page_index()
+        index = links.page_index()
         for link in SPELLINGS.values():
-            page = app.resolve_link(link, index)
+            page = links.resolve_link(link, index)
             assert page is not None and page.stem == GOAL, link
         # the name alone, as a typed field may hold it
-        assert app.resolve_link("GOAL-002", index).stem == GOAL
-        assert app.resolve_link(GOAL, index).stem == GOAL
+        assert links.resolve_link("GOAL-002", index).stem == GOAL
+        assert links.resolve_link(GOAL, index).stem == GOAL
         for missing in ("[[GOAL-099]]", "[[goal-002]]", "", None, "[[]]"):
-            assert app.resolve_link(missing, index) is None, missing
+            assert links.resolve_link(missing, index) is None, missing
         # the index the body text uses gives the same page
         for link in SPELLINGS.values():
-            assert app.resolve_link(link, app.link_index()) == ("goals", GOAL), link
+            assert links.resolve_link(link, links.link_index()) == ("goals", GOAL), link
     print("OK: one resolver, every spelling")
 
 
@@ -132,17 +137,17 @@ def test_body_links_open_the_goal():
 
 def test_coverage_is_the_same_for_every_spelling():
     with app.app.test_request_context("/"):
-        data = app.load_goals()
+        data = project.goals.load_goals()
         by_stem = {p.stem: p for p in wiki.load_folder("functional-requirements")}
         for stem in SPELLINGS:
-            assert app.links_of(by_stem[stem], "goal") == [GOAL], stem
-        assert app.links_of(by_stem["FR-007-twice"], "goal") == [GOAL]
-        assert app.links_of(by_stem["FR-008-unresolved"], "goal") == []
+            assert links.links_of(by_stem[stem], "goal") == [GOAL], stem
+        assert links.links_of(by_stem["FR-007-twice"], "goal") == [GOAL]
+        assert links.links_of(by_stem["FR-008-unresolved"], "goal") == []
     serving = [p.id for p in data["coverage"]["GOAL-002"]]
     assert serving == ["FR-001", "FR-002", "FR-003", "FR-004", "FR-005", "FR-006", "FR-007"], serving
     assert data["coverage"]["GOAL-003"] == []
     # the epic whose goal does not exist breaks the rule, no other epic does
-    assert [p.id for p in data["untraced"] if app._fr_level(p) == "epic"] == ["FR-008"], data["untraced"]
+    assert [p.id for p in data["untraced"] if project.requirements._fr_level(p) == "epic"] == ["FR-008"], data["untraced"]
 
     html = _get("/goals")
     rows = {goal: bool(gap) for gap, goal in re.findall(r'<tr( class="gm-gap")? data-goal="(GOAL-\d+)"', html)}
@@ -177,7 +182,7 @@ def test_id_only_reciprocal_self_and_duplicate_links():
     assert _panel(gamma, "Linked from") == []
 
     with app.app.test_request_context("/"):
-        rel = app.build_relations_panel("DT-001-alpha")
+        rel = project.terms.build_relations_panel("DT-001-alpha")
         assert _ids(rel["outbound"]) == ["DT-002"] and _ids(rel["inbound"]) == ["DT-002", "DT-003"]
     # the relations count of the term list counts a page once
     rows = re.findall(r'href="/page/domain-terms/(DT-\d+)[^"]*".*?<span class="rel-pill">(\d+)</span>',
@@ -190,22 +195,22 @@ def test_id_only_reciprocal_self_and_duplicate_links():
 def test_typed_fields_follow_an_id_only_link():
     with app.app.test_request_context("/"):
         # parent: the feature sits under its epic, it is no orphan
-        tree = app.build_fr_hierarchy()
+        tree = project.requirements.build_fr_hierarchy()
         assert tree["orphans"] == [], tree["orphans"]
         epic = next(e for e in tree["epics"] if e["id"] == "FR-002")
         assert [f["id"] for f in epic["features"]] == ["FR-009"], epic
-        assert [a["id"] for a in app._fr_ancestors("FR-009-child")] == ["FR-002"]
+        assert [a["id"] for a in project.requirements._fr_ancestors("FR-009-child")] == ["FR-002"]
         # drivers, realizes, uses, parent and steps of the architecture pages
-        assert _ids(app.build_drivers("BB-001-core")) == ["FR-001"]
-        assert _ids(app.build_addressed_by("FR-001-stem")) == ["BB-001"]
-        assert _ids(app.build_realized_by("FR-001-stem")) == ["RS-001"]
+        assert _ids(project.architecture.build_drivers("BB-001-core")) == ["FR-001"]
+        assert _ids(project.architecture.build_addressed_by("FR-001-stem")) == ["BB-001"]
+        assert _ids(project.architecture.build_realized_by("FR-001-stem")) == ["RS-001"]
         blocks = {p.stem: p for p in wiki.load_folder("building-blocks")}
-        assert app.links_of(blocks["BB-001-core"], "uses") == ["BB-003-store"]
-        top = app.build_bb_tree()
+        assert links.links_of(blocks["BB-001-core"], "uses") == ["BB-003-store"]
+        top = project.architecture.build_bb_tree()
         assert [n["stem"] for n in top] == ["BB-001-core", "BB-003-store"], top
         assert [c["stem"] for c in top[0]["children"]] == ["BB-002-part"], top[0]
         scenario = next(iter(wiki.load_folder("runtime-scenarios")))
-        steps = app.steps_of(scenario)
+        steps = project.architecture.steps_of(scenario)
         assert (steps[0]["from_stem"], steps[0]["to_stem"]) == ("BB-001-core", "BB-003-store"), steps
     print("OK: parent, drivers, realizes, uses and steps follow an ID-only link")
 

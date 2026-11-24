@@ -38,6 +38,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
 import wiki  # noqa: E402
+import project.terms  # noqa: E402
+import session  # noqa: E402
 
 QR = """---
 id: QR-001
@@ -78,7 +80,7 @@ def _home():
 
 
 def test_home_shows_two_peaks_the_valley_and_commons_in_order():
-    app.set_view([])
+    session.set_view([])
     body = _home()
     positions = [body.index(k) for k in ORDER]
     assert positions == sorted(positions), positions
@@ -137,24 +139,24 @@ def test_valley_carries_status_changes_issues_and_decisions_link():
 
 
 def test_hidden_area_and_section_leave_home():
-    app.set_view(["architecture", "C6"])
+    session.set_view(["architecture", "C6"])
     try:
         body = _home()
         assert "area-tile-architecture" not in body
         com = body[body.index("area-tile-commons"):]
         assert "C6" not in com and "C5" in com
     finally:
-        app.set_view([])
+        session.set_view([])
 
 
 def test_area_with_every_section_hidden_reads_not_captured_yet():
-    app.set_view(["A1", "A2", "A3", "A4", "A5"])
+    session.set_view(["A1", "A2", "A3", "A4", "A5"])
     try:
         body = _home()
         arc = body[body.index("area-tile-architecture"):body.index("area-tile-commons")]
         assert "Not captured yet" in arc and "0 pages" not in arc, arc
     finally:
-        app.set_view([])
+        session.set_view([])
 
 
 def test_every_page_has_the_main_nav():
@@ -245,7 +247,7 @@ def test_supporting_models_count_model_pages():
         body = _area("/req42")
         tile = body[body.index("tile-r4"):body.index("tile-r5")]
         with app.app.test_request_context("/req42"):
-            n = app.supporting_model_count()
+            n = project.terms.supporting_model_count()
         assert n >= 1, n
         assert f'<span class="num">{n}</span><span class="unit">model page' in tile, tile
         assert "<ul" not in tile and "Borrow a book" not in tile, tile

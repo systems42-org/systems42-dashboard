@@ -20,11 +20,12 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import app  # noqa: E402
+import search  # noqa: E402
 
 
 def _index() -> dict:
     with app.app.test_request_context():
-        return app.build_search_index()
+        return search.build_search_index()
 
 
 def _rec(page_id: str) -> dict:

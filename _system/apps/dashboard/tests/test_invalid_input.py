@@ -107,6 +107,7 @@ logging.getLogger("systems42.inputs").addHandler(_log)
 import app  # noqa: E402
 import wiki  # noqa: E402
 import inputs  # noqa: E402
+import links  # noqa: E402
 
 
 def _get(path):
@@ -119,7 +120,7 @@ def _all_routes():
                    if "GET" in r.methods and "<" not in str(r)
                    # /about: this wiki.yaml names no about page, so 404 is right
                    and str(r) not in ("/presence/count", "/presence/list", "/brand/intro.html", "/about"))
-    pages = [app._page_url(p.parent.name, p.stem) for p in sorted(_wiki.glob("*/*.md"))]
+    pages = [links._page_url(p.parent.name, p.stem) for p in sorted(_wiki.glob("*/*.md"))]
     return plain + pages + ["/source/SRC-001-invalid-month"]
 
 

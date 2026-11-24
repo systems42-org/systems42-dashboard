@@ -33,6 +33,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import project.terms  # noqa: E402
 
 _DT = _wiki / "domain-terms"
 
@@ -72,7 +73,7 @@ _dt("007", "Durchführungsart", "Catalog", stereotype="value-object")
 
 
 def _diagram(**kw):
-    d = app.build_data_model_full_diagram(**kw)
+    d = project.terms.build_data_model_full_diagram(**kw)
     assert d, f"no diagram projected for {kw or 'the whole model'}"
     return d
 
@@ -164,11 +165,11 @@ def test_focus_keeps_one_entity_and_its_direct_neighbours():
 def test_a_filter_that_matches_nothing_projects_nothing():
     """The view guards on entities, not on the diagram, so None is a valid
     answer and must stay one (see build_data_model_full_diagram's contract)."""
-    assert app.build_data_model_full_diagram(context="No Such Context") is None
+    assert project.terms.build_data_model_full_diagram(context="No Such Context") is None
 
 
 def test_the_contexts_are_listed_for_the_filter_ui():
-    assert app.data_model_contexts() == ["Billing", "Catalog"], app.data_model_contexts()
+    assert project.terms.data_model_contexts() == ["Billing", "Catalog"], project.terms.data_model_contexts()
 
 
 if __name__ == "__main__":
