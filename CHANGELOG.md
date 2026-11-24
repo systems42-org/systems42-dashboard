@@ -31,6 +31,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - Dashboard: `/ping`, `/leaving`, `/settings` and `/disconnect-all` answer 400 to a JSON body that is not an object, and the session stays as it was. An array, a string, a number or a boolean ended in HTTP 500 in the Python dashboard, and the Go dashboard read it as an empty body (#184).
 - Dashboard: `/req42/<slug>` answers 404 for the arc42 sections, which live under `/arc42/`.
 - Dashboard: `/issues?section=` ignores case, so `c2` filters like `C2`.
+- Dashboard: the issue filters work in the static demo of the website. A changed filter stays on the demo's issue list, the list shows the issues the address asks for, also after a reload and with a sort order, and a section's issue count opens that section's open issues. Before, a changed filter led to `/issues` outside `/demo/`, a page that does not exist, and every address showed all issues. The site build now fails on a demo script that leaves `/demo/` (#181).
 - Dashboard: the metamodel page links a projection's route only when it is a path on this site.
 - Dashboard: the View dialog puts section ids and titles in as text, so
   markup in a framework file cannot reach the page.

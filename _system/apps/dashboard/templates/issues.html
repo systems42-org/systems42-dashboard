@@ -62,7 +62,7 @@
   </thead>
   <tbody>
     {% for it in items %}
-    <tr class="issue-row" data-id="{{ it.id }}" data-status="{{ it.status }}" data-sections="{{ it.sections | join(' ') }}">
+    <tr class="issue-row" data-id="{{ it.id }}" data-status="{{ it.status }}" data-open="{{ 'yes' if it.is_open else 'no' }}" data-category="{{ it.category }}" data-severity="{{ it.severity }}" data-sections="{{ it.sections | join(' ') }}" data-owner="{{ it.owner_key }}">
       <td class="c-id"><a href="{{ it.url }}"><code>{{ it.id }}</code></a></td>
       <td class="c-title"><span class="term"><a class="term-link" href="{{ it.url }}">{{ it.title }}</a></span></td>
       <td class="c-status c-kind">{% if it.kind %}<span class="badge kind-badge">{{ it.kind }}</span>{% endif %}</td>
@@ -94,7 +94,8 @@
       const sort = new URLSearchParams(location.search).get('sort');
       if (sort) params.set('sort', sort);
       const qs = params.toString().replace(/%3A/gi, ':').replace(/%2C/gi, ',');
-      location.assign('/issues' + (qs ? '?' + qs : ''));
+      // the page's own address, so an exported copy stays in its folder
+      location.assign(location.pathname + (qs ? '?' + qs : ''));
     });
   }
 </script>
