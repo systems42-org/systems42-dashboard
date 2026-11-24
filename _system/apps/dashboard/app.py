@@ -31,8 +31,6 @@ import web.search_session  # search, join, presence, reload, the view and Discon
 # some slim base images lack a webp entry in their mime.types
 mimetypes.add_type("image/webp", ".webp")
 
-app = Flask(__name__)
-
 # Timezone for the "last refreshed" footer; honours the container's TZ env.
 # Empty (not "UTC") when unset, so inject_refresh_time can fall back to the
 # host's own local zone instead of forcing UTC.
@@ -45,17 +43,6 @@ def _build_cache() -> dict | None:
     return g.setdefault("_build_cache", {}) if has_request_context() else None
 
 
-wiki.use_request_cache(_build_cache)
-
-# The route groups, one blueprint each. None has a URL prefix.
-app.register_blueprint(web.pages.bp)
-app.register_blueprint(web.projections.bp)
-app.register_blueprint(web.search_session.bp)
-app.register_blueprint(web.help.bp)
-app.register_blueprint(web.brand.bp)
-
-
-@app.context_processor
 def inject_refresh_time():
     """Every render carries the moment its data was (re)parsed — pages parse the
     wiki live, so this is effectively the page load / data refresh time."""
@@ -98,10 +85,6 @@ def csp_nonce() -> str:
     return g.csp_nonce
 
 
-app.jinja_env.globals["csp_nonce"] = csp_nonce
-
-
-@app.after_request
 def _page_policy(resp):
     """Every HTML page gets the page policy (_PAGE_CSP). No page may be shown
     inside another site's frame (clickjacking the settings or Disconnect-all
@@ -124,7 +107,6 @@ def _brand_url(folder: Path, name: str) -> str:
     return f"/brand/{name}?v={v}" if v else f"/brand/{name}"
 
 
-@app.context_processor
 def inject_identity():
     """Make the project identity and the active brand available to every
     template. `active_brand.intro_url` is the address of the brand's intro
@@ -144,14 +126,12 @@ def inject_identity():
     return cfg
 
 
-@app.context_processor
 def inject_metamodel_version():
     """The repository's metamodel version against this release (FR-043), for
     the footer notice and the version section of /metamodel."""
     return {"metamodel_check": metamodel.version_check()}
 
 
-@app.context_processor
 def inject_area():
     """The area the current page belongs to (None on home, help…), for
     the breadcrumb's area level and the colour bar. A hidden area yields None
@@ -164,7 +144,6 @@ def inject_area():
     return {"current_area": area}
 
 
-@app.before_request
 def read_sections():
     """The sections come from the repository's metamodel (FR-044). Reading
     them per request shows an edited framework file on the next page load."""
@@ -197,7 +176,6 @@ def _nav_current(key: str, href: str, path: str, area: dict | None) -> bool:
     return bool(here and here["id"] == key) or path.startswith(href)
 
 
-@app.context_processor
 def inject_nav():
     """`nav_items` for base.html: (href, label, current), hidden entries dropped."""
     if not has_request_context():
@@ -207,19 +185,43 @@ def inject_nav():
                           for k, h, l in _nav_entries() if not settings.is_hidden(k)]}
 
 
-app.jinja_env.globals["static_url"] = web.common.static_url
-
-
-app.jinja_env.globals["list_spec"] = web.common.list_spec
-# the folder a type's pages live in, for the hints that name it (CON-006)
-app.jinja_env.globals["type_folder"] = catalog.folder
-
-
-@app.errorhandler(404)
 def not_found(_err):
     """A missing page keeps the header and footer, so the reader can go on
     from here (FR-013)."""
     return render_template("not_found.html"), 404
+
+
+def create_app() -> Flask:
+    """Build the Flask app: the hooks, the template context and the 404 page
+    that apply to every route, the template globals, the route groups and the
+    request cache. Two calls give two apps over the same module state (the
+    settings, the session, the caches), which is fine while one process
+    serves one wiki."""
+    app = Flask(__name__)
+    wiki.use_request_cache(_build_cache)
+
+    app.before_request(read_sections)
+    app.after_request(_page_policy)
+    for processor in (inject_refresh_time, inject_identity, inject_metamodel_version,
+                      inject_area, inject_nav):
+        app.context_processor(processor)
+    app.register_error_handler(404, not_found)
+
+    app.jinja_env.globals["csp_nonce"] = csp_nonce
+    app.jinja_env.globals["static_url"] = web.common.static_url
+    app.jinja_env.globals["list_spec"] = web.common.list_spec
+    # the folder a type's pages live in, for the hints that name it (CON-006)
+    app.jinja_env.globals["type_folder"] = catalog.folder
+
+    # The route groups, one blueprint each. None has a URL prefix.
+    for group in (web.pages, web.projections, web.search_session, web.help, web.brand):
+        app.register_blueprint(group.bp)
+    return app
+
+
+# The one app of this process: Gunicorn (`app:app`), the site export and the
+# tests use it. Building it starts no thread and writes nothing.
+app = create_app()
 
 
 if __name__ == "__main__":

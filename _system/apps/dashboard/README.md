@@ -363,9 +363,10 @@ status-strip source count already reads.
 
 ```
 _system/apps/dashboard/
-  app.py             Flask app and what applies to every route: the request cache, the page
-                     policy, the template context, the navigation and the 404 page.
-                     Registers the blueprints. May import every module below
+  app.py             create_app() and the one app of the process (app.app), with what applies
+                     to every route: the request cache, the page policy, the template
+                     context, the navigation and the 404 page. create_app() registers these
+                     and the blueprints. May import every module below
   web/               the routes, one module and one Flask blueprint per group. May import
                      Flask and every module below, never app
     brand.py         the active brand's marks and intro, the about page and the files it

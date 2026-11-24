@@ -113,6 +113,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - Dashboard release 0.14.5 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.4 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.3 (`_system/apps/dashboard/VERSION`).
+- Dashboard: `create_app()` in `app.py` builds the Flask app. It registers the request hooks, the template context, the 404 page, the template globals, the blueprints and the request cache. `app.app` stays the app that Gunicorn, the site export and the tests use. No behaviour change (#185).
 - Dashboard: the help page, the method page and the metamodel page move from `app.py` into the Flask blueprint `web/help.py`, the brand routes and the about page into `web/brand.py`. The path of `help.md` moves into `settings.py`. `app.py` holds no route any more. No URL changes. No behaviour change (#185).
 - Dashboard: the search, the join page, the heartbeat and presence endpoints, the reload, the View dialog's endpoints and Disconnect all move from `app.py` into the Flask blueprint `web/search_session.py`. No URL changes. No behaviour change (#185).
 - Dashboard: the goals, the functional requirements, the term list, the term network, the entity diagram, the arc42 views, the decisions, the stakeholders and the issue list move from `app.py` into the Flask blueprint `web/projections.py`. No URL changes. No behaviour change (#185).
