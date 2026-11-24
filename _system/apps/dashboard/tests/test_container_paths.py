@@ -54,7 +54,7 @@ def test_the_image_holds_every_module_the_app_imports():
     """A module next to app.py that the Dockerfile does not copy stops the container at import."""
     for mod in ("app.py", "catalog.py", "inputs.py", "metamodel.py", "wiki.py", "links.py", "render.py", "search.py", "session.py", "settings.py", "preflight.py", "gunicorn.conf.py"):
         assert re.search(r"^COPY " + re.escape(mod) + r" \.$", DOCKERFILE, re.M), mod
-    for package in ("project",):                     # a package folder is copied as a folder
+    for package in ("project", "web"):                     # a package folder is copied as a folder
         assert re.search(r"^COPY " + package + r" \./" + package + "$", DOCKERFILE, re.M), package
 
 

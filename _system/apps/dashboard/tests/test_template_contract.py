@@ -80,7 +80,8 @@ def test_every_key_app_reads_is_declared_by_some_template():
     # app.py and the modules its code moved into (issue #185)
     here = Path(__file__).resolve().parent.parent
     source = "".join(f.read_text(encoding="utf-8")
-                     for f in [*sorted(here.glob("*.py")), *sorted(here.glob("project/*.py"))])
+                     for f in [*sorted(here.glob("*.py")), *sorted(here.glob("project/*.py")),
+                               *sorted(here.glob("web/*.py"))])
     read = set(re.findall(r'\.meta\.get\(\s*"([^"]+)"', source))
     assert read, "found no .meta.get() reads — did app.py move?"
     undeclared = sorted(read - declared)

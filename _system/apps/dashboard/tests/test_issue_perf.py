@@ -36,6 +36,7 @@ for n in range(1, N + 1):
         f"category: content\nowner:\n---\n\n# Frage {n}\n", encoding="utf-8")
 
 import app  # noqa: E402
+import web.common  # noqa: E402
 import metamodel  # noqa: E402
 
 client = app.app.test_client()
@@ -71,7 +72,7 @@ def test_page_view_with_200_issues_is_fast():
         took = time.perf_counter() - t
         assert resp.status_code == 200, path
         assert took < 1.5, (path, round(took, 2))
-    assert len(app.open_issues_for("STK-001-team")) == N
+    assert len(web.common.open_issues_for("STK-001-team")) == N
 
 
 def test_a_changed_metamodel_file_is_read_again():

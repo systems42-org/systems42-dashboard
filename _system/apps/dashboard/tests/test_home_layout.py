@@ -37,6 +37,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import web.pages  # noqa: E402
 import wiki  # noqa: E402
 import project.terms  # noqa: E402
 import session  # noqa: E402
@@ -208,7 +209,7 @@ def test_recent_changes_shape():
         encoding="utf-8")
     try:
         wiki._PARSE_CACHE.clear()
-        rows = app.recent_changes(5)
+        rows = web.pages.recent_changes(5)
         assert rows and set(rows[0]) >= {"id", "title", "kind", "url", "when"}, rows
         assert rows[0]["url"] == "/page/domain-terms/DT-001-x"
     finally:

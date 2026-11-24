@@ -32,15 +32,16 @@ HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(HERE))
 
 import app  # noqa: E402
+import web.common  # noqa: E402
 
 
 def test_public_url_prefers_env_and_strips_slash():
     with app.app.test_request_context("/"):
-        assert app.public_url() == "http://192.0.2.7:8080"
+        assert web.common.public_url() == "http://192.0.2.7:8080"
 
 
 def test_qr_svg_is_inline_and_theme_aware():
-    svg = app.qr_svg("http://192.0.2.7:8080")
+    svg = web.common.qr_svg("http://192.0.2.7:8080")
     assert svg.startswith("<svg") and "currentColor" in svg
 
 
@@ -60,7 +61,7 @@ def test_public_url_falls_back_when_env_is_unset():
     saved = os.environ.pop("DASH_PUBLIC_URL")
     try:
         with app.app.test_request_context("/", base_url="http://[::1]:8080"):
-            url = app.public_url()
+            url = web.common.public_url()
             assert url.startswith("http://"), url
             assert url.endswith(":8080"), url
             assert "]" not in url.split("//", 1)[1].split(":8080")[0] or url.startswith("http://[::1]"), url
@@ -72,13 +73,13 @@ def test_public_url_falls_back_to_the_request_origin_without_a_lan_ip():
     """No routable interface (an offline laptop, a locked-down container):
     the QR must still encode a working address — the request's own origin."""
     saved_env = os.environ.pop("DASH_PUBLIC_URL")
-    saved_ip = app._lan_ip
-    app._lan_ip = lambda: None
+    saved_ip = web.common._lan_ip
+    web.common._lan_ip = lambda: None
     try:
         with app.app.test_request_context("/", base_url="http://127.0.0.1:8000"):
-            assert app.public_url() == "http://127.0.0.1:8000"
+            assert web.common.public_url() == "http://127.0.0.1:8000"
     finally:
-        app._lan_ip = saved_ip
+        web.common._lan_ip = saved_ip
         os.environ["DASH_PUBLIC_URL"] = saved_env
 
 

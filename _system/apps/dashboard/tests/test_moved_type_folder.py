@@ -90,6 +90,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 
 sys.path.insert(0, str(HERE))
 import app  # noqa: E402
+import web.pages  # noqa: E402
 import project.terms  # noqa: E402
 
 client = app.app.test_client()
@@ -107,7 +108,7 @@ def _get(url):
 def _tile(sid):
     with app.app.test_request_context("/"):
         app.catalog.refresh()
-        return app.build_section_tile(app.catalog.SECTION_BY_ID[sid])
+        return web.pages.build_section_tile(app.catalog.SECTION_BY_ID[sid])
 
 
 def test_the_lookup_reads_the_declaration():

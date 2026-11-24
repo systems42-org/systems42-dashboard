@@ -37,6 +37,7 @@ files = ["requirements.txt"]
 "render.py" = "systems42_dashboard/render.py"
 "search.py" = "systems42_dashboard/search.py"
 "project" = "systems42_dashboard/project"
+"web" = "systems42_dashboard/web"
 "session.py" = "systems42_dashboard/session.py"
 "settings.py" = "systems42_dashboard/settings.py"
 "preflight.py" = "systems42_dashboard/preflight.py"

@@ -64,6 +64,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 
 sys.path.insert(0, str(HERE))
 import app  # noqa: E402
+import web.pages  # noqa: E402
 import settings  # noqa: E402
 import session  # noqa: E402
 
@@ -92,7 +93,7 @@ def test_home_page_lists_both():
     assert f'<code class="ml-id">C6</code> {RENAMED}<' in body, body
     # the architecture peak counts the added section's pages and its open issue
     with app.app.test_request_context("/"):
-        arch = app.build_area_tile(app.catalog.AREA_BY_KEY["architecture"])
+        arch = web.pages.build_area_tile(app.catalog.AREA_BY_KEY["architecture"])
     assert (arch["count"], arch["open_issues"]) == (2, 1), arch
 
 

@@ -363,8 +363,15 @@ status-strip source count already reads.
 
 ```
 _system/apps/dashboard/
-  app.py             Flask app, the routes and what the views put together
-                     (tiles, lists, issue fields). May import every module below
+  app.py             Flask app, the routes not yet moved into web/, and what applies to
+                     every route. Registers the blueprints. May import every module below
+  web/               the routes, one module and one Flask blueprint per group. May import
+                     Flask and every module below, never app
+    common.py        what several groups share: the static file URL, the sort presets, the
+                     head and section path of a detail page, the issue fields and the issues
+                     that link to a page, the address and QR code for joining
+    pages.py         home with its tiles and the state of the vault, the area pages, the
+                     generic section list, the page and source detail, the changes
   catalog.py         the three areas, and the sections from the metamodel with routes and colours
   metamodel.py       reader for _system/metamodel/ (the /metamodel page, ADR-0008)
   inputs.py          reads text and YAML from wiki, wiki.yaml and metamodel, and logs what is invalid

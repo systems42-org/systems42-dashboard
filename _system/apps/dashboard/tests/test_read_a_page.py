@@ -55,6 +55,7 @@ _page("stakeholders", "STK-002-quelle", "stakeholder", "Quelle", "draft",
       body="Aus [[SRC-001-gespraech]], nicht aus [[SRC-009-fehlt]] oder [[DR-009-fehlt]].")
 
 import app  # noqa: E402
+import web.common  # noqa: E402
 import project.terms  # noqa: E402
 
 client = app.app.test_client()
@@ -113,7 +114,7 @@ def test_other_pages_carry_no_status_badge():
 def test_relations_mark_closed_exactly_where_the_issues_panel_does():
     with app.app.test_request_context("/"):
         rel = project.terms.build_relations_panel("STK-001-leserin")
-        panel = {i["id"]: i["is_open"] for i in app.open_issues_for("STK-001-leserin")}
+        panel = {i["id"]: i["is_open"] for i in web.common.open_issues_for("STK-001-leserin")}
     items = {it["id"]: it for g in rel["inbound"] + rel["outbound"] for it in g["links"]}
     for pid, is_open in panel.items():
         assert items[pid]["closed"] is (not is_open), (pid, items[pid])
