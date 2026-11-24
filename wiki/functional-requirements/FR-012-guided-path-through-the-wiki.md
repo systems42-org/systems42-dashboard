@@ -2,7 +2,7 @@
 id: FR-012
 type: functional-requirement
 title: Guided path through the wiki
-status: draft
+status: deprecated
 created: 2026-11-11
 updated: 2026-11-24
 sources: ["[[SRC-009-guided-path-through-the-wiki]]", "[[SRC-008-grilling-session-on-showing-the-method]]"]
@@ -48,4 +48,6 @@ One path serves newcomers who read alone and presenters who walk it out loud.
 
 ## History
 
+> Deprecated on 2026-11-24: Gernot Starke decided not to build the guided path for now. [[FR-018-orientation-on-the-first-page]] no longer asks for a link to it.
+>
 > Proposed by Claude on 2026-11-11 at Gernot Starke's request ([[SRC-009-guided-path-through-the-wiki]]). Shaped in fr-14 questions Q1 to Q4 of [[SRC-008-grilling-session-on-showing-the-method]]. Should, not Must: search carries GOAL-003's answers, and a Must would need its own epic under GOAL-003.

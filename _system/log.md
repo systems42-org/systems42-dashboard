@@ -487,3 +487,6 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 
 ## [2026-11-24] correction | Limit the section id exception to presentation
 - Restored Gernot Starke's wording in [[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]]. The exception allows selecting a presentation by section id and requires a generic view for other declared sections ([[SRC-055-recovery-report-systems42-dashboard]]).
+
+## [2026-11-24] correction | Drop the guided path
+- Gernot Starke decided not to build the guided path for now. [[FR-012-guided-path-through-the-wiki]] is deprecated. [[FR-018-orientation-on-the-first-page]], [[FR-023-areas-and-sections-follow-the-tailoring]], [[FR-010-show-the-method]] and [[QR-005-the-dashboard-supports-learning]] no longer name it.
