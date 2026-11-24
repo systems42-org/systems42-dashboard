@@ -4,7 +4,7 @@ type: functional-requirement
 title: Show the method
 status: draft
 created: 2026-11-11
-updated: 2026-11-19
+updated: 2026-11-24
 sources: ["[[SRC-007-show-the-method]]", "[[SRC-008-grilling-session-on-showing-the-method]]"]
 related: ["[[STK-013-people-learning-or-presenting-systems42]]", "[[STK-008-workshop-participants-and-facilitators]]"]
 tags: ["functional-requirement", "method"]
@@ -35,7 +35,7 @@ A presenter needs to show that a raw source becomes typed, linked pages with sou
 ## Hierarchy
 
 - **Parent:** none (epic).
-- **Children:** projected from the `parent:` backlinks: [[FR-011-explain-the-three-loops]], [[FR-012-guided-path-through-the-wiki]], [[FR-035-method-terms-lead-to-their-definition]], [[FR-046-shared-session-in-a-workshop]].
+- **Children:** projected from the `parent:` backlinks: [[FR-011-explain-the-five-loops]], [[FR-012-guided-path-through-the-wiki]], [[FR-035-method-terms-lead-to-their-definition]], [[FR-046-shared-session-in-a-workshop]], [[FR-068-read-the-metamodel-as-a-reference]].
 
 > [!note] Open points
 > The metric of GOAL-002 is a proposal. Nobody has agreed it yet.

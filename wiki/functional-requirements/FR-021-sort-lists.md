@@ -4,8 +4,8 @@ type: functional-requirement
 title: Sort lists
 status: draft
 created: 2026-11-12
-updated: 2026-11-20
-sources: ["[[SRC-013-browse-by-area-and-section]]", "[[SRC-014-grilling-session-on-browsing]]"]
+updated: 2026-11-24
+sources: ["[[SRC-013-browse-by-area-and-section]]", "[[SRC-014-grilling-session-on-browsing]]", "[[SRC-055-recovery-report-systems42-dashboard]]"]
 related: ["[[FR-022-lists-keep-sort-and-filter-in-their-address]]", "[[STK-001-readers]]", "[[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]]"]
 tags: ["functional-requirement", "navigation"]
 notation: agile
@@ -46,3 +46,4 @@ As a [[STK-001-readers|product owner]] I want **to sort a list by several column
 ## History
 
 > Gernot Starke made sorting a Must and asked for several columns ([[SRC-014-grilling-session-on-browsing]], Q6). On 2026-11-20 he decided that list sort presets belong to dashboard presentation ([[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]]), not to the Systems42 metamodel.
+> The recovery report also identified priority-ordered backlog reading as a capability. This requirement already covers the requirement list sorted by priority, release and order ([[SRC-055-recovery-report-systems42-dashboard]]).

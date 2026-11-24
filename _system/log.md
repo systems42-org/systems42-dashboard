@@ -84,7 +84,7 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Source: `raw/fr-13-show-the-method.md`, proposed by Claude for GOAL-002, now [[SRC-007-show-the-method]] in `raw/ingested/`. The grilling answers are [[SRC-008-grilling-session-on-showing-the-method]].
 - Grill gate: checked against GOAL-002, the source pages and the `/help` work of another session. Gernot Starke answered Q1 to Q4 one at a time.
 - Decisions:
-  - Q1: one epic, [[FR-010-show-the-method]], with the feature [[FR-011-explain-the-three-loops]]. The guided path from fr-14 becomes a second feature when captured. What already works gets no feature.
+  - Q1: one epic, [[FR-010-show-the-method]], with the feature [[FR-011-explain-the-five-loops]]. The guided path from fr-14 becomes a second feature when captured. What already works gets no feature.
   - Q2: FR-011 states the principles of capture and inspect only. Gernot Starke and the Systems42 team take over clarify, so it became [[ISS-002-define-the-clarify-loop]] (also a Todoist task in his systems42 project).
   - Q3: the explanation fits on one screen and is reachable from every page. 4 of 5 test readers new to Systems42 name the three loops with their input and output after 2 minutes.
   - Q4: epic and feature are Should. A demo does not fail without the explanation.
@@ -466,3 +466,24 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 - Updated: [[FR-032-example-brands-to-try]]. Created: SRC-053, SRC-054.
 - Also in the pull request: the website hero and page headers show the Chart mark, and dashboard release 0.14.2.
 - Not changed: the Mac app icon (`macos/build-app.sh`) still draws the peaks, [#172](https://github.com/systems42-org/systems42-dashboard/issues/172).
+
+## [2026-11-24] capture | Recovery report — systems42-dashboard at 8b98d1a
+- Source: the report pinned to `8b98d1a`, archived at `raw/ingested/recovery-systems42-dashboard-8b98d1a.md` and recorded as [[SRC-055-recovery-report-systems42-dashboard]]. Closing-round answers are [[SRC-056-closing-round-on-recovery-report]].
+- Current-state check: dashboard `main` is at `25d3cfa`, after many wiki and code updates. Context and level-1 building blocks were already captured in [[SRC-043-context-of-the-systems42-dashboard]], [[SRC-044-building-blocks-of-the-systems42-dashboard]] and [[SRC-045-grilling-session-on-context-and-building-blocks]], so they were not duplicated. The recovery findings remain tied to their pinned revision.
+- Created: [[FR-066-see-the-architecture-views]], [[FR-067-read-the-project-about-page]], [[FR-068-read-the-metamodel-as-a-reference]], [[QR-005-the-dashboard-supports-learning]], [[QR-006-hostile-wiki-content-is-inert]] and [[ISS-009-correct-ambiguous-code-references]].
+- Updated: [[FR-011-explain-the-five-loops]], [[FR-021-sort-lists]] (provenance), [[STK-013-people-learning-or-presenting-systems42]], [[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]], [[BB-001-python-dashboard]] and [[ISS-002-define-the-clarify-loop]]. The priority-ordered backlog finding is covered by [[FR-021-sort-lists]].
+- The human confirmed that learning is a quality requirement, not a separate Help feature, and agreed on the measure of 4 out of 5 new readers within 10 minutes. The method explanation now names five loops; [[ISS-002-define-the-clarify-loop]] is resolved from the current `clarify` workflow.
+- The closing round left the report's build question open for expert review. Created [[ISS-010-are-build-hardening-rules-required]]; no constraint was inferred.
+- Delivery candidates were not backfilled; the report's answer leaves those for separate Implement runs.
+
+## [2026-11-24] clarify | Define the clarify loop
+- Resolved [[ISS-002-define-the-clarify-loop]]: Systems42 now defines the loop in `[[clarify]]`, and [[FR-011-explain-the-five-loops]] explains it in the current five-loop method.
+
+## [2026-11-24] correction | Reopen clarify loop issue
+- Reopened [[ISS-002-define-the-clarify-loop]]. The workflow exists, but the team's agreement on its principle was not established. The earlier closure was an agent error; the dashboard explanation in [[FR-011-explain-the-five-loops]] does not resolve it.
+
+## [2026-11-24] correction | Make the metamodel dependency explicit
+- [[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]] states the dependency from dashboard to metamodel first. [[FR-044-sections-come-from-the-repositorys-metamodel]] distinguishes the sections declared by the metamodel from the presentation chosen by the dashboard.
+
+## [2026-11-24] correction | Limit the section id exception to presentation
+- Restored Gernot Starke's wording in [[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]]. The exception allows selecting a presentation by section id and requires a generic view for other declared sections ([[SRC-055-recovery-report-systems42-dashboard]]).

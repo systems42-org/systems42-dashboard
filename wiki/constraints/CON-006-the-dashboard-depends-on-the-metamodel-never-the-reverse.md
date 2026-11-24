@@ -4,8 +4,8 @@ type: constraint
 title: The dashboard depends on the metamodel, never the reverse
 status: draft
 created: 2026-11-17
-updated: 2026-11-17
-sources: ["[[SRC-027-dashboard-distribution-and-metamodel-contract]]", "[[SRC-028-grilling-session-on-dashboard-distribution]]"]
+updated: 2026-11-24
+sources: ["[[SRC-027-dashboard-distribution-and-metamodel-contract]]", "[[SRC-028-grilling-session-on-dashboard-distribution]]", "[[SRC-055-recovery-report-systems42-dashboard]]"]
 related: ["[[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]]", "[[FR-044-sections-come-from-the-repositorys-metamodel]]", "[[FR-043-the-dashboard-checks-the-metamodel-version]]", "[[ISS-005-the-method-lint-imports-dashboard-code]]", "[[STK-012-maintainers]]"]
 tags: [constraint]
 category: technical
@@ -17,6 +17,7 @@ category: technical
 - The dashboard code holds no metamodel facts: no section ids, titles, folders or scope, no type prefixes, folders or labels. It reads them from the repository it runs on.
 - It may assume the three areas Requirements, Architecture and Commons.
 - Presentation stays in the dashboard: routes, colours, navigation labels, tile layout.
+- As a presentation exception, the dashboard may use a section id to select a view for a section declared by the metamodel. Every declared section without a dedicated view must use the generic view ([[SRC-055-recovery-report-systems42-dashboard]]).
 - Nothing in the Systems42 method depends on dashboard code.
 - The dashboard is developed and tested against the metamodel of `systems42-org/meta`.
 
