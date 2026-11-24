@@ -363,7 +363,8 @@ status-strip source count already reads.
 
 ```
 _system/apps/dashboard/
-  app.py             Flask app + all diagram projections. May import every module below
+  app.py             Flask app, the routes and the projections not yet moved into project/.
+                     May import every module below
   catalog.py         the three areas, and the sections from the metamodel with routes and colours
   metamodel.py       reader for _system/metamodel/ (the /metamodel page, ADR-0008)
   inputs.py          reads text and YAML from wiki, wiki.yaml and metamodel, and logs what is invalid
@@ -376,6 +377,12 @@ _system/apps/dashboard/
                      and Markdown. May import wiki, links and metamodel, never Flask or app
   search.py          the search records: searched fields, a page's text for search and its
                      neighbours. May import wiki, links, render and catalog, never Flask or app
+  project/           the projections, one module each. None imports Flask or app
+    common.py        what several projections share: open issues, the maturity bar, provenance,
+                     the pages of a section, diagram node ids, labels and links. May import
+                     wiki and links
+    context.py       the context flows and what they share with the context diagram. May
+                     import wiki, links and project.common
   help.md            source of the /help page
   templates/         base, index, _empty (shared empty state), _macros (plural()),
                      _maturity (maturity bar/legend), _mermaid (loader),

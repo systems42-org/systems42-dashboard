@@ -33,6 +33,8 @@ import render  # sanitizer, wikilinks and Markdown
 import search  # search records
 import links as links_module  # link resolver and indexes. "links" is a local name in many functions here
 import wiki  # paths, pages, parse cache and loaders
+import project.common  # what several projections share
+import project.context  # the context flows
 
 # some slim base images lack a webp entry in their mime.types
 mimetypes.add_type("image/webp", ".webp")
@@ -575,85 +577,9 @@ def vault_status() -> dict:
     issues = wiki.load_type("issue")
     last = max((p.mtime for p in pages), default=0.0)
     return {"pages": len(pages),
-            "open_issues": sum(1 for i in issues if is_open_issue(i.status)),
+            "open_issues": sum(1 for i in issues if project.common.is_open_issue(i.status)),
             "sources": len(wiki.load_sources()),
             "last_change": _relative_when(last) if last else "—"}
-
-
-def provenance(page: wiki.Page) -> list[dict]:
-    """Resolve a page's `sources:` wikilinks to provenance records. Unresolved
-    entries are kept (url=None) so the chip can say so instead of vanishing."""
-    idx = links_module.source_index()
-    rows = []
-    refs = page.as_list("sources")          # a bare string is one entry, not a list of characters
-    for ref in refs:
-        base = _fr_stem_from_ref(ref)           # '[[raw/sources/SRC-001-x]]' -> 'SRC-001-x'
-        if not base:
-            continue                             # None / empty after stripping — nothing to show
-        src = idx.get(base)
-        if src:
-            rows.append({"id": src.id, "title": src.title, "stem": src.stem,
-                         "type": str(src.meta.get("source-type") or ""),
-                         "origin": str(src.meta.get("origin") or ""),
-                         "captured": str(src.meta.get("captured") or ""),
-                         "url": f"/source/{src.stem}"})
-        else:
-            rows.append({"id": base, "title": base, "stem": base, "type": "", "origin": "", "captured": "", "url": None})
-    return rows
-
-
-@wiki._request_cached
-def open_issue_counts() -> dict[str, set[str]]:
-    """folder -> ids of OPEN issues whose links (frontmatter `related:` or body
-    wikilinks) resolve to a page in that folder. One issue's id can appear in
-    several folders' sets; an issue that links nothing resolvable appears in
-    none. Sets (not counts) so a caller spanning several folders — e.g. Scope's
-    context + external-interfaces — can union them and count each issue once,
-    even if it links pages in more than one of those folders."""
-    links = links_module.link_index()
-    out: dict[str, set[str]] = {}
-    for iss in wiki.load_type("issue"):
-        if not is_open_issue(iss.status):
-            continue
-        for folder in {links[t][0] for t in iss.link_targets() if t in links}:
-            out.setdefault(folder, set()).add(iss.id)
-    return out
-
-
-# Status values that count as "closed" for the issues filter.
-CLOSED_STATUSES = {"resolved", "wontfix"}
-
-
-def is_open_issue(status: object) -> bool:
-    """The one meaning of "open" for an issue: every status except resolved
-    and wontfix. A missing or unknown status stays visible as open."""
-    return str(status or "").strip().lower() not in CLOSED_STATUSES
-
-
-# The four-step lifecycle every content type shares (AGENTS.md: draft → review →
-# accepted → deprecated). Issue statuses are mapped onto it so one thin
-# bar reads the same on every tile.
-MATURITY_ORDER = ["accepted", "review", "draft", "deprecated"]
-_MATURITY_ALIASES = {
-    "proposed": "review", "in-progress": "review",
-    "resolved": "accepted", "ingested": "accepted",
-    "open": "draft",
-    "superseded": "deprecated", "rejected": "deprecated", "wontfix": "deprecated",
-}
-
-
-def maturity(statuses) -> dict:
-    """Bucket status strings into MATURITY_ORDER and return the segments of a
-    stacked bar (percent widths) plus a text label for the tooltip/aria."""
-    counts = {k: 0 for k in MATURITY_ORDER}
-    for s in statuses:
-        s = _MATURITY_ALIASES.get(str(s or "").strip().lower(), str(s or "").strip().lower())
-        counts[s if s in counts else "draft"] += 1
-    total = sum(counts.values())
-    segments = [{"status": k, "n": counts[k], "pct": round(100 * counts[k] / total)}
-                for k in MATURITY_ORDER if counts[k]]
-    label = " · ".join(f'{s["n"]} {s["status"]}' for s in segments) or "nothing yet"
-    return {"total": total, "segments": segments, "label": label}
 
 
 # --- decision records (wiki/decisions/, MADR, DR-034) ----------------------
@@ -695,13 +621,6 @@ def load_decisions() -> list[dict]:
 # /req42/<slug> list for the other known sections, and /section/<id> for a
 # section the dashboard has no view for.
 
-def _block_pages(block: dict) -> list[wiki.Page]:
-    """All wiki pages feeding one req42 block, sorted by id."""
-    pages: list[wiki.Page] = []
-    for folder in block["folders"]:
-        pages.extend(wiki.load_folder(folder))
-    return sorted(pages, key=lambda p: p.id)
-
 
 # --- context diagram (req42 block 03) --------------------------------------
 #
@@ -711,86 +630,6 @@ def _block_pages(block: dict) -> list[wiki.Page]:
 # Center = the system (blueish box); systems/organizations = light-grey boxes;
 # human roles = actor symbol ("Person"). Stakeholders are merged/hidden/shaped per their
 # `context_role`/`nature` fields (DR-014). No node links (not needed yet).
-
-_NID_RE = re.compile(r"[^A-Za-z0-9]")
-
-
-def _diagram_node_id(raw: str) -> str:
-    return _NID_RE.sub("", str(raw)) or "N"
-
-
-def _clean_label(s: object, drop_parenthetical: bool = True) -> str:
-    """Resolve [[a|b]]→b / [[a]]→a, optionally drop a trailing (parenthetical),
-    strip chars that would break the mermaid/HTML text so labels are always
-    render-safe.
-
-    `drop_parenthetical=False` for the system name: a vault called
-    "Bookshelf (v2)" showed in full in the hero but as "Bookshelf" in every
-    diagram, which reads as two different systems on the same screen.
-    Square brackets are stripped because mermaid uses them as node-shape
-    delimiters; apostrophes are kept — labels are emitted inside double
-    quotes, and "Member's card" should stay readable.
-    """
-    t = str(s or "")
-    t = re.sub(r"\[\[[^\]|]+\|([^\]]+)\]\]", r"\1", t)                       # [[a|b]] -> b
-    t = re.sub(r"\[\[([^\]]+)\]\]", lambda m: m.group(1).split("/")[-1], t)  # [[a]]   -> a
-    if drop_parenthetical:
-        t = re.sub(r"\s*\([^)]*\)\s*$", "", t)                               # trailing (…)
-    t = t.replace("&", " and ")          # never silently delete: "A & B" -> "A and B"
-    t = re.sub(r'[<>"|\[\]]', "", t)
-    return re.sub(r"\s+", " ", t).strip()
-
-
-# Layout bands (DR-026 `tier:`). Neighbours that feed the system are ranked
-# BEFORE the centre, those it serves AFTER it, so mermaid's LR layout puts
-# supply/support on the left and demand/operations on the right instead of
-# scattering fourteen nodes around one box.
-_TIER_BANDS = [
-    ("supply", "Supply", "left"),
-    ("support", "Support", "left"),
-    ("demand", "Demand", "right"),
-    ("core-operations", "Core operations", "right"),
-]
-_TIER_LABEL = {k: lbl for k, lbl, _ in _TIER_BANDS}
-
-
-def _eif_node_label(p) -> str:
-    """Short label for a diagram node: `short_title` wins, then `title`, and
-    `partner` only as a last resort — `partner` is a full sentence by design and
-    is what made the projection unreadable at fourteen nodes."""
-    return _clean_label(p.meta.get("short_title") or p.title or p.meta.get("partner"))
-
-
-def _flow_edge_label(flows: list[dict]) -> str:
-    """One label for one line. Each flow's `label:` is a word or two; duplicates
-    collapse (a round trip about the same thing reads once), and a flow with no
-    label falls back to its `data`, clipped."""
-    seen: list[str] = []
-    for f in flows:
-        lab = _clean_label(f.get("label") or "")
-        if not lab:
-            lab = _clean_label(f.get("data") or "")
-            if len(lab) > 24:
-                lab = lab[:23].rstrip() + "…"
-        if lab and lab not in seen:
-            seen.append(lab)
-    return " · ".join(seen)
-
-
-def _eif_flows(p) -> tuple[list[dict], list[dict], list[dict]]:
-    """(inbound, outbound, all-in-document-order) flow dicts for one interface.
-    The third is what labels the edge, so the label reads in the order the author
-    wrote the flows rather than in-then-out."""
-    flows = [f for f in p.as_list("flows") if isinstance(f, dict)]
-    d = lambda f: str(f.get("direction", "")).lower()
-    return ([f for f in flows if d(f) in ("inbound", "bidirectional")],
-            [f for f in flows if d(f) in ("outbound", "bidirectional")],
-            flows)
-
-
-def _node_link(p: wiki.Page) -> dict:
-    """A page drawn as a diagram node, as the text link beside the diagram."""
-    return {"id": p.id, "title": p.title, "url": links_module._page_url(p.folder, p.stem)}
 
 
 def build_context_diagram(center: str | None = None,
@@ -803,7 +642,7 @@ def build_context_diagram(center: str | None = None,
     (build_context_flows). Returns None when no edges exist yet. Pure and
     string-only, so it can be reused outside the request cycle. `links`, when
     given, receives every page drawn as a node (QR-001)."""
-    center = center or _clean_label(wiki_config()["system_name"], drop_parenthetical=False)
+    center = center or project.common._clean_label(wiki_config()["system_name"], drop_parenthetical=False)
     drawn: list[dict] = []
     core = "CORE"
     bands: dict[str, list[tuple[str, str, str]]] = {}   # tier -> [(nid, label, cls)]
@@ -814,12 +653,12 @@ def build_context_diagram(center: str | None = None,
         """`side` decides which end of the edge the neighbour sits on, which is
         what actually positions it: mermaid ranks the source before the target."""
         if ins and outs:
-            lab = _flow_edge_label(ordered if ordered is not None else ins + outs)
+            lab = project.context._flow_edge_label(ordered if ordered is not None else ins + outs)
             src, arrow, dst = (nid, "<-->", core) if side == "left" else (core, "<-->", nid)
         elif ins:
-            lab, src, arrow, dst = _flow_edge_label(ins), nid, "-->", core
+            lab, src, arrow, dst = project.context._flow_edge_label(ins), nid, "-->", core
         elif outs:
-            lab, src, arrow, dst = _flow_edge_label(outs), core, "-->", nid
+            lab, src, arrow, dst = project.context._flow_edge_label(outs), core, "-->", nid
         else:
             return
         edges.append(f'  {src} {arrow}|"{lab}"| {dst}' if lab else f"  {src} {arrow} {dst}")
@@ -830,16 +669,16 @@ def build_context_diagram(center: str | None = None,
     for p in wiki.load_type("external-interface"):
         if p.status == "deprecated":
             continue
-        ins, outs, ordered = _eif_flows(p)
+        ins, outs, ordered = project.context._eif_flows(p)
         if not (ins or outs):
             continue
-        nid = _diagram_node_id(p.id)
+        nid = project.common._diagram_node_id(p.id)
         tier = str(p.meta.get("tier") or "").strip().lower()
-        side = next((s for k, _, s in _TIER_BANDS if k == tier), "left")
-        (bands.setdefault(tier, []) if tier in _TIER_LABEL else loose).append(
-            (nid, _eif_node_label(p), "system"))
+        side = next((s for k, _, s in project.context._TIER_BANDS if k == tier), "left")
+        (bands.setdefault(tier, []) if tier in project.context._TIER_LABEL else loose).append(
+            (nid, project.context._eif_node_label(p), "system"))
         add_edge(nid, ins, outs, side, ordered)
-        drawn.append(_node_link(p))
+        drawn.append(project.common._node_link(p))
 
     # user roles — flows live on the stakeholder, not as EIF nodes. DR-014:
     # several stakeholders sharing a `context_role` merge into ONE node (union of
@@ -858,7 +697,7 @@ def build_context_diagram(center: str | None = None,
         raw_role = p.meta.get("context_role")
         if isinstance(raw_role, str) and raw_role.strip().lower() == "none":
             continue
-        label = _clean_label(raw_role) if raw_role else _clean_label(p.title)
+        label = project.common._clean_label(raw_role) if raw_role else project.common._clean_label(p.title)
         is_org = str(p.meta.get("nature", "person")).strip().lower() == "organization"
         g = groups.get(label)
         if g is None:
@@ -867,10 +706,10 @@ def build_context_diagram(center: str | None = None,
             g["cls"] = "system"          # organizations/systems share the box style
         _union(g["prov"], prov)
         _union(g["recv"], recv)
-        drawn.append(_node_link(p))   # a merged role node links each of its stakeholders
+        drawn.append(project.common._node_link(p))   # a merged role node links each of its stakeholders
 
     for label, g in sorted(groups.items(), key=lambda kv: kv[1]["order"]):
-        nid = _diagram_node_id(label)
+        nid = project.common._diagram_node_id(label)
         loose.append((nid, label, g["cls"]))
         ins = [{"data": x} for x in g["prov"]]
         outs = [{"data": x} for x in g["recv"]]
@@ -887,14 +726,14 @@ def build_context_diagram(center: str | None = None,
                 else f'  {nid}["{label}"]:::{cls}')
 
     lines = ["flowchart LR"]
-    for tier, tier_label, _ in _TIER_BANDS:
+    for tier, tier_label, _ in project.context._TIER_BANDS:
         if not bands.get(tier):
             continue
-        lines.append(f'  subgraph {_diagram_node_id(tier)}["{tier_label}"]')
+        lines.append(f'  subgraph {project.common._diagram_node_id(tier)}["{tier_label}"]')
         lines.append("    direction TB")
         lines += ["  " + node_line(*n) for n in bands[tier]]
         lines.append("  end")
-    lines.append(f'  {core}["{_clean_label(center)}"]:::core')
+    lines.append(f'  {core}["{project.common._clean_label(center)}"]:::core')
     lines += [node_line(*n) for n in loose]
     lines += edges
     lines += [
@@ -903,35 +742,6 @@ def build_context_diagram(center: str | None = None,
         "  classDef actor fill:#f3f6fb,stroke:#aeb8c9,color:#15202e;",
     ]
     return "\n".join(lines)
-
-
-def build_context_flows() -> list[dict]:
-    """The diagram's edges, spelled out. One group per neighbour, both
-    directions listed — this is where the detail that was removed from the
-    node and edge labels goes (DR-026). `unknown`/empty cells come back as
-    None so the template can render a dash instead of the word."""
-    def cell(v) -> str | None:
-        s = _clean_label(v or "")
-        return None if not s or s.lower() in ("unknown", "n/a", "none") else s
-
-    groups: list[dict] = []
-    for p in wiki.load_type("external-interface"):
-        if p.status == "deprecated":
-            continue
-        ins, outs, ordered = _eif_flows(p)
-        if not (ins or outs):
-            continue
-        rows = []
-        for f, direction in [(f, "in") for f in ins] + [(f, "out") for f in outs]:
-            rows.append({"direction": direction, "data": cell(f.get("data")) or "—",
-                         "format": cell(f.get("format")), "trigger": cell(f.get("trigger"))})
-        groups.append({
-            "id": p.id, "stem": p.stem, "url": links_module._page_url(p.folder, p.stem), "name": _eif_node_label(p),
-            "partner": _clean_label(p.meta.get("partner") or ""),
-            "tier": _TIER_LABEL.get(str(p.meta.get("tier") or "").strip().lower(), ""),
-            "label": _flow_edge_label(ordered), "rows": rows,
-        })
-    return groups
 
 
 # --- domain term network (DR-023) ----------------------------------------
@@ -1110,7 +920,7 @@ def build_relations_panel(stem: str, exclude: set[str] | None = None) -> dict:
             # panel says it (FR-034, FR-027)
             st = by_stem[s].status
             item["status"] = st if st in _issue_vocab()["status"] else ""
-            item["closed"] = not is_open_issue(st)
+            item["closed"] = not project.common.is_open_issue(st)
         return item
 
     me = by_stem.get(stem)
@@ -1318,13 +1128,6 @@ def load_goals() -> dict:
 # /req42/functional-requirements page. Everything it cannot
 # place is listed under the other notations.
 
-def _fr_stem_from_ref(ref: object) -> str:
-    """From '[[FR-009-foo]]' / 'FR-009-foo' / a bare stem, return the page stem
-    (children are matched to parents by stem)."""
-    s = str(ref or "").strip()
-    m = re.match(r"\[\[([^\]\|#]+)", s)
-    return (m.group(1) if m else s).split("/")[-1].strip()
-
 
 def _fr_level(p: "wiki.Page") -> str:
     return str(p.meta.get("level") or "").strip().lower()
@@ -1527,30 +1330,30 @@ def _mermaid_goal_epic_tree(goals: dict, hierarchy: dict,
     def epic_edge(parent_nid: str, e: dict) -> None:
         # An epic may contribute to several goals (a DAG): declare its node with
         # label + click once, then reference it by id on every further edge.
-        nid = _diagram_node_id(e["id"])
+        nid = project.common._diagram_node_id(e["id"])
         if e["id"] in seen:
             lines.append(f'  {parent_nid} --> {nid}')
             return
-        label = _clean_label(e["title"])
+        label = project.common._clean_label(e["title"])
         lines.append(f'  {parent_nid} --> {nid}["{e["id"]}<br/>{label}"]:::epic')
         lines.append(f'  click {nid} "/functional-requirements/{e["stem"]}"')
         drawn.append({"id": e["id"], "title": e["title"], "url": f'/functional-requirements/{e["stem"]}'})
         seen.add(e["id"])
 
     def uc_edge(parent_nid: str, uc: wiki.Page) -> None:
-        nid = _diagram_node_id(uc.id)
+        nid = project.common._diagram_node_id(uc.id)
         if uc.id in seen:
             lines.append(f'  {parent_nid} --> {nid}')
             return
-        label = _clean_label(uc.title)
+        label = project.common._clean_label(uc.title)
         lines.append(f'  {parent_nid} --> {nid}["{uc.id}<br/>{label}"]:::usecase')
         lines.append(f'  click {nid} "{links_module._page_url(uc.folder, uc.stem)}"')
-        drawn.append(_node_link(uc))
+        drawn.append(project.common._node_link(uc))
         seen.add(uc.id)
 
     for o in objectives:
-        gid = _diagram_node_id(o.id)
-        glabel = _clean_label(_short_title(o))
+        gid = project.common._diagram_node_id(o.id)
+        glabel = project.common._clean_label(_short_title(o))
         lines.append(f'  {gid}["{o.id}<br/>{glabel}"]:::goal')
         lines.append(f'  click {gid} "/goals#{o.id}"')
         drawn.append({"id": o.id, "title": o.title, "url": f"/goals#{o.id}"})
@@ -1614,13 +1417,13 @@ def _mermaid_fr_subtree(node: dict | None, blocks: list[wiki.Page] | None = None
     direct = node.get("direct_stories") or []        # epic's stories without a feature
     if not feats and not own_stories and not direct and not blocks:
         return None
-    rid = _diagram_node_id(node["id"])
-    lines = ["graph TD", f'  {rid}["{node["id"]}<br/>{_clean_label(node["title"])}"]:::root']
+    rid = project.common._diagram_node_id(node["id"])
+    lines = ["graph TD", f'  {rid}["{node["id"]}<br/>{project.common._clean_label(node["title"])}"]:::root']
     drawn: list[dict] = []
 
     def child(parent_nid: str, rec: dict, css: str) -> str:
-        nid = _diagram_node_id(rec["id"])
-        label = _clean_label(rec["title"])
+        nid = project.common._diagram_node_id(rec["id"])
+        label = project.common._clean_label(rec["title"])
         url = f'/functional-requirements/{rec["stem"]}'
         lines.append(f'  {parent_nid} --> {nid}["{rec["id"]}<br/>{label}"]:::{css}')
         lines.append(f'  click {nid} "{url}"')
@@ -1636,10 +1439,10 @@ def _mermaid_fr_subtree(node: dict | None, blocks: list[wiki.Page] | None = None
     for s in direct:
         child(rid, s, "story")
     for b in blocks:
-        nid = _diagram_node_id(b.id)
-        lines.append(f'  {rid} -.-> {nid}[["{b.id}<br/>{_clean_label(b.title)}"]]:::block')
+        nid = project.common._diagram_node_id(b.id)
+        lines.append(f'  {rid} -.-> {nid}[["{b.id}<br/>{project.common._clean_label(b.title)}"]]:::block')
         lines.append(f'  click {nid} "{links_module._page_url(b.folder, b.stem)}"')
-        drawn.append(_node_link(b))
+        drawn.append(project.common._node_link(b))
 
     lines += [
         "  classDef root fill:#2f6fb3,stroke:#7fc0ff,color:#ffffff,stroke-width:2px,font-weight:bold;",
@@ -1821,31 +1624,31 @@ def build_whitebox(stem: str | None) -> str | None:
     mixed = _mixed([pages[n["stem"]] for n in kids])
     for n in kids:
         sfx = _lifecycle_suffix(pages[n["stem"]], mixed)
-        lines.append(f'  {_diagram_node_id(n["id"])}["{n["id"]} · {_clean_label(n["title"])}{sfx}"]:::block')
+        lines.append(f'  {project.common._diagram_node_id(n["id"])}["{n["id"]} · {project.common._clean_label(n["title"])}{sfx}"]:::block')
     neighbours: list[str] = []
     edges: list[str] = []
     outside: list[str] = []
     for n in kids:
         for t in links_module.links_of(pages[n["stem"]], "uses"):
             if t in inside:
-                edges.append(f'  {_diagram_node_id(n["id"])} --> {_diagram_node_id(pages[t].id)}')
+                edges.append(f'  {project.common._diagram_node_id(n["id"])} --> {project.common._diagram_node_id(pages[t].id)}')
             elif t in pages:
                 # a block elsewhere in the tree: drawn as a neighbour, so the
                 # dependency stays visible on this level
                 if t not in outside:
                     outside.append(t)
-                edges.append(f'  {_diagram_node_id(n["id"])} --> {_diagram_node_id(pages[t].id)}')
+                edges.append(f'  {project.common._diagram_node_id(n["id"])} --> {project.common._diagram_node_id(pages[t].id)}')
             elif t in eifs:
                 if t not in neighbours:
                     neighbours.append(t)
-                edges.append(f'  {_diagram_node_id(n["id"])} --> {_diagram_node_id(eifs[t].id)}')
+                edges.append(f'  {project.common._diagram_node_id(n["id"])} --> {project.common._diagram_node_id(eifs[t].id)}')
     for t in outside:
-        lines.append(f'  {_diagram_node_id(pages[t].id)}["{pages[t].id} · {_clean_label(pages[t].title)}'
+        lines.append(f'  {project.common._diagram_node_id(pages[t].id)}["{pages[t].id} · {project.common._clean_label(pages[t].title)}'
                      f'{_lifecycle_suffix(pages[t], mixed)}"]:::outside')
     for t in neighbours:
-        lines.append(f'  {_diagram_node_id(eifs[t].id)}["{_clean_label(eifs[t].title)}"]:::system')
+        lines.append(f'  {project.common._diagram_node_id(eifs[t].id)}["{project.common._clean_label(eifs[t].title)}"]:::system')
     lines += edges
-    lines += _lifecycle_lines({s: (_diagram_node_id(pages[s].id), pages[s])
+    lines += _lifecycle_lines({s: (project.common._diagram_node_id(pages[s].id), pages[s])
                                for s in [n["stem"] for n in kids] + outside})
     lines += [
         "  classDef block fill:#2f6fb3,stroke:#7fc0ff,color:#ffffff;",
@@ -2014,8 +1817,8 @@ def _endpoint(raw: object, by_stem: dict) -> tuple[str | None, str]:
     if not p:
         return None, stem or "?"
     if wiki._is(p.folder, "stakeholder", "external-interface"):
-        return stem, _clean_label(p.title)
-    return stem, f"{p.id} · {_clean_label(p.title)}"
+        return stem, project.common._clean_label(p.title)
+    return stem, f"{p.id} · {project.common._clean_label(p.title)}"
 
 
 def _entries(p: wiki.Page, field: str) -> list:
@@ -2175,9 +1978,9 @@ def build_deployment_diagram(root: str | None = None,
 
     def emit(n: dict, depth: int) -> None:
         p, pad = nodes[n["stem"]], "  " * depth
-        nid = _diagram_node_id(p.id)
-        label = f'{p.id} · {_clean_label(p.title)}'
-        tech = _clean_label(p.meta.get("technology") or "")
+        nid = project.common._diagram_node_id(p.id)
+        label = f'{p.id} · {project.common._clean_label(p.title)}'
+        tech = project.common._clean_label(p.meta.get("technology") or "")
         if tech:
             label += f" ({tech})"
         label += _lifecycle_suffix(p, mixed)
@@ -2190,9 +1993,9 @@ def build_deployment_diagram(root: str | None = None,
         lines.append(f'{pad}subgraph {nid}["{label}"]')
         for b in hosted:
             bp = blocks[b]
-            bid = f"{nid}_{_diagram_node_id(bp.id)}"
+            bid = f"{nid}_{project.common._diagram_node_id(bp.id)}"
             marked[f"{n['stem']}/{b}"] = (bid, bp)
-            lines.append(f'{pad}  {bid}["{bp.id} · {_clean_label(bp.title)}{_lifecycle_suffix(bp, mixed)}"]:::block')
+            lines.append(f'{pad}  {bid}["{bp.id} · {project.common._clean_label(bp.title)}{_lifecycle_suffix(bp, mixed)}"]:::block')
         for c in n["children"]:
             emit(c, depth + 1)
         lines.append(f"{pad}end")
@@ -2208,24 +2011,24 @@ def build_deployment_diagram(root: str | None = None,
             v = _scalar(e.get("to"))
             t = links_module._link_stem(v) if v else ""
             if t in shown:
-                target = _diagram_node_id(nodes[t].id)
+                target = project.common._diagram_node_id(nodes[t].id)
             elif t in eifs:
-                target = _diagram_node_id(eifs[t].id)
+                target = project.common._diagram_node_id(eifs[t].id)
                 if t not in neighbours:
                     neighbours.append(t)
             else:
                 continue
             proto = " · ".join(x for x in (_edge_text(e.get("protocol")), _edge_text(e.get("note"))) if x)
             arrow = f' -- "{proto}" --> ' if proto else " --> "
-            edges.append(f"  {_diagram_node_id(nodes[s].id)}{arrow}{target}")
+            edges.append(f"  {project.common._diagram_node_id(nodes[s].id)}{arrow}{target}")
     for t in neighbours:
-        lines.append(f'  {_diagram_node_id(eifs[t].id)}["{_clean_label(eifs[t].title)}"]:::system')
+        lines.append(f'  {project.common._diagram_node_id(eifs[t].id)}["{project.common._clean_label(eifs[t].title)}"]:::system')
     lines += edges
     if links is not None:
         hosted = {b for s in shown for b in links_module.links_of(nodes[s], "hosts") if b in blocks}
-        links.extend(_node_link(nodes[s]) for s in sorted(shown, key=lambda k: nodes[k].id))
-        links.extend(_node_link(blocks[b]) for b in sorted(hosted, key=lambda k: blocks[k].id))
-        links.extend(_node_link(eifs[t]) for t in neighbours)
+        links.extend(project.common._node_link(nodes[s]) for s in sorted(shown, key=lambda k: nodes[k].id))
+        links.extend(project.common._node_link(blocks[b]) for b in sorted(hosted, key=lambda k: blocks[k].id))
+        links.extend(project.common._node_link(eifs[t]) for t in neighbours)
     lines += _lifecycle_lines(dict(sorted(marked.items(), key=lambda kv: kv[1][0])))
     lines += [
         "  classDef infra fill:#e3ecf7,stroke:#2f6fb3,color:#15202e;",
@@ -2276,7 +2079,7 @@ def building_blocks_view():
     rows = [_arch_row(p) for p in sorted(pages, key=lambda q: q.id)]
     return render_template(
         "building_blocks.html", block=block, tree=build_bb_tree(), total=len(pages),
-        whitebox=build_whitebox(None), maturity=maturity(p.status for p in pages), rows=rows,
+        whitebox=build_whitebox(None), maturity=project.common.maturity(p.status for p in pages), rows=rows,
     )
 
 
@@ -2306,7 +2109,7 @@ def strategy_view():
         row["replaced_by"] = _link_groups(links_module.links_of(p, "superseded-by"))
         rows.append(row)
     return render_template("strategy.html", block=block, rows=rows, total=len(pages),
-                           maturity=maturity(p.status for p in pages))
+                           maturity=project.common.maturity(p.status for p in pages))
 
 
 @app.route("/arc42/concepts")
@@ -2336,7 +2139,7 @@ def concepts_view():
         row["category"] = known.get(raw.lower(), raw)
         flat.append(row)
     return render_template("concepts.html", block=block, groups=groups, total=len(pages),
-                           rows=flat, maturity=maturity(p.status for p in pages))
+                           rows=flat, maturity=project.common.maturity(p.status for p in pages))
 
 
 @app.route("/arc42/runtime")
@@ -2351,7 +2154,7 @@ def runtime_view():
         row["steps"] = len(steps_of(p))
         rows.append(row)
     return render_template("runtime.html", block=block, rows=rows, total=len(pages),
-                           maturity=maturity(p.status for p in pages))
+                           maturity=project.common.maturity(p.status for p in pages))
 
 
 @app.route("/arc42/deployment")
@@ -2372,7 +2175,7 @@ def deployment_view():
                                           if not l["url"].startswith(f"/page/{catalog.folder('deployment-node')}/")],
                            hints=deployment_hints(), rows=rows,
                            tree=build_node_tree(), total=len(pages),
-                           maturity=maturity(p.status for p in pages))
+                           maturity=project.common.maturity(p.status for p in pages))
 
 
 # --- global search ---------------------------------------------------------
@@ -2406,14 +2209,14 @@ def build_section_tile(section: dict) -> dict:
             "links": [], "active": section["scope"] == "in",
             "unit": "page", "unit_many": None, "count": 0}
     if section["scope"] != "in":
-        base["maturity"] = maturity([])
+        base["maturity"] = project.common.maturity([])
         base["open_issues"] = 0
         return base
     pages = [p for f in folders for p in wiki.load_folder(f)]
-    flags = open_issue_counts()
+    flags = project.common.open_issue_counts()
     # union, not sum: an issue linking pages in two of this section's folders
     # must count once, not twice.
-    t = {**base, "count": len(pages), "maturity": maturity(p.status for p in pages),
+    t = {**base, "count": len(pages), "maturity": project.common.maturity(p.status for p in pages),
          "open_issues": len(set().union(*(flags.get(f, set()) for f in folders))),
          "open_issues_href": f"/issues?section={sid}",
          "open_issues_title": "Show the open issues that point at pages of this section"}
@@ -2441,7 +2244,7 @@ def build_section_tile(section: dict) -> dict:
                             {"label": "Term network", "href": "/graph/domain-terms"}]})
     elif sid == "C6":
         t.update({"unit": "issue",
-                  "open_issues": sum(1 for i in pages if is_open_issue(i.status)),
+                  "open_issues": sum(1 for i in pages if project.common.is_open_issue(i.status)),
                   "open_issues_href": "/issues?status=open",
                   "open_issues_title": "Show the open issues"})
     return t
@@ -2454,12 +2257,12 @@ def build_area_tile(area: dict) -> dict:
     sections = visible_sections(area["key"])
     folders = [f for s in sections for f in s["folders"]]
     pages = [p for f in folders for p in wiki.load_folder(f)]
-    flags = open_issue_counts()
+    flags = project.common.open_issue_counts()
     tiles = {s["id"]: build_section_tile(s) for s in sections if s["scope"] == "in"}
     return {
         "key": area["key"], "label": area["label"], "subtitle": area["subtitle"],
         "href": area["href"], "colors": area["colors"],
-        "count": len(pages), "maturity": maturity(p.status for p in pages),
+        "count": len(pages), "maturity": project.common.maturity(p.status for p in pages),
         "open_issues": len(set().union(*(flags.get(f, set()) for f in folders if not wiki._is(f, "issue")))),
         "sections": [{"id": s["id"], "title": s["title"], "href": s["href"], "scope": s["scope"],
                       **({"count": tiles[s["id"]]["count"], "unit": tiles[s["id"]]["unit"],
@@ -2473,7 +2276,7 @@ def build_valley() -> dict:
     """What the agent did: the vault's state, what moved last, what is open.
     Sits between the two peaks on the home page (DR-033)."""
     issues = wiki.load_type("issue")
-    open_issues = sorted((i for i in issues if is_open_issue(i.status)),
+    open_issues = sorted((i for i in issues if project.common.is_open_issue(i.status)),
                          key=lambda i: ({"blocker": 0, "major": 1, "minor": 2}
                                         .get(str(i.meta.get("severity") or ""), 3), i.id))
     return {
@@ -2509,7 +2312,7 @@ def method_view():
     """The three loops, capture, inspect and clarify, by their principles
     (FR-011). Clarify links its issue while that issue is open."""
     issue = next((p for p in wiki.load_type("issue")
-                  if p.stem == CLARIFY_ISSUE and is_open_issue(p.status)), None)
+                  if p.stem == CLARIFY_ISSUE and project.common.is_open_issue(p.status)), None)
     clarify = ({"id": issue.id, "title": issue.title, "url": links_module._page_url(issue.folder, issue.stem)}
                if issue else None)
     return render_template("method.html", clarify_issue=clarify)
@@ -2555,7 +2358,7 @@ def glossary_view():
     # the kind filter runs in the browser (static/list-view.js, FR-038)
     return render_template("glossary.html", rows=rows, total=len(rows),
                            kinds=list(DOMAIN_MODEL_STEREOTYPES),
-                           maturity=maturity(p.status for p in pages))
+                           maturity=project.common.maturity(p.status for p in pages))
 
 
 @app.route("/graph/domain-terms")
@@ -2630,7 +2433,7 @@ def issue_fields(p: wiki.Page, titles: dict[str, str], links: dict[str, tuple[st
         return v if v in vocab[field] else ""
     status = p.status if p.status in vocab["status"] else ""
     owner = _issue_owner(p, titles, links)
-    return {"status": status, "is_open": is_open_issue(p.status),
+    return {"status": status, "is_open": project.common.is_open_issue(p.status),
             "severity": known("severity"), "kind": known("kind"), "category": known("category"),
             "owner": owner["label"], "owner_key": owner["key"], "owner_url": owner["url"]}
 
@@ -2727,7 +2530,7 @@ def issues_view():
         options={"status": lifecycle_values, "category": categories, "severity": severities,
                  "section": sections, "owner": owners},
         sort=arg("sort"),
-        maturity=maturity(p.status for p in pages),
+        maturity=project.common.maturity(p.status for p in pages),
     )
 
 
@@ -2763,7 +2566,7 @@ def stakeholders_view():
             "status": p.status,
         })
     return render_template("stakeholders.html", rows=rows, total=len(rows),
-                           maturity=maturity(p.status for p in pages))
+                           maturity=project.common.maturity(p.status for p in pages))
 
 
 @app.route("/decisions")
@@ -2774,7 +2577,7 @@ def decisions_view():
     buckets = [{"key": k, "label": labels[k], "count": sum(1 for d in items if d["kind"] == k)}
                for k in DECISION_KINDS]
     return render_template("decisions.html", items=items, total=len(items), buckets=buckets,
-                           maturity=maturity(d["status"] for d in items))
+                           maturity=project.common.maturity(d["status"] for d in items))
 
 
 def _is_wiki_folder(folder: str) -> bool:
@@ -2814,7 +2617,7 @@ def page_detail(folder, stem):
     # context pages carry the system-context diagram, projected live (DR-013)
     diagram_links: list[dict] = []
     context_diagram = build_context_diagram(links=diagram_links) if wiki._is(folder, "context") else None
-    context_flows = build_context_flows() if wiki._is(folder, "context") else None
+    context_flows = project.context.build_context_flows() if wiki._is(folder, "context") else None
     # domain terms carry a focused ego-graph snippet above the definition (DR-023)
     ego_graph = build_glossary_ego_graph(stem) if wiki._is(folder, "domain-term") else None
     trace = build_trace(stem, folder)
@@ -2842,7 +2645,7 @@ def page_detail(folder, stem):
         sequence=sequence, hints=hints, deployment=deployment, diagram_links=diagram_links,
         ego_graph=ego_graph, ego_layers=ego_layers,
         needs_mermaid=bool(context_diagram or whitebox or sequence or deployment) or "language-mermaid" in body_html,
-        sources=provenance(page),
+        sources=project.common.provenance(page),
         issue=issue_fields(page, titles, links_module.link_index()) if wiki._is(folder, "issue") else None,
         page_issues=open_issues_for(stem),
         formats=render.format_labels(page.body),
@@ -2961,12 +2764,12 @@ def _mermaid_goal_tree(vision: wiki.Page, objectives: list[wiki.Page]) -> str | 
     desktop widths (≥1000 px) without horizontal scrolling."""
     if not vision or not objectives:
         return None
-    root = _clean_label(wiki_config()["system_name"], drop_parenthetical=False)
+    root = project.common._clean_label(wiki_config()["system_name"], drop_parenthetical=False)
     lines = ["graph TD", f'  V["Vision {root}"]:::vision',
              f'  click V "/goals#{vision.id}"']
     for o in objectives:
-        nid = _diagram_node_id(o.id)
-        label = _clean_label(_short_title(o))
+        nid = project.common._diagram_node_id(o.id)
+        label = project.common._clean_label(_short_title(o))
         lines.append(f'  V --> {nid}["{o.id}<br/>{label}"]:::goal')
         # absolute target so the same diagram works on /goals (in-page anchor)
         # and on /req42 (cross-page navigation to the matching goal card)
@@ -3030,7 +2833,7 @@ def _dm_class_name(label: str, taken: set) -> str:
     name would otherwise become one box."""
     # Capitalise each word BEFORE stripping separators, or "Piece for sale"
     # becomes "Pieceforsale" — legal mermaid, unreadable on a wall.
-    words = re.split(r"[^A-Za-z0-9]+", _dm_ascii(_clean_label(label)))
+    words = re.split(r"[^A-Za-z0-9]+", _dm_ascii(project.common._clean_label(label)))
     base = "".join(w[:1].upper() + w[1:] for w in words if w) or "Entity"
     if base[0].isdigit():
         base = "E" + base
@@ -3096,7 +2899,7 @@ def _dm_relationships(page: wiki.Page) -> list[dict]:
         out.append({
             "source": page.stem,
             "target": tgt,
-            "verb": _clean_label(str(entry.get("label") or "")),
+            "verb": project.common._clean_label(str(entry.get("label") or "")),
             "cardinality": str(multiplicity if multiplicity is not None else "").strip(),
             "kind": kind if kind in _DM_ARROWS else "association",
         })
@@ -3149,7 +2952,7 @@ def build_data_model_full_diagram(context: str | None = None,
         # mermaid class label (`class Id["Title"]`) whenever the two differ, so
         # "Durchführungsart" is drawn as written, not as "Durchfuehrungsart".
         ident = name_of[n["key"]]
-        label = _clean_label(n["label"]).replace('"', "'")
+        label = project.common._clean_label(n["label"]).replace('"', "'")
         return f'{ident}["{label}"]' if label != ident else ident
 
     lines = ["classDiagram"]
@@ -3179,7 +2982,7 @@ def build_data_model_full_diagram(context: str | None = None,
         # `cardinality:` describes the TARGET end only. Deriving a source
         # multiplicity from it looked tidier and was wrong: "0..*" would have
         # drawn a zero on the owning side, which means nothing.
-        multiplicity = _clean_label(e["cardinality"], drop_parenthetical=False).replace('\\', "")
+        multiplicity = project.common._clean_label(e["cardinality"], drop_parenthetical=False).replace('\\', "")
         if carded and multiplicity:
             line = f'  {src} {arrow} "{multiplicity}" {dst}'
         else:
@@ -3493,7 +3296,7 @@ def area_view(area_key):
              if s["id"] not in dashboard_config()["hidden"]]
     pages = [p for t in tiles for f in t["folders"] for p in wiki.load_folder(f)]
     return render_template("area.html", area=area, tiles=tiles, count=len(pages),
-                           maturity=maturity(p.status for p in pages), needs_mermaid=False)
+                           maturity=project.common.maturity(p.status for p in pages), needs_mermaid=False)
 
 
 @app.route("/req42/functional-requirements")
@@ -3574,7 +3377,7 @@ def fr_view(stem):
         trace=trace,
         relations=build_relations_panel(stem, exclude=trace_stems(trace)),
         needs_mermaid=bool(diagram) or "language-mermaid" in body_html,
-        sources=provenance(page),
+        sources=project.common.provenance(page),
         page_issues=open_issues_for(stem),
         formats=render.format_labels(page.body),
         **page_head(page),
@@ -3637,19 +3440,19 @@ def _block_list(block: dict, slug: str | None):
          "title": p.title, "url": links_module._page_url(p.folder, p.stem),
          "status": p.status, "relations": len(links_module.linked_stems(p)),
          **(_qr_details(p, titles, links) if wiki._is(p.folder, "quality-requirement") else {})}
-        for p in _block_pages(block)
+        for p in project.common._block_pages(block)
     ]
     # the Scope block (03) shows the same live-projected system-context diagram
     diagram_links: list[dict] = []
     context_diagram = build_context_diagram(links=diagram_links) if slug == "scope" else None
-    context_flows = build_context_flows() if slug == "scope" else None
+    context_flows = project.context.build_context_flows() if slug == "scope" else None
     entity_diagram = build_data_model_full_diagram() if slug == "models" else None
     return render_template(
         "req42_block.html", block=block, rows=rows, total=len(rows),
         list_type=catalog.type_of(block["folders"][0]) if block["folders"] else "page",
         context_diagram=context_diagram, context_flows=context_flows, diagram_links=diagram_links,
         entity_diagram=entity_diagram, needs_mermaid=bool(context_diagram or entity_diagram),
-        maturity=maturity(r["status"] for r in rows),
+        maturity=project.common.maturity(r["status"] for r in rows),
     )
 
 

@@ -42,6 +42,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import project.common  # noqa: E402
 
 _GOALS = _wiki / "goals"
 _FRS = _wiki / "functional-requirements"
@@ -242,8 +243,8 @@ def test_a_parenthesised_system_name_survives_into_the_diagrams():
             tree = app._mermaid_goal_tree(data["vision"], data["objectives"])
         assert "System X (v2)" in tree, tree.splitlines()[:2]
         # square brackets are mermaid node delimiters and must still go
-        assert app._clean_label("Acme [Beta]") == "Acme Beta"
-        assert app._clean_label("Member's card") == "Member's card"
+        assert project.common._clean_label("Acme [Beta]") == "Acme Beta"
+        assert project.common._clean_label("Member's card") == "Member's card"
     finally:
         cfg.write_text(original, encoding="utf-8")
 
