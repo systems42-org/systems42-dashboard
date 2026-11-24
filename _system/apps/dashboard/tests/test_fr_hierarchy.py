@@ -22,6 +22,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import render  # noqa: E402
 import links as links_module  # noqa: E402
 import wiki as wiki_module  # noqa: E402
 
@@ -155,19 +156,19 @@ def test_body_wikilinks_become_hyperlinks():
     titles, links = links_module.title_index(), links_module.link_index()
 
     # a stakeholder wikilink with an alias -> real anchor to its /page route
-    html = app.render_wikilinks("As [[STK-001-librarian|the librarian]] …", titles, links)
+    html = render.render_wikilinks("As [[STK-001-librarian|the librarian]] …", titles, links)
     assert '<a class="wl" href="/page/stakeholders/STK-001-librarian">the librarian</a>' in html, html
 
     # an FR target resolves to the rich FR route, not /page
-    html2 = app.render_wikilinks("see [[FR-001-lending]]", titles, links)
+    html2 = render.render_wikilinks("see [[FR-001-lending]]", titles, links)
     assert 'href="/functional-requirements/FR-001-lending"' in html2, html2
 
     # provenance and unresolved targets stay non-link spans
-    assert '<span class="wl">' in app.render_wikilinks("[[raw/sources/SRC-001-x|Q]]", titles, links)
-    assert '<span class="wl">' in app.render_wikilinks("[[Totally-Unknown]]", titles, links)
+    assert '<span class="wl">' in render.render_wikilinks("[[raw/sources/SRC-001-x|Q]]", titles, links)
+    assert '<span class="wl">' in render.render_wikilinks("[[Totally-Unknown]]", titles, links)
 
     # inline-snippet callers pass no link index -> nothing becomes a link
-    assert "<a " not in app.render_wikilinks("[[STK-001-librarian|X]]", titles, None)
+    assert "<a " not in render.render_wikilinks("[[STK-001-librarian|X]]", titles, None)
     print("OK wikilinks -> hyperlinks")
 
 

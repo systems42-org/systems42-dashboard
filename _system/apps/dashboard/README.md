@@ -372,6 +372,8 @@ _system/apps/dashboard/
                      May import inputs, metamodel and catalog, never Flask or app
   links.py           the link resolver, the title, page, link and source indexes and the page
                      URL. May import wiki, never Flask or app
+  render.py          the sanitizer, wikilinks, method-anchor links, "follows" notes, callouts
+                     and Markdown. May import wiki, links and metamodel, never Flask or app
   help.md            source of the /help page
   templates/         base, index, _empty (shared empty state), _macros (plural()),
                      _maturity (maturity bar/legend), _mermaid (loader),

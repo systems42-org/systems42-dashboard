@@ -48,6 +48,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
 import links  # noqa: E402
+import render  # noqa: E402
 
 _FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 _KEY_RE = re.compile(r"^([a-zA-Z][a-zA-Z0-9_-]*)\s*:", re.MULTILINE)
@@ -154,7 +155,7 @@ def test_goal_template_body_markers_are_extractable():
                                 "platform that does the bookkeeping."), sentence
             obj = data["objectives"][0]
             for label in ("Purpose", "Advantage", "Metric"):
-                got = app.extract_pam_bullet(obj, label, titles)
+                got = render.extract_pam_bullet(obj, label, titles)
                 assert got.strip(), f"`- **{label}.**` did not parse from the template"
     finally:
         vp.unlink()
