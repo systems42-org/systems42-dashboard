@@ -354,10 +354,9 @@ def test_disconnect_all_rejects_a_non_facilitator():
 
 
 def test_disconnect_all_accepts_the_facilitator():
-    # The real shutdown SIGTERMs this process *and its parent* 0.4 s later
-    # (`_shutdown` → `_terminate`): under a test runner or a CI shell that
-    # parent is the runner itself. Record the signals instead of sending
-    # them, and wait for every one so none can fire after the restore.
+    # The real shutdown SIGTERMs this process 0.4 s later (`_shutdown` →
+    # `_terminate`). Record the signal instead of sending it, and wait for
+    # it so it cannot fire after the restore.
     _reset_presence()
     client = app.app.test_client()
     _ping(client, "yoda")
@@ -370,13 +369,14 @@ def test_disconnect_all_accepts_the_facilitator():
         assert resp.status_code == 204
         with app._lifecycle_lock:
             assert app._shutting_down is True
-        # Outside the dev server `_terminate` signals the parent (gunicorn's
-        # master) and then this process: wait for BOTH, or the second could
-        # land after the restore below and hit the real os.kill.
-        expected = [(os.getppid(), signal.SIGTERM), (os.getpid(), signal.SIGTERM)]
+        # No Gunicorn hook has named a master here, so `_terminate` signals
+        # this process only, never the parent (the test runner). The case
+        # with a master is in tests/test_lifecycle_start.py.
+        expected = [(os.getpid(), signal.SIGTERM)]
         deadline = time.monotonic() + 3
         while len(sent) < len(expected) and time.monotonic() < deadline:
             time.sleep(0.05)
+        time.sleep(0.2)   # a signal to the parent would follow at once
         assert sent == expected, sent
     finally:
         app.os.kill = real_kill

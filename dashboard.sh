@@ -17,7 +17,8 @@
 # (rebuild, local, test), see _system/apps/dashboard/dev.sh.
 #
 # DASH_PORT sets the port (8080). DASH_PUBLIC_URL sets the address of the QR
-# code. DASH_NO_BROWSER=1 starts without opening a browser. DASH_WHEEL names
+# code. DASH_NO_BROWSER=1 starts without opening a browser. DASH_NO_SHUTDOWN=1
+# keeps the dashboard running after the last browser tab has closed. DASH_WHEEL names
 # the wheel `uv` runs, as a file or an address, for a machine that cannot reach
 # GitHub. uv still needs Python 3.12 and the libraries, from its cache or an index.
 #
@@ -119,6 +120,7 @@ case "$cmd" in
     docker run -d --name "$NAME" -p "$PORT:8000" \
       --user "$(id -u):$(id -g)" \
       -e TZ="${TZ:-UTC}" -e DASH_PUBLIC_URL="$public" \
+      ${DASH_NO_SHUTDOWN:+-e DASH_NO_SHUTDOWN="$DASH_NO_SHUTDOWN"} \
       -v "$ROOT:/repo:ro" \
       ${settings:+-v "$settings"} \
       "$image" >/dev/null

@@ -83,6 +83,27 @@ def test_a_settings_file_of_an_older_release_is_still_mounted():
         assert start[0].count(" -v ") == 2, start[0]
 
 
+def test_dash_no_shutdown_reaches_the_container_only_when_set():
+    """FR-050: the switch for the automatic stop is read inside the container,
+    so the launcher has to hand it on."""
+    for value, expected in ((None, False), ("1", True)):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = _wiki(tmp, 'dashboard_version: "0.9.0"\n')
+            bin_dir, log = _stubs(tmp)
+            env = {**os.environ, "PATH": f"{bin_dir}{os.pathsep}/usr/bin:/bin", "DASH_NO_BROWSER": "1"}
+            for key in ("DASH_PORT", "DASH_PUBLIC_URL", "DASH_NO_SHUTDOWN"):
+                env.pop(key, None)
+            if value is not None:
+                env["DASH_NO_SHUTDOWN"] = value
+            run = subprocess.run(["bash", str(root / "dashboard.sh")], env=env, capture_output=True, text=True)
+            assert run.returncode == 0, run.stderr
+            start = [l for l in log.read_text(encoding="utf-8").splitlines() if l.startswith("run ")]
+            assert len(start) == 1, start
+            assert ("-e DASH_NO_SHUTDOWN=1" in start[0]) is expected, start[0]
+            assert ("DASH_NO_SHUTDOWN" in start[0]) is expected, start[0]
+            assert start[0].endswith("ghcr.io/systems42-org/dashboard:0.9.0"), start[0]
+
+
 def test_an_unquoted_version_is_read_too():
     with tempfile.TemporaryDirectory() as tmp:
         root = _wiki(tmp, "dashboard_version: 0.9.0\n")
