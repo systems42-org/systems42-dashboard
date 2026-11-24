@@ -1,6 +1,6 @@
 """Sort presets live in the dashboard, not in the metamodel (FR-021, CON-006). No pytest.
 
-The presets are app.SORT_PRESETS; the metamodel declares none.
+The presets are web.common.SORT_PRESETS; the metamodel declares none.
 
 Run from the dashboard dir:
     .venv/bin/python tests/test_sort_presets.py
@@ -19,6 +19,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import app  # noqa: E402
+import web.common  # noqa: E402
 import metamodel  # noqa: E402
 
 
@@ -32,9 +33,9 @@ def test_presets_per_type():
         "quality-requirement": [{"label": "Priority", "keys": ["priority"]}],
     }
     for name, orders in want.items():
-        assert app.sort_presets(name) == orders, (name, app.sort_presets(name))
-    assert app.sort_presets("constraint") == []
-    assert app.sort_presets("no-such-type") == []
+        assert web.common.sort_presets(name) == orders, (name, web.common.sort_presets(name))
+    assert web.common.sort_presets("constraint") == []
+    assert web.common.sort_presets("no-such-type") == []
 
 
 def test_no_type_page_declares_sort_orders():
@@ -45,8 +46,8 @@ def test_no_type_page_declares_sort_orders():
 
 
 def test_a_preset_cannot_be_changed_through_its_result():
-    app.sort_presets("issue")[0]["keys"].append("x")
-    assert app.SORT_PRESETS["issue"][0]["keys"] == ["status", "severity"]
+    web.common.sort_presets("issue")[0]["keys"].append("x")
+    assert web.common.SORT_PRESETS["issue"][0]["keys"] == ["status", "severity"]
 
 
 def test_domain_terms_list_takes_the_domain_term_type():
@@ -54,7 +55,7 @@ def test_domain_terms_list_takes_the_domain_term_type():
     assert metamodel.type_for_folder("domain-terms") == "domain-term"
     tpl = (Path(app.__file__).parent / "templates" / "glossary.html").read_text(encoding="utf-8")
     assert 'list_spec("domain-term")' in tpl
-    assert app.list_spec("domain-term")["orders"] == [{"label": "A to Z", "keys": ["title"]}]
+    assert web.common.list_spec("domain-term")["orders"] == [{"label": "A to Z", "keys": ["title"]}]
 
 
 if __name__ == "__main__":

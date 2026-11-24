@@ -363,8 +363,26 @@ status-strip source count already reads.
 
 ```
 _system/apps/dashboard/
-  app.py             Flask app, the routes and what the views put together
-                     (tiles, lists, issue fields). May import every module below
+  app.py             create_app() and the one app of the process (app.app), with what applies
+                     to every route: the request cache, the page policy, the template
+                     context, the navigation and the 404 page. create_app() registers these
+                     and the blueprints. May import every module below
+  web/               the routes, one module and one Flask blueprint per group. May import
+                     Flask and every module below, never app
+    brand.py         the active brand's marks and intro, the about page and the files it
+                     links to, and the policy that keeps such a file inert
+    common.py        what several groups share: the static file URL, the sort presets, the
+                     head and section path of a detail page, the issue fields and the issues
+                     that link to a page, the address and QR code for joining
+    help.py          the help page, the method page and the /metamodel page with its builders
+    pages.py         home with its tiles and the state of the vault, the area pages, the
+                     generic section list, the page and source detail, the changes
+    projections.py   the goals, the functional requirements and the page of one requirement,
+                     the term list, the term network and the entity diagram, the arc42 views,
+                     the decisions, the stakeholders and the issue list
+    search_session.py  the search page and the search index, the join page, the heartbeat and
+                     presence endpoints, the reload, the View dialog's data and its saving,
+                     Disconnect all
   catalog.py         the three areas, and the sections from the metamodel with routes and colours
   metamodel.py       reader for _system/metamodel/ (the /metamodel page, ADR-0008)
   inputs.py          reads text and YAML from wiki, wiki.yaml and metamodel, and logs what is invalid

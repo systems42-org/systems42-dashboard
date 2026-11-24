@@ -52,6 +52,7 @@ COPY links.py .
 COPY render.py .
 COPY search.py .
 COPY project ./project
+COPY web ./web
 COPY session.py .
 COPY settings.py .
 COPY preflight.py .

@@ -1,10 +1,12 @@
 """Import direction of the dashboard's modules (issue #185). No pytest.
 
-`app.py` holds the Flask app and the routes. Every module below it is usable
-without a web request, so it imports neither Flask nor `app`, and only the
-sibling modules the table names. The projections are the package `project/`,
-one row per module in it (`project.context`). The check reads the sources with
-`ast` and imports nothing.
+`app.py` holds the Flask app and registers the route groups. The route groups
+are the package `web/`, one row per module in it (`web.pages`): they may import
+Flask and the modules below them, never `app`. Every module below `web/` is
+usable without a web request, so it imports neither Flask nor `app` nor `web`,
+and only the sibling modules the table names. The projections are the package
+`project/`, one row per module in it (`project.context`). The check reads the
+sources with `ast` and imports nothing.
 
 Run from the dashboard dir:
     .venv/bin/python tests/test_module_imports.py
@@ -35,11 +37,26 @@ ALLOWED = {
     "settings": {"wiki", "catalog", "metamodel", "inputs", "session"},
     "preflight": set(),
 }
+# Everything below the web layer, by its top-level name.
+_BELOW_WEB = {"inputs", "metamodel", "catalog", "wiki", "links", "render", "search", "session",
+              "settings", "project.architecture", "project.common", "project.context",
+              "project.goals", "project.requirements", "project.terms",
+              "yaml", "markdown", "markupsafe"}
+# The route groups: module in web/ -> what it may import besides the standard
+# library. Flask is allowed here, `app` never.
+WEB = {
+    "web.brand": _BELOW_WEB | {"flask"},
+    "web.common": _BELOW_WEB | {"flask", "segno"},
+    "web.help": _BELOW_WEB | {"flask", "web.common"},
+    "web.pages": _BELOW_WEB | {"flask", "web.common"},
+    "web.projections": _BELOW_WEB | {"flask", "web.common"},
+    "web.search_session": _BELOW_WEB | {"flask", "web.common"},
+}
 # These sit above the modules: the app itself and what starts it.
 ABOVE = {"app", "cli", "gunicorn.conf"}
 NEVER = {"flask", "app"}
 # Package folders. A module in one is named with its package: `project.context`.
-PACKAGES = {"project"}
+PACKAGES = {"project", "web"}
 
 
 def _source(module: str) -> Path:
@@ -74,12 +91,13 @@ def test_every_module_has_a_row():
     for package in PACKAGES:
         found |= {f"{package}.{p.name[:-len('.py')]}" for p in (HERE / package).glob("*.py")
                   if p.name != "__init__.py"}
-    assert found == set(ALLOWED) | ABOVE, sorted(found ^ (set(ALLOWED) | ABOVE))
+    known = set(ALLOWED) | set(WEB) | ABOVE
+    assert found == known, sorted(found ^ known)
 
 
 def test_a_package_itself_holds_no_code():
-    """`project/__init__.py` is a docstring. Code there would run on the import
-    of any of its modules, outside the table."""
+    """`project/__init__.py` and `web/__init__.py` are a docstring each. Code
+    there would run on the import of any of its modules, outside the table."""
     for package in PACKAGES:
         body = ast.parse((HERE / package / "__init__.py").read_text(encoding="utf-8")).body
         assert all(isinstance(st, ast.Expr) and isinstance(st.value, ast.Constant) for st in body), package
@@ -97,13 +115,31 @@ def test_modules_import_only_what_the_table_allows():
         assert not extra, f"{module}.py imports {sorted(extra)}, allowed: {sorted(allowed)}"
 
 
+def test_no_module_below_web_imports_web():
+    for module in ALLOWED:
+        hit = {name for name in _imports(module) if name.split(".")[0] == "web"}
+        assert not hit, f"{module}.py imports {sorted(hit)}"
+
+
+def test_no_route_group_imports_app():
+    for module in WEB:
+        assert "app" not in _imports(module), f"{module}.py imports app"
+
+
+def test_route_groups_import_only_what_the_table_allows():
+    for module, allowed in WEB.items():
+        extra = _imports(module) - set(sys.stdlib_module_names) - {"__future__"} - allowed
+        assert not extra, f"{module}.py imports {sorted(extra)}, allowed: {sorted(allowed)}"
+        assert module not in allowed, module
+
+
 def test_the_table_names_no_cycle():
     """A module may import only modules whose own rows do not lead back to it."""
     def reach(module: str, seen: tuple = ()) -> None:
         assert module not in seen, " -> ".join((*seen, module))
-        for dep in ALLOWED.get(module, ()):
+        for dep in {**ALLOWED, **WEB}.get(module, ()):
             reach(dep, (*seen, module))
-    for module in ALLOWED:
+    for module in {**ALLOWED, **WEB}:
         reach(module)
 
 

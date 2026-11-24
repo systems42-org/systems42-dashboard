@@ -42,6 +42,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import web.common  # noqa: E402
 import wiki  # noqa: E402
 import metamodel  # noqa: E402
 
@@ -148,13 +149,13 @@ def test_a_rewrite_that_keeps_its_mtime_but_not_its_size_is_parsed_again():
 def test_static_url_stamps_the_files_mtime():
     expected = int((ROOT / "static" / "style.css").stat().st_mtime)
     with app.app.test_request_context("/"):
-        url = app.static_url("style.css")
+        url = web.common.static_url("style.css")
     assert url.endswith(f"?v={expected}"), url
 
 
 def test_static_url_leaves_a_missing_file_unversioned():
     with app.app.test_request_context("/"):
-        url = app.static_url("no-such-file.css")
+        url = web.common.static_url("no-such-file.css")
     assert "?" not in url, url
 
 

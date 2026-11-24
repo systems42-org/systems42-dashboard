@@ -3,7 +3,7 @@
 
 The requirement view built its own record for fr.html and left the three
 values out, so they showed on every page type but this one. Both views now
-take them from `app.page_head()` and render them with the `page_meta` macro.
+take them from `web.common.page_head()` and render them with the `page_meta` macro.
 
 Run from the dashboard dir:
     .venv/bin/python tests/test_fr_page_head.py
@@ -87,6 +87,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import web.common  # noqa: E402
 import wiki  # noqa: E402
 
 _META = re.compile(r'<p class="detail-meta">.*?</p>', re.S)
@@ -160,7 +161,7 @@ def test_markup_matches_the_generic_page():
 
 def test_one_builder_for_both_views():
     page = next(p for p in wiki.load_folder("functional-requirements") if p.stem == "FR-005-odd")
-    assert app.page_head(page) == {"created": "2026-13-01", "updated": "", "tags": ["lonely"]}
+    assert web.common.page_head(page) == {"created": "2026-13-01", "updated": "", "tags": ["lonely"]}
     templates = Path(app.app.root_path) / "templates"
     for name in ("detail.html", "fr.html"):
         text = (templates / name).read_text(encoding="utf-8")

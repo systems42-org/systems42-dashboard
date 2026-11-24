@@ -155,6 +155,8 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import web.help  # noqa: E402
+import web.pages  # noqa: E402
 import wiki  # noqa: E402
 import links  # noqa: E402
 
@@ -294,21 +296,21 @@ def test_symlinks_out_of_the_wiki_are_not_followed():
         _, body = _get(url)
         assert "LINKED SECRET" not in body and "Linked out" not in body, url
     assert wiki._parse(_wiki / "domain-terms" / "DT-105-linked-out.md", "domain-terms") is None
-    assert not app._is_wiki_folder("linked")
+    assert not web.pages._is_wiki_folder("linked")
     assert wiki.load_folder("linked") == []
 
 
 def test_symlinks_inside_the_wiki_still_work():
     status, body = _get("/page/domain-terms/DT-106-linked-in")
     assert status == 200 and "LINKED INSIDE" in body
-    assert app._is_wiki_folder("shared")
+    assert web.pages._is_wiki_folder("shared")
     status, body = _get("/page/shared/LNK-001-inside")
     assert status == 200 and "LINKED FOLDER" in body
 
 
 def test_decision_links_are_escaped():
     # a metamodel page citing a decision whose file name holds a quote
-    html = app._mm_dr_link('DR-002-quote" onmouseover="x', "DR-002")
+    html = web.help._mm_dr_link('DR-002-quote" onmouseover="x', "DR-002")
     assert 'href="/page/decisions/DR-002-quote&#34; onmouseover=&#34;x"' in html, html
 
 

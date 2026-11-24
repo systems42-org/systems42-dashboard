@@ -29,7 +29,7 @@ def test_no_gradients_or_glow():
 
 
 def test_no_emoji_in_ui():
-    for p in list((HERE / "templates").glob("*.html")) + [HERE / "app.py"]:
+    for p in list((HERE / "templates").glob("*.html")) + [HERE / "app.py", *(HERE / "web").glob("*.py")]:
         txt = p.read_text(encoding="utf-8")
         m = EMOJI.search(txt)
         assert not m, f"emoji {m.group()!r} in {p.name}"

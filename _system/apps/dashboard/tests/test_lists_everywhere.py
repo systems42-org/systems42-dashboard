@@ -61,6 +61,7 @@ _g = _wiki / "goals" / "GOAL-001-page-1.md"
 _g.write_text(_g.read_text(encoding="utf-8").replace("stereotype: objective", "stereotype: vision"), encoding="utf-8")
 
 import app  # noqa: E402
+import web.common  # noqa: E402
 import wiki  # noqa: E402
 
 client = app.app.test_client()
@@ -116,12 +117,12 @@ def test_picker_offers_the_sort_presets():
                   for o in re.findall(r'<option value="[^"]+">(.*?)</option>',
                                       # the order picker alone: the term list also has a kind picker
                                       m.group(1).split("<select data-list-order>", 1)[-1].split("</select>", 1)[0], re.S)]
-        want = [o["label"] for o in app.sort_presets(typ)]
+        want = [o["label"] for o in web.common.sort_presets(typ)]
         assert labels == want, (path, labels, want)
         # the table carries the same orders for the script
         m = re.search(r'<table\b[^>]*data-sort-orders=\'([^\']*)\'', body)
         assert m, path
-        assert json.loads(html.unescape(m.group(1))) == app.sort_presets(typ), (path, m.group(1))
+        assert json.loads(html.unescape(m.group(1))) == web.common.sort_presets(typ), (path, m.group(1))
 
 
 def test_every_header_sorts():

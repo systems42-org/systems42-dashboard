@@ -48,6 +48,7 @@ _page("issues", "ISS-005-erwaehnt", "issue", "Nur erwähnt", "open",
       "severity: blocker\nkind: risk\n", body="Erwähnt QR-001 ohne Link.")
 
 import app  # noqa: E402
+import web.common  # noqa: E402
 import wiki  # noqa: E402
 
 client = app.app.test_client()
@@ -67,11 +68,11 @@ def _listed(section):
 
 
 def test_open_issues_for_orders_open_first_then_severity():
-    got = app.open_issues_for("STK-001-aerztin")
+    got = web.common.open_issues_for("STK-001-aerztin")
     assert [i["id"] for i in got] == ["ISS-004", "ISS-001", "ISS-002"], got
     assert set(got[0]) >= {"id", "title", "status", "severity", "url"}, got[0]
     assert got[0]["url"] == "/page/issues/ISS-004-blocker"
-    assert app.open_issues_for("QR-001-ruhig") == []
+    assert web.common.open_issues_for("QR-001-ruhig") == []
 
 
 def test_stakeholder_page_lists_its_issues_with_status_and_severity():
