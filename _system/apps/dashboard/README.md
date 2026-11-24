@@ -368,7 +368,8 @@ _system/apps/dashboard/
   static/list-view.js        the shared list layer: a th[data-sort] sorts by its
                              cells' data-sort-value (else their text), a
                              table[data-list] adds sort orders, "agreed only" and
-                             keeps both in the address (?sort=, ?status=)
+                             a kind filter, and keeps them in the address
+                             (?sort=, ?status=, ?kind=)
   static/metamodel-graph.js  the cytoscape metamodel network on /metamodel
   static/settings.js   the View dialog
   static/systems42-sections.svg   the sections diagram shown on /help

@@ -2,11 +2,9 @@ package web_test
 
 import (
 	"html"
-	"os"
 	"path/filepath"
 	"reflect"
 	"regexp"
-	"sort"
 	"strings"
 	"testing"
 
@@ -27,6 +25,7 @@ var (
 	fieldRE   = regexp.MustCompile(`(?s)<dt>(.*?)</dt>\s*<dd>(.*?)</dd>`)
 	dataKind  = regexp.MustCompile(`data-kind="([^"]*)"`)
 	dataState = regexp.MustCompile(`data-status="([^"]*)"`)
+	optionRE  = regexp.MustCompile(`<option value="([^"]*)">([^<]*)</option>`)
 )
 
 func visibleText(fragment string) string {
@@ -231,53 +230,31 @@ relationships:
 	if !strings.Contains(page, `data-key="kind"`) {
 		t.Error("the kind column does not sort")
 	}
-	shown := func(query string) []string {
-		ids := []string{}
-		for id := range listRows(t, get("/domain-terms"+query)) {
-			ids = append(ids, id)
-		}
-		sort.Strings(ids)
-		return ids
+	_, picker, _ := strings.Cut(page, "<select data-list-kind>")
+	picker, _, _ = strings.Cut(picker, "</select>")
+	options := [][]string{}
+	for _, m := range optionRE.FindAllStringSubmatch(picker, -1) {
+		options = append(options, m[1:])
 	}
-	for query, want := range map[string][]string{
-		"?kind=entity":       {"DT-001"},
-		"?kind=value-object": {"DT-002"},
-		"?kind=sum-type":     {"DT-004"},
-		"?kind=none":         {"DT-003", "DT-005"},
-		"?kind=gadget":       {"DT-001", "DT-002", "DT-003", "DT-004", "DT-005"},
-	} {
-		if got := shown(query); !reflect.DeepEqual(got, want) {
-			t.Errorf("%s shows %v, want %v", query, got, want)
-		}
+	wantOptions := [][]string{{"", "All"}, {"entity", "entity"}, {"value-object", "value-object"},
+		{"sum-type", "sum-type"}, {"none", "No kind"}}
+	if !reflect.DeepEqual(options, wantOptions) {
+		t.Errorf("kind options = %v", options)
 	}
-	page = get("/domain-terms?kind=none")
-	for _, want := range []string{`<option value="none" selected>No kind</option>`, "Showing 2 of 5 terms", "5 terms</span>"} {
-		if !strings.Contains(page, want) {
-			t.Errorf("?kind=none lacks %q", want)
+	if !strings.Contains(page, "No terms match these filters.") {
+		t.Error("the list has no hint for a filter that leaves no row")
+	}
+	// the filter runs in the browser (static/list-view.js, run by
+	// tests/test_term_fields.py): the server sends every term whatever the
+	// address says
+	for _, query := range []string{"?kind=entity", "?kind=none&status=accepted&sort=title:desc", "?kind=gadget"} {
+		if got := listRows(t, get("/domain-terms"+query)); !reflect.DeepEqual(got, wantRows) {
+			t.Errorf("%s: list rows = %v", query, got)
 		}
 	}
-
-	// with the status filter: the server leaves the rows of the kind, and the
-	// list layer hides those whose data-status is not accepted
-	page = get("/domain-terms?kind=none&status=accepted&sort=title:desc")
-	rows := listRows(t, page)
-	if len(rows) != 2 || rows["DT-003"][2] != "accepted" || rows["DT-005"][2] != "draft" {
-		t.Errorf("kind and status: rows = %v", rows)
-	}
-	for _, want := range []string{"data-list-status", `<input type="hidden" name="status" value="accepted">`,
-		`<input type="hidden" name="sort" value="title:desc">`} {
-		if !strings.Contains(page, want) {
-			t.Errorf("kind and status: page lacks %q", want)
-		}
-	}
-
-	// a kind with no term: the table stays, with a hint
-	if err := os.Remove(filepath.Join(wikiDir, "domain-terms", "DT-002-session.md")); err != nil {
-		t.Fatal(err)
-	}
-	page = get("/domain-terms?kind=value-object")
-	if len(listRows(t, page)) != 0 || !strings.Contains(page, "No terms match this filter.") ||
-		strings.Contains(page, "No agreed pages in this list.") {
-		t.Error("an empty kind does not show the hint alone")
+	_, content, _ := strings.Cut(page, `<h1 class="page-h1">`)
+	content, _, _ = strings.Cut(content, "</table>")
+	if strings.Contains(content, "<form") || strings.Contains(content, "<script") {
+		t.Error("the term list holds a form or a script of its own")
 	}
 }

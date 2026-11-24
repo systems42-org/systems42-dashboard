@@ -3429,15 +3429,8 @@ def glossary_view():
     titles = title_index()
     links = link_index()       # so definition wikilinks render as real hyperlinks
     pages = domain_terms()
-    # the kind filter runs on the server, so the address carries it (FR-038).
-    # An unknown value shows every term
-    kind = request.args.get("kind", "").strip()
-    if kind not in DOMAIN_MODEL_STEREOTYPES and kind != "none":
-        kind = ""
     rows = []
     for p in pages:
-        if kind and term_kind(p) != ("" if kind == "none" else kind):
-            continue
         rows.append({
             "id": p.id,
             "kind": term_kind(p),
@@ -3454,10 +3447,9 @@ def glossary_view():
         })
     # Default order is alphabetical by term; other orders are applied client-side.
     rows.sort(key=lambda r: r["title"].lower())
-    return render_template("glossary.html", rows=rows, total=len(pages),
-                           kinds=list(DOMAIN_MODEL_STEREOTYPES), chosen_kind=kind,
-                           sort=request.args.get("sort", "").strip(),
-                           status="accepted" if request.args.get("status") == "accepted" else "",
+    # the kind filter runs in the browser (static/list-view.js, FR-038)
+    return render_template("glossary.html", rows=rows, total=len(rows),
+                           kinds=list(DOMAIN_MODEL_STEREOTYPES),
                            maturity=maturity(p.status for p in pages))
 
 

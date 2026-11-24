@@ -1,5 +1,6 @@
 // The shared list layer (FR-021, FR-022): sort by one or several columns, the
-// dashboard's sort presets for its type, an "agreed only" filter, and all of it in the address.
+// dashboard's sort presets for its type, an "agreed only" filter, a kind filter
+// where the list has kinds (FR-038), and all of it in the address.
 //
 // Markup, declared in the templates:
 //
@@ -12,15 +13,19 @@
 //   <th aria-sort="ascending">             the order the server rendered
 //   <td data-sort-value="…">               the sort key, else the cell's text
 //   <tr data-status="accepted">            the row's status, for the status filter
-//   <div data-list-controls="<type>">      the order picker (select[data-list-order])
-//                                          and the status filter (button[data-list-status]),
-//                                          one or more per list
+//   <tr data-kind="entity">                the row's kind, for the kind filter ("" = no kind)
+//   <div data-list-controls="<type>">      the order picker (select[data-list-order]),
+//                                          the status filter (button[data-list-status])
+//                                          and the kind filter (select[data-list-kind]:
+//                                          "" = all, "none" = rows without a kind,
+//                                          else one kind), one or more per list
 //
-// A status change fires `listfilter` on the table, detail {status: "all" | "accepted"}.
+// A filter change fires `listfilter` on the table, detail {status: "all" | "accepted",
+// kind: "" | "none" | <kind>}.
 //
-// Address: ?sort=<key>:<asc|desc>,<key>:<asc|desc> and ?status=accepted. Read on
-// load, written with history.replaceState on every change. Unknown keys and values
-// are ignored, so a bad address shows the server's list.
+// Address: ?sort=<key>:<asc|desc>,<key>:<asc|desc>, ?status=accepted and ?kind=<kind>.
+// Read on load, written with history.replaceState on every change. Unknown keys and
+// values are ignored, so a bad address shows the server's list.
 //
 // A table with data-sort headers but no data-list sorts by header click alone and
 // leaves the address alone. A header click fires `tablesort` on the table.
@@ -107,6 +112,12 @@
     return filter !== "accepted" || status === "accepted";
   }
 
+  // filter: "" keeps every row, "none" the rows without a kind, else the rows of that kind
+  function keepKind(kind, filter) {
+    if (!filter) return true;
+    return filter === "none" ? !kind : kind === filter;
+  }
+
   function clear(table) {
     table.querySelectorAll("th[aria-sort]").forEach(function (th) {
       th.removeAttribute("aria-sort");
@@ -114,7 +125,7 @@
   }
 
   var api = {compare: compare, sortRows: sortRows, sortKeyed: sortKeyed, parseSort: parseSort,
-             formatSort: formatSort, keepRow: keepRow, clear: clear};
+             formatSort: formatSort, keepRow: keepRow, keepKind: keepKind, clear: clear};
   window.S42List = api;
   window.S42TableSort = api;                       // the former name, for older pages
   if (typeof document === "undefined") return;     // under node, for the tests
@@ -146,14 +157,16 @@
     var serverRows = Array.from(tbody.rows);
     var initialSort = table.querySelector("th[aria-sort]");
     var initialState = initialSort ? [initialSort, initialSort.getAttribute("aria-sort")] : null;
-    var state = {spec: [], status: "all"};
+    var state = {spec: [], status: "all", kind: ""};
     // a page may hold several controls for one list, such as a status filter
     // beside the goal matrix: they share the list's state and address
     var controls = isList ? Array.from(document.querySelectorAll('[data-list-controls="' + table.dataset.list + '"]')) : [];
     var picker = null;
+    var kindPicker = null;
     var statusButtons = [];
     controls.forEach(function (c) {
       picker = picker || c.querySelector("select[data-list-order]");
+      kindPicker = kindPicker || c.querySelector("select[data-list-kind]");
       statusButtons = statusButtons.concat(Array.from(c.querySelectorAll("button[data-list-status]")));
     });
     var orders = [];
@@ -186,19 +199,20 @@
         initialState[0].setAttribute("aria-sort", initialState[1]);
       }
       if (!isList) return;
-      if (statusButtons.length) {
+      if (statusButtons.length || kindPicker) {
         // a class, not `hidden`: a page's own filter (search, kind) owns
         // `hidden`, and a row shows only when both let it
         var shown = 0;
         serverRows.forEach(function (row) {
-          var keep = keepRow(row.dataset.status, state.status);
+          var keep = keepRow(row.dataset.status, state.status) && keepKind(row.dataset.kind, state.kind);
           row.classList.toggle("list-out", !keep);
           if (keep && !row.hidden) shown++;
         });
         var hint = table.parentNode.querySelector(".list-empty");
         if (hint) hint.hidden = shown !== 0;
-        table.dispatchEvent(new CustomEvent("listfilter", {detail: {status: state.status}}));
+        table.dispatchEvent(new CustomEvent("listfilter", {detail: {status: state.status, kind: state.kind}}));
       }
+      if (kindPicker) kindPicker.value = state.kind;
       if (picker) {
         var current = formatSort(state.spec);
         picker.value = "";
@@ -221,6 +235,10 @@
       if (statusButtons.length) {
         if (state.status === "accepted") params.set("status", "accepted");
         else params.delete("status");
+      }
+      if (kindPicker) {
+        if (state.kind) params.set("kind", state.kind);
+        else params.delete("kind");
       }
       var qs = params.toString().replace(/%3A/gi, ":").replace(/%2C/gi, ",");
       var url = location.pathname + (qs ? "?" + qs : "") + location.hash;
@@ -270,6 +288,12 @@
         table.dispatchEvent(new CustomEvent("tablesort"));
       });
     }
+    if (kindPicker) {
+      kindPicker.addEventListener("change", function () {
+        state.kind = kindPicker.value;
+        render();
+      });
+    }
     statusButtons.forEach(function (b) {
       b.addEventListener("click", function () {
         state.status = b.dataset.listStatus === "accepted" ? "accepted" : "all";
@@ -280,6 +304,10 @@
     var params = new URLSearchParams(location.search);
     state.spec = resolve(parseSort(params.get("sort")));
     if (statusButtons.length && params.get("status") === "accepted") state.status = "accepted";
+    // only a kind the picker offers: an unknown one shows every row
+    if (kindPicker && Array.from(kindPicker.options).some(function (o) { return o.value === params.get("kind"); })) {
+      state.kind = params.get("kind");
+    }
     if (orders.length && !state.spec.length && picker) picker.value = "";
     render();
   }

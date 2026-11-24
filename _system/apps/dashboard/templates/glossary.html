@@ -6,7 +6,6 @@
 {% from "_macros.html" import status_rank %}
 {% from "_list.html" import list_attrs, list_controls, list_empty %}
 {% set spec = list_spec("domain-term") %}
-{% macro opt(value, label, current) %}<option value="{{ value }}"{% if value == current %} selected{% endif %}>{{ label }}</option>{% endmacro %}
 {% block content %}
 <h1 class="page-h1">Domain Terms <span class="count-pill">{{ total }} terms</span></h1>
 {{ maturity_bar(maturity) }}
@@ -16,20 +15,8 @@
   <a class="fbtn fbtn-link" href="/graph/domain-terms" title="The same terms as an interactive network">Term network →</a>
 </div>
 
-{% if total %}
-{# The kind filter runs on the server, so the address carries it (FR-038). #}
-<form class="issue-filters" method="get" action="/domain-terms">
-  <label>Kind <select name="kind">
-    {{ opt("", "All", chosen_kind) }}
-    {% for v in kinds %}{{ opt(v, v, chosen_kind) }}{% endfor %}
-    {{ opt("none", "No kind", chosen_kind) }}
-  </select></label>
-  {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
-  {% if sort %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
-  <button type="submit" class="fbtn issue-filters-apply">Apply</button>
-</form>
-{% if chosen_kind %}<p class="filter-note">Showing {{ rows | length }} of {{ total }} terms. <a href="/domain-terms">Show all terms →</a></p>{% endif %}
-{{ list_controls(spec) }}
+{% if rows %}
+{{ list_controls(spec, kinds=kinds) }}
 <div class="table-card">
 <table{{ list_attrs(spec) }}>
   <thead>
@@ -61,24 +48,10 @@
     {% endfor %}
   </tbody>
 </table>
-{% if rows %}{{ list_empty() }}{% else %}<p class="empty-hint">No terms match this filter.</p>{% endif %}
+{{ list_empty("No terms match these filters.") }}
 </div>
 {% else %}
 {{ empty_state("glossary terms") }}
 {% endif %}
 
-<script nonce="{{ csp_nonce() }}">
-  // a changed kind applies at once and keeps the sort and status the list shows now
-  const form = document.querySelector('.issue-filters');
-  if (form) {
-    form.querySelector('.issue-filters-apply').hidden = true;
-    form.addEventListener('change', () => {
-      const params = new URLSearchParams(location.search);
-      if (form.elements.kind.value) params.set('kind', form.elements.kind.value);
-      else params.delete('kind');
-      const qs = params.toString().replace(/%3A/gi, ':').replace(/%2C/gi, ',');
-      location.assign('/domain-terms' + (qs ? '?' + qs : ''));
-    });
-  }
-</script>
 {% endblock %}

@@ -110,6 +110,13 @@ def test_agreed_only_keeps_accepted_rows():
     assert out == [True, False, False, True]
 
 
+def test_kind_filter_keeps_one_kind_or_the_rows_without():
+    out = _node('var k = window.S42List.keepKind;\n'
+                'console.log(JSON.stringify([k("entity", ""), k("", ""), k("entity", "entity"), k("sum-type", "entity"), '
+                'k("", "entity"), k("", "none"), k(undefined, "none"), k("entity", "none")]));')
+    assert out == [True, True, True, False, False, True, True, False]
+
+
 def test_replaces_table_sort():
     assert not (_DASH / "static" / "table-sort.js").exists()
     base = (_DASH / "templates" / "base.html").read_text(encoding="utf-8")
@@ -128,5 +135,6 @@ if __name__ == "__main__":
         test_each_cell_is_read_once_per_sort()
         test_address_format()
         test_agreed_only_keeps_accepted_rows()
+        test_kind_filter_keeps_one_kind_or_the_rows_without()
     test_replaces_table_sort()
     print("OK: list view")

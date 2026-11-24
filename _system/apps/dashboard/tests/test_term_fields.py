@@ -5,9 +5,12 @@ Run from the dashboard dir:
     .venv/bin/python tests/test_term_fields.py
 """
 import html as html_lib
+import json
 import os
 from pathlib import Path
 import re
+import shutil
+import subprocess
 import sys
 import tempfile
 
@@ -128,50 +131,85 @@ with tempfile.TemporaryDirectory() as temp:
 
         # --- the term list (FR-038) ---
         page = get("/domain-terms")
-        assert _list_rows(page) == {
+        every = {
             "DT-001": ("entity", "entity", "accepted"),
             "DT-002": ("value-object", "value-object", "draft"),
             "DT-003": ("", "", "accepted"),
             "DT-004": ("sum-type", "sum-type", "draft"),
             "DT-005": ("", "", "draft"),
         }
+        assert _list_rows(page) == every
         assert 'data-key="kind"' in page, "the kind column sorts"
-        options = re.findall(r'<option value="([^"]*)"( selected)?>([^<]*)</option>',
-                             page.split('<select name="kind">', 1)[1].split("</select>", 1)[0])
-        assert options == [("", " selected", "All"), ("entity", "", "entity"), ("value-object", "", "value-object"),
-                           ("sum-type", "", "sum-type"), ("none", "", "No kind")], options
+        picker = page.split("<select data-list-kind>", 1)[1].split("</select>", 1)[0]
+        options = re.findall(r'<option value="([^"]*)">([^<]*)</option>', picker)
+        assert options == [("", "All"), ("entity", "entity"), ("value-object", "value-object"),
+                           ("sum-type", "sum-type"), ("none", "No kind")], options
+        assert "No terms match these filters." in page
+        # the filter runs in the browser: the server sends every term whatever the
+        # address says, and the page holds no form and no script of its own
+        for query in ("?kind=entity", "?kind=none&status=accepted&sort=title:desc", "?kind=gadget"):
+            assert _list_rows(get("/domain-terms" + query)) == every, query
+        content = page.split('<h1 class="page-h1">', 1)[1].split("</table>", 1)[0]
+        assert "<form" not in content and "<script" not in content
 
-        def shown(query):
-            return set(_list_rows(get("/domain-terms" + query)))
+        # --- the kind filter, run on this page's rows by static/list-view.js under node ---
+        body = page.split('<tbody id="glossary-body">', 1)[1].split("</tbody>", 1)[0]
+        rows = []
+        for attrs, row in re.findall(r"<tr([^>]*)>(.*?)</tr>", body, re.S):
+            cells = re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)
+            rows.append({"status": re.search(r'data-status="([^"]*)"', attrs).group(1),
+                         "kind": re.search(r'data-kind="([^"]*)"', attrs).group(1),
+                         "cells": [_text(cells[0]), _text(cells[1]), _text(cells[2])]})
 
-        assert shown("?kind=entity") == {"DT-001"}
-        assert shown("?kind=value-object") == {"DT-002"}
-        assert shown("?kind=sum-type") == {"DT-004"}
-        assert shown("?kind=none") == {"DT-003", "DT-005"}
-        assert shown("?kind=gadget") == {"DT-001", "DT-002", "DT-003", "DT-004", "DT-005"}, "an unknown kind is ignored"
+        def run(search="", actions=(), picker=True):
+            spec = {"search": search, "rows": rows, "kinds": [value for value, _ in options] if picker else [],
+                    "columns": [{"key": "id"}, {"key": "title"}, {"key": "kind"}], "actions": list(actions)}
+            out = subprocess.run(["node", str(Path(__file__).with_name("list_harness.js"))],
+                                 input=json.dumps(spec), capture_output=True, text=True, check=True).stdout
+            return json.loads(out)
 
-        page = get("/domain-terms?kind=none")
-        assert '<option value="none" selected>No kind</option>' in page
-        assert "Showing 2 of 5 terms" in page and "5 terms</span>" in page
-
-        # with the status filter: the server leaves the rows of the kind, and the
-        # list layer (static/list-view.js) hides those whose data-status is not accepted
-        page = get("/domain-terms?kind=none&status=accepted&sort=title:desc")
-        rows = _list_rows(page)
-        assert set(rows) == {"DT-003", "DT-005"}
-        assert {i for i, r in rows.items() if r[2] == "accepted"} == {"DT-003"}
-        assert "data-list-status" in page, "the status filter stays on the filtered list"
-        # without script, Apply keeps status and sort
-        form = page.split('<form class="issue-filters"', 1)[1].split("</form>", 1)[0]
-        assert '<input type="hidden" name="status" value="accepted">' in form
-        assert '<input type="hidden" name="sort" value="title:desc">' in form
-        script = (Path(app.app.static_folder) / "list-view.js").read_text(encoding="utf-8")
-        assert "new URLSearchParams(location.search)" in script, "the list layer keeps the other address parameters"
-
-        # a kind with no term: the table stays, with a hint
-        (terms / "DT-002-session.md").unlink()
-        page = get("/domain-terms?kind=value-object")
-        assert _list_rows(page) == {} and "No terms match this filter." in page
-        assert "No agreed pages in this list." not in page
+        if not shutil.which("node"):
+            print("skip: node not installed, the kind filter did not run")
+        else:
+            by_title = ["DT-005", "DT-004", "DT-003", "DT-002", "DT-001"]     # Note, Offer, Review, Session, Training
+            out = run()
+            assert sorted(out["shown"]) == sorted(every) and out["search"] == "" and out["kind"] == ""
+            # one kind, picked on the page: the rows, and the address a reload shows them with
+            for kind, ids in (("entity", ["DT-001"]), ("value-object", ["DT-002"]), ("sum-type", ["DT-004"]),
+                              ("none", ["DT-005", "DT-003"])):
+                picked = run(actions=[{"kind": kind}])
+                assert picked["shown"] == ids and picked["search"] == "?kind=" + kind, (kind, picked)
+                opened = run("?kind=" + kind)
+                assert opened["shown"] == ids and opened["kind"] == kind, (kind, opened)
+            # back to All takes the kind out of the address
+            out = run("?kind=entity", [{"kind": ""}])
+            assert sorted(out["shown"]) == sorted(every) and out["search"] == ""
+            # an unknown kind shows every term
+            out = run("?kind=gadget")
+            assert sorted(out["shown"]) == sorted(every) and out["kind"] == ""
+            # kind and status
+            out = run("?kind=none&status=accepted")
+            assert out["shown"] == ["DT-003"] and out["search"] == "?kind=none&status=accepted", out
+            out = run("?status=accepted", [{"kind": "entity"}])
+            assert out["shown"] == ["DT-001"] and out["search"] == "?status=accepted&kind=entity", out
+            out = run("?kind=none", [{"status": "accepted"}, {"status": "all"}])
+            assert out["shown"] == ["DT-005", "DT-003"] and out["search"] == "?kind=none", out
+            assert out["events"][-2:] == [{"status": "accepted", "kind": "none"}, {"status": "all", "kind": "none"}]
+            # a kind with no agreed term: the hint shows
+            out = run("?kind=sum-type&status=accepted")
+            assert out["shown"] == [] and out["emptyHint"] is True, out
+            assert run("?kind=sum-type")["emptyHint"] is False
+            # kind and sort
+            out = run("?kind=none&sort=title:desc")
+            assert out["shown"] == ["DT-003", "DT-005"] and out["search"] == "?kind=none&sort=title:desc", out
+            out = run("?kind=none", [{"sort": "id"}])
+            assert out["shown"] == ["DT-003", "DT-005"] and out["search"] == "?kind=none&sort=id:asc", out
+            out = run("?sort=title:asc", [{"sort": "kind"}])
+            assert out["shown"][:3] == ["DT-001", "DT-004", "DT-002"], out       # a term without a kind sorts last
+            out = run("?sort=title:asc")
+            assert out["shown"] == by_title, out
+            # a list without a kind picker ignores ?kind= and leaves it alone
+            out = run("?kind=entity&status=accepted", picker=False)
+            assert out["shown"] == ["DT-003", "DT-001"] and out["search"] == "?kind=entity&status=accepted", out
 
 print("term fields: passed")
