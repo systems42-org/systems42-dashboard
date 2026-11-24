@@ -32,6 +32,7 @@ from flask import (Flask, abort, g, has_request_context, jsonify, make_response,
 from markupsafe import Markup, escape
 
 import catalog  # the section catalog (DR-033)
+import inputs  # readers for files the dashboard does not write
 import metamodel  # reader for _system/metamodel/ (DR-035)
 
 # some slim base images lack a webp entry in their mime.types
@@ -199,12 +200,7 @@ def wiki_config() -> dict:
     placeholder — renaming it is bootstrap.md step 1, and the workflow is where
     that is asked for. The dashboard does not second-guess the configured name.
     """
-    try:
-        data = yaml.safe_load(CONFIG_PATH.read_text(encoding="utf-8")) or {}
-    except (OSError, yaml.YAMLError):
-        data = {}
-    if not isinstance(data, dict):
-        data = {}
+    data = _config_data()
     name = str(data.get("system_name") or "").strip()
     about = about_doc(data.get("about"))
     version = data.get("dashboard_version")
@@ -256,6 +252,17 @@ def docs_file(rel: str) -> Path | None:
     root = DOCS_DIR.resolve()
     path = (root / rel).resolve()
     return path if root in path.parents and path.is_file() else None
+
+
+def _config_data() -> dict:
+    """wiki.yaml as a mapping. {} when the file is missing, is not UTF-8 or
+    is not a YAML mapping: `inputs` logs the last two."""
+    try:
+        text = inputs.read_text(CONFIG_PATH)
+    except OSError:
+        return {}
+    data = inputs.load_yaml(CONFIG_PATH, text) if text is not None else None
+    return data if isinstance(data, dict) else {}
 
 
 _config_warned: set[str] = set()
@@ -730,10 +737,11 @@ def _parse(path: Path, folder: str) -> Page | None:
         return cached[1]
     # One broken file must never take the whole dashboard down: every page
     # render walks the full vault (title/link indexes), so an exception here
-    # is a 500 everywhere. Bytes that are not UTF-8 show as U+FFFD; a file
-    # that vanished between stat and read is simply skipped (not cached).
+    # is a 500 everywhere. Bytes that are not UTF-8 show as U+FFFD, and a
+    # date that is none stays text: `inputs` logs both. A file that vanished
+    # between stat and read is simply skipped (not cached).
     try:
-        text = path.read_text(encoding="utf-8", errors="replace")
+        text = inputs.read_text(path, replace=True)
     except OSError:
         _forget(path)
         return None
@@ -741,10 +749,7 @@ def _parse(path: Path, folder: str) -> Page | None:
     if not m:
         page = None
     else:
-        try:
-            meta = yaml.safe_load(m.group(1)) or {}
-        except yaml.YAMLError:
-            meta = {}
+        meta = inputs.load_yaml(path, m.group(1))
         if not isinstance(meta, dict):
             meta = {}                         # `--- just a string ---` or a list: no fields
         page = Page(stem=path.stem, meta=meta, body=m.group(2), folder=folder,
@@ -5284,11 +5289,7 @@ def metamodel_view():
 
 
 def _about_path() -> Path | None:
-    try:
-        data = yaml.safe_load(CONFIG_PATH.read_text(encoding="utf-8")) or {}
-    except (OSError, yaml.YAMLError):
-        data = {}
-    return about_doc(data.get("about")) if isinstance(data, dict) else None
+    return about_doc(_config_data().get("about"))
 
 
 # Relative src/href in the rendered page → /about/files/<path under docs/>, so

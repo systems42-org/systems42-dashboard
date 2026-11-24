@@ -45,6 +45,7 @@ ENV REPO_DIR=/repo
 
 COPY app.py .
 COPY catalog.py .
+COPY inputs.py .
 COPY metamodel.py .
 COPY preflight.py .
 COPY gunicorn.conf.py .

@@ -13,6 +13,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
 ## [Unreleased]
 
 ### Fixed
+- Dashboard: a date that is none (`created: 2026-13-01`, `2026-02-30`) in one wiki page, in `wiki.yaml` or in a metamodel file no longer answers every route with an error. The value stays as the text that was written, and the other fields of the file count. Bytes that are not UTF-8 in `wiki.yaml`, a metamodel file or an anchor no longer do so either: that file is ignored. For each such file the log names the file and the problem, and it now does so for malformed YAML and for wiki pages that are not UTF-8 as well (#176).
 - Dashboard: the term network lists the page types behind its "More" button in alphabetical order, as the Go dashboard does. Before, the order followed the links of the terms, so the two dashboards differed.
 - Dashboard: `search_plain()` in `app.py` now strips Markdown emphasis and backticks as intended instead of matching the later `_emphasis()` regex of the same name.
 - Launcher: `./dashboard.sh uv` loads only the dashboard's own modules. Started from a folder that holds an `app.py` or `preflight.py`, it used to load those instead. Relative path settings such as `WIKI_CONFIG` still mean the folder they were given in. When the port is busy, the message names Ctrl+C for a uv start, not only `./dashboard.sh down`, which needs Docker.
@@ -76,6 +77,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
   next.
 
 ### Changed
+- Dashboard release 0.14.4 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.3 (`_system/apps/dashboard/VERSION`).
 - Dashboard: the home page, Help and the README no longer call Requirements and Architecture "peaks" or the column between them the "valley", since the Chart mark replaced the Peaks mark. Commons is "shared by both areas" (Python and Go).
 - Website: the line under the hero buttons says how many pages of requirements and architecture the demo holds. It no longer counts "views", the exported HTML files.

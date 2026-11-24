@@ -226,3 +226,32 @@ func TestComputeMaturityAndVisionSentence(t *testing.T) {
 		t.Fatalf("VisionSentence = %q, want %q", got, want)
 	}
 }
+
+// A date that is none stays the text that was written, and the page keeps its
+// other fields, as in app.py (tests/test_invalid_input.py, issue #176).
+func TestInvalidDateStaysTextAndKeepsThePage(t *testing.T) {
+	repo := t.TempDir()
+	wikiDir := filepath.Join(repo, "wiki")
+	if err := os.MkdirAll(filepath.Join(wikiDir, "domain-terms"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for stem, front := range map[string]string{
+		"DT-001-invalid-month": "id: DT-001\ntitle: Invalid month\ncreated: 2026-13-01\nupdated: 2026-01-02",
+		"DT-002-invalid-day":   "id: DT-002\ntitle: Invalid day\ncreated: 2026-01-02\nupdated: 2026-02-30",
+	} {
+		p := filepath.Join(wikiDir, "domain-terms", stem+".md")
+		if err := os.WriteFile(p, []byte("---\n"+front+"\n---\n# T\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	store := NewStore(Paths{RepoDir: repo, WikiDir: wikiDir, SourcesDir: filepath.Join(repo, "raw", "sources")})
+	month := store.LoadPage("domain-terms", "DT-001-invalid-month")
+	if month == nil || month.Title() != "Invalid month" ||
+		month.MetaString("created") != "2026-13-01" || month.MetaString("updated") != "2026-01-02" {
+		t.Fatalf("invalid month: %+v", month)
+	}
+	day := store.LoadPage("domain-terms", "DT-002-invalid-day")
+	if day == nil || day.Title() != "Invalid day" || day.MetaString("updated") != "2026-02-30" {
+		t.Fatalf("invalid day: %+v", day)
+	}
+}

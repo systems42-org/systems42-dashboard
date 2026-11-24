@@ -52,7 +52,7 @@ def test_every_folder_is_found_below_the_repository():
 
 def test_the_image_holds_every_module_the_app_imports():
     """A module next to app.py that the Dockerfile does not copy stops the container at import."""
-    for mod in ("app.py", "catalog.py", "metamodel.py", "preflight.py", "gunicorn.conf.py"):
+    for mod in ("app.py", "catalog.py", "inputs.py", "metamodel.py", "preflight.py", "gunicorn.conf.py"):
         assert re.search(r"^COPY " + re.escape(mod) + r" \.$", DOCKERFILE, re.M), mod
 
 
@@ -63,8 +63,8 @@ def test_metamodel_imports_from_a_shallow_place():
     tmp = Path(tempfile.mkdtemp())
     app_dir = tmp / "app"
     app_dir.mkdir()
-    (app_dir / "metamodel.py").write_text((HERE / "metamodel.py").read_text(encoding="utf-8"),
-                                          encoding="utf-8")
+    for mod in ("metamodel.py", "inputs.py"):        # inputs.py: metamodel.py imports it
+        (app_dir / mod).write_text((HERE / mod).read_text(encoding="utf-8"), encoding="utf-8")
     env = {k: v for k, v in os.environ.items() if k != "ANCHORS_DIR"}
     env["METAMODEL_DIR"] = str(tmp / "metamodel")
     out = subprocess.run(
