@@ -82,6 +82,7 @@ import wiki  # noqa: E402
 import links  # noqa: E402
 import project.terms  # noqa: E402
 import project.requirements  # noqa: E402
+import project.goals  # noqa: E402
 
 client = app.app.test_client()
 
@@ -135,7 +136,7 @@ def test_body_links_open_the_goal():
 
 def test_coverage_is_the_same_for_every_spelling():
     with app.app.test_request_context("/"):
-        data = app.load_goals()
+        data = project.goals.load_goals()
         by_stem = {p.stem: p for p in wiki.load_folder("functional-requirements")}
         for stem in SPELLINGS:
             assert links.links_of(by_stem[stem], "goal") == [GOAL], stem

@@ -88,6 +88,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import app  # noqa: E402
 import project.requirements  # noqa: E402
+import project.goals  # noqa: E402
 
 
 def test_use_case_is_a_hierarchy_root():
@@ -123,7 +124,7 @@ def test_ancestors_end_at_the_use_case():
 
 
 def test_story_inherits_the_use_case_goals():
-    g = app.load_goals()
+    g = project.goals.load_goals()
     assert "FR-007" in {p.id for p in g["coverage"]["GOAL-002"]}, g["coverage"]["GOAL-002"]
     assert "FR-007" not in {p.id for p in g["enablers"]}
     print("OK goal inherited from UC-001")
@@ -143,7 +144,7 @@ def test_use_case_page_shows_refined_by():
 
 
 def test_use_case_counts_as_a_column_and_serves_its_goal():
-    g = app.load_goals()
+    g = project.goals.load_goals()
     assert [u.id for u in g["ucs"]] == ["UC-001", "UC-002"], g["ucs"]
     assert "UC-001" in {p.id for p in g["coverage"]["GOAL-002"]}
     # a use case with goal: [] is untraced, never an enabler

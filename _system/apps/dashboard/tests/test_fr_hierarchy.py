@@ -26,6 +26,7 @@ import render  # noqa: E402
 import links as links_module  # noqa: E402
 import wiki as wiki_module  # noqa: E402
 import project.requirements  # noqa: E402
+import project.goals  # noqa: E402
 
 
 def test_build_fr_hierarchy_counts_and_shape():
@@ -75,7 +76,7 @@ def test_build_fr_hierarchy_counts_and_shape():
 
 def test_goal_epic_diagram_string():
     bl = project.requirements.build_fr_hierarchy()
-    dia = project.requirements._mermaid_goal_epic_tree(app.load_goals(), bl)
+    dia = project.requirements._mermaid_goal_epic_tree(project.goals.load_goals(), bl)
     assert dia is not None
     assert dia.startswith("graph TD"), dia[:40]
     # objectives present and clickable to their goal cards on /goals
@@ -246,7 +247,7 @@ def test_features_and_stories_may_refine_a_use_case():
             uc_page = client.get("/functional-requirements/UC-010-borrow").get_data(as_text=True)
             overview = client.get("/req42/functional-requirements").get_data(as_text=True)
             crumbs = [a["id"] for a in project.requirements._fr_ancestors("FR-093-renew-online")]
-            goals = app.load_goals()
+            goals = project.goals.load_goals()
         finally:
             wiki_module.WIKI_DIR = saved
 
@@ -304,7 +305,7 @@ def test_parent_written_as_a_number_or_a_single_link():
             codes = {s: client.get(f"/functional-requirements/{s}").status_code for s in pages}
             overview = client.get("/req42/functional-requirements").status_code
             crumbs = {s: [a["id"] for a in project.requirements._fr_ancestors(s)] for s in pages}
-            goals = app.load_goals()
+            goals = project.goals.load_goals()
         finally:
             wiki_module.WIKI_DIR = saved
     assert set(codes.values()) == {200} and overview == 200, (codes, overview)

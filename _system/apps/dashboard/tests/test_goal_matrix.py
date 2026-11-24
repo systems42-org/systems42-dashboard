@@ -32,6 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
 import project.requirements  # noqa: E402
+import project.goals  # noqa: E402
 
 
 def _page(folder, stem, title, status, **fields):
@@ -115,7 +116,7 @@ def _rows():
 
 
 def test_rule_helper():
-    data = app.load_goals()
+    data = project.goals.load_goals()
     assert [p.id for p in data["enablers"]] == ["FR-003", "FR-005"], data["enablers"]
     assert [p.id for p in data["untraced"]] == ["FR-002", "FR-009", "FR-010"], data["untraced"]
     served = [p.id for p in data["coverage"]["GOAL-002"]]
@@ -125,7 +126,7 @@ def test_rule_helper():
 def test_goal_epic_map_keeps_untraced_epics():
     # the map on the functional-requirements page: an untraced epic is no
     # enabler, but it must not drop off the map either
-    dia = project.requirements._mermaid_goal_epic_tree(app.load_goals(), project.requirements.build_fr_hierarchy())
+    dia = project.requirements._mermaid_goal_epic_tree(project.goals.load_goals(), project.requirements.build_fr_hierarchy())
     enabler = re.search(r"ENABLER --> (\w+)", dia)
     assert 'NOGOAL["No goal"]' in dia, dia
     assert re.search(r"NOGOAL --> \w+\[\"FR-002", dia), dia
@@ -241,7 +242,7 @@ def test_goal_served_only_by_another_notation_is_no_gap():
     assert 'href="/functional-requirements/FR-015-ears-shall"' in notes[0][1], notes
     # it is a draft: with drafts hidden the goal is a gap
     assert 'data-gap-accepted' in _head("GOAL-007")
-    data = app.load_goals()
+    data = project.goals.load_goals()
     assert "FR-015" not in {p.id for p in data["enablers"] + data["untraced"]}
 
 
