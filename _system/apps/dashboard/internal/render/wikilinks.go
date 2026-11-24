@@ -106,7 +106,7 @@ func RenderWikilinks(text string, ctx LinkContext) string {
 					EscapeHTML("/source/"+src.Stem), EscapeHTML(srcLabel))
 			}
 		} else if len(ctx.Links) > 0 {
-			if dest, ok := ctx.Links[base]; ok {
+			if dest, ok := wiki.ResolveLink(target, ctx.Links); ok {
 				return fmt.Sprintf(`<a class="wl" href="%s">%s</a>`,
 					EscapeHTML(wiki.PageURL(dest.Folder, dest.Stem)), label)
 			}

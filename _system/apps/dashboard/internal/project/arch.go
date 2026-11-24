@@ -267,14 +267,15 @@ func BuildWhitebox(stem string, blocks, eifs []*wiki.Page, byStem map[string]*wi
 
 func endpointStem(text string, byStem map[string]*wiki.Page) string {
 	if strings.Contains(text, "[[") {
-		return wiki.StemOfLink(text)
+		return wiki.LinkStem(text, byStem)
 	}
-	if byStem[text] != nil {
+	// plain text names a page by its file name only: "BB-003" stays text
+	if p := byStem[text]; p != nil && p.Stem == text {
 		return text
 	}
 	if idx := strings.LastIndexByte(text, '/'); idx >= 0 {
 		last := strings.TrimSpace(text[idx+1:])
-		if byStem[last] != nil {
+		if p := byStem[last]; p != nil && p.Stem == last {
 			return last
 		}
 	}
@@ -288,7 +289,7 @@ func resolveEndpoint(raw any, byStem map[string]*wiki.Page) (stem string, label 
 		st = endpointStem(text, byStem)
 	}
 	p := byStem[st]
-	if p == nil {
+	if p == nil || p.Stem != st {
 		if st == "" {
 			return "", "?"
 		}
@@ -605,7 +606,7 @@ func BuildDeploymentDiagram(root string, nodes, blocks, eifs []*wiki.Page, bySte
 			v := wiki.Scalar(e["to"])
 			t := ""
 			if v != nil && wiki.ScalarString(v) != "" {
-				t = wiki.StemOfLink(v)
+				t = wiki.LinkStem(v, byStem)
 			}
 			var target string
 			if shown[t] {
@@ -720,7 +721,7 @@ func DeploymentHints(stem string, nodes, blocks []*wiki.Page, byStem map[string]
 			v := wiki.Scalar(e["to"])
 			t := ""
 			if v != nil && wiki.ScalarString(v) != "" {
-				t = wiki.StemOfLink(v)
+				t = wiki.LinkStem(v, byStem)
 			}
 			if t == "" {
 				hints = append(hints, fmt.Sprintf("%s connects entry %d: to: is empty, not drawn", p.ID(), i+1))

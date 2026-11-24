@@ -138,14 +138,14 @@ func TermKind(p *wiki.Page) string {
 // DMRelationships returns the entries of a term's `relationships:` that name a
 // target, as edges. The target may be a stem no structured term has: the
 // entity diagram drops those, the term page lists them (FR-039).
-func DMRelationships(p *wiki.Page) []map[string]any {
+func DMRelationships(p *wiki.Page, index map[string]*wiki.Page) []map[string]any {
 	out := make([]map[string]any, 0)
 	for _, item := range p.AsList("relationships") {
 		entry, ok := item.(map[string]any)
 		if !ok {
 			continue
 		}
-		tgt := wiki.StemOfLink(entry["to"])
+		tgt := wiki.LinkStem(entry["to"], index)
 		if tgt == "" {
 			continue
 		}
@@ -184,7 +184,7 @@ func DMRelationships(p *wiki.Page) []map[string]any {
 // other target stays as written.
 func TermRelationships(p *wiki.Page, links map[string]wiki.PageRef, byStem map[string]*wiki.Page) []map[string]any {
 	out := make([]map[string]any, 0)
-	for _, r := range DMRelationships(p) {
+	for _, r := range DMRelationships(p, byStem) {
 		kind := r["kind"].(string)
 		row := map[string]any{
 			"kind":         kind,
@@ -235,7 +235,7 @@ func DataModelNodes(domainTerms []*wiki.Page) []map[string]any {
 
 // DataModelEdges returns the parent inheritance edges and frontmatter
 // relationships edges among existing entity-diagram nodes.
-func DataModelEdges(domainTerms []*wiki.Page) []map[string]any {
+func DataModelEdges(domainTerms []*wiki.Page, index map[string]*wiki.Page) []map[string]any {
 	nodes := DataModelNodes(domainTerms)
 	byStem := make(map[string]bool, len(nodes))
 	for _, n := range nodes {
@@ -245,7 +245,7 @@ func DataModelEdges(domainTerms []*wiki.Page) []map[string]any {
 	out := make([]map[string]any, 0)
 	for _, p := range wiki.DataModelPages(domainTerms) {
 		for _, raw := range p.AsList("parent") {
-			tgt := wiki.StemOfLink(raw)
+			tgt := wiki.LinkStem(raw, index)
 			if tgt != "" && byStem[tgt] && tgt != p.Stem {
 				out = append(out, map[string]any{
 					"source":      p.Stem,
@@ -256,7 +256,7 @@ func DataModelEdges(domainTerms []*wiki.Page) []map[string]any {
 				})
 			}
 		}
-		for _, r := range DMRelationships(p) {
+		for _, r := range DMRelationships(p, index) {
 			if byStem[r["target"].(string)] {
 				out = append(out, r)
 			}

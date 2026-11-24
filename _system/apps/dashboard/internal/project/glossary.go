@@ -43,10 +43,7 @@ func BuildGlossaryGraph(allPages, domainTerms []*wiki.Page, edgeFilter string) m
 		gloStems[p.Stem] = true
 		gloDegree[p.Stem] = 0
 	}
-	byStem := make(map[string]*wiki.Page, len(allPages))
-	for _, p := range allPages {
-		byStem[p.Stem] = p
-	}
+	byStem := wiki.PageIndex(allPages)
 
 	seenPairs := map[pairKey]bool{}
 	edges := make([]map[string]any, 0)
@@ -56,7 +53,7 @@ func BuildGlossaryGraph(allPages, domainTerms []*wiki.Page, edgeFilter string) m
 		for _, p := range glossary {
 			src := p.Stem
 			for _, raw := range p.AsList("related") {
-				tgt := wiki.StemOfLink(raw)
+				tgt := wiki.LinkStem(raw, byStem)
 				if tgt == "" || tgt == src || byStem[tgt] == nil {
 					continue
 				}
@@ -87,7 +84,7 @@ func BuildGlossaryGraph(allPages, domainTerms []*wiki.Page, edgeFilter string) m
 
 	if edgeFilter != "related" {
 		seenStruct := map[structEdgeKey]bool{}
-		for _, rel := range DataModelEdges(domainTerms) {
+		for _, rel := range DataModelEdges(domainTerms, byStem) {
 			src, tgt := rel["source"].(string), rel["target"].(string)
 			if !gloStems[src] || !gloStems[tgt] {
 				continue

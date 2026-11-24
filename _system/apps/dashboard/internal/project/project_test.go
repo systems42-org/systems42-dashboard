@@ -96,7 +96,7 @@ func TestEntityDiagramUmlautsInheritanceAndFilters(t *testing.T) {
 	if len(nodes) != 3 { // DT-001..003 (DT-004 has no stereotype)
 		t.Fatalf("expected 3 nodes, got %d", len(nodes))
 	}
-	edges := DataModelEdges(terms)
+	edges := DataModelEdges(terms, wiki.PageIndex(terms))
 	diag := BuildDataModelFullDiagram(nodes, edges, "Core", "")
 	for _, want := range []string{
 		`class Durchfuehrungsart["Durchführungsart"] {`,
@@ -146,7 +146,7 @@ func TestGoalsFRHierarchyAndArchProjections(t *testing.T) {
 	if gd.Vision == nil || len(gd.Objectives) != 1 || len(gd.Enablers) != 1 || len(gd.Untraced) != 3 {
 		t.Fatalf("LoadGoals unexpected: %+v", gd)
 	}
-	h := BuildFRHierarchy(frs)
+	h := BuildFRHierarchy(frs, wiki.PageIndex(frs))
 	if h["total_epics"].(int) != 3 || h["total_features"].(int) != 1 {
 		t.Fatalf("BuildFRHierarchy counts wrong: %+v", h)
 	}

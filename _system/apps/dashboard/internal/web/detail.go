@@ -70,12 +70,8 @@ func (s *Server) linkContext(sn *requestSnapshot) render.LinkContext {
 
 func (sn *requestSnapshot) byStem() map[string]*wiki.Page {
 	if sn.pagesByStem == nil {
-		all := sn.all()
-		m := make(map[string]*wiki.Page, len(all))
-		for _, p := range all {
-			m[p.Stem] = p
-		}
-		sn.pagesByStem = m
+		// stems and IDs: the index wiki.ResolveLink reads
+		sn.pagesByStem = wiki.PageIndex(sn.all())
 	}
 	return sn.pagesByStem
 }
@@ -351,26 +347,21 @@ func buildRelationsPanel(sn *requestSnapshot, stem string, exclude map[string]bo
 	}
 
 	var outbound []string
-	outSet := map[string]bool{}
-	if me := byStem[stem]; me != nil {
-		for tgt := range me.LinkTargets() {
+	var inbound []string
+	if me := byStem[stem]; me != nil && me.Stem == stem {
+		for tgt := range me.LinkedStems(byStem) {
 			if byStem[tgt] != nil && !exclude[tgt] {
 				outbound = append(outbound, tgt)
-				outSet[tgt] = true
+			}
+		}
+		// every page that links here, also one this page links to (FR-034)
+		for _, q := range pages {
+			if !exclude[q.Stem] && wiki.LinksTo(q, me, byStem) {
+				inbound = append(inbound, q.Stem)
 			}
 		}
 	}
 	sort.Strings(outbound)
-
-	var inbound []string
-	for _, q := range pages {
-		if q.Stem == stem || outSet[q.Stem] || exclude[q.Stem] {
-			continue
-		}
-		if _, ok := q.LinkTargets()[stem]; ok {
-			inbound = append(inbound, q.Stem)
-		}
-	}
 	sort.Strings(inbound)
 
 	grouped := func(stems []string) []map[string]any {

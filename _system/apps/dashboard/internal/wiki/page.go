@@ -261,7 +261,15 @@ func StemFromRef(ref any) string {
 
 // StemOfLink extracts the target stem from a frontmatter link entry.
 func StemOfLink(raw any) string {
-	t := strings.TrimSpace(scalarString(raw))
+	return LinkName(raw)
+}
+
+// LinkName returns the page name inside a link:
+// '[[wiki/goals/GOAL-002#Metric|waiting]]' -> 'GOAL-002'. It drops the
+// brackets, the alias, the heading and the path. A value without brackets is
+// read the same way.
+func LinkName(spelling any) string {
+	t := strings.TrimSpace(scalarString(spelling))
 	if m := anyWikilinkRE.FindStringSubmatch(t); m != nil {
 		t = m[1]
 	}
@@ -274,6 +282,55 @@ func StemOfLink(raw any) string {
 	t = strings.TrimSpace(t)
 	parts := strings.Split(t, "/")
 	return strings.TrimSpace(parts[len(parts)-1])
+}
+
+// ResolveLink is the one resolver for links (#178): what index holds for the
+// page a link names. The body text, the relations panel and every projection
+// over a link field call it, so a link that opens a page in the text counts
+// for that page everywhere. index is PageIndex or LinkIndex: a full file name
+// or an ID alone, case-sensitive.
+func ResolveLink[T any](spelling any, index map[string]T) (T, bool) {
+	v, ok := index[LinkName(spelling)]
+	return v, ok
+}
+
+// LinkStem returns the file name of the page a link names, or the name as
+// written when no page has it (a hint can then say which name is missing).
+func LinkStem(spelling any, index map[string]*Page) string {
+	if p, ok := ResolveLink(spelling, index); ok && p != nil {
+		return p.Stem
+	}
+	return LinkName(spelling)
+}
+
+// LinkedStems returns the pages p links to, each once however often and
+// however it is spelled, without p itself. A name no page has stays as
+// written.
+func (p *Page) LinkedStems(index map[string]*Page) map[string]struct{} {
+	out := map[string]struct{}{}
+	for tgt := range p.LinkTargets() {
+		if s := LinkStem(tgt, index); s != p.Stem {
+			out[s] = struct{}{}
+		}
+	}
+	return out
+}
+
+// LinksTo reports whether page links to target, by any name that resolves to
+// it.
+func LinksTo(page, target *Page, index map[string]*Page) bool {
+	if page == target {
+		return false
+	}
+	targets := page.LinkTargets()
+	for _, name := range []string{target.Stem, target.ID()} {
+		if index[name] == target {
+			if _, ok := targets[name]; ok {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // LinksOf returns existing target stems referenced by page.Meta[field], in
@@ -292,7 +349,7 @@ func LinksOf(page *Page, field string, byStem map[string]*Page) []string {
 		if v == nil {
 			return
 		}
-		s := StemOfLink(v)
+		s := LinkStem(v, byStem)
 		if s != "" && byStem[s] != nil && !seen[s] {
 			seen[s] = true
 			out = append(out, s)
@@ -321,7 +378,7 @@ func StructTargets(page *Page, field string, keys []string, byStem map[string]*P
 			if v == nil {
 				continue
 			}
-			s := StemOfLink(v)
+			s := LinkStem(v, byStem)
 			if s != "" && byStem[s] != nil && !seen[s] {
 				seen[s] = true
 				out = append(out, s)
@@ -680,18 +737,29 @@ type PageRef struct {
 	Stem   string
 }
 
-// LinkIndex maps each page's stem and ID to its PageRef (first writer wins).
-func LinkIndex(pages []*Page) map[string]PageRef {
-	idx := make(map[string]PageRef, len(pages)*2)
+// PageIndex maps each page's stem and ID to the page: the names a link may
+// use for a page. A file name always names its own page. An ID names the
+// first page that carries it, unless it is another page's file name.
+func PageIndex(pages []*Page) map[string]*Page {
+	idx := make(map[string]*Page, len(pages)*2)
 	for _, p := range pages {
-		ref := PageRef{Folder: p.Folder, Stem: p.Stem}
-		if _, exists := idx[p.Stem]; !exists {
-			idx[p.Stem] = ref
-		}
+		idx[p.Stem] = p
+	}
+	for _, p := range pages {
 		id := p.ID()
 		if _, exists := idx[id]; !exists {
-			idx[id] = ref
+			idx[id] = p
 		}
+	}
+	return idx
+}
+
+// LinkIndex is PageIndex as PageRefs, for the links in the body text.
+func LinkIndex(pages []*Page) map[string]PageRef {
+	pageIdx := PageIndex(pages)
+	idx := make(map[string]PageRef, len(pageIdx))
+	for name, p := range pageIdx {
+		idx[name] = PageRef{Folder: p.Folder, Stem: p.Stem}
 	}
 	return idx
 }
