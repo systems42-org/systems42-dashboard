@@ -4,7 +4,7 @@ type: functional-requirement
 title: Sections come from the repository's metamodel
 status: draft
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-24
 sources: ["[[SRC-027-dashboard-distribution-and-metamodel-contract]]", "[[SRC-028-grilling-session-on-dashboard-distribution]]"]
 related: ["[[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]]", "[[FR-023-areas-and-sections-follow-the-tailoring]]", "[[CON-005-the-dashboard-works-on-systems42-derivatives-only]]", "[[STK-012-maintainers]]"]
 tags: ["functional-requirement", "navigation"]
@@ -27,7 +27,7 @@ As a [[STK-010-operators|person who sets up a project wiki]] I want **the dashbo
 **PROBLEM / GOAL**
 
 - The dashboard builds its section catalog from the framework blocks in `_system/metamodel/frameworks/` of the repository it runs on: each section's id, title, folders and scope.
-- The dashboard code holds no list of sections ([[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]]).
+- The dashboard may select a presentation by section id. It must provide a generic view for every declared section without a dedicated presentation ([[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]]).
 - The three areas are fixed. Routes, colours and layout stay the dashboard's.
 
 **Success metric(s).** On a test repository with one renamed section and one added section, the dashboard shows both on the first page, in the header and in the lists, without a code change.

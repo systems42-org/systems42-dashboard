@@ -481,3 +481,6 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 
 ## [2026-11-24] correction | Reopen clarify loop issue
 - Reopened [[ISS-002-define-the-clarify-loop]]. The workflow exists, but the team's agreement on its principle was not established. The earlier closure was an agent error; the dashboard explanation in [[FR-011-explain-the-five-loops]] does not resolve it.
+
+## [2026-11-24] correction | Make the metamodel dependency explicit
+- [[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]] states the dependency from dashboard to metamodel first. [[FR-044-sections-come-from-the-repositorys-metamodel]] distinguishes the sections declared by the metamodel from the presentation chosen by the dashboard.
