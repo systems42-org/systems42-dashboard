@@ -4,8 +4,9 @@
 {% from "_macros.html" import status_rank %}
 {% macro list_attrs(spec) %} data-list="{{ spec.type }}" data-sort-orders='{{ spec.orders | tojson }}'{% endmacro %}
 
-{# `kinds`: the kinds the list's rows can have. With any, a kind filter shows. #}
-{% macro list_controls(spec, status=True, order=True, kinds=[]) %}
+{# `kinds`: the kinds the list's rows can have. With any, a kind filter shows.
+   `deliveries`: the delivery states as [{value, label}]. With any, a delivery filter shows (FR-048). #}
+{% macro list_controls(spec, status=True, order=True, kinds=[], deliveries=[]) %}
 <div class="list-controls" data-list-controls="{{ spec.type }}" hidden>
   {% if order and spec.orders %}<label class="list-order">Order
     <select data-list-order>
@@ -18,6 +19,12 @@
       <option value="">All</option>
       {% for k in kinds %}<option value="{{ k }}">{{ k }}</option>
       {% endfor %}<option value="none">No kind</option>
+    </select></label>{% endif %}
+  {% if deliveries %}<label class="list-order">Delivery
+    <select data-list-delivery>
+      <option value="">All</option>
+      {% for d in deliveries %}<option value="{{ d.value }}">{{ d.label }}</option>
+      {% endfor %}<option value="none">No delivery record</option>
     </select></label>{% endif %}
   {% if status %}<span class="filterbar" role="group" aria-label="Status">
     <button type="button" class="fbtn active" data-list-status="all" aria-pressed="true">All</button>

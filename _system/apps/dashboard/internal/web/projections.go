@@ -343,8 +343,15 @@ func (s *Server) handleFunctionalRequirements(w http.ResponseWriter, r *http.Req
 
 	allFRPages := sortedByID(append([]*wiki.Page{}, frs...))
 
+	// the delivery column and its filter show only in a wiki that tracks delivery (FR-048)
+	vocab := s.loadDeliveryVocab()
+	deliveries := []map[string]any{}
 	rows := make([]map[string]any, 0, len(allFRPages))
 	for _, p := range allFRPages {
+		delivery := deliveryBadge(p, vocab)
+		if delivery["value"] != "" && len(deliveries) == 0 {
+			deliveries = deliveryOptions(vocab)
+		}
 		rows = append(rows, map[string]any{
 			"id":       p.ID(),
 			"title":    p.Title(),
@@ -355,10 +362,12 @@ func (s *Server) handleFunctionalRequirements(w http.ResponseWriter, r *http.Req
 			"release":  strings.TrimSpace(p.MetaString("release")),
 			"order":    strings.TrimSpace(p.MetaString("order")),
 			"status":   p.Status(),
+			"delivery": delivery,
 		})
 	}
 
 	s.renderHTML(w, r, http.StatusOK, "functional-requirements.html", cat, map[string]any{
+		"deliveries":    deliveries,
 		"hierarchy":     hierarchy,
 		"diagram":       nilIfEmpty(diagram),
 		"diagram_links": diagramLinks,
@@ -464,6 +473,7 @@ func (s *Server) handleFRDetail(w http.ResponseWriter, r *http.Request) {
 		"sources":       provenanceChips(page, sn.sourceIndex()),
 		"page_issues":   openIssuesFor(sn, stem, vocab),
 		"formats":       render.FormatLabels(page.Body, linkCtx),
+		"delivery":      deliveryBadge(page, s.loadDeliveryVocab()),
 	}), now)
 }
 

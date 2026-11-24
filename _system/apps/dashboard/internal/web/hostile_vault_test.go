@@ -216,7 +216,7 @@ func TestHostileVault(t *testing.T) {
 		`&lt;b&gt;an alias&lt;/b&gt;`,
 		`style="text-align:left"`,
 		`class="language-mermaid"`,
-		`<a class="wl" href="/page/domain-terms/DT-103-hostile-title">`,
+		`<a class="wl wl-term" href="/page/domain-terms/DT-103-hostile-title" title="&lt;script&gt;alert(2)&lt;/script&gt; see Linker.">`,
 		`id="fn:1"`,
 		`class="footnote-ref"`,
 	} {

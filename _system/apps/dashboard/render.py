@@ -50,9 +50,9 @@ for _cell in ("th", "td"):
 _SANITIZE_TAGS = set(nh3.ALLOWED_TAGS) | {"tfoot"}
 # footnotes: fn:1, fnref:1, fnref2:1 (a second reference to the same note)
 _CONTENT_ID_RE = re.compile(r"fn(?:ref\d*)?:[\w.-]+")
-# wikilinks and anchor links (render_wikilinks, /metamodel), fenced code incl.
-# mermaid, footnotes, the scroll box around tables (wrap_tables)
-_CONTENT_CLASS_RE = re.compile(r"wl|wl-anchor|mm-anchor|language-[\w+-]+|footnote(?:-ref|-backref)?"
+# wikilinks, term links and anchor links (render_wikilinks, /metamodel), fenced
+# code incl. mermaid, footnotes, the scroll box around tables (wrap_tables)
+_CONTENT_CLASS_RE = re.compile(r"wl|wl-anchor|wl-term|mm-anchor|language-[\w+-]+|footnote(?:-ref|-backref)?"
                                r"|table-scroll")
 
 
@@ -125,7 +125,8 @@ def render_wikilinks(text: str, titles: dict[str, str],
     """Replace [[..]] with its alias (or resolved title). When `links` is given
     and the target resolves to a wiki page, a source record or a method anchor,
     emit a real hyperlink; otherwise (inline snippets, or an unresolved target)
-    keep the styled-text span.
+    keep the styled-text span. A link to a domain term carries the term's
+    definition as its title (FR-041).
 
     The label is escaped (a title is data, not markup); the text around the
     links is left as it is, because callers pass markdown here and sanitize
@@ -142,7 +143,11 @@ def render_wikilinks(text: str, titles: dict[str, str],
         elif links:
             dest = links_module.resolve_link(target, links)
             if dest:
-                return f'<a class="wl" href="{escape(links_module._page_url(*dest))}">{label}</a>'
+                url = escape(links_module._page_url(*dest))
+                if wiki._is(dest[0], "domain-term") and (definition := term_definition(dest[1])):
+                    return (f'<a class="wl wl-term" href="{url}" '
+                            f'title="{_title_attribute(definition)}">{label}</a>')
+                return f'<a class="wl" href="{url}">{label}</a>'
         if links is not None and (a := anchor_lookup().get(base.lower())):
             return _anchor_link(a, str(escape(alias.strip() if alias else a["name"])))
         return f'<span class="wl">{label}</span>'
@@ -183,6 +188,53 @@ def anchor_title(a: dict) -> str:
     """An anchor's definition as plain text, for a `title` attribute."""
     text = wiki.WIKILINK_RE.sub(lambda m: (m.group(2) or m.group(1)).strip(), a.get("definition") or "")
     return _PLAIN_MD_RE.sub(lambda m: m.group(1) or m.group(2) or m.group(3) or m.group(4), text)
+
+
+# --- term definitions (FR-041) -----------------------------------------------
+#
+# A link to a domain term carries the term's definition as its `title`, so a
+# reader meets it where the term is used. static/term-definition.js shows the
+# title in place on hover, focus and tap. Without script the browser's own
+# tooltip shows it.
+
+# longest definition a link carries, in characters, the ellipsis included
+TERM_DEFINITION_MAX = 300
+# characters Markdown reads as markup. A title is written into Markdown text
+# before Markdown runs, and a backtick or bracket in it could pair with one in
+# the text around the link and break the attribute open.
+_TITLE_MARKUP = {ord(c): f"&#{ord(c)};" for c in "`[]\\*_"}
+
+
+def _title_attribute(text: str) -> str:
+    """`text` escaped for a `title` attribute in Markdown text."""
+    return str(escape(text)).translate(_TITLE_MARKUP)
+
+
+@wiki._request_cached
+def term_definition(stem: str) -> str:
+    """The definition of the domain term with this file name as plain text:
+    its **Definition.** paragraph, links and Markdown reduced to their text,
+    cut at a word after TERM_DEFINITION_MAX characters. "" for a term without
+    one and for a page of another type. Read once per request and term,
+    however many links name the term."""
+    page = links_module.page_index().get(stem)
+    if page is None or not wiki._is(page.folder, "domain-term"):
+        return ""
+    titles = links_module.title_index()
+
+    def link_text(m: re.Match) -> str:
+        base = m.group(1).strip().split("/")[-1]
+        return (m.group(2) or titles.get(base, base)).strip()
+
+    text = wiki.WIKILINK_RE.sub(link_text, labeled_text(page, "Definition"))
+    text = _PLAIN_MD_RE.sub(lambda m: m.group(1) or m.group(2) or m.group(3) or m.group(4), text)
+    text = re.sub(r"\s+", " ", text).strip()
+    if len(text) > TERM_DEFINITION_MAX:
+        cut = text[:TERM_DEFINITION_MAX - 1]
+        if " " in cut:
+            cut = cut[:cut.rindex(" ")]
+        text = cut.rstrip(" ,;:.") + "…"
+    return text
 
 
 def anchor_url(a: dict) -> str:
@@ -411,17 +463,22 @@ def render_markdown(body: str, titles: dict[str, str]) -> str:
     return sanitize_html(wrap_tables(md.markdown(body, extensions=["extra", "sane_lists"])))
 
 
+def labeled_text(page: wiki.Page, label: str) -> str:
+    """The paragraph introduced by a bold lead like **Definition.** or
+    **Snapshot.** as written, on one line."""
+    rx = re.compile(r"\*\*" + re.escape(label) + r"\.\*\*\s*(.+?)(?=\n\s*\n|\n\s*\*\*|$)", re.DOTALL)
+    m = rx.search(page.body)
+    raw = m.group(1).strip() if m else ""
+    return re.sub(r"\s+", " ", raw)
+
+
 def extract_labeled(page: wiki.Page, label: str, titles: dict[str, str],
                     links: dict[str, tuple[str, str]] | None = None) -> str:
     """Pull the paragraph introduced by a bold lead like **Definition.** or
     **Snapshot.**, collapse whitespace, and render its wikilinks. Pass `links`
     (a link index) to turn resolvable targets into real hyperlinks instead of
     styled-text spans."""
-    rx = re.compile(r"\*\*" + re.escape(label) + r"\.\*\*\s*(.+?)(?=\n\s*\n|\n\s*\*\*|$)", re.DOTALL)
-    m = rx.search(page.body)
-    raw = m.group(1).strip() if m else ""
-    raw = re.sub(r"\s+", " ", raw)
-    return sanitize_html(render_wikilinks(raw, titles, links))
+    return sanitize_html(render_wikilinks(labeled_text(page, label), titles, links))
 
 
 _PAM_BULLET_RE = re.compile(

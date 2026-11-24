@@ -1,7 +1,8 @@
 """What several projections share.
 
 Owns the meaning of an open issue, the open issues per folder and the values
-the metamodel allows for an issue, the maturity bar, a page's provenance
+the metamodel allows for an issue and for a requirement's delivery status, the
+maturity bar, a page's provenance
 records, the pages of a section, the type prefix of a page name, a page's
 short title, and the node ids, labels and node links of the Mermaid diagrams.
 
@@ -152,6 +153,46 @@ def _issue_vocab() -> dict[str, list[str]]:
     read once per request."""
     return {"status": metamodel.lifecycle("issue"),
             **{f: metamodel.field_values("issue", f) for f in ("severity", "kind", "category")}}
+
+
+# The delivery states and, per shipped notation, the levels that may carry
+# one and the states it allows (meta FR-031). They apply where the
+# repository's metamodel declares none, as catalog.py does for type folders.
+DELIVERY_STATES = ("partial", "implemented", "outdated", "removed")
+_DEFAULT_NOTATION_DELIVERY = {
+    "agile": {"levels": ["story"], "states": ["implemented", "outdated", "removed"]},
+    "use-case": {"levels": ["sea", "fish"], "states": ["partial", "implemented", "outdated", "removed"]},
+    "ears": {"levels": ["requirement"], "states": ["implemented", "outdated", "removed"]},
+    "prose": {"levels": ["requirement"], "states": ["implemented", "outdated", "removed"]},
+}
+
+
+@wiki._request_cached
+def delivery_vocab() -> dict:
+    """What the metamodel allows for a requirement's `delivery:` (CON-006),
+    read once per request:
+
+      states     the values of the type's `delivery` field, in declared order
+      notations  notation name (lower case) -> {levels, states}: its
+                 `implementable_levels` and `delivery_states`. None where
+                 neither the notation nor the defaults declare the key: no
+                 rule then
+    """
+    def declared(notation: dict, key: str, default_key: str, name: str):
+        value = notation.get(key)
+        if isinstance(value, list):
+            return [str(v) for v in value]
+        return _DEFAULT_NOTATION_DELIVERY.get(name, {}).get(default_key)
+
+    notations = {}
+    for n in metamodel.notations():
+        name = n["name"].lower()
+        notations.setdefault(name, {"levels": declared(n, "implementable_levels", "levels", name),
+                                    "states": declared(n, "delivery_states", "states", name)})
+    for name, rules in _DEFAULT_NOTATION_DELIVERY.items():
+        notations.setdefault(name, dict(rules))
+    return {"states": metamodel.field_values("functional-requirement", "delivery") or list(DELIVERY_STATES),
+            "notations": notations}
 
 
 def _short_title(p: wiki.Page) -> str:

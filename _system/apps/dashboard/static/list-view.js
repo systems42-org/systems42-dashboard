@@ -1,6 +1,7 @@
 // The shared list layer (FR-021, FR-022): sort by one or several columns, the
 // dashboard's sort presets for its type, an "agreed only" filter, a kind filter
-// where the list has kinds (FR-038), and all of it in the address.
+// where the list has kinds (FR-038), a delivery filter where it tracks delivery
+// (FR-048), and all of it in the address.
 //
 // Markup, declared in the templates:
 //
@@ -14,16 +15,21 @@
 //   <td data-sort-value="…">               the sort key, else the cell's text
 //   <tr data-status="accepted">            the row's status, for the status filter
 //   <tr data-kind="entity">                the row's kind, for the kind filter ("" = no kind)
+//   <tr data-delivery="implemented">       the row's delivery value, for the delivery filter
+//                                          ("" = no delivery record)
 //   <div data-list-controls="<type>">      the order picker (select[data-list-order]),
 //                                          the status filter (button[data-list-status])
 //                                          and the kind filter (select[data-list-kind]:
 //                                          "" = all, "none" = rows without a kind,
-//                                          else one kind), one or more per list
+//                                          else one kind) and the delivery filter
+//                                          (select[data-list-delivery], same values),
+//                                          one or more per list
 //
 // A filter change fires `listfilter` on the table, detail {status: "all" | "accepted",
-// kind: "" | "none" | <kind>}.
+// kind: "" | "none" | <kind>}, plus `delivery` in a list with a delivery filter.
 //
-// Address: ?sort=<key>:<asc|desc>,<key>:<asc|desc>, ?status=accepted and ?kind=<kind>.
+// Address: ?sort=<key>:<asc|desc>,<key>:<asc|desc>, ?status=accepted, ?kind=<kind>
+// and ?delivery=<state>.
 // Read on load, written with history.replaceState on every change. Unknown keys and
 // values are ignored, so a bad address shows the server's list.
 //
@@ -112,7 +118,8 @@
     return filter !== "accepted" || status === "accepted";
   }
 
-  // filter: "" keeps every row, "none" the rows without a kind, else the rows of that kind
+  // filter: "" keeps every row, "none" the rows without a kind, else the rows of that kind.
+  // The delivery filter reads a row's delivery value the same way.
   function keepKind(kind, filter) {
     if (!filter) return true;
     return filter === "none" ? !kind : kind === filter;
@@ -157,16 +164,18 @@
     var serverRows = Array.from(tbody.rows);
     var initialSort = table.querySelector("th[aria-sort]");
     var initialState = initialSort ? [initialSort, initialSort.getAttribute("aria-sort")] : null;
-    var state = {spec: [], status: "all", kind: ""};
+    var state = {spec: [], status: "all", kind: "", delivery: ""};
     // a page may hold several controls for one list, such as a status filter
     // beside the goal matrix: they share the list's state and address
     var controls = isList ? Array.from(document.querySelectorAll('[data-list-controls="' + table.dataset.list + '"]')) : [];
     var picker = null;
     var kindPicker = null;
+    var deliveryPicker = null;
     var statusButtons = [];
     controls.forEach(function (c) {
       picker = picker || c.querySelector("select[data-list-order]");
       kindPicker = kindPicker || c.querySelector("select[data-list-kind]");
+      deliveryPicker = deliveryPicker || c.querySelector("select[data-list-delivery]");
       statusButtons = statusButtons.concat(Array.from(c.querySelectorAll("button[data-list-status]")));
     });
     var orders = [];
@@ -199,20 +208,24 @@
         initialState[0].setAttribute("aria-sort", initialState[1]);
       }
       if (!isList) return;
-      if (statusButtons.length || kindPicker) {
+      if (statusButtons.length || kindPicker || deliveryPicker) {
         // a class, not `hidden`: a page's own filter (search, kind) owns
         // `hidden`, and a row shows only when both let it
         var shown = 0;
         serverRows.forEach(function (row) {
-          var keep = keepRow(row.dataset.status, state.status) && keepKind(row.dataset.kind, state.kind);
+          var keep = keepRow(row.dataset.status, state.status) && keepKind(row.dataset.kind, state.kind) &&
+            keepKind(row.dataset.delivery, state.delivery);
           row.classList.toggle("list-out", !keep);
           if (keep && !row.hidden) shown++;
         });
         var hint = table.parentNode.querySelector(".list-empty");
         if (hint) hint.hidden = shown !== 0;
-        table.dispatchEvent(new CustomEvent("listfilter", {detail: {status: state.status, kind: state.kind}}));
+        var detail = {status: state.status, kind: state.kind};
+        if (deliveryPicker) detail.delivery = state.delivery;
+        table.dispatchEvent(new CustomEvent("listfilter", {detail: detail}));
       }
       if (kindPicker) kindPicker.value = state.kind;
+      if (deliveryPicker) deliveryPicker.value = state.delivery;
       if (picker) {
         var current = formatSort(state.spec);
         picker.value = "";
@@ -239,6 +252,10 @@
       if (kindPicker) {
         if (state.kind) params.set("kind", state.kind);
         else params.delete("kind");
+      }
+      if (deliveryPicker) {
+        if (state.delivery) params.set("delivery", state.delivery);
+        else params.delete("delivery");
       }
       var qs = params.toString().replace(/%3A/gi, ":").replace(/%2C/gi, ",");
       var url = location.pathname + (qs ? "?" + qs : "") + location.hash;
@@ -294,6 +311,12 @@
         render();
       });
     }
+    if (deliveryPicker) {
+      deliveryPicker.addEventListener("change", function () {
+        state.delivery = deliveryPicker.value;
+        render();
+      });
+    }
     statusButtons.forEach(function (b) {
       b.addEventListener("click", function () {
         state.status = b.dataset.listStatus === "accepted" ? "accepted" : "all";
@@ -307,6 +330,10 @@
     // only a kind the picker offers: an unknown one shows every row
     if (kindPicker && Array.from(kindPicker.options).some(function (o) { return o.value === params.get("kind"); })) {
       state.kind = params.get("kind");
+    }
+    // the same for a delivery state
+    if (deliveryPicker && Array.from(deliveryPicker.options).some(function (o) { return o.value === params.get("delivery"); })) {
+      state.delivery = params.get("delivery");
     }
     if (orders.length && !state.spec.length && picker) picker.value = "";
     render();

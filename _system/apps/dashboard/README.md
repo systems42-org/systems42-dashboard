@@ -391,8 +391,8 @@ _system/apps/dashboard/
                      May import inputs, metamodel and catalog, never Flask or app
   links.py           the link resolver, the title, page, link and source indexes and the page
                      URL. May import wiki, never Flask or app
-  render.py          the sanitizer, wikilinks, method-anchor links, "follows" notes, callouts
-                     and Markdown. May import wiki, links and metamodel, never Flask or app
+  render.py          the sanitizer, wikilinks, the definition a term link carries, method-anchor
+                     links, "follows" notes, callouts and Markdown. May import wiki, links and metamodel, never Flask or app
   search.py          the search: searched fields, a page's text for search, its
                      neighbours, the synonyms and the search index. May import wiki, links,
                      render, catalog and project.terms, never Flask or app
@@ -400,17 +400,17 @@ _system/apps/dashboard/
     architecture.py  the decision records, building blocks and white box, runtime scenarios,
                      deployment, state, drivers and trace panels. May import wiki, links,
                      render, catalog and project.common
-    common.py        what several projections share: open issues, the maturity bar, provenance,
-                     the pages of a section, diagram node ids, labels and links. May import
-                     wiki, links and metamodel
+    common.py        what several projections share: open issues, the delivery states the
+                     metamodel allows, the maturity bar, provenance, the pages of a section,
+                     diagram node ids, labels and links. May import wiki, links and metamodel
     context.py       the context diagram, its flows and what the two share. May import wiki,
                      links and project.common
     goals.py         the vision, the objectives, the requirements that serve them, the goal
                      coverage matrix and the goal tree. May import wiki, links, render,
                      project.common and project.requirements
-    requirements.py  the functional requirements: notation and level, the hierarchy with the
-                     story map, its Mermaid trees, and the quality scenarios. May import wiki,
-                     links, render and project.common
+    requirements.py  the functional requirements: notation, level and delivery status, the
+                     hierarchy with the story map, its Mermaid trees, and the quality scenarios.
+                     May import wiki, links, render and project.common
     terms.py         the domain terms: the term network, the links of a page ("Links to",
                      "Linked from"), a term's fields and the entity diagram. May import wiki,
                      links, render, catalog and project.common
@@ -432,9 +432,11 @@ _system/apps/dashboard/
   static/list-view.js        the shared list layer: a th[data-sort] sorts by its
                              cells' data-sort-value (else their text), a
                              table[data-list] adds sort orders, "agreed only" and
-                             a kind filter, and keeps them in the address
-                             (?sort=, ?status=, ?kind=)
+                             a kind filter and a delivery filter, and keeps them in
+                             the address (?sort=, ?status=, ?kind=, ?delivery=)
   static/metamodel-graph.js  the cytoscape metamodel network on /metamodel
+  static/term-definition.js  shows the definition a term link carries in its title, next to
+                             the link: on hover, on focus and at the first tap (FR-041)
   static/settings.js   the View dialog
   static/systems42-sections.svg   the sections diagram shown on /help
   static/systems42-logo.svg, systems42-favicon.png   the Systems42 mark

@@ -1,6 +1,6 @@
 """The functional requirements (req42 section 04) and the quality scenarios.
 
-Owns a requirement's notation and level, the requirement hierarchy with the
+Owns a requirement's notation, level and delivery status, the requirement hierarchy with the
 story map (build_fr_hierarchy), a requirement's node and ancestors in it, the
 Mermaid trees of goals with epics and of one requirement with its building
 blocks, and the scenario rows of a quality requirement.
@@ -10,6 +10,7 @@ no import of `app` here (tests/test_module_imports.py).
 """
 from __future__ import annotations
 
+import datetime
 import re
 
 import links as links_module  # link resolver and indexes
@@ -74,6 +75,46 @@ def _fr_node(p: "wiki.Page") -> dict:
         "level": _fr_level(p), "notation": _fr_notation(p),
         "status": p.status,
     }
+
+
+_DATE_PREFIX_RE = re.compile(r"([0-9]{4}-[0-9]{2}-[0-9]{2})(?:[Tt ].*)?\Z")
+
+
+def _delivery_checked(value) -> str:
+    """The day of a `delivery-checked:` timestamp, as written in its own time
+    zone. Text that does not start with a date stays as written."""
+    if isinstance(value, datetime.datetime):
+        return value.date().isoformat()
+    if isinstance(value, datetime.date):
+        return value.isoformat()
+    if value is None or isinstance(value, (list, dict)):
+        return ""
+    text = str(value).strip()
+    m = _DATE_PREFIX_RE.match(text)
+    return m.group(1) if m else text
+
+
+def fr_delivery(p: "wiki.Page") -> dict:
+    """A requirement's delivery status (meta FR-031, FR-048):
+
+      value    `delivery:` as written, "" when the page has none. Absent means
+               no delivery record, not "not implemented"
+      known    whether the metamodel allows the value on this page: it is one
+               of the type's states, and the page's notation allows the state
+               and lists the page's level as implementable. A page without a
+               known notation is held to the type's states only
+      checked  the day of `delivery-checked:`, "" without one or without a value
+    """
+    raw = p.meta.get("delivery")
+    value = "" if raw is None or isinstance(raw, (list, dict)) else str(raw).strip()
+    if not value:
+        return {"value": "", "known": False, "checked": ""}
+    vocab = project.common.delivery_vocab()
+    rules = vocab["notations"].get(_fr_notation(p)) or {}
+    known = (value in vocab["states"]
+             and (rules.get("states") is None or value in rules["states"])
+             and (rules.get("levels") is None or _fr_level(p) in rules["levels"]))
+    return {"value": value, "known": known, "checked": _delivery_checked(p.meta.get("delivery-checked"))}
 
 
 def build_fr_hierarchy() -> dict:

@@ -1,7 +1,8 @@
 """What several route groups share.
 
 Owns the static file URL with its cache buster, the sort presets of the
-lists, the head and the section path of a detail page, the issue fields and
+lists, the head and the section path of a detail page, the delivery badge of
+a requirement and the delivery filter of the requirement list, the issue fields and
 the issues that link to a page, and the address and QR code for joining.
 
 May import Flask and every module below `web/`, never `app`
@@ -22,6 +23,7 @@ import links as links_module  # link resolver and indexes. "links" is a local na
 import wiki  # paths, pages, parse cache and loaders
 import project.architecture  # decisions, building blocks, runtime, deployment, traces
 import project.common  # what several projections share
+import project.requirements  # requirement hierarchy, its Mermaid trees, quality scenarios
 
 
 def static_url(filename: str) -> str:
@@ -65,6 +67,28 @@ def list_spec(type_name: str) -> dict:
     """What a section list declares for static/list-view.js (FR-021): its type
     and the sort presets the dashboard offers for it."""
     return {"type": type_name, "orders": sort_presets(type_name)}
+
+
+# How a delivery state reads on a badge and in the filter (FR-048). The words
+# are presentation, the states come from the metamodel (CON-006): a state
+# without an entry here shows under its own name.
+DELIVERY_LABELS = {"partial": "partly implemented", "implemented": "implemented",
+                   "outdated": "implementation outdated", "removed": "implementation removed"}
+
+
+def delivery_badge(page: wiki.Page) -> dict:
+    """A requirement's delivery status for the `delivery_badge` macro (FR-048):
+    `project.requirements.fr_delivery` plus `label`, the state in plain words.
+    A value the metamodel does not allow on this page keeps its own text."""
+    d = project.requirements.fr_delivery(page)
+    return {**d, "label": DELIVERY_LABELS.get(d["value"], d["value"]) if d["known"] else d["value"]}
+
+
+def delivery_options() -> list[dict]:
+    """The states the delivery filter of the requirement list offers: every
+    state the metamodel declares, as `{value, label}`."""
+    return [{"value": s, "label": DELIVERY_LABELS.get(s, s)}
+            for s in project.common.delivery_vocab()["states"]]
 
 
 def _issue_owner(p: wiki.Page, titles: dict[str, str],

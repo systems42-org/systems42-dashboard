@@ -251,3 +251,75 @@ func TestExtractLabeledPAMAndEmphasis(t *testing.T) {
 		t.Fatalf("callout bullet parity failed: %s", bq)
 	}
 }
+
+// The literals here are the ones tests/test_term_definitions.py holds, so both
+// implementations are held to the same text (FR-041).
+func TestTermDefinitionAndTermLinks(t *testing.T) {
+	titles := map[string]string{"DT-002-item": "Item", "DT-003-empty": "Empty"}
+	order := "# Order\n\n**Definition.** A customer's **binding** request for\n[[DT-002-item|items]], " +
+		"see [[DT-003-empty]], `code` and [the shop](https://example.org).\n\n**In context.** Sales only."
+	if got := TermDefinition(order, titles); got != "A customer's binding request for items, see Empty, code and the shop." {
+		t.Fatalf("TermDefinition = %q", got)
+	}
+	if got := TermDefinition("# Empty\n\nNo labelled paragraph here.", titles); got != "" {
+		t.Fatalf("a page without a definition gave %q", got)
+	}
+	long := "A thing to sell, " + strings.Repeat("with a very long list of properties, ", 12) + "and an end."
+	got := TermDefinition("**Definition.** "+long, titles)
+	if n := len([]rune(got)); n != 298 || !strings.HasSuffix(got, "erties, with a very long list…") {
+		t.Fatalf("long definition cut to %d characters: %q", n, got)
+	}
+	// counted in characters, not bytes
+	umlauts := TermDefinition("**Definition.** "+strings.Repeat("Größe ", 80), titles)
+	if n := len([]rune(umlauts)); n != 294 || !strings.HasSuffix(umlauts, "Größe…") {
+		t.Fatalf("umlaut definition cut to %d characters: %q", n, umlauts)
+	}
+
+	hostile := `"><script>alert(1)</script> <img src=x onerror=alert(2)> it's ` +
+		"click) javascript:alert(4) a ` tick, a \\* star & an [open bracket"
+	wantAttr := `&#34;&gt;&lt;script&gt;alert(1)&lt;/script&gt; &lt;img src=x onerror=alert(2)&gt; it&#39;s ` +
+		`click) javascript:alert(4) a &#96; tick, a &#92;&#42; star &amp; an &#91;open bracket`
+	if got := TitleAttribute(hostile); got != wantAttr {
+		t.Fatalf("TitleAttribute = %s", got)
+	}
+
+	calls := map[string]int{}
+	ctx := LinkContext{
+		Titles: map[string]string{"DT-001-order": "Order", "DT-003-empty": "Empty", "DT-004-hostile": "Hostile"},
+		Links: map[string]wiki.PageRef{
+			"DT-001-order":   {Folder: "domain-terms", Stem: "DT-001-order"},
+			"DT-001":         {Folder: "domain-terms", Stem: "DT-001-order"},
+			"DT-003-empty":   {Folder: "domain-terms", Stem: "DT-003-empty"},
+			"DT-004-hostile": {Folder: "domain-terms", Stem: "DT-004-hostile"},
+		},
+		Definition: func(stem string) string {
+			calls[stem]++
+			return map[string]string{"DT-001-order": "A request.", "DT-004-hostile": hostile}[stem]
+		},
+	}
+	if got := RenderWikilinks("[[DT-001|by id]] [[DT-003-empty]]", ctx); got !=
+		`<a class="wl wl-term" href="/page/domain-terms/DT-001-order" title="A request.">by id</a> `+
+			`<a class="wl" href="/page/domain-terms/DT-003-empty">Empty</a>` {
+		t.Fatalf("RenderWikilinks = %s", got)
+	}
+	if got := RenderWikilinks("[[DT-004-hostile]]", ctx); got !=
+		`<a class="wl wl-term" href="/page/domain-terms/DT-004-hostile" title="`+wantAttr+`">Hostile</a>` {
+		t.Fatalf("hostile link = %s", got)
+	}
+	// through Markdown and the sanitizer: one link, the definition as text,
+	// also after a stray backtick, and a link quoted as code stays as written
+	html := RenderMarkdown("A stray ` tick before [[DT-004-hostile]].\n\nQuoted: `[[DT-001-order]]`.", ctx)
+	for _, bad := range []string{"<script", "<img", `href="javascript:`} {
+		if strings.Contains(html, bad) {
+			t.Fatalf("hostile definition left %q: %s", bad, html)
+		}
+	}
+	if strings.Count(html, `<a class="wl wl-term" href="/page/domain-terms/DT-004-hostile" title="`) != 1 ||
+		!strings.Contains(html, "javascript:alert(4) a ` tick, a \\* star &amp; an [open bracket\">Hostile</a>") ||
+		!strings.Contains(html, "<code>[[DT-001-order]]</code>") {
+		t.Fatalf("RenderMarkdown = %s", html)
+	}
+	if got := SanitizeHTML(`<a class="wl wl-term fbtn" href="/x" title="d">x</a>`, false); got != `<a class="wl wl-term" href="/x" title="d">x</a>` {
+		t.Fatalf("sanitizer = %s", got)
+	}
+}

@@ -440,6 +440,14 @@ h2 { letter-spacing: -.01em; }
 .state-current { color: var(--ink); border-color: var(--ink-soft); }
 .state-planned, .state-target { border-style: dashed; color: var(--accent); border-color: var(--accent); }
 .state-outdated { color: var(--ink-soft); background: var(--bg-soft); text-decoration: line-through; }
+/* delivery status of a requirement (FR-048): the status pill, one colour per
+   state. A value the metamodel does not allow keeps the plain pill. */
+.delivery { font-size: .75rem; padding: .12rem .5rem; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-soft); white-space: nowrap; }
+.delivery-implemented { color: var(--accent-2); border-color: rgba(70,211,176,.4); }
+.delivery-partial { color: var(--accent); border-color: rgba(62,166,255,.35); }
+.delivery-outdated { color: var(--warn); border-color: rgba(255,180,84,.4); background: rgba(255,180,84,.1); }
+.delivery-removed { color: var(--ink-dim); }
+.delivery-checked { font-size: .75rem; color: var(--ink-dim); }
 
 /* ---- data tables (glossary, stakeholders, issues) ---- */
 /* overflow: clip (not hidden) clips for rounded corners WITHOUT making this a
@@ -493,6 +501,22 @@ th[aria-sort="descending"] .th-sort::after { content: "▼"; color: var(--ink); 
 /* resolved wikilinks are real anchors; firm up the underline on hover */
 a.wl { text-decoration: none; cursor: pointer; }
 a.wl:hover { border-bottom-style: solid; border-bottom-color: var(--accent); }
+
+/* --- term definition in place (FR-041, static/term-definition.js) ---
+   One box for the page, placed next to the term link by the script. Fixed to
+   the viewport and never wider than it, so it cannot widen a narrow page. */
+.term-def { position: fixed; top: 0; left: 0; z-index: 40; box-sizing: border-box;
+  width: max-content; max-width: min(24rem, calc(100vw - 16px)); padding: var(--space-2) var(--space-3);
+  font-size: var(--step--1); line-height: 1.4; font-weight: 400; text-align: left; overflow-wrap: anywhere;
+  color: var(--ink); background: var(--card-2); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow); animation: term-def-in .12s ease-out; }
+.term-def[hidden] { display: none; }
+.term-def-open { display: block; margin-top: var(--space-2); padding: var(--space-2) 0;
+  color: var(--accent); font-weight: 600; }
+.term-def-open[hidden] { display: none; }
+@keyframes term-def-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .term-def { animation: none; } }
+/* --- end of term definition in place --- */
 
 /* ---- Quality (req42 block C1): each QR shows its Q42 quality scenario ---- */
 .c-title { min-width: 16rem; }
