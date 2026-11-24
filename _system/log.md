@@ -484,3 +484,6 @@ greppable: `grep '^## \[' _system/log.md | tail -5`.
 
 ## [2026-11-24] correction | Make the metamodel dependency explicit
 - [[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]] states the dependency from dashboard to metamodel first. [[FR-044-sections-come-from-the-repositorys-metamodel]] distinguishes the sections declared by the metamodel from the presentation chosen by the dashboard.
+
+## [2026-11-24] correction | Limit the section id exception to presentation
+- Restored Gernot Starke's wording in [[CON-006-the-dashboard-depends-on-the-metamodel-never-the-reverse]]. The exception allows selecting a presentation by section id and requires a generic view for other declared sections ([[SRC-055-recovery-report-systems42-dashboard]]).

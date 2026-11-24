@@ -13,14 +13,16 @@ category: technical
 
 # The dashboard depends on the metamodel, never the reverse
 
-**Constraint.** The dependency runs from the dashboard to the Systems42 metamodel. The Systems42 metamodel and method tools must work without dashboard code.
-
-- The dashboard must read section ids, titles, folders and scope, and type prefixes, folders and labels from the metamodel of the repository it runs on.
+**Constraint.**
+- The dashboard code holds no metamodel facts: no section ids, titles, folders or scope, no type prefixes, folders or labels. It reads them from the repository it runs on.
 - It may assume the three areas Requirements, Architecture and Commons.
+- Presentation stays in the dashboard: routes, colours, navigation labels, tile layout.
+- As a presentation exception, the dashboard may use a section id to select a view for a section declared by the metamodel. Every declared section without a dedicated view must use the generic view ([[SRC-055-recovery-report-systems42-dashboard]]).
+- Nothing in the Systems42 method depends on dashboard code.
 - The dashboard is developed and tested against the metamodel of `systems42-org/meta`.
 
 **Rationale / origin.** Gernot Starke set this on 2026-11-17 ([[SRC-027-dashboard-distribution-and-metamodel-contract]]). [[CON-004-the-dashboard-shows-the-metamodel-it-does-not-define-it]] rules which wiki a requirement belongs to. This constraint rules the code.
 
-**Impact.** The metamodel defines which sections exist. The dashboard may use a section id to choose routes, colours, navigation labels and tile layout. Sections without a dedicated presentation must still open through the generic route with their area's colours ([[FR-044-sections-come-from-the-repositorys-metamodel]], [[SRC-055-recovery-report-systems42-dashboard]]).
-
-The recovery report found evidence that the method lint runs independently of the dashboard. The closing round kept [[ISS-005-the-method-lint-imports-dashboard-code]] open ([[SRC-055-recovery-report-systems42-dashboard]]).
+**Impact.** The constraint does not hold on 2026-11-17 (`main` 53d2920):
+- `catalog.py` hard-codes the sections, and `app.py` the type prefixes, folders and labels (`_TYPE_FOLDER`, `_TYPE_LABEL`, `FOLDER_LABELS`). [[FR-044-sections-come-from-the-repositorys-metamodel]] removes the first.
+- The method's `metamodel-lint.py` imports `catalog.py` ([[ISS-005-the-method-lint-imports-dashboard-code]]).
