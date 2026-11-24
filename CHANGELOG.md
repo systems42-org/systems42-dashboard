@@ -79,6 +79,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
   next.
 
 ### Changed
+- Dashboard release 0.14.6 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.5 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.4 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.3 (`_system/apps/dashboard/VERSION`).
