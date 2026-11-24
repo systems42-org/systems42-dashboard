@@ -79,6 +79,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
 import wiki  # noqa: E402
+import links  # noqa: E402
 
 client = app.app.test_client()
 
@@ -107,18 +108,18 @@ def test_fixture_holds_the_spellings():
 
 def test_resolver_accepts_every_spelling_the_body_accepts():
     with app.app.test_request_context("/"):
-        index = app.page_index()
+        index = links.page_index()
         for link in SPELLINGS.values():
-            page = app.resolve_link(link, index)
+            page = links.resolve_link(link, index)
             assert page is not None and page.stem == GOAL, link
         # the name alone, as a typed field may hold it
-        assert app.resolve_link("GOAL-002", index).stem == GOAL
-        assert app.resolve_link(GOAL, index).stem == GOAL
+        assert links.resolve_link("GOAL-002", index).stem == GOAL
+        assert links.resolve_link(GOAL, index).stem == GOAL
         for missing in ("[[GOAL-099]]", "[[goal-002]]", "", None, "[[]]"):
-            assert app.resolve_link(missing, index) is None, missing
+            assert links.resolve_link(missing, index) is None, missing
         # the index the body text uses gives the same page
         for link in SPELLINGS.values():
-            assert app.resolve_link(link, app.link_index()) == ("goals", GOAL), link
+            assert links.resolve_link(link, links.link_index()) == ("goals", GOAL), link
     print("OK: one resolver, every spelling")
 
 
@@ -135,9 +136,9 @@ def test_coverage_is_the_same_for_every_spelling():
         data = app.load_goals()
         by_stem = {p.stem: p for p in wiki.load_folder("functional-requirements")}
         for stem in SPELLINGS:
-            assert app.links_of(by_stem[stem], "goal") == [GOAL], stem
-        assert app.links_of(by_stem["FR-007-twice"], "goal") == [GOAL]
-        assert app.links_of(by_stem["FR-008-unresolved"], "goal") == []
+            assert links.links_of(by_stem[stem], "goal") == [GOAL], stem
+        assert links.links_of(by_stem["FR-007-twice"], "goal") == [GOAL]
+        assert links.links_of(by_stem["FR-008-unresolved"], "goal") == []
     serving = [p.id for p in data["coverage"]["GOAL-002"]]
     assert serving == ["FR-001", "FR-002", "FR-003", "FR-004", "FR-005", "FR-006", "FR-007"], serving
     assert data["coverage"]["GOAL-003"] == []
@@ -200,7 +201,7 @@ def test_typed_fields_follow_an_id_only_link():
         assert _ids(app.build_addressed_by("FR-001-stem")) == ["BB-001"]
         assert _ids(app.build_realized_by("FR-001-stem")) == ["RS-001"]
         blocks = {p.stem: p for p in wiki.load_folder("building-blocks")}
-        assert app.links_of(blocks["BB-001-core"], "uses") == ["BB-003-store"]
+        assert links.links_of(blocks["BB-001-core"], "uses") == ["BB-003-store"]
         top = app.build_bb_tree()
         assert [n["stem"] for n in top] == ["BB-001-core", "BB-003-store"], top
         assert [c["stem"] for c in top[0]["children"]] == ["BB-002-part"], top[0]

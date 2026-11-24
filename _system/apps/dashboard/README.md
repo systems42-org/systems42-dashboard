@@ -370,6 +370,8 @@ _system/apps/dashboard/
   wiki.py            the repository paths, Page, parsing and containment, the parse cache, the
                      folder loaders, wiki.yaml as a mapping and the per-request memo decorator.
                      May import inputs, metamodel and catalog, never Flask or app
+  links.py           the link resolver, the title, page, link and source indexes and the page
+                     URL. May import wiki, never Flask or app
   help.md            source of the /help page
   templates/         base, index, _empty (shared empty state), _macros (plural()),
                      _maturity (maturity bar/legend), _mermaid (loader),

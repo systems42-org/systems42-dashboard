@@ -30,6 +30,7 @@ from markupsafe import Markup, escape
 
 import catalog  # the section catalog (DR-033)
 import metamodel  # reader for _system/metamodel/ (DR-035)
+import links as links_module  # link resolver and indexes. "links" is a local name in many functions here
 import wiki  # paths, pages, parse cache and loaders
 
 # some slim base images lack a webp entry in their mime.types
@@ -562,7 +563,7 @@ def recent_changes(n: int | None = 5) -> list[dict]:
     workshop, nobody watches it live)."""
     pages = sorted(wiki.load_all_pages(), key=lambda p: -p.mtime)[:n]
     return [{"id": p.id, "title": p.title, "kind": catalog.label(p.folder),
-             "url": _page_url(p.folder, p.stem), "when": _relative_when(p.mtime)} for p in pages]
+             "url": links_module._page_url(p.folder, p.stem), "when": _relative_when(p.mtime)} for p in pages]
 
 
 def vault_status() -> dict:
@@ -578,101 +579,10 @@ def vault_status() -> dict:
             "last_change": _relative_when(last) if last else "—"}
 
 
-@wiki._request_cached
-def title_index() -> dict[str, str]:
-    """Map every page stem -> human title, for resolving wikilinks to text.
-    Built from load_all_pages(), so it knows exactly the pages link_index()
-    and the lists know (a nested or root-level .md is none of them)."""
-    return {p.stem: p.title for p in wiki.load_all_pages()}
-
-
-def _page_url(folder: str, stem: str) -> str:
-    """Canonical dashboard URL for a wiki page. FRs have their own rich route;
-    everything else uses the generic /page view."""
-    if wiki._is(folder, "functional-requirement"):
-        return f"/functional-requirements/{stem}"
-    return f"/page/{folder}/{stem}"
-
-
-@wiki._request_cached
-def page_index() -> dict[str, wiki.Page]:
-    """Map each page's stem and id -> its Page: the names a link may use for
-    a page. A file name always names its own page. An ID names the first page
-    that carries it, unless it is another page's file name."""
-    idx: dict[str, wiki.Page] = {}
-    pages = wiki.load_all_pages()
-    for p in pages:
-        idx[p.stem] = p
-    for p in pages:
-        idx.setdefault(p.id, p)
-    return idx
-
-
-@wiki._request_cached
-def link_index() -> dict[str, tuple[str, str]]:
-    """page_index() as (folder, stem), so body wikilinks like
-    `[[STK-006-…|Backoffice]]` or `[[FR-008]]` resolve to a real target URL."""
-    return {name: (p.folder, p.stem) for name, p in page_index().items()}
-
-
-def link_name(spelling: object) -> str:
-    """The page name inside a link: '[[wiki/goals/GOAL-002#Metric|waiting]]'
-    -> 'GOAL-002'. Drops the brackets, the alias, the heading and the path. A
-    value without brackets is read the same way."""
-    t = str(spelling or "").strip()
-    m = re.search(r"\[\[([^\]]+)\]\]", t)
-    if m:
-        t = m.group(1)
-    t = t.split("|")[0].split("#")[0].strip()
-    return t.split("/")[-1].strip()
-
-
-def resolve_link(spelling: object, index: dict):
-    """The one resolver for links (#178): what `index` holds for the page a
-    link names, or None. The body text, the relations panel and every
-    projection over a link field call it, so a link that opens a page in the
-    text counts for that page everywhere. `index` is page_index() or
-    link_index(): a full file name or an ID alone, case-sensitive. One dict
-    lookup per link, because the relations panel asks every page (#68)."""
-    return index.get(link_name(spelling))
-
-
-def _link_stem(spelling: object) -> str:
-    """The file name of the page a link names, or the name as written when no
-    page has it (a hint can then say which name is missing)."""
-    p = resolve_link(spelling, page_index())
-    return p.stem if p else link_name(spelling)
-
-
-def linked_stems(page: wiki.Page) -> set[str]:
-    """The pages `page` links to, each once however often and however it is
-    spelled, without itself. A name no page has stays as written."""
-    return {s for s in map(_link_stem, page.link_targets()) if s != page.stem}
-
-
-def links_to(page: wiki.Page, target: wiki.Page) -> bool:
-    """Whether `page` links to `target`, by any name that resolves to it."""
-    index = page_index()
-    names = {n for n in (target.stem, target.id) if index.get(n) is target}
-    return page is not target and not names.isdisjoint(page.link_targets())
-
-
-@wiki._request_cached
-def source_index() -> dict[str, wiki.Page]:
-    """Map each raw/sources/ record's stem and id -> its Page, so a page's
-    `sources:` wikilinks (and the /source/<stem> route) can resolve either
-    form."""
-    idx: dict[str, wiki.Page] = {}
-    for p in wiki.load_sources():
-        idx.setdefault(p.stem, p)
-        idx.setdefault(p.id, p)
-    return idx
-
-
 def provenance(page: wiki.Page) -> list[dict]:
     """Resolve a page's `sources:` wikilinks to provenance records. Unresolved
     entries are kept (url=None) so the chip can say so instead of vanishing."""
-    idx = source_index()
+    idx = links_module.source_index()
     rows = []
     refs = page.as_list("sources")          # a bare string is one entry, not a list of characters
     for ref in refs:
@@ -699,7 +609,7 @@ def open_issue_counts() -> dict[str, set[str]]:
     none. Sets (not counts) so a caller spanning several folders — e.g. Scope's
     context + external-interfaces — can union them and count each issue once,
     even if it links pages in more than one of those folders."""
-    links = link_index()
+    links = links_module.link_index()
     out: dict[str, set[str]] = {}
     for iss in wiki.load_type("issue"):
         if not is_open_issue(iss.status):
@@ -823,13 +733,13 @@ def render_wikilinks(text: str, titles: dict[str, str],
         label = escape(alias.strip() if alias else titles.get(base, base))
         if links is not None and (target.startswith("raw/") or base.startswith("SRC-")):
             # a source cited in the text leads to its record (FR-034)
-            if src := source_index().get(base):
+            if src := links_module.source_index().get(base):
                 return (f'<a class="wl" href="{escape("/source/" + src.stem)}">'
                         f'{escape(alias.strip() if alias else src.title)}</a>')
         elif links:
-            dest = resolve_link(target, links)
+            dest = links_module.resolve_link(target, links)
             if dest:
-                return f'<a class="wl" href="{escape(_page_url(*dest))}">{label}</a>'
+                return f'<a class="wl" href="{escape(links_module._page_url(*dest))}">{label}</a>'
         if links is not None and (a := anchor_lookup().get(base.lower())):
             return _anchor_link(a, str(escape(alias.strip() if alias else a["name"])))
         return f'<span class="wl">{label}</span>'
@@ -973,7 +883,7 @@ def format_labels(body: str) -> list[dict]:
     """The "follows" notes of a page as head labels, one per standard named,
     deduplicated: `label`, `url` and `title` (empty for a standard that is no
     anchor) and `note`, the rest of the line such as "section 5, black box"."""
-    titles, links = title_index(), link_index()
+    titles, links = links_module.title_index(), links_module.link_index()
     out: list[dict] = []
     seen: set[str] = set()
     for _, line in _follows_notes(body):
@@ -986,7 +896,7 @@ def format_labels(body: str) -> list[dict]:
             if a:
                 found.append({"label": a["name"], "url": anchor_url(a), "title": anchor_title(a)})
             elif base in links:
-                found.append({"label": titles.get(base, base), "url": _page_url(*links[base]), "title": ""})
+                found.append({"label": titles.get(base, base), "url": links_module._page_url(*links[base]), "title": ""})
             else:
                 found.append({"label": (wm.group(2) or base).strip(), "url": "", "title": ""})
         if not found:
@@ -1091,7 +1001,7 @@ def render_markdown(body: str, titles: dict[str, str]) -> str:
     body = _unwrap_prose(body)
     # full-text bodies get real hyperlinks; inline-snippet helpers keep spans
     # a wikilink quoted as code stays as written
-    links = link_index()
+    links = links_module.link_index()
     body = outside_code(body, lambda t: render_wikilinks(t, titles, links))
     # turn Obsidian callouts `> [!type] title` into a bold label line
     body = CALLOUT_RE.sub(lambda m: f"> **{m.group(2) or m.group(1).title()}**", body)
@@ -1186,7 +1096,7 @@ def _strip_inline_markdown(text: str) -> str:
 def load_decisions() -> list[dict]:
     """Decision records (wiki/decisions/) as list rows with rendered bodies, in
     ID order. `kind` outside architecture|business falls back to undefined."""
-    titles = title_index()
+    titles = links_module.title_index()
     out = []
     for p in sorted(wiki.load_type("decision-record"), key=lambda p: p.id):
         kind = str(p.meta.get("kind") or "").strip().lower()
@@ -1199,7 +1109,7 @@ def load_decisions() -> list[dict]:
             "kind": kind if kind in DECISION_KINDS else "undefined",
             "decided": str(decided) or "—",
             "aliases": p.aliases,
-            "url": _page_url(p.folder, p.stem),
+            "url": links_module._page_url(p.folder, p.stem),
             "drivers": [l for g in build_drivers(p.stem) for l in g["links"]],
             "html": render_markdown(p.body, titles),
         })
@@ -1311,7 +1221,7 @@ def _eif_flows(p) -> tuple[list[dict], list[dict], list[dict]]:
 
 def _node_link(p: wiki.Page) -> dict:
     """A page drawn as a diagram node, as the text link beside the diagram."""
-    return {"id": p.id, "title": p.title, "url": _page_url(p.folder, p.stem)}
+    return {"id": p.id, "title": p.title, "url": links_module._page_url(p.folder, p.stem)}
 
 
 def build_context_diagram(center: str | None = None,
@@ -1447,7 +1357,7 @@ def build_context_flows() -> list[dict]:
             rows.append({"direction": direction, "data": cell(f.get("data")) or "—",
                          "format": cell(f.get("format")), "trigger": cell(f.get("trigger"))})
         groups.append({
-            "id": p.id, "stem": p.stem, "url": _page_url(p.folder, p.stem), "name": _eif_node_label(p),
+            "id": p.id, "stem": p.stem, "url": links_module._page_url(p.folder, p.stem), "name": _eif_node_label(p),
             "partner": _clean_label(p.meta.get("partner") or ""),
             "tier": _TIER_LABEL.get(str(p.meta.get("tier") or "").strip().lower(), ""),
             "label": _flow_edge_label(ordered), "rows": rows,
@@ -1464,10 +1374,6 @@ def build_context_flows() -> list[dict]:
 # are revealed per type by buttons. Edges are undirected & deduplicated and come
 # ONLY from `related:` frontmatter (body wikilinks would add uncurated noise, so
 # link_targets() is deliberately NOT used here).
-
-def _stem_of_link(raw: object) -> str:
-    """A `related:` entry like '[[DT-026-eaqua|EAquA]]' -> 'DT-026-eaqua'."""
-    return link_name(raw)
 
 
 def _type_of(stem: str) -> str:
@@ -1492,7 +1398,7 @@ def build_glossary_graph(edge_filter: str = "all") -> dict:
     for p in glossary:                       # src is always a domain term
         src = p.stem
         for raw in p.as_list("related") if edge_filter != "structured" else []:
-            tgt = _link_stem(raw)
+            tgt = links_module._link_stem(raw)
             if not tgt or tgt == src or tgt not in by_stem:
                 continue                     # self / dangling / non-page
             pair = frozenset((src, tgt))
@@ -1614,7 +1520,7 @@ def build_relations_panel(stem: str, exclude: set[str] | None = None) -> dict:
     page already lists in a typed panel (drivers, addressed by, …). A linked
     issue carries its `status` and whether it is `closed`."""
     exclude = exclude or set()
-    titles = title_index()
+    titles = links_module.title_index()
     pages = wiki.load_all_pages()
     by_stem = {p.stem: p for p in pages}
 
@@ -1639,11 +1545,11 @@ def build_relations_panel(stem: str, exclude: set[str] | None = None) -> dict:
         return item
 
     me = by_stem.get(stem)
-    outbound = sorted(s for s in (linked_stems(me) if me else ())
+    outbound = sorted(s for s in (links_module.linked_stems(me) if me else ())
                       if s in by_stem and s not in exclude)
     # every page that links here, also one this page links to (FR-034)
     inbound = sorted(q.stem for q in (pages if me else ())
-                     if q.stem not in exclude and links_to(q, me))
+                     if q.stem not in exclude and links_module.links_to(q, me))
 
     def grouped(stems: list) -> list:
         buckets: dict[str, list] = {}
@@ -1806,7 +1712,7 @@ def load_goals() -> dict:
     def served(p: wiki.Page) -> list[str]:
         # only links that resolve to an objective count: the vision, a missing
         # page or a mangled value serves no goal (rule-fr-traces-to-goal)
-        return [objective_by_stem[s].id for s in links_of(p, "goal") if s in objective_by_stem]
+        return [objective_by_stem[s].id for s in links_module.links_of(p, "goal") if s in objective_by_stem]
 
     enablers: list[wiki.Page] = []
     untraced: list[wiki.Page] = []
@@ -1872,7 +1778,7 @@ def _fr_first_parent(p: "wiki.Page") -> str | None:
     out of scope for this view. Goal inheritance from a use case reads the
     same edge, so the two always agree."""
     for ref in p.as_list("parent"):
-        stem = _link_stem(ref)
+        stem = links_module._link_stem(ref)
         if stem:
             return stem
     return None
@@ -1989,7 +1895,7 @@ def build_fr_hierarchy() -> dict:
         b = breakdown(u)
         total_features += b["n_features"]
         total_stories += b["n_stories"]
-        uc_rows.append({**_fr_node(u), "url": _page_url(u.folder, u.stem), **b})
+        uc_rows.append({**_fr_node(u), "url": links_module._page_url(u.folder, u.stem), **b})
 
     # A parent that exists does not place a page: only a root shows features,
     # and only a root or a feature shows stories. A feature no root shows is an
@@ -2069,7 +1975,7 @@ def _mermaid_goal_epic_tree(goals: dict, hierarchy: dict,
             return
         label = _clean_label(uc.title)
         lines.append(f'  {parent_nid} --> {nid}["{uc.id}<br/>{label}"]:::usecase')
-        lines.append(f'  click {nid} "{_page_url(uc.folder, uc.stem)}"')
+        lines.append(f'  click {nid} "{links_module._page_url(uc.folder, uc.stem)}"')
         drawn.append(_node_link(uc))
         seen.add(uc.id)
 
@@ -2118,7 +2024,7 @@ def fr_building_blocks(stem: str) -> list[wiki.Page]:
     """The building blocks whose `drivers:` name this requirement (rel-drivers),
     by id. The link is stored on the block only, never on the requirement."""
     return [p for p in sorted(wiki.load_type("building-block"), key=lambda q: q.id)
-            if stem in links_of(p, "drivers")]
+            if stem in links_module.links_of(p, "drivers")]
 
 
 def _mermaid_fr_subtree(node: dict | None, blocks: list[wiki.Page] | None = None,
@@ -2163,7 +2069,7 @@ def _mermaid_fr_subtree(node: dict | None, blocks: list[wiki.Page] | None = None
     for b in blocks:
         nid = _diagram_node_id(b.id)
         lines.append(f'  {rid} -.-> {nid}[["{b.id}<br/>{_clean_label(b.title)}"]]:::block')
-        lines.append(f'  click {nid} "{_page_url(b.folder, b.stem)}"')
+        lines.append(f'  click {nid} "{links_module._page_url(b.folder, b.stem)}"')
         drawn.append(_node_link(b))
 
     lines += [
@@ -2215,7 +2121,7 @@ def _fr_ancestors(stem: str) -> list[dict]:
     while cur:
         ps = None
         for ref in cur.as_list("parent"):
-            ps = _link_stem(ref)
+            ps = links_module._link_stem(ref)
             if ps:
                 break
         if not ps or ps in seen:
@@ -2236,28 +2142,9 @@ def _fr_ancestors(stem: str) -> list[dict]:
 # is empty, a context page or missing is level 1). The tree, a block's white box
 # and the "addressed by" side of `drivers:` are projections, never stored.
 
-def links_of(page: wiki.Page, field: str) -> list[str]:
-    """Existing target stems of a link field, in order, without duplicates.
-    Accepts '[[stem]]', '[[stem|alias]]', a bare stem, a single value or a
-    list, and the nested list YAML makes of an unquoted [[stem]]."""
-    by_stem = {p.stem for p in wiki.load_all_pages()}
-    out: list[str] = []
-
-    def walk(v: object) -> None:
-        if isinstance(v, (list, tuple)):
-            for x in v:
-                walk(x)
-            return
-        s = _link_stem(v) if v else ""
-        if s and s in by_stem and s not in out:
-            out.append(s)
-
-    walk(page.meta.get(field))
-    return out
-
 
 def _bb_parent(p: wiki.Page, bb_stems: set[str]) -> str | None:
-    return next((s for s in links_of(p, "parent") if s in bb_stems), None)
+    return next((s for s in links_module.links_of(p, "parent") if s in bb_stems), None)
 
 
 def _level_tree(type_name: str, keep=None) -> list[dict]:
@@ -2270,7 +2157,7 @@ def _level_tree(type_name: str, keep=None) -> list[dict]:
     stems = set(pages)
     children: dict[str | None, list[str]] = {}
     for s, p in pages.items():
-        parent = next((x for x in links_of(p, "parent") if x in stems), None)
+        parent = next((x for x in links_module.links_of(p, "parent") if x in stems), None)
         children.setdefault(parent, []).append(s)
     seen: set[str] = set()
 
@@ -2279,7 +2166,7 @@ def _level_tree(type_name: str, keep=None) -> list[dict]:
         p = pages[s]
         kids = sorted((k for k in children.get(s, []) if k not in seen), key=lambda k: pages[k].id)
         return {"stem": s, "id": p.id, "title": p.title, "status": p.status,
-                "state": page_state(p), "url": _page_url(p.folder, s),
+                "state": page_state(p), "url": links_module._page_url(p.folder, s),
                 "children": [node(k) for k in kids if k not in seen]}
 
     roots = [node(s) for s in sorted(children.get(None, []), key=lambda k: pages[k].id)]
@@ -2334,7 +2221,7 @@ def _lifecycle_lines(shown: dict[str, tuple[str, wiki.Page]]) -> list[str]:
         elif lc in _FUTURE and mixed:
             lines.append(f"  style {nid} {_DASHED}")
         lines += [f'  {nid} -. "replaced by" .-> {shown[x][0]}'
-                  for x in links_of(p, "superseded-by") if x in shown]
+                  for x in links_module.links_of(p, "superseded-by") if x in shown]
     return lines
 
 
@@ -2342,7 +2229,7 @@ def _lifecycle_suffix(p: wiki.Page, mixed: bool) -> str:
     lc = lifecycle(p)
     if lc == "outdated" or (lc in _FUTURE and mixed):
         return f" · {lc}"
-    return " · being replaced" if links_of(p, "superseded-by") else ""
+    return " · being replaced" if links_module.links_of(p, "superseded-by") else ""
 
 
 def build_whitebox(stem: str | None) -> str | None:
@@ -2370,7 +2257,7 @@ def build_whitebox(stem: str | None) -> str | None:
     edges: list[str] = []
     outside: list[str] = []
     for n in kids:
-        for t in links_of(pages[n["stem"]], "uses"):
+        for t in links_module.links_of(pages[n["stem"]], "uses"):
             if t in inside:
                 edges.append(f'  {_diagram_node_id(n["id"])} --> {_diagram_node_id(pages[t].id)}')
             elif t in pages:
@@ -2407,7 +2294,7 @@ def _link_groups(stems: list[str]) -> list[dict]:
         p = by_stem[s]
         t = _type_of(s)
         buckets.setdefault(t, []).append({"id": p.id, "label": p.title, "type": t,
-                                          "url": _page_url(p.folder, s)})
+                                          "url": links_module._page_url(p.folder, s)})
     order = catalog.prefix_order()
     ordered = order + [t for t in buckets if t not in order]
     return [{"type": t, "label": catalog.group_label(t), "links": buckets[t]}
@@ -2417,7 +2304,7 @@ def _link_groups(stems: list[str]) -> list[dict]:
 def build_drivers(stem: str) -> list[dict]:
     """The requirements a decision record or building block rests on."""
     p = next((q for q in wiki.load_all_pages() if q.stem == stem), None)
-    return _link_groups(links_of(p, "drivers")) if p else []
+    return _link_groups(links_module.links_of(p, "drivers")) if p else []
 
 
 # --- arc42 A1/A3/A4/A5 and `state` (DR-010) ----------------------------------
@@ -2462,7 +2349,7 @@ def _struct_targets(p: wiki.Page, field: str, keys: tuple[str, ...]) -> list[str
             continue
         for k in keys:
             v = _scalar(e.get(k))
-            t = _link_stem(v) if v else ""
+            t = links_module._link_stem(v) if v else ""
             if t and t in by_stem and t not in out:
                 out.append(t)
     return out
@@ -2471,14 +2358,14 @@ def _struct_targets(p: wiki.Page, field: str, keys: tuple[str, ...]) -> list[str
 def build_addressed_by(stem: str) -> list[dict]:
     """Decision records and architecture pages whose `drivers:` name this page."""
     hits = [p.stem for t in _DRIVER_TYPES for p in sorted(wiki.load_type(t), key=lambda q: q.id)
-            if stem in links_of(p, "drivers")]
+            if stem in links_module.links_of(p, "drivers")]
     return _link_groups(hits)
 
 
 def build_realized_by(stem: str) -> list[dict]:
     """The runtime scenarios whose `realizes:` name this page (rel-realizes)."""
     return _link_groups([p.stem for p in sorted(wiki.load_type("runtime-scenario"), key=lambda q: q.id)
-                         if stem in links_of(p, "realizes")])
+                         if stem in links_module.links_of(p, "realizes")])
 
 
 # Requirement types a `drivers:` link may point at (rel-drivers).
@@ -2501,29 +2388,29 @@ def build_trace(stem: str, folder: str) -> dict:
     if wiki._is(folder, *_DRIVER_TYPES):
         trace["drivers"] = build_drivers(stem)
     if wiki._is(folder, "runtime-scenario") and me:
-        trace["realizes"] = _link_groups(links_of(me, "realizes"))
+        trace["realizes"] = _link_groups(links_module.links_of(me, "realizes"))
     if me and not wiki._is(folder, "decision-record"):
-        trace["shaped_by"] = _link_groups(links_of(me, "decisions"))
+        trace["shaped_by"] = _link_groups(links_module.links_of(me, "decisions"))
     if me:
-        trace["replaced_by"] = _link_groups(links_of(me, "superseded-by"))
+        trace["replaced_by"] = _link_groups(links_module.links_of(me, "superseded-by"))
         trace["replaces"] = _link_groups([p.stem for p in sorted(wiki.load_folder(folder), key=lambda q: q.id)
-                                          if stem in links_of(p, "superseded-by")])
+                                          if stem in links_module.links_of(p, "superseded-by")])
     if wiki._is(folder, "building-block"):
         trace["used_by"] = _link_groups([p.stem for p in sorted(wiki.load_folder(folder), key=lambda q: q.id)
-                                         if stem in links_of(p, "uses")])
+                                         if stem in links_module.links_of(p, "uses")])
         trace["deployed_on"] = _link_groups([p.stem for p in sorted(wiki.load_type("deployment-node"), key=lambda q: q.id)
-                                             if stem in links_of(p, "hosts")])
+                                             if stem in links_module.links_of(p, "hosts")])
     if wiki._is(folder, "building-block", "deployment-node"):
         trace["governed_by"] = _link_groups([p.stem for p in sorted(wiki.load_type("crosscutting-concept"), key=lambda q: q.id)
-                                             if stem in links_of(p, "applies-to")])
+                                             if stem in links_module.links_of(p, "applies-to")])
     if wiki._is(folder, "building-block", "deployment-node", "external-interface", "stakeholder"):
         trace["takes_part_in"] = _link_groups(
             [p.stem for p in sorted(wiki.load_type("runtime-scenario"), key=lambda q: q.id)
              if stem in _struct_targets(p, "steps", ("from", "to"))])
     if wiki._is(folder, "crosscutting-concept") and me:
-        trace["applies_to"] = _link_groups(links_of(me, "applies-to"))
+        trace["applies_to"] = _link_groups(links_module.links_of(me, "applies-to"))
     if wiki._is(folder, "deployment-node") and me:
-        trace["hosts"] = _link_groups(links_of(me, "hosts"))
+        trace["hosts"] = _link_groups(links_module.links_of(me, "hosts"))
     if wiki._is(folder, *_ADDRESSABLE):
         trace["addressed_by"] = build_addressed_by(stem)
     if wiki._is(folder, *_REALIZABLE):
@@ -2541,7 +2428,7 @@ def _endpoint_stem(text: str, by_stem: dict) -> str:
     a page stem or a path ending in one. Other plain text keeps every
     character, `/` included ("TCP/IP Gateway")."""
     if "[[" in text:
-        return _link_stem(text)
+        return links_module._link_stem(text)
     if text in by_stem:
         return text
     last = text.rsplit("/", 1)[-1].strip()
@@ -2664,7 +2551,7 @@ def runtime_hints(stem: str) -> list[str]:
         a, b = st["from_stem"], st["to_stem"]
         if a in blocks and b in blocks and a != b:
             targets = set(_bb_ancestors(b, blocks))
-            if not any(set(links_of(blocks[x], "uses")) & targets for x in _bb_ancestors(a, blocks)):
+            if not any(set(links_module.links_of(blocks[x], "uses")) & targets for x in _bb_ancestors(a, blocks)):
                 h = f"{blocks[a].id} → {blocks[b].id}: no uses: edge"
                 if h not in hints:
                     hints.append(h)
@@ -2714,7 +2601,7 @@ def build_deployment_diagram(root: str | None = None,
             yield from walk(n["children"])
 
     inside = [nodes[n["stem"]] for n in walk(tree)]
-    inside += [blocks[b] for p in inside for b in links_of(p, "hosts") if b in blocks]
+    inside += [blocks[b] for p in inside for b in links_module.links_of(p, "hosts") if b in blocks]
     mixed = _mixed(inside)
 
     def emit(n: dict, depth: int) -> None:
@@ -2727,7 +2614,7 @@ def build_deployment_diagram(root: str | None = None,
         label += _lifecycle_suffix(p, mixed)
         shown.add(n["stem"])
         marked[n["stem"]] = (nid, p)
-        hosted = [b for b in links_of(p, "hosts") if b in blocks]
+        hosted = [b for b in links_module.links_of(p, "hosts") if b in blocks]
         if not n["children"] and not hosted:
             lines.append(f'{pad}{nid}["{label}"]:::infra')
             return
@@ -2750,7 +2637,7 @@ def build_deployment_diagram(root: str | None = None,
             if not isinstance(e, dict):
                 continue
             v = _scalar(e.get("to"))
-            t = _link_stem(v) if v else ""
+            t = links_module._link_stem(v) if v else ""
             if t in shown:
                 target = _diagram_node_id(nodes[t].id)
             elif t in eifs:
@@ -2766,7 +2653,7 @@ def build_deployment_diagram(root: str | None = None,
         lines.append(f'  {_diagram_node_id(eifs[t].id)}["{_clean_label(eifs[t].title)}"]:::system')
     lines += edges
     if links is not None:
-        hosted = {b for s in shown for b in links_of(nodes[s], "hosts") if b in blocks}
+        hosted = {b for s in shown for b in links_module.links_of(nodes[s], "hosts") if b in blocks}
         links.extend(_node_link(nodes[s]) for s in sorted(shown, key=lambda k: nodes[k].id))
         links.extend(_node_link(blocks[b]) for b in sorted(hosted, key=lambda k: blocks[k].id))
         links.extend(_node_link(eifs[t]) for t in neighbours)
@@ -2796,12 +2683,12 @@ def deployment_hints(stem: str | None = None) -> list[str]:
                 hints.append(f"{p.id} connects entry {n}: not a {{to, protocol}} entry, not drawn")
                 continue
             v = _scalar(e.get("to"))
-            t = _link_stem(v) if v else ""
+            t = links_module._link_stem(v) if v else ""
             if not t:
                 hints.append(f"{p.id} connects entry {n}: to: is empty, not drawn")
             elif t not in pages:
                 hints.append(f"{p.id} connects {t}: no such page")
-        for b in links_of(p, "hosts"):
+        for b in links_module.links_of(p, "hosts"):
             if b not in blocks:
                 hints.append(f"{p.id} hosts {b}: not a building block, not drawn")
     return hints
@@ -2833,7 +2720,7 @@ _CONCEPT_CATEGORIES = [
 
 def _arch_row(p: wiki.Page) -> dict:
     return {"id": p.id, "title": p.title, "status": p.status, "state": page_state(p),
-            "url": _page_url(p.folder, p.stem)}
+            "url": links_module._page_url(p.folder, p.stem)}
 
 
 @app.route("/arc42/strategy")
@@ -2845,9 +2732,9 @@ def strategy_view():
     rows = []
     for p in pages:
         row = _arch_row(p)
-        row["drivers"] = _link_groups(links_of(p, "drivers"))
-        row["decisions"] = _link_groups(links_of(p, "decisions"))
-        row["replaced_by"] = _link_groups(links_of(p, "superseded-by"))
+        row["drivers"] = _link_groups(links_module.links_of(p, "drivers"))
+        row["decisions"] = _link_groups(links_module.links_of(p, "decisions"))
+        row["replaced_by"] = _link_groups(links_module.links_of(p, "superseded-by"))
         rows.append(row)
     return render_template("strategy.html", block=block, rows=rows, total=len(pages),
                            maturity=maturity(p.status for p in pages))
@@ -2869,7 +2756,7 @@ def concepts_view():
                 continue
             row = _arch_row(p)
             row["unknown_category"] = raw if raw and cat not in known else ""
-            row["applies_to"] = _link_groups(links_of(p, "applies-to"))
+            row["applies_to"] = _link_groups(links_module.links_of(p, "applies-to"))
             rows.append(row)
         if rows:
             groups.append({"label": label, "rows": rows})
@@ -2891,7 +2778,7 @@ def runtime_view():
     rows = []
     for p in pages:
         row = _arch_row(p)
-        row["realizes"] = _link_groups(links_of(p, "realizes"))
+        row["realizes"] = _link_groups(links_module.links_of(p, "realizes"))
         row["steps"] = len(steps_of(p))
         rows.append(row)
     return render_template("runtime.html", block=block, rows=rows, total=len(pages),
@@ -2954,7 +2841,7 @@ def search_plain(page: wiki.Page, titles: dict[str, str]) -> str:
         if label:
             return label.strip()
         if target.startswith("raw/") or base.startswith("SRC-"):
-            src = source_index().get(base)
+            src = links_module.source_index().get(base)
             return src.id if src else _SOURCE_ID_RE.match(base).group(0) if _SOURCE_ID_RE.match(base) else ""
         return titles.get(base, target)
 
@@ -2988,7 +2875,7 @@ def _search_fields(page: wiki.Page) -> dict[str, list[str]]:
 
 def _search_links(pages: list[wiki.Page]) -> dict[str, set[str]]:
     """page id -> ids one link step away, in either direction (FR-008)."""
-    idx = link_index()
+    idx = links_module.link_index()
     by_stem = {p.stem: p for p in pages}
     out: dict[str, set[str]] = {p.id: set() for p in pages}
     for p in pages:
@@ -3009,7 +2896,7 @@ def build_search_records() -> list[dict]:
     and carries the reader's text (`plain`), `aliases`, the searched `fields`
     (lower-cased) and the ids of its neighbours (`links`)."""
     pages = wiki.load_all_pages()
-    titles = title_index()
+    titles = links_module.title_index()
     neighbours = _search_links(pages)
     records = []
     for p in pages:
@@ -3018,7 +2905,7 @@ def build_search_records() -> list[dict]:
             "type": catalog.label(p.folder),
             "title": p.title,
             "status": p.status,
-            "url": _page_url(p.folder, p.stem),
+            "url": links_module._page_url(p.folder, p.stem),
             "aliases": [str(a) for a in p.aliases],
             "plain": search_plain(p, titles),
             "fields": _search_fields(p),
@@ -3129,7 +3016,7 @@ def build_valley() -> dict:
         "status": vault_status(),
         "changes": recent_changes(4),
         "open_issues": [{"id": i.id, "title": i.title, "stem": i.stem,
-                         "url": _page_url(i.folder, i.stem),
+                         "url": links_module._page_url(i.folder, i.stem),
                          "severity": str(i.meta.get("severity") or "")} for i in open_issues[:5]],
         "open_total": len(open_issues),
         "decision_count": len(wiki.load_type("decision-record")),
@@ -3143,7 +3030,7 @@ def index():
     areas = {a["key"]: build_area_tile(a) for a in visible_areas()}
     join_url = public_url()
     return render_template("index.html", areas=areas, valley=build_valley(),
-                           vision_sentence=vision_sentence(vision_page(), title_index()),
+                           vision_sentence=vision_sentence(vision_page(), links_module.title_index()),
                            join_url=join_url, join_qr=qr_svg(join_url))
 
 
@@ -3159,7 +3046,7 @@ def method_view():
     (FR-011). Clarify links its issue while that issue is open."""
     issue = next((p for p in wiki.load_type("issue")
                   if p.stem == CLARIFY_ISSUE and is_open_issue(p.status)), None)
-    clarify = ({"id": issue.id, "title": issue.title, "url": _page_url(issue.folder, issue.stem)}
+    clarify = ({"id": issue.id, "title": issue.title, "url": links_module._page_url(issue.folder, issue.stem)}
                if issue else None)
     return render_template("method.html", clarify_issue=clarify)
 
@@ -3180,8 +3067,8 @@ def changes_view():
 
 @app.route("/domain-terms")
 def glossary_view():
-    titles = title_index()
-    links = link_index()       # so definition wikilinks render as real hyperlinks
+    titles = links_module.title_index()
+    links = links_module.link_index()       # so definition wikilinks render as real hyperlinks
     pages = domain_terms()
     rows = []
     for p in pages:
@@ -3193,7 +3080,7 @@ def glossary_view():
             "title": p.title,
             "aliases": p.aliases,
             "definition": extract_labeled(p, "Definition", titles, links),
-            "relations": len(linked_stems(p)),
+            "relations": len(links_module.linked_stems(p)),
             "status": p.status,
             "created": str(p.meta.get("created", "")),
             "updated": str(p.meta.get("updated", "")),
@@ -3251,7 +3138,7 @@ def _issue_owner(p: wiki.Page, titles: dict[str, str],
     target = target.split("#")[0].strip()
     if target in links:
         folder, stem = links[target]
-        return {"key": stem, "label": alias or titles.get(stem, stem), "url": _page_url(folder, stem)}
+        return {"key": stem, "label": alias or titles.get(stem, stem), "url": links_module._page_url(folder, stem)}
     if linked or alias:
         return {"key": raw, "label": alias or target, "url": None}
     return {"key": raw, "label": raw, "url": None}
@@ -3291,12 +3178,12 @@ _SEVERITY_RANK = {"blocker": 0, "major": 1, "minor": 2}
 def _issue_backlinks() -> dict[str, list[dict]]:
     """page stem -> the issues that link to it, by frontmatter or body
     wikilink (FR-027). A mere mention without a link does not count."""
-    titles, links = title_index(), link_index()
+    titles, links = links_module.title_index(), links_module.link_index()
     out: dict[str, list[dict]] = {}
     for iss in wiki.load_type("issue"):
         f = issue_fields(iss, titles, links)
         item = {"id": iss.id, "title": iss.title, "status": f["status"], "severity": f["severity"],
-                "is_open": f["is_open"], "url": _page_url(iss.folder, iss.stem)}
+                "is_open": f["is_open"], "url": links_module._page_url(iss.folder, iss.stem)}
         for stem in {links[t][1] for t in iss.link_targets() if t in links}:
             out.setdefault(stem, []).append(item)
     return out
@@ -3314,7 +3201,7 @@ def issues_view():
     """C6: every issue, filtered on the server by status, category, severity,
     section and owner (FR-025). Filters combine and live in the address, so a
     copied link shows the same issues. Unknown values are ignored."""
-    titles, links = title_index(), link_index()
+    titles, links = links_module.title_index(), links_module.link_index()
     pages = sorted(wiki.load_type("issue"), key=lambda x: x.id)
     lifecycle_values = metamodel.lifecycle("issue")
     categories = metamodel.field_values("issue", "category")
@@ -3326,7 +3213,7 @@ def issues_view():
         sections = sorted({folder_section[links[t][0]] for t in p.link_targets()
                            if t in links and links[t][0] in folder_section})
         items.append({"id": p.id, "title": p.title, **issue_fields(p, titles, links),
-                      "sections": sections, "url": _page_url(p.folder, p.stem)})
+                      "sections": sections, "url": links_module._page_url(p.folder, p.stem)})
 
     # the filters: only known values count, anything else shows every issue
     # one option per owner: a page by its title, whatever alias an issue uses
@@ -3382,8 +3269,8 @@ def issues_view():
 
 @app.route("/stakeholders")
 def stakeholders_view():
-    titles = title_index()
-    links = link_index()       # snapshot wikilinks become real hyperlinks
+    titles = links_module.title_index()
+    links = links_module.link_index()       # snapshot wikilinks become real hyperlinks
     by_stem = {q.stem: q for q in wiki.load_all_pages()}   # resolve related domain terms
     pages = sorted(wiki.load_type("stakeholder"), key=lambda x: x.id)
     _REL_MAX = 6               # cap chips per row; rest is one click away on the detail page
@@ -3392,7 +3279,7 @@ def stakeholders_view():
         # domain terms the stakeholder points at — quick links to "additional
         # info" (the snapshot's inline links + `related:`), by id.
         rel = []
-        for s in sorted(linked_stems(p)):
+        for s in sorted(links_module.linked_stems(p)):
             q = by_stem.get(s)
             if q and wiki._is(q.folder, "domain-term"):
                 rel.append({"id": q.id, "label": q.title, "type": "DT",
@@ -3401,7 +3288,7 @@ def stakeholders_view():
         rows.append({
             "id": p.id,
             "stem": p.stem,
-            "url": _page_url(p.folder, p.stem),
+            "url": links_module._page_url(p.folder, p.stem),
             "title": p.title,
             "role": p.meta.get("role", ""),
             "snapshot": extract_labeled(p, "Snapshot", titles, links),
@@ -3439,7 +3326,7 @@ def _is_wiki_folder(folder: str) -> bool:
 def page_detail(folder, stem):
     """Detail page for a single content unit (any wiki page). Search results
     link here."""
-    titles = title_index()
+    titles = links_module.title_index()
     # FRs have their own rich page (full text + hierarchy breakdown) under the
     # functional-requirements/ path; send any /page link there so the whole
     # hierarchy stays on one route.
@@ -3492,7 +3379,7 @@ def page_detail(folder, stem):
         ego_graph=ego_graph, ego_layers=ego_layers,
         needs_mermaid=bool(context_diagram or whitebox or sequence or deployment) or "language-mermaid" in body_html,
         sources=provenance(page),
-        issue=issue_fields(page, titles, link_index()) if wiki._is(folder, "issue") else None,
+        issue=issue_fields(page, titles, links_module.link_index()) if wiki._is(folder, "issue") else None,
         page_issues=open_issues_for(stem),
         formats=format_labels(page.body),
         term=term_fields(page) if wiki._is(folder, "domain-term") else None,
@@ -3527,10 +3414,10 @@ def source_detail(stem):
     came from, and which wiki pages it fed (`ingested-pages:`). Reached from a
     provenance chip on any sourced page; no standalone sources list exists yet,
     so its path is Home › source (FR-020)."""
-    src = source_index().get(stem)
+    src = links_module.source_index().get(stem)
     if not src:
         abort(404)
-    titles = title_index()
+    titles = links_module.title_index()
     body = re.sub(r"^\s*#\s+.*(?:\n|$)", "", src.body, count=1)
     # frontmatter values are human-entered and never trusted: escape every one
     # before it lands in body_html, which the template renders with `| safe`.
@@ -3542,7 +3429,7 @@ def source_detail(stem):
     # each ref is plain text: escaped around its wikilinks, label escaped
     # inside them, so a hostile one comes out as inert entities whether or
     # not it resolves to a real page.
-    ingested = ", ".join(render_wikilinks_text(str(r), titles, link_index()) for r in src.as_list("ingested-pages")) or "—"
+    ingested = ", ".join(render_wikilinks_text(str(r), titles, links_module.link_index()) for r in src.as_list("ingested-pages")) or "—"
     body_html = f'<dl class="source-facts">{facts_html}<dt>Ingested pages</dt><dd>{ingested}</dd></dl>' + render_markdown(body, titles)
     return render_template("detail.html", kind="Source", id=src.id, title=src.title, status=src.status,
                            **page_head(src), body_html=body_html, crumb=None, crumb_href=None,
@@ -3717,7 +3604,7 @@ def data_model_edges() -> list[dict]:
         # Draw that as the inheritance it is, rather than make the author repeat
         # it as a relationship entry — one fact, one place.
         for raw in p.as_list("parent"):
-            tgt = _link_stem(raw)
+            tgt = links_module._link_stem(raw)
             if tgt and tgt in by_stem and tgt != p.stem:
                 out.append({"source": p.stem, "target": tgt, "verb": "",
                             "cardinality": "", "kind": "inheritance"})
@@ -3733,7 +3620,7 @@ def _dm_relationships(page: wiki.Page) -> list[dict]:
     for entry in page.as_list("relationships"):
         if not isinstance(entry, dict):
             continue
-        tgt = _link_stem(entry.get("to"))
+        tgt = links_module._link_stem(entry.get("to"))
         if not tgt:
             continue
         kind = str(entry.get("kind") or "association").strip().lower()
@@ -3893,7 +3780,7 @@ def term_fields(page: wiki.Page) -> dict:
     """What the term page shows beside its text (FR-039): kind, aliases,
     attributes and relationships. A relationship whose target is a page
     names it by id and title and links it. Any other target stays as written."""
-    links = link_index()
+    links = links_module.link_index()
     by_stem = {p.stem: p for p in wiki.load_all_pages()}
     relationships = []
     for r in _dm_relationships(page):
@@ -3903,7 +3790,7 @@ def term_fields(page: wiki.Page) -> dict:
             "label": r["verb"],
             "target": target.title if target else r["target"],
             "target_id": target.id if target else "",
-            "url": _page_url(target.folder, target.stem) if target else "",
+            "url": links_module._page_url(target.folder, target.stem) if target else "",
             # a multiplicity on a generalization means nothing, as in the diagram
             "multiplicity": r["cardinality"] if _DM_ARROWS[r["kind"]][1] else "",
         })
@@ -3938,7 +3825,7 @@ def _extract_dm_notes(page: wiki.Page, titles: dict[str, str]) -> list[dict]:
 def data_model_entities() -> list[dict]:
     """One record per structured term with its sections + notes ready to render —
     the per-entity catalog rendered below the projection diagram on /entity-diagram."""
-    titles = title_index()
+    titles = links_module.title_index()
     pages = data_model_pages()
     out = []
     for p in pages:
@@ -3977,7 +3864,7 @@ def _goal_matrix(data: dict) -> tuple[list[dict], list[dict]]:
              if _fr_notation(fr) == "agile" and _fr_level(fr) == "epic"]
 
     def col(p: wiki.Page) -> dict:
-        return {"id": p.id, "title": p.title, "url": _page_url(p.folder, p.stem),
+        return {"id": p.id, "title": p.title, "url": links_module._page_url(p.folder, p.stem),
                 "status": p.status, "enabler": p.id in enabler_ids,
                 "nogoal": p.id in untraced_ids}
 
@@ -3992,12 +3879,12 @@ def _goal_matrix(data: dict) -> tuple[list[dict], list[dict]]:
         groups = []
         if not any(p.id in col_ids for p in serving):
             for kind, label in (("feature", "features"), ("story", "stories")):
-                links = [{"id": p.id, "url": _page_url(p.folder, p.stem)} for p in serving
+                links = [{"id": p.id, "url": links_module._page_url(p.folder, p.stem)} for p in serving
                          if _fr_notation(p) == "agile" and _fr_level(p) == kind]
                 if links:
                     groups.append({"label": label, "links": links})
             # requirements in another notation (EARS, prose …) are no column either
-            others = [{"id": p.id, "url": _page_url(p.folder, p.stem)} for p in serving
+            others = [{"id": p.id, "url": links_module._page_url(p.folder, p.stem)} for p in serving
                       if _fr_notation(p) not in ("agile", "use-case")]
             if others:
                 groups.append({"label": "other requirements", "links": others})
@@ -4008,7 +3895,7 @@ def _goal_matrix(data: dict) -> tuple[list[dict], list[dict]]:
         serving = data["coverage"].get(o.id, [])
         covered = {p.id for p in serving}
         cells = [c["id"] in covered for c in cols]
-        rows.append({"id": o.id, "title": o.title, "url": _page_url(o.folder, o.stem),
+        rows.append({"id": o.id, "title": o.title, "url": links_module._page_url(o.folder, o.stem),
                      "status": o.status, "cells": cells,
                      "views": {"all": view(serving),
                                # for "Agreed only": counts accepted pages only
@@ -4021,12 +3908,12 @@ def goals_view():
     """req42 Block 01 — Vision + Objectives. Three sections top-down:
     Mermaid tree, full-text cards (vision then objectives), goal-coverage matrix.
     Goal↔Epic edges are read from each FR's `goal:` field (DR-018)."""
-    titles = title_index()
-    links = link_index()       # vision/objective prose wikilinks become real links
+    titles = links_module.title_index()
+    links = links_module.link_index()       # vision/objective prose wikilinks become real links
     data = load_goals()
     vision, objectives = data["vision"], data["objectives"]
     # the flat, sortable list of every goal page (FR-021)
-    goal_rows = [{"id": g.id, "title": g.title, "url": _page_url(g.folder, g.stem),
+    goal_rows = [{"id": g.id, "title": g.title, "url": links_module._page_url(g.folder, g.stem),
                   "stereotype": str(g.meta.get("stereotype") or "").strip().lower(),
                   "horizon": str(g.meta.get("horizon") or "").strip(), "status": g.status}
                  for g in ([vision] if vision else []) + objectives]
@@ -4048,7 +3935,7 @@ def goals_view():
         vision_card = {
             "id": vision.id,
             "title": vision.title,
-            "url": _page_url(vision.folder, vision.stem),
+            "url": links_module._page_url(vision.folder, vision.stem),
             "stereotype": "Vision",
             "maturity": None,
             "beneficiary": _wikilink_list(vision.as_list("beneficiary")),
@@ -4080,7 +3967,7 @@ def goals_view():
         objective_cards.append({
             "id": o.id,
             "title": o.title,
-            "url": _page_url(o.folder, o.stem),
+            "url": links_module._page_url(o.folder, o.stem),
             "stereotype": "Goal",
             "purpose": extract_pam_bullet(o, "Purpose", titles, links),
             "advantage": extract_pam_bullet(o, "Advantage", titles, links),
@@ -4090,7 +3977,7 @@ def goals_view():
             "beneficiary": _wikilink_list(o.as_list("beneficiary")),
             # every requirement that serves the goal, features and stories
             # too: a superset of its matrix marks, as text (FR-036)
-            "epics": [{"id": p.id, "title": p.title, "url": _page_url(p.folder, p.stem)}
+            "epics": [{"id": p.id, "title": p.title, "url": links_module._page_url(p.folder, p.stem)}
                       for p in data["coverage"].get(o.id, [])],
         })
 
@@ -4190,7 +4077,7 @@ def fr_view(stem):
     page = wiki._parse(path, fr_folder) if fr_folder and path.is_file() else None
     if not page:
         abort(404)
-    titles = title_index()
+    titles = links_module.title_index()
     body = re.sub(r"^\s*#\s+.*(?:\n|$)", "", page.body, count=1)  # drop leading "# Title"
     body_html = render_markdown(body, titles)
 
@@ -4280,11 +4167,11 @@ def section_view(sid):
 
 
 def _block_list(block: dict, slug: str | None):
-    titles, links = title_index(), link_index()
+    titles, links = links_module.title_index(), links_module.link_index()
     rows = [
         {"id": p.id, "type": catalog.label(p.folder),
-         "title": p.title, "url": _page_url(p.folder, p.stem),
-         "status": p.status, "relations": len(linked_stems(p)),
+         "title": p.title, "url": links_module._page_url(p.folder, p.stem),
+         "status": p.status, "relations": len(links_module.linked_stems(p)),
          **(_qr_details(p, titles, links) if wiki._is(p.folder, "quality-requirement") else {})}
         for p in _block_pages(block)
     ]
@@ -4882,7 +4769,7 @@ def _mm_dr_link(ref: str, label: str = "") -> str:
     vault lacks stays plain text instead of a link that 404s."""
     text = escape(label or ref)
     if ref in {p.stem for p in wiki.load_type("decision-record")}:
-        return f'<a class="wl" href="{escape(_page_url(catalog.folder("decision-record"), ref))}">{text}</a>'
+        return f'<a class="wl" href="{escape(links_module._page_url(catalog.folder("decision-record"), ref))}">{text}</a>'
     return str(text)
 
 
@@ -4939,7 +4826,7 @@ def _mm_example(t: dict) -> dict:
     else:
         name = Path(folder).name
         pages = wiki.load_folder(name)
-        url = lambda p: _page_url(name, p.stem)         # noqa: E731
+        url = lambda p: links_module._page_url(name, p.stem)         # noqa: E731
     if not pages:
         return {"count": 0}
     best = min(pages, key=lambda p: (_MM_EXAMPLE_RANK.get(p.status, 9), p.id))

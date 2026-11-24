@@ -223,6 +223,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(HERE.parent))  # import app.py
 
 import app  # noqa: E402
+import links  # noqa: E402
 
 
 class _LiveMarkup(HTMLParser):
@@ -266,7 +267,7 @@ def _routes() -> list[str]:
     urls = [str(r) for r in app.app.url_map.iter_rules()
             if "GET" in r.methods and "<" not in str(r)
             and str(r) not in ("/presence/count", "/presence/list")]
-    urls += [app._page_url(p.parent.name, p.stem) for p in _wiki.rglob("*.md")]
+    urls += [links._page_url(p.parent.name, p.stem) for p in _wiki.rglob("*.md")]
     urls += [f"/source/{p.stem}" for p in _sources.glob("*.md")]
     urls += [f"/req42/{slug}" for slug in app.catalog.SECTION_BY_SLUG]
     urls += [f"/section/{sid}" for sid in app.catalog.SECTION_BY_ID]

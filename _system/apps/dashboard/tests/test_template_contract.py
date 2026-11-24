@@ -47,6 +47,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import links  # noqa: E402
 
 _FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 _KEY_RE = re.compile(r"^([a-zA-Z][a-zA-Z0-9_-]*)\s*:", re.MULTILINE)
@@ -144,7 +145,7 @@ def test_goal_template_body_markers_are_extractable():
     try:
         with app.app.app_context():
             data = app.load_goals()
-            titles = app.title_index()
+            titles = links.title_index()
             assert data["vision"] is not None, "the template's vision is not recognised"
             para = " ".join(app._vision_paragraphs(data["vision"], titles))
             assert "System X" in para, f"`## Vision` did not parse: {para!r}"

@@ -85,6 +85,7 @@ _page("decisions", "DR-003-im-callout", "decision-record", "Im Callout", extra="
 
 import app  # noqa: E402
 import wiki  # noqa: E402
+import links  # noqa: E402
 import metamodel  # noqa: E402
 
 client = app.app.test_client()
@@ -238,14 +239,14 @@ def test_follows_inside_a_callout_keeps_the_callout_whole():
     assert _labels(html) == ["MADR"], _head(html)
     pane = html.split('class="detail-pane"', 1)[1].split("</article>", 1)[0]
     with app.app.test_request_context("/"):
-        plain = app.render_markdown("> [!note] Hinweis\n> Zweite Zeile.\n", app.title_index())
+        plain = app.render_markdown("> [!note] Hinweis\n> Zweite Zeile.\n", links.title_index())
     # the same callout as if the note had never been there
     assert pane.strip().lstrip(">").strip() == plain.strip(), (pane, plain)
 
 
 def test_search_drops_exactly_the_lines_the_page_drops():
     with app.app.test_request_context("/"):
-        titles = app.title_index()
+        titles = links.title_index()
         pages = {p.stem: p for p in wiki.load_folder("decisions")}
         kept = app.search_plain(pages["DR-002-nur-text"], titles)
         dropped = app.search_plain(pages["DR-001-eine-wahl"], titles)

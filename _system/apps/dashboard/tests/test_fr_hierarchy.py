@@ -22,6 +22,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import links as links_module  # noqa: E402
 import wiki as wiki_module  # noqa: E402
 
 
@@ -151,7 +152,7 @@ def test_fr_route_redirect_and_404():
 
 
 def test_body_wikilinks_become_hyperlinks():
-    titles, links = app.title_index(), app.link_index()
+    titles, links = links_module.title_index(), links_module.link_index()
 
     # a stakeholder wikilink with an alias -> real anchor to its /page route
     html = app.render_wikilinks("As [[STK-001-librarian|the librarian]] …", titles, links)

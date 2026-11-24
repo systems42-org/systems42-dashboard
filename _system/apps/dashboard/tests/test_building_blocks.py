@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
 import wiki  # noqa: E402
+import links  # noqa: E402
 
 
 def _flat(nodes):
@@ -77,16 +78,16 @@ def test_whitebox_level_one():
 
 def test_driver_link_forms():
     # quoted wikilink with alias, quoted wikilink, bare stem, unquoted [[x]] (YAML nested list)
-    assert app.links_of(_page("building-blocks", "BB-001-booking"), "drivers") == [
+    assert links.links_of(_page("building-blocks", "BB-001-booking"), "drivers") == [
         "QR-001-fast-search", "UC-001-find-course", "FR-001-search"]
-    assert app.links_of(_page("building-blocks", "BB-004-booking-core"), "drivers") == ["QR-001-fast-search"]
-    assert app.links_of(_page("building-blocks", "BB-004-booking-core"), "parent") == ["BB-001-booking"]
+    assert links.links_of(_page("building-blocks", "BB-004-booking-core"), "drivers") == ["QR-001-fast-search"]
+    assert links.links_of(_page("building-blocks", "BB-004-booking-core"), "parent") == ["BB-001-booking"]
 
 
 def test_dangling_links_are_skipped():
-    assert app.links_of(_page("building-blocks", "BB-002-catalog"), "uses") == ["EIF-001-payment"]
-    assert app.links_of(_page("decisions", "DR-001-modular-monolith"), "drivers") == ["QR-001-fast-search"]
-    assert app.links_of(_page("building-blocks", "BB-004-booking-core"), "decisions") == []
+    assert links.links_of(_page("building-blocks", "BB-002-catalog"), "uses") == ["EIF-001-payment"]
+    assert links.links_of(_page("decisions", "DR-001-modular-monolith"), "drivers") == ["QR-001-fast-search"]
+    assert links.links_of(_page("building-blocks", "BB-004-booking-core"), "decisions") == []
 
 
 def test_drivers_grouped_by_type():

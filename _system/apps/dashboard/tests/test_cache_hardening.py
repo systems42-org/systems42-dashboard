@@ -60,6 +60,7 @@ _page("domain-terms/deeper", "DT-900-nested", "Nested")
 
 import app  # noqa: E402
 import wiki  # noqa: E402
+import links  # noqa: E402
 import metamodel  # noqa: E402
 
 client = app.app.test_client()
@@ -107,7 +108,7 @@ def test_an_edited_page_gets_fresh_link_targets():
 def test_title_index_knows_what_load_all_pages_knows():
     with app.app.test_request_context("/"):
         stems = {p.stem for p in wiki.load_all_pages()}
-        titles = app.title_index()
+        titles = links.title_index()
     assert set(titles) == stems, (set(titles) ^ stems)
     assert "DT-900-nested" not in titles and "README" not in titles
     assert titles["DT-001-term-1"] == "Term 1"
