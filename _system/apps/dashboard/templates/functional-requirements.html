@@ -117,13 +117,24 @@
 {% if hierarchy.orphans %}
 <section class="fr-card fr-orphans">
   <header class="fr-card-head"><h2>Orphaned requirements</h2></header>
-  <p class="lead">Agile feature/story whose <code>parent:</code> resolves to neither an Agile requirement nor a use case at level sea or fish — probably a typo in the wikilink.</p>
+  <p class="lead">Agile features and stories the story map cannot place: <code>parent:</code> is empty, names no live page, or names a page that takes no such child. A feature belongs under an epic or a use case at level sea or fish, a story under one of these or a feature. An orphaned feature keeps its stories.</p>
   <ul class="fr-stories">
     {% for o in hierarchy.orphans %}
     <li>
       <code class="ml-id">{{ o.id }}</code>
       <a href="/functional-requirements/{{ o.stem }}">{{ o.title }}</a>
       <span class="badge">{{ o.level }}</span>
+      {% if o.stories %}
+      <ul class="fr-stories">
+        {% for s in o.stories %}
+        <li>
+          <code class="ml-id">{{ s.id }}</code>
+          <a href="/functional-requirements/{{ s.stem }}">{{ s.title }}</a>
+          <span class="badge">{{ s.level }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
     </li>
     {% endfor %}
   </ul>
