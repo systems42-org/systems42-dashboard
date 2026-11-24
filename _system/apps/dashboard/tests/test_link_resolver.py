@@ -80,6 +80,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 import app  # noqa: E402
 import wiki  # noqa: E402
 import links  # noqa: E402
+import project.terms  # noqa: E402
 
 client = app.app.test_client()
 
@@ -178,7 +179,7 @@ def test_id_only_reciprocal_self_and_duplicate_links():
     assert _panel(gamma, "Linked from") == []
 
     with app.app.test_request_context("/"):
-        rel = app.build_relations_panel("DT-001-alpha")
+        rel = project.terms.build_relations_panel("DT-001-alpha")
         assert _ids(rel["outbound"]) == ["DT-002"] and _ids(rel["inbound"]) == ["DT-002", "DT-003"]
     # the relations count of the term list counts a page once
     rows = re.findall(r'href="/page/domain-terms/(DT-\d+)[^"]*".*?<span class="rel-pill">(\d+)</span>',

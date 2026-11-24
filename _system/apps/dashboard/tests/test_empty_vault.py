@@ -31,6 +31,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import project.terms  # noqa: E402
 
 # /leaving is deliberately NOT exercised: it arms the self-shutdown watchdog,
 # which would SIGTERM this test process. Its behaviour is covered by DR-022.
@@ -76,7 +77,7 @@ def test_ping_returns_nickname_and_facilitator_flag():
 
 
 def test_data_model_diagrams_are_none_when_no_entities():
-    assert app.build_data_model_full_diagram() is None
+    assert project.terms.build_data_model_full_diagram() is None
 
 
 # routes whose empty state must tell the reader what to do next

@@ -28,16 +28,17 @@ related: ["[[DT-003-review]]"]
     os.environ.update(WIKI_DIR=str(wiki), DASH_STARTUP_GRACE="3600")
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     import app
+    import project.terms
 
     with app.app.test_client() as client:
-        graph = app.build_glossary_graph()
+        graph = project.terms.build_glossary_graph()
         assert {n["data"]["id"] for n in graph["nodes"]} == {
             "DT-001-training", "DT-002-session", "DT-003-review"
         }
         assert {e["data"]["kind"] for e in graph["edges"]} == {"related", "composition"}
-        assert {e["data"]["kind"] for e in app.build_glossary_graph("structured")["edges"]} == {"composition"}
-        assert {e["data"]["kind"] for e in app.build_glossary_graph("related")["edges"]} == {"related"}
-        diagram = app.build_data_model_full_diagram()
+        assert {e["data"]["kind"] for e in project.terms.build_glossary_graph("structured")["edges"]} == {"composition"}
+        assert {e["data"]["kind"] for e in project.terms.build_glossary_graph("related")["edges"]} == {"related"}
+        diagram = project.terms.build_data_model_full_diagram()
         assert 'Training *-- "0..*" Session : schedules' in diagram and "+training_id" in diagram
         assert "+order date" in diagram
         assert "+cost #123;net#125;" in diagram

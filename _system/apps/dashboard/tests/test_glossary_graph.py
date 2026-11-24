@@ -20,10 +20,11 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import project.terms  # noqa: E402
 
 
 def test_build_glossary_graph_shape_and_invariants():
-    g = app.build_glossary_graph()
+    g = project.terms.build_glossary_graph()
     nodes = [n["data"] for n in g["nodes"]]
     edges = [e["data"] for e in g["edges"]]
     by_id = {n["id"]: n for n in nodes}

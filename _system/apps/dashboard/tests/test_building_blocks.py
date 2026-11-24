@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 import app  # noqa: E402
 import wiki  # noqa: E402
 import links  # noqa: E402
+import project.terms  # noqa: E402
 
 
 def _flat(nodes):
@@ -170,11 +171,11 @@ def test_glossary_term_links_back_to_block():
 
 
 def test_glossary_network_has_a_building_block_layer():
-    g = app.build_glossary_graph()
+    g = project.terms.build_glossary_graph()
     assert g["layer_counts"].get("BB") == 1, g["layer_counts"]
     bb = next(n["data"] for n in g["nodes"] if n["data"]["id"] == "BB-001-booking")
     assert "rest" not in bb and bb["url"] == "/page/building-blocks/BB-001-booking"
-    assert app.build_glossary_ego_graph("DT-001-booking")["layer_counts"].get("BB") == 1
+    assert project.terms.build_glossary_ego_graph("DT-001-booking")["layer_counts"].get("BB") == 1
     _, body = _get("/graph/domain-terms")
     assert 'data-layer="BB"' in body and "lg-BB" in body
     _, body = _get("/page/domain-terms/DT-001-booking")

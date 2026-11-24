@@ -1,11 +1,11 @@
 """The search records: what the search index holds for each page.
 
 Owns the searched frontmatter fields, the reader's text of a page body
-(search_plain), a page's neighbours by link and the flat list of records the
-browser ranks.
+(search_plain), a page's neighbours by link, the flat list of records the
+browser ranks, the synonyms from the domain terms and the search index.
 
-May import `wiki`, `links`, `render` and `catalog`. No Flask import and no
-import of `app` here (tests/test_module_imports.py).
+May import `wiki`, `links`, `render`, `catalog` and `project.terms`. No Flask
+import and no import of `app` here (tests/test_module_imports.py).
 """
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ import re
 
 import catalog  # the section catalog (DR-033)
 import links as links_module  # link resolver and indexes
+import project.terms  # the domain terms
 import render  # sanitizer, wikilinks and Markdown
 import wiki  # paths, pages, parse cache and loaders
 
@@ -121,3 +122,18 @@ def build_search_records() -> list[dict]:
             "links": sorted(neighbours.get(p.id, ())),
         })
     return records
+
+
+# --- global search ---------------------------------------------------------
+
+
+def search_synonyms() -> list[list[str]]:
+    """Each domain term's title plus its aliases, lower-cased. The search
+    treats a group as one word (FR-003)."""
+    return [[str(w).strip().lower() for w in [p.title, *p.aliases] if str(w).strip()]
+            for p in project.terms.domain_terms()]
+
+
+def build_search_index() -> dict:
+    """What /search.json serves and /search embeds: {records, synonyms}."""
+    return {"records": build_search_records(), "synonyms": search_synonyms()}

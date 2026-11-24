@@ -375,14 +375,18 @@ _system/apps/dashboard/
                      URL. May import wiki, never Flask or app
   render.py          the sanitizer, wikilinks, method-anchor links, "follows" notes, callouts
                      and Markdown. May import wiki, links and metamodel, never Flask or app
-  search.py          the search records: searched fields, a page's text for search and its
-                     neighbours. May import wiki, links, render and catalog, never Flask or app
+  search.py          the search: searched fields, a page's text for search, its
+                     neighbours, the synonyms and the search index. May import wiki, links,
+                     render, catalog and project.terms, never Flask or app
   project/           the projections, one module each. None imports Flask or app
     common.py        what several projections share: open issues, the maturity bar, provenance,
                      the pages of a section, diagram node ids, labels and links. May import
-                     wiki and links
+                     wiki, links and metamodel
     context.py       the context flows and what they share with the context diagram. May
                      import wiki, links and project.common
+    terms.py         the domain terms: the term network, the links of a page ("Links to",
+                     "Linked from"), a term's fields and the entity diagram. May import wiki,
+                     links, render, catalog and project.common
   help.md            source of the /help page
   templates/         base, index, _empty (shared empty state), _macros (plural()),
                      _maturity (maturity bar/legend), _mermaid (loader),

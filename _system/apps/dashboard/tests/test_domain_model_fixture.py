@@ -26,17 +26,18 @@ with tempfile.TemporaryDirectory() as temp:
     )
     sys.path.insert(0, str(HERE.parent))
     import app
+    import project.terms
 
     with app.app.test_request_context():
-        diagram = app.build_data_model_full_diagram()
+        diagram = project.terms.build_data_model_full_diagram()
         assert 'Customer --> "0..*" Order : places' in diagram
         assert 'Order *-- "1..*" OrderLine : contains' in diagram
         assert "+customer_id" in diagram and "+quantity" in diagram
         assert "ReviewPolicy" not in diagram
-        graph = app.build_glossary_graph()
+        graph = project.terms.build_glossary_graph()
         assert len(graph["nodes"]) == 4 and len(graph["edges"]) == 3
-        assert len(app.build_glossary_graph("related")["edges"]) == 1
-        assert len(app.build_glossary_graph("structured")["edges"]) == 2
+        assert len(project.terms.build_glossary_graph("related")["edges"]) == 1
+        assert len(project.terms.build_glossary_graph("structured")["edges"]) == 2
 
     with app.app.test_client() as client:
         for route in ("/domain-terms", "/graph/domain-terms", "/entity-diagram", "/req42/models"):

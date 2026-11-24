@@ -90,6 +90,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 
 sys.path.insert(0, str(HERE))
 import app  # noqa: E402
+import project.terms  # noqa: E402
 
 client = app.app.test_client()
 
@@ -179,7 +180,7 @@ def test_term_detail_page_and_its_links():
 
 def test_term_projections_show_the_moved_pages():
     with app.app.test_request_context("/"):
-        graph = app.build_glossary_graph()
+        graph = project.terms.build_glossary_graph()
     core = {n["data"]["id"]: n["data"] for n in graph["nodes"] if n["data"].get("core")}
     assert set(core) == {"DT-001-customer", "DT-002-order"}, core
     assert core["DT-001-customer"]["url"] == TERM

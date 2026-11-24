@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import app  # noqa: E402
 import wiki  # noqa: E402
 import links  # noqa: E402
+import project.terms  # noqa: E402
 
 
 def _flat(groups):
@@ -28,7 +29,7 @@ def _flat(groups):
 
 def test_relations_panel_outbound_inbound_and_dedup():
     with app.app.test_request_context("/"):
-        rel = app.build_relations_panel("STK-001-librarian")
+        rel = project.terms.build_relations_panel("STK-001-librarian")
 
     out = _flat(rel["outbound"])
     inb = _flat(rel["inbound"])

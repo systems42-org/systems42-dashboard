@@ -28,6 +28,7 @@ if not _REMOTE_URL:
     sys.path.insert(0, str(_DASH))
 
     import app  # noqa: E402
+    import search  # noqa: E402
 
 HARNESS = Path(__file__).resolve().parent / "search_harness.js"
 _INDEX = None
@@ -41,7 +42,7 @@ def _index_json() -> str:
                 _INDEX = resp.read().decode("utf-8")
         else:
             with app.app.test_request_context():
-                _INDEX = json.dumps(app.build_search_index())
+                _INDEX = json.dumps(search.build_search_index())
     return _INDEX
 
 

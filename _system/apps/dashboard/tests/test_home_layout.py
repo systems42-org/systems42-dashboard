@@ -38,6 +38,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
 import wiki  # noqa: E402
+import project.terms  # noqa: E402
 
 QR = """---
 id: QR-001
@@ -245,7 +246,7 @@ def test_supporting_models_count_model_pages():
         body = _area("/req42")
         tile = body[body.index("tile-r4"):body.index("tile-r5")]
         with app.app.test_request_context("/req42"):
-            n = app.supporting_model_count()
+            n = project.terms.supporting_model_count()
         assert n >= 1, n
         assert f'<span class="num">{n}</span><span class="unit">model page' in tile, tile
         assert "<ul" not in tile and "Borrow a book" not in tile, tile

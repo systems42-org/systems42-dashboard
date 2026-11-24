@@ -19,10 +19,11 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import project.terms  # noqa: E402
 
 
 def test_ego_is_a_valid_1hop_slice():
-    full = app.build_glossary_graph()
+    full = project.terms.build_glossary_graph()
     full_ids = {n["data"]["id"] for n in full["nodes"]}
 
     # focal-term neighbours straight from the full edge set, for the oracle below
@@ -42,7 +43,7 @@ def test_ego_is_a_valid_1hop_slice():
     for stem in sorted(full_ids):
         if type_of[stem] != "DT":
             continue
-        ego = app.build_glossary_ego_graph(stem)
+        ego = project.terms.build_glossary_ego_graph(stem)
         assert ego is not None, stem
         ids = {n["data"]["id"] for n in ego["nodes"]}
 
@@ -53,9 +54,9 @@ def test_ego_is_a_valid_1hop_slice():
 
         # node set == focal + neighbours of type DT/STK/GOAL/BB (1-hop, type-filtered)
         expected = {stem} | {n for n in full_neighbours(stem)
-                             if type_of.get(n) in app._EGO_TYPES}
+                             if type_of.get(n) in project.terms._EGO_TYPES}
         assert ids == expected, (stem, ids ^ expected)
-        assert all(type_of[i] in app._EGO_TYPES for i in ids), stem
+        assert all(type_of[i] in project.terms._EGO_TYPES for i in ids), stem
 
         # induced subgraph: every edge stays inside the ego, no dangling endpoints
         for e in ego["edges"]:
@@ -66,7 +67,7 @@ def test_ego_is_a_valid_1hop_slice():
         tally = {}
         for e in ego["edges"]:
             d = e["data"]
-            if d.get("cross") and d.get("ntype") in app._EGO_TYPES:
+            if d.get("cross") and d.get("ntype") in project.terms._EGO_TYPES:
                 tally[d["ntype"]] = tally.get(d["ntype"], 0) + 1
         assert ego["layer_counts"] == tally, (stem, ego["layer_counts"], tally)
         checked += 1
@@ -74,11 +75,11 @@ def test_ego_is_a_valid_1hop_slice():
     assert checked, "no domain terms found"
 
     # an unknown stem yields no snippet
-    assert app.build_glossary_ego_graph("does-not-exist") is None
+    assert project.terms.build_glossary_ego_graph("does-not-exist") is None
 
     # DT-004-shelf: exactly one term-to-term edge (to DT-001-book), and no
     # cross-type relations of its own, so its ego graph offers no layer buttons.
-    shelf = app.build_glossary_ego_graph("DT-004-shelf")
+    shelf = project.terms.build_glossary_ego_graph("DT-004-shelf")
     assert shelf is not None
     glo_internal = [e for e in shelf["edges"] if e["data"].get("cross") is False]
     assert len(glo_internal) == 1, "DT-004-shelf should have exactly one term-to-term edge"

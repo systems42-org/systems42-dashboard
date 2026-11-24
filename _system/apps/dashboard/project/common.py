@@ -1,17 +1,19 @@
 """What several projections share.
 
-Owns the meaning of an open issue and the open issues per folder, the maturity
-bar, a page's provenance records, the pages of a section, and the node ids,
-labels and node links of the Mermaid diagrams.
+Owns the meaning of an open issue, the open issues per folder and the values
+the metamodel allows for an issue, the maturity bar, a page's provenance
+records, the pages of a section, the type prefix of a page name, and the node
+ids, labels and node links of the Mermaid diagrams.
 
-May import `wiki` and `links`. No Flask import and no import of `app` here
-(tests/test_module_imports.py).
+May import `wiki`, `links` and `metamodel`. No Flask import and no import of
+`app` here (tests/test_module_imports.py).
 """
 from __future__ import annotations
 
 import re
 
 import links as links_module  # link resolver and indexes
+import metamodel  # reader for _system/metamodel/ (DR-035)
 import wiki  # paths, pages, parse cache and loaders
 
 
@@ -138,3 +140,15 @@ def _fr_stem_from_ref(ref: object) -> str:
     s = str(ref or "").strip()
     m = re.match(r"\[\[([^\]\|#]+)", s)
     return (m.group(1) if m else s).split("/")[-1].strip()
+
+
+def _type_of(stem: str) -> str:
+    return stem.split("-")[0] if "-" in stem else stem
+
+
+@wiki._request_cached
+def _issue_vocab() -> dict[str, list[str]]:
+    """The values the metamodel allows for an issue's status and enum fields,
+    read once per request."""
+    return {"status": metamodel.lifecycle("issue"),
+            **{f: metamodel.field_values("issue", f) for f in ("severity", "kind", "category")}}
