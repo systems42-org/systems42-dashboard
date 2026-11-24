@@ -223,12 +223,31 @@ def _load(folder: str, construct: str) -> list[dict]:
     return out
 
 
+def _declared_blocks(fw: dict) -> list[tuple[str, dict]]:
+    """The blocks a framework page declares, as (ID, block). An entry that is
+    no mapping or has no ID declares no block."""
+    declared = fw.get("blocks")
+    out = []
+    for b in declared if isinstance(declared, list) else []:
+        if isinstance(b, dict) and str(b.get("id") or "").strip():
+            out.append((str(b["id"]).strip(), b))
+    return out
+
+
+def block_title(block: dict) -> str:
+    """The name a block shows under: its `title:`, else its ID. The section
+    navigation and `/metamodel` both use it."""
+    return str(block.get("title") or block["id"])
+
+
 def load() -> dict:
     """Everything the page needs, as plain dicts:
 
       meta         the meta-metamodel page (universal fields, lifecycles, constructs)
       frameworks   in display order, each with its `blocks`
-      blocks       flat, in framework order, each with `framework` added
+      blocks       flat, in framework order, each with `framework` added and
+                   `title` as shown (`block_title`); entries `blocks()` leaves
+                   out are left out here too
       types        in block order (then page order); `block_title` added
       relations    page order; `edges` as declared
       notations    shipped and project-specific FR notation definitions (DR-038)
@@ -242,13 +261,16 @@ def load() -> dict:
                                    if f.get("name") in _FRAMEWORK_ORDER else 99))
     blocks: list[dict] = []
     for fw in frameworks:
-        for b in fw.get("blocks") or []:
-            blocks.append({**b, "framework": fw.get("name"), "area": fw.get("area")})
+        for bid, b in _declared_blocks(fw):
+            blocks.append({**b, "id": bid, "title": block_title({**b, "id": bid}),
+                           "framework": fw.get("name"), "area": fw.get("area")})
     block_pos = {b["id"]: i for i, b in enumerate(blocks)}
     block_by_id = {b["id"]: b for b in blocks}
 
     types = _load("types", "type")
     for t in types:
+        if t.get("block"):
+            t["block"] = str(t["block"]).strip()     # as text, like the block's ID
         b = block_by_id.get(t.get("block"))
         t["block_title"] = b["title"] if b else ""
         t["block_area"] = b["area"] if b else None
@@ -277,13 +299,11 @@ def blocks() -> list[dict]:
                  for t in _load("types", "type") if t.get("folder")}
     out: list[dict] = []
     for fw in _load("frameworks", "framework"):
-        for b in fw.get("blocks") or []:
-            if not isinstance(b, dict) or not str(b.get("id") or "").strip():
-                continue
+        for bid, b in _declared_blocks(fw):
             names = b.get("types") or []
             names = [names] if isinstance(names, str) else names if isinstance(names, list) else []
             folders = [folder_of[str(n)] for n in names if str(n) in folder_of]
-            out.append({**b, "id": str(b["id"]).strip(), "framework": fw.get("name"),
+            out.append({**b, "id": bid, "framework": fw.get("name"),
                         "area": fw.get("area"), "folders": folders})
     return out
 

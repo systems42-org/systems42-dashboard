@@ -87,7 +87,7 @@ def build(blocks: list[dict]) -> list[dict]:
         known = _KNOWN.get(sid, {})
         scope = str(b.get("scope") or "in")
         out.append({
-            "id": sid, "area": area, "title": str(b.get("title") or sid),
+            "id": sid, "area": area, "title": metamodel.block_title(b),
             "folders": list(b.get("folders") or []),
             "href": _href(sid, scope), "slug": known.get("slug"),
             "scope": scope, "colors": list(known.get("colors") or AREA_BY_KEY[area]["colors"]),

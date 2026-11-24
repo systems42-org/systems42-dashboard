@@ -180,14 +180,10 @@ func BuildCatalog(blocks []Block) *Catalog {
 		if note == "" {
 			note = b.Note
 		}
-		title := b.Title
-		if title == "" {
-			title = b.ID
-		}
 		sections = append(sections, Section{
 			ID:        b.ID,
 			Area:      b.Area,
-			Title:     title,
+			Title:     BlockTitle(b.Title, b.ID),
 			Folders:   foldersCopy,
 			Href:      sectionHrefForScope(b.ID, scope),
 			Slug:      known.slug,

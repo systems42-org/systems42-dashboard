@@ -339,6 +339,40 @@ func (r *Reader) load(folder, construct string) []map[string]any {
 	return out
 }
 
+// declaredBlocks returns the blocks a framework page declares, each as a copy
+// with "id" as trimmed text. An entry that is no mapping or has no ID declares
+// no block.
+func declaredBlocks(fw map[string]any) []map[string]any {
+	rawBlocks, _ := fw["blocks"].([]any)
+	out := make([]map[string]any, 0, len(rawBlocks))
+	for _, item := range rawBlocks {
+		bm, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		id := strings.TrimSpace(strVal(bm["id"]))
+		if id == "" {
+			continue
+		}
+		cp := make(map[string]any, len(bm)+3)
+		for k, v := range bm {
+			cp[k] = v
+		}
+		cp["id"] = id
+		out = append(out, cp)
+	}
+	return out
+}
+
+// BlockTitle is the name a block shows under: its title, else its ID. The
+// section navigation and /metamodel both use it.
+func BlockTitle(title, id string) string {
+	if title == "" {
+		return id
+	}
+	return title
+}
+
 // Blocks returns every framework block in framework-filename then block order,
 // resolving each listed type name to its wiki subfolder via types/*.md.
 func (r *Reader) Blocks() []Block {
@@ -355,16 +389,8 @@ func (r *Reader) Blocks() []Block {
 	for _, fw := range r.load("frameworks", "framework") {
 		fwName := strVal(fw["name"])
 		fwArea := strVal(fw["area"])
-		rawBlocks, _ := fw["blocks"].([]any)
-		for _, item := range rawBlocks {
-			bm, ok := item.(map[string]any)
-			if !ok {
-				continue
-			}
-			id := strings.TrimSpace(strVal(bm["id"]))
-			if id == "" {
-				continue
-			}
+		for _, bm := range declaredBlocks(fw) {
+			id := strVal(bm["id"])
 			var typeNames []string
 			switch tv := bm["types"].(type) {
 			case string:
@@ -384,17 +410,13 @@ func (r *Reader) Blocks() []Block {
 					folders = append(folders, f)
 				}
 			}
-			title := strVal(bm["title"])
-			if title == "" {
-				title = id
-			}
 			scope := strVal(bm["scope"])
 			if scope == "" {
 				scope = "in"
 			}
 			out = append(out, Block{
 				ID:        id,
-				Title:     title,
+				Title:     BlockTitle(strVal(bm["title"]), id),
 				Framework: fwName,
 				Area:      fwArea,
 				Scope:     scope,
@@ -596,19 +618,11 @@ func (r *Reader) Load() *Data {
 	blockPos := map[string]int{}
 	blockByID := map[string]map[string]any{}
 	for _, fw := range frameworks {
-		rawBlocks, _ := fw["blocks"].([]any)
-		for _, item := range rawBlocks {
-			bm, ok := item.(map[string]any)
-			if !ok {
-				continue
-			}
-			cp := make(map[string]any, len(bm)+2)
-			for k, v := range bm {
-				cp[k] = v
-			}
+		for _, cp := range declaredBlocks(fw) {
+			bid := strVal(cp["id"])
+			cp["title"] = BlockTitle(strVal(cp["title"]), bid)
 			cp["framework"] = fw["name"]
 			cp["area"] = fw["area"]
-			bid := strVal(cp["id"])
 			blockPos[bid] = len(blocks)
 			blockByID[bid] = cp
 			blocks = append(blocks, cp)
@@ -617,7 +631,10 @@ func (r *Reader) Load() *Data {
 
 	types := r.load("types", "type")
 	for _, t := range types {
-		bid := strVal(t["block"])
+		bid := strings.TrimSpace(strVal(t["block"]))
+		if bid != "" {
+			t["block"] = bid // as text, like the block's ID
+		}
 		if b, ok := blockByID[bid]; ok {
 			t["block_title"] = strVal(b["title"])
 			t["block_area"] = b["area"]

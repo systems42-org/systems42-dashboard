@@ -158,3 +158,51 @@ func TestLoadAnchorsAndNotations(t *testing.T) {
 		t.Fatal("expected project-specific notation from NotationsDir")
 	}
 }
+
+// A block without a title shows its ID in the catalog and in Load (issue 205).
+// A block without an ID and a block entry that is plain text declare no block.
+func TestBlockWithoutTitleShowsItsID(t *testing.T) {
+	dir := t.TempDir()
+	for _, d := range []string{"frameworks", "types"} {
+		if err := os.MkdirAll(filepath.Join(dir, d), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	fwPath := filepath.Join(dir, "frameworks", "fw-req42.md")
+	declare := func(r4 string) {
+		t.Helper()
+		text := "---\ntype: metamodel\nconstruct: framework\nname: req42\narea: requirements\nblocks:\n" +
+			"  - " + r4 + "\n" +
+			"  - {number: \"98\", title: \"Block without an ID\", types: [], scope: in}\n" +
+			"  - a block that is plain text\n---\n\n# Framework: req42\n"
+		if err := os.WriteFile(fwPath, []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	typePage := "---\ntype: metamodel\nconstruct: type\nname: activity-model\nblock: R4\n" +
+		"folder: wiki/activity-models\n---\n\n# Type: activity-model\n"
+	if err := os.WriteFile(filepath.Join(dir, "types", "type-activity-model.md"), []byte(typePage), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	shown := func(want string) {
+		t.Helper()
+		r := NewReader(dir, "", "")
+		cat := BuildCatalog(r.Blocks())
+		if len(cat.Sections) != 1 || cat.Sections[0].ID != "R4" || cat.Sections[0].Title != want {
+			t.Fatalf("catalog: expected one section R4 titled %q, got %+v", want, cat.Sections)
+		}
+		mm := r.Load()
+		if len(mm.Blocks) != 1 || strVal(mm.Blocks[0]["id"]) != "R4" || strVal(mm.Blocks[0]["title"]) != want {
+			t.Fatalf("load: expected one block R4 titled %q, got %+v", want, mm.Blocks)
+		}
+		if len(mm.Types) != 1 || strVal(mm.Types[0]["block_title"]) != want {
+			t.Fatalf("load: expected block_title %q, got %+v", want, mm.Types)
+		}
+	}
+
+	declare("{id: R4, types: [activity-model], scope: in}")
+	shown("R4")
+	declare("{id: R4, title: \"Helper Models\", types: [activity-model], scope: in}")
+	shown("Helper Models")
+}

@@ -499,7 +499,8 @@ workflows name against the ones vendored under `.agents/skills/`. The
 three-area restructure is pinned by `test_catalog.py` (every wiki folder
 belongs to exactly one section), `test_sections_from_metamodel.py` (a renamed
 and an added section show without a code change, FR-044), `test_moved_type_folder.py`
-(a moved type folder shows in tile, list, search, detail page and projections), `test_view.py` (the view, its lifetime
+(a moved type folder shows in tile, list, search, detail page and projections), `test_block_without_title.py`
+(a block without a title shows its ID in the section navigation and on `/metamodel`), `test_view.py` (the view, its lifetime
 and the success metric of FR-046), `test_areas.py`, `test_area_chrome.py` (breadcrumbs,
 colour bar), `test_menu.py`, `test_help.py` and `test_home_layout.py`.
 The metamodel is pinned twice: `test_metamodel_lint.py` runs
