@@ -2152,15 +2152,19 @@ def build_fr_hierarchy() -> dict:
                        (direct feature children) and `n_stories` (its direct
                        stories plus the stories of its direct features — exactly
                        what the page renders), plus priority/release/status.
-      total_epics / total_features / total_stories — aggregate counters.
+      total_epics / total_features / total_stories — aggregate counters:
+                       every feature and story the roots and the orphans show.
       use_cases      — use cases (use-case notation, level sea or fish) that
                        Agile features or stories name as `parent:` (DR-038
                        amendment), shaped like an epic row (features,
                        direct_stories, counts); a use case without such
                        children stays under other_notations only.
-      orphans        — Agile feature/story pages whose parent does not resolve
-                       to an Agile FR or a refinable use case (normally empty;
-                       surfaced for visibility).
+      orphans        — Agile feature/story pages no root shows: a feature
+                       whose parent is not an epic or a refinable use case,
+                       a story whose parent is none of epic, feature and
+                       refinable use case (no parent, a dangling or retired
+                       one, a cycle, a self-parent). An orphaned feature
+                       carries its `stories`. Normally empty.
       other_notations — every live FR the story map cannot place: other
                        notations, and pages with a missing or unknown notation
                        or level (still visible, never silently Agile).
@@ -2232,13 +2236,25 @@ def build_fr_hierarchy() -> dict:
         total_stories += b["n_stories"]
         uc_rows.append({**_fr_node(u), "url": _page_url("functional-requirements", u.stem), **b})
 
+    # A parent that exists does not place a page: only a root shows features,
+    # and only a root or a feature shows stories. A feature no root shows is an
+    # orphan and keeps its stories, so every story of a feature shows once.
+    def level_of(stem: str | None) -> str:
+        return _fr_level(by_stem[stem]) if stem in by_stem else ""
+
     orphans = []
     for p in pages:
         st = _fr_level(p)
-        if st in ("feature", "story"):
-            ps = parent_stem(p)
-            if ps is None or (ps not in by_stem and ps not in uc_by_stem):
-                orphans.append(_fr_node(p))
+        ps = parent_stem(p)
+        under_root = ps in uc_by_stem or level_of(ps) == "epic"
+        if st == "feature" and not under_root:
+            stories = [_fr_node(s) for s in kids(p.stem, "story")]
+            orphans.append({**_fr_node(p), "stories": stories})
+            total_features += 1
+            total_stories += len(stories)
+        elif st == "story" and not under_root and level_of(ps) != "feature":
+            orphans.append(_fr_node(p))
+            total_stories += 1
 
     placed = set(by_stem) | {u["stem"] for u in uc_rows}
     return {
@@ -2409,8 +2425,9 @@ def _mermaid_fr_subtree(node: dict | None, blocks: list[Page] | None = None,
 def _fr_hierarchy_node(hierarchy: dict, stem: str) -> tuple[dict | None, str | None]:
     """Locate the built hierarchy node for a stem within build_fr_hierarchy()'s tree.
     Returns (node, level) with level ∈ {epic, feature, story}, or the use case's
-    own level (sea, fish) for a use case that roots Agile children; (None, None)
-    if the stem is not an FR in the hierarchy (e.g. an orphan or unknown page)."""
+    own level (sea, fish) for a use case that roots Agile children. An orphan
+    is found too, with its stories if it is a feature. (None, None) if the
+    stem is not an FR in the hierarchy (another notation, or an unknown page)."""
     use_cases = hierarchy.get("use_cases") or []
     for root, is_uc in [(e, False) for e in hierarchy["epics"]] + [(u, True) for u in use_cases]:
         if root["stem"] == stem:
@@ -2422,6 +2439,12 @@ def _fr_hierarchy_node(hierarchy: dict, stem: str) -> tuple[dict | None, str | N
                 if s["stem"] == stem:
                     return s, "story"
         for s in root["direct_stories"]:
+            if s["stem"] == stem:
+                return s, "story"
+    for o in hierarchy.get("orphans") or []:
+        if o["stem"] == stem:
+            return o, o["level"]
+        for s in o.get("stories") or []:
             if s["stem"] == stem:
                 return s, "story"
     return None, None
@@ -4377,7 +4400,7 @@ def fr_view(stem):
         fr["n_stories"] = len(fr["stories"])
 
     diagram_links: list[dict] = []
-    # a requirement outside the hierarchy (an orphan) still shows its blocks
+    # a requirement outside the hierarchy (another notation) still shows its blocks
     diagram = _mermaid_fr_subtree(node or {"id": page.id, "title": page.title},
                                   fr_building_blocks(stem), diagram_links)
     trace = build_trace(stem, "functional-requirements")

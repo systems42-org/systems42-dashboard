@@ -487,14 +487,34 @@ func BuildFRHierarchy(frs []*wiki.Page) map[string]any {
 		placed[u.Stem] = true
 	}
 
+	// A parent that exists does not place a page: only a root shows features,
+	// and only a root or a feature shows stories. A feature no root shows is an
+	// orphan and keeps its stories, so every story of a feature shows once.
+	levelOf := func(stem string) string {
+		if p := byStem[stem]; p != nil {
+			return FRLevel(p)
+		}
+		return ""
+	}
 	orphans := make([]map[string]any, 0)
 	for _, p := range pages {
 		lvl := FRLevel(p)
-		if lvl == "feature" || lvl == "story" {
-			ps := frFirstParent(p)
-			if ps == "" || (byStem[ps] == nil && ucByStem[ps] == nil) {
-				orphans = append(orphans, frNode(p))
+		ps := frFirstParent(p)
+		underRoot := ucByStem[ps] != nil || levelOf(ps) == "epic"
+		if lvl == "feature" && !underRoot {
+			stList := kids(p.Stem, "story")
+			stories := make([]map[string]any, 0, len(stList))
+			for _, s := range stList {
+				stories = append(stories, frNode(s))
 			}
+			fn := frNode(p)
+			fn["stories"] = stories
+			orphans = append(orphans, fn)
+			totalFeatures++
+			totalStories += len(stories)
+		} else if lvl == "story" && !underRoot && levelOf(ps) != "feature" {
+			orphans = append(orphans, frNode(p))
+			totalStories++
 		}
 	}
 
@@ -520,7 +540,7 @@ func BuildFRHierarchy(frs []*wiki.Page) map[string]any {
 }
 
 // FRHierarchyNode finds stem within BuildFRHierarchy's tree and returns
-// (node, level).
+// (node, level). An orphan is found too, with its stories if it is a feature.
 func FRHierarchyNode(hierarchy map[string]any, stem string) (map[string]any, string) {
 	epics, _ := hierarchy["epics"].([]map[string]any)
 	ucs, _ := hierarchy["use_cases"].([]map[string]any)
@@ -559,6 +579,18 @@ func FRHierarchyNode(hierarchy map[string]any, stem string) (map[string]any, str
 	for _, u := range ucs {
 		if n, lvl := checkRoot(u, true); n != nil {
 			return n, lvl
+		}
+	}
+	orphans, _ := hierarchy["orphans"].([]map[string]any)
+	for _, o := range orphans {
+		if o["stem"].(string) == stem {
+			return o, o["level"].(string)
+		}
+		stories, _ := o["stories"].([]map[string]any)
+		for _, s := range stories {
+			if s["stem"].(string) == stem {
+				return s, "story"
+			}
 		}
 	}
 	return nil, ""
