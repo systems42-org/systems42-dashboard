@@ -98,6 +98,7 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - Dashboard release 0.14.5 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.4 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.3 (`_system/apps/dashboard/VERSION`).
+- Dashboard: the search records, with the searched fields and a page's text for search, move from `app.py` into the new module `search.py`, which imports neither Flask nor `app`. No behaviour change (#185).
 - Dashboard: the sanitizer, the wikilink, method-anchor and "follows" helpers, callouts and the Markdown rendering move from `app.py` into the new module `render.py`, which imports neither Flask nor `app`. No behaviour change (#185).
 - Dashboard: the link resolver, the title, page, link and source indexes and the page URL move from `app.py` into the new module `links.py`, which imports neither Flask nor `app`. No behaviour change (#185).
 - Dashboard: the repository paths, the `Page` class, parsing, the parse cache, the folder loaders and the per-request memo move from `app.py` into the new module `wiki.py`, which imports neither Flask nor `app`. No behaviour change (#185).

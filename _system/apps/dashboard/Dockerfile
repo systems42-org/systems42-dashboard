@@ -50,6 +50,7 @@ COPY metamodel.py .
 COPY wiki.py .
 COPY links.py .
 COPY render.py .
+COPY search.py .
 COPY preflight.py .
 COPY gunicorn.conf.py .
 COPY help.md .

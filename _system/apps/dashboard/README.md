@@ -374,6 +374,8 @@ _system/apps/dashboard/
                      URL. May import wiki, never Flask or app
   render.py          the sanitizer, wikilinks, method-anchor links, "follows" notes, callouts
                      and Markdown. May import wiki, links and metamodel, never Flask or app
+  search.py          the search records: searched fields, a page's text for search and its
+                     neighbours. May import wiki, links, render and catalog, never Flask or app
   help.md            source of the /help page
   templates/         base, index, _empty (shared empty state), _macros (plural()),
                      _maturity (maturity bar/legend), _mermaid (loader),

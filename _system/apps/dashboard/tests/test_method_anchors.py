@@ -87,6 +87,7 @@ import app  # noqa: E402
 import wiki  # noqa: E402
 import links  # noqa: E402
 import render  # noqa: E402
+import search  # noqa: E402
 import metamodel  # noqa: E402
 
 client = app.app.test_client()
@@ -249,8 +250,8 @@ def test_search_drops_exactly_the_lines_the_page_drops():
     with app.app.test_request_context("/"):
         titles = links.title_index()
         pages = {p.stem: p for p in wiki.load_folder("decisions")}
-        kept = app.search_plain(pages["DR-002-nur-text"], titles)
-        dropped = app.search_plain(pages["DR-001-eine-wahl"], titles)
+        kept = search.search_plain(pages["DR-002-nur-text"], titles)
+        dropped = search.search_plain(pages["DR-001-eine-wahl"], titles)
     assert "Follows from the interview" in kept, kept
     assert "follows the interview of 2026-11-12" in kept, kept
     assert kept.count("follows MADR") == 2, kept          # the two code samples

@@ -23,6 +23,7 @@ ALLOWED = {
     "wiki": {"inputs", "metamodel", "catalog", "yaml"},
     "links": {"wiki"},
     "render": {"wiki", "links", "metamodel", "markdown", "nh3", "markupsafe"},
+    "search": {"wiki", "links", "render", "catalog"},
     "preflight": set(),
 }
 # These sit above the modules: the app itself and what starts it.
