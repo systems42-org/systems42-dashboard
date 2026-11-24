@@ -38,6 +38,7 @@ files = ["requirements.txt"]
 "search.py" = "systems42_dashboard/search.py"
 "project" = "systems42_dashboard/project"
 "session.py" = "systems42_dashboard/session.py"
+"settings.py" = "systems42_dashboard/settings.py"
 "preflight.py" = "systems42_dashboard/preflight.py"
 "gunicorn.conf.py" = "systems42_dashboard/gunicorn.conf.py"
 "help.md" = "systems42_dashboard/help.md"

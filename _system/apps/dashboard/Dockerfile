@@ -53,6 +53,7 @@ COPY render.py .
 COPY search.py .
 COPY project ./project
 COPY session.py .
+COPY settings.py .
 COPY preflight.py .
 COPY gunicorn.conf.py .
 COPY help.md .

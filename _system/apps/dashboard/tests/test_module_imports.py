@@ -28,10 +28,11 @@ ALLOWED = {
     "project.architecture": {"wiki", "links", "render", "catalog", "project.common"},
     "project.common": {"wiki", "links", "metamodel"},
     "project.context": {"wiki", "links", "project.common"},
-    "project.goals": {"wiki", "links", "render", "project.requirements"},
+    "project.goals": {"wiki", "links", "render", "project.common", "project.requirements"},
     "project.requirements": {"wiki", "links", "render", "project.common"},
     "project.terms": {"wiki", "links", "render", "catalog", "project.common"},
     "session": {"catalog"},
+    "settings": {"wiki", "catalog", "metamodel", "inputs", "session"},
     "preflight": set(),
 }
 # These sit above the modules: the app itself and what starts it.

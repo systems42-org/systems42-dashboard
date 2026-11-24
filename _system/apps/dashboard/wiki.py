@@ -174,8 +174,8 @@ class Page:
 #
 #   Tier 2  the aggregate builders (load_folder / load_all_pages / title_index /
 #           link_index / load_decisions) are memoized for the duration of ONE request
-#           via flask.g, so the tree is walked once per request instead of once
-#           per markdown block rendered. Outside a request context they run
+#           in the cache the web application registers (use_request_cache), so the
+#           tree is walked once per request instead of once per markdown block rendered. Outside a request context they run
 #           uncached (keeps build_* helpers usable standalone, e.g. for ISS-010).
 
 # (path -> ((mtime_ns, size), parsed Page or None)), like metamodel._CACHE. The

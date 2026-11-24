@@ -85,6 +85,8 @@ Unreleased changes sit at the top until the next Starter Kit release.
   next.
 
 ### Changed
+- Dashboard release 0.14.24 (`_system/apps/dashboard/VERSION`).
+- Dashboard release 0.14.23 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.22 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.21 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.20 (`_system/apps/dashboard/VERSION`).
@@ -105,6 +107,8 @@ Unreleased changes sit at the top until the next Starter Kit release.
 - Dashboard release 0.14.5 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.4 (`_system/apps/dashboard/VERSION`).
 - Dashboard release 0.14.3 (`_system/apps/dashboard/VERSION`).
+- Dashboard: `wiki_config()`, the config warning, the about page lookup, the brand folders and what the view hides moved from `app.py` into `settings.py`. The config warning is logged on `systems42.settings`. No behaviour change (#185).
+- Dashboard: the context diagram moves from `app.py` into `project/context.py` and the goal tree into `project/goals.py`. Both take the system's name as an argument. The watchdog, the shutdown and their flags move into `session.py`, which logs the shutdown through its own logger `systems42.session`. No behaviour change (#185).
 - Dashboard: the view, the grace periods, the presence of the connected tabs, their names and the Keyholder role move from `app.py` into the new module `session.py`, which imports neither Flask nor `app`. The watchdog and the shutdown stay in `app.py`. No behaviour change (#185).
 - Dashboard: the decision records, the building block levels and white box, the runtime scenarios, the deployment diagram, the drivers and the trace panels move from `app.py` into the new module `project/architecture.py`. No behaviour change (#185).
 - Dashboard: the vision, the objectives, the enabler lanes and the goal coverage move from `app.py` into the new module `project/goals.py`. No behaviour change (#185).

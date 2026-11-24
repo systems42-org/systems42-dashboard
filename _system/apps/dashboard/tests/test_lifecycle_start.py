@@ -5,11 +5,11 @@ switches the automatic stop off (FR-050, issue #182).
 import app only for the Flask test client: past the startup grace the thread
 sent SIGTERM to the process and to its parent, whatever that parent was.
 
-Now a server entry point calls `app.start_lifecycle()`: the Gunicorn hook in
+Now a server entry point calls `session.start_lifecycle()`: the Gunicorn hook in
 gunicorn.conf.py, which passes the master's pid, and `python app.py`. Only
 that pid is ever signalled besides the process itself.
 
-No test here signals its parent. In-process tests stub `app._shutdown`, the
+No test here signals its parent. In-process tests stub `session._shutdown`, the
 child interpreters stub `os.kill`, and the Gunicorn test starts its own
 Gunicorn, whose worker signals that Gunicorn's master.
 
@@ -63,7 +63,7 @@ sys.path.insert(0, sys.argv[1])
 import app
 import session
 kills = []
-app.os.kill = lambda pid, sig: kills.append([pid, int(sig)])
+session.os.kill = lambda pid, sig: kills.append([pid, int(sig)])
 
 def threads():
     return sorted(t.name for t in threading.enumerate())
@@ -119,8 +119,8 @@ statuses = [client.get("/").status_code, post(client, "/ping", "a"),
 time.sleep(2.5)
 statuses.append(client.get("/").status_code)
 result = {"after_import": after_import, "after_work": threads(), "kills": kills,
-          "statuses": statuses, "shutting_down": app._shutting_down,
-          "started": app._watchdog_started}
+          "statuses": statuses, "shutting_down": session._shutting_down,
+          "started": session._watchdog_started}
 """, DASH_STARTUP_GRACE="0.2", DASH_LEAVE_GRACE="0.2", DASH_HEARTBEAT_GRACE="0.2")
     assert result["after_import"] == ["MainThread"], result
     assert result["after_work"] == ["MainThread"], result
@@ -139,7 +139,7 @@ gunicorn_conf().post_worker_init(Worker())
 started = threads()
 wait_for(lambda: len(kills) >= 2)
 result = {"before": before, "started": started, "kills": kills,
-          "master": app._gunicorn_master, "ppid": os.getppid()}
+          "master": session._gunicorn_master, "ppid": os.getppid()}
 """, DASH_STARTUP_GRACE="0.2")
     assert result["before"] == ["MainThread"], result
     assert result["started"] == ["MainThread", "dashboard-watchdog"], result
@@ -154,7 +154,7 @@ gunicorn_conf().post_worker_init(Worker())
 client = app.app.test_client()
 post(client, "/ping", "tab")
 time.sleep(1.5)
-still_up = (list(kills), app._shutting_down)
+still_up = (list(kills), session._shutting_down)
 post(client, "/leaving", "tab")
 wait_for(lambda: len(kills) >= 2)
 result = {"still_up": still_up, "kills": kills}
@@ -169,7 +169,7 @@ def test_python_app_py_starts_the_watchdog_and_stops_only_itself():
     main = src[src.index('if __name__ == "__main__":'):]
     assert "start_lifecycle()" in main and main.index("start_lifecycle()") < main.index("app.run("), main
     result, pid = _child("""
-app.start_lifecycle()
+session.start_lifecycle()
 started = threads()
 wait_for(lambda: len(kills) >= 1)
 time.sleep(0.6)   # a second signal would arrive right after the first
@@ -199,13 +199,13 @@ gunicorn_conf().post_worker_init(Worker())
 started = threads()
 client = app.app.test_client()
 time.sleep(1.5)                     # 7 startup graces without a page
-after_startup = (list(kills), app._shutting_down)
+after_startup = (list(kills), session._shutting_down)
 post(client, "/ping", "tab")
 post(client, "/leaving", "tab")     # the last page closes
 wait_for(lambda: not session._clients)  # the watchdog still drops it
 dropped = dict(session._clients)
 time.sleep(1.5)
-after_last_page = (list(kills), app._shutting_down)
+after_last_page = (list(kills), session._shutting_down)
 # "Disconnect all" is outside the switch (FR-050, scope).
 post(client, "/ping", "yoda")
 status = post(client, "/disconnect-all", "yoda")
@@ -225,13 +225,13 @@ def test_a_watchdog_pass_with_a_moved_clock():
     # Both modes on one clock, without a thread: the server "started" three
     # hours ago and no page ever connected.
     reasons = []
-    real_shutdown, real_started = app._shutdown, app._server_started
-    app._shutdown = reasons.append
+    real_shutdown, real_started = session._shutdown, session._server_started
+    session._shutdown = reasons.append
     try:
-        app._server_started = time.monotonic() - 3 * 3600
-        assert app._watchdog_pass(auto_stop=False) is False
+        session._server_started = time.monotonic() - 3 * 3600
+        assert session._watchdog_pass(auto_stop=False) is False
         assert reasons == []
-        assert app._watchdog_pass(auto_stop=True) is True
+        assert session._watchdog_pass(auto_stop=True) is True
         assert reasons == ["no browser heartbeat within the startup grace period"]
 
         # A page connected and went stale: dropped in both modes, a stop only
@@ -240,15 +240,15 @@ def test_a_watchdog_pass_with_a_moved_clock():
         with session._lifecycle_lock:
             session._clients["tab"] = time.monotonic() - 3 * 3600
             session._first_seen["tab"] = session._clients["tab"]
-            app._ever_connected = True
-        assert app._watchdog_pass(auto_stop=False) is False
+            session._ever_connected = True
+        assert session._watchdog_pass(auto_stop=False) is False
         assert session._clients == {} and reasons == []
-        assert app._watchdog_pass(auto_stop=True) is True
+        assert session._watchdog_pass(auto_stop=True) is True
         assert reasons == ["no more browser heartbeat (all tabs closed)"]
     finally:
-        app._shutdown, app._server_started = real_shutdown, real_started
-        app._ever_connected = False
-    assert app._watchdog_started is False   # this process never started one
+        session._shutdown, session._server_started = real_shutdown, real_started
+        session._ever_connected = False
+    assert session._watchdog_started is False   # this process never started one
 
 
 def _free_port():

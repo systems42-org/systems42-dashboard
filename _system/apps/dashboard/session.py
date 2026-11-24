@@ -2,22 +2,26 @@
 
 Owns the view (the hide list and its validation), the grace periods from the
 `DASH_*` settings, the presence state of the connected tabs with its lock, the
-names of the clients and the facilitator role.
+names of the clients and the facilitator role, and the server lifecycle: the
+watchdog, the shutdown and the flags they keep.
 
-The watchdog, the shutdown and the session endpoints stay in `app.py`: they
-log through the Flask app and read the request.
+The session endpoints stay in `app.py`: they read the request.
 
 Standard library plus `catalog`, which says what the view may hide. No Flask
 import and no import of `app` here (tests/test_module_imports.py).
 """
 from __future__ import annotations
 
+import logging
 import os
+import signal
 import threading
 import time
 import zlib
 
 import catalog  # the section catalog (DR-033)
+
+log = logging.getLogger("systems42.session")
 
 
 # The view (FR-046, DR-002): what the Keyholder hides for this session. A hide
@@ -209,3 +213,146 @@ def _parse_user_agent(ua: str) -> tuple[str, str]:
     else:
         os_name = ""
     return browser, os_name
+
+
+def _record_ping(cid: str, ua: str) -> None:
+    """Record one /ping of a client: when it was seen, its User-Agent, and
+    that a page has connected. A pending "tab is leaving" signal is cleared.
+    Call under `_lifecycle_lock`."""
+    global _ever_connected
+    now = time.monotonic()
+    if cid not in _clients:
+        _first_seen[cid] = now
+    _clients[cid] = now
+    _user_agents[cid] = ua
+    _leaving.pop(cid, None)
+    _ever_connected = True
+
+
+# ---------------------------------------------------------------------------
+# Server lifecycle: self-shutdown as soon as no browser is watching anymore.
+# Multiple browsers (workshop clients) may watch at once, so presence is
+# tracked per client (a random id each tab generates once, in base.html)
+# rather than as a single "is anyone home" flag.
+#
+# Every open page sends a lightweight heartbeat (`POST /ping`) every few
+# seconds, tagged with its client_id. As long as any client keeps pinging,
+# the server keeps running; once the last one goes quiet, the watchdog shuts
+# it down after a grace period — a closed browser window leaves no orphaned
+# container behind. A page additionally reports via a pagehide beacon
+# `POST /leaving` that it is going away: if it was just navigation, the next
+# page's `/ping` (same client_id, carried via sessionStorage) immediately
+# clears the signal; if the tab is really closed, that client is dropped
+# after `_LEAVE_GRACE` (~5 s) instead of waiting out the full heartbeat grace
+# period.
+#
+# Deliberately NO long-lived open connection (an earlier iteration used an
+# SSE/events stream): that tied up a worker thread for a tab's entire
+# lifetime, and clicking through subpages piled these up until the thread
+# pool was exhausted and even /stop stopped being served. A /ping is instead
+# an immediate request that holds no thread — the problem disappears
+# entirely. The grace period is generous so a tab throttled in the background
+# (browsers throttle timers to ~1x/min) stays alive; only a genuinely closed
+# tab stops pinging altogether. A single worker keeps the state
+# process-coherent (Dockerfile: --workers 1). See DR-022 and its addendum.
+# ---------------------------------------------------------------------------
+
+_ever_connected = False
+_shutting_down = False
+_watchdog_started = False
+_server_started = time.monotonic()
+# The pid of the Gunicorn master, once gunicorn.conf.py has reported it
+# (`start_lifecycle`). None everywhere else: under the development server, in
+# the site export and in tests the parent is a shell or a test runner.
+_gunicorn_master: int | None = None
+
+
+def _shutdown(reason):
+    """Cleanly shut down the server. Under gunicorn, the master is terminated
+    via SIGTERM, so all workers exit and the container's PID 1 returns — with
+    `restart: no` the container then stays down. The master is the pid that
+    gunicorn.conf.py handed to `start_lifecycle`, never a guess from the
+    parent pid. Everywhere else we only terminate ourselves (NOT the parent —
+    that is a shell or a test runner) via SIGTERM: a SIGINT sent from a
+    background thread to our own process is swallowed by the Werkzeug dev
+    server (Werkzeug 3.x), whereas SIGTERM is reliably handled via the default
+    signal action."""
+    global _shutting_down
+    with _lifecycle_lock:
+        if _shutting_down:
+            return
+        _shutting_down = True
+    log.info("dashboard shutdown: %s", reason)
+
+    def _terminate():
+        time.sleep(0.4)  # let the HTTP response / beacon flush first
+        if _gunicorn_master is not None:
+            try:
+                os.kill(_gunicorn_master, signal.SIGTERM)
+            except (ProcessLookupError, PermissionError):
+                pass
+        os.kill(os.getpid(), signal.SIGTERM)
+
+    threading.Thread(target=_terminate, daemon=True).start()
+
+
+def _watchdog_pass(auto_stop: bool) -> bool:
+    """One pass of the watchdog: drop the clients that are gone, then stop the
+    server when nobody is left and `auto_stop` is on. Returns True when the
+    watchdog has nothing more to do."""
+    with _lifecycle_lock:
+        if _shutting_down:
+            return True
+        now = time.monotonic()
+        # A client said goodbye and never pinged again: drop it (fast
+        # path on tab close). A fresher ping after the goodbye cancels it
+        # (was just in-page navigation).
+        for cid, left_at in list(_leaving.items()):
+            last = _clients.get(cid)
+            if last is not None and last > left_at:
+                _leaving.pop(cid, None)
+            elif now - left_at > _LEAVE_GRACE:
+                _forget_client(cid)
+        # A client simply went stale (no goodbye, no more pings either).
+        for cid, last in list(_clients.items()):
+            if now - last > _HEARTBEAT_GRACE:
+                _forget_client(cid)
+        anyone_left = bool(_clients)
+        ever = _ever_connected
+    if not auto_stop:
+        return False
+    if not ever:
+        # Nobody has ever pinged -> startup grace period.
+        if now - _server_started > _STARTUP_GRACE:
+            _shutdown("no browser heartbeat within the startup grace period")
+            return True
+    elif not anyone_left:
+        _shutdown("no more browser heartbeat (all tabs closed)")
+        return True
+    return False
+
+
+def _watchdog(auto_stop: bool):
+    while not _watchdog_pass(auto_stop):
+        time.sleep(1.0)
+
+
+def start_lifecycle(gunicorn_master: int | None = None) -> None:
+    """Start the watchdog. Only a server entry point calls this: the Gunicorn
+    hook in gunicorn.conf.py, which passes the master's pid, and `python
+    app.py`. Importing this module starts nothing, so the site export and the
+    tests can use the Flask test client for as long as they need (issue #182).
+
+    DASH_NO_SHUTDOWN, set to anything, switches the automatic stop off
+    (FR-050): the watchdog still drops clients that are gone, and "Disconnect
+    all" still stops the server. The Go dashboard reads the same variable."""
+    global _watchdog_started, _gunicorn_master, _server_started
+    with _lifecycle_lock:
+        if _watchdog_started:
+            return
+        _watchdog_started = True
+        _gunicorn_master = gunicorn_master
+        _server_started = time.monotonic()   # the startup grace starts here
+    auto_stop = not os.environ.get("DASH_NO_SHUTDOWN", "").strip()
+    threading.Thread(target=_watchdog, args=(auto_stop,), daemon=True,
+                     name="dashboard-watchdog").start()

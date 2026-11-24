@@ -64,6 +64,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 
 sys.path.insert(0, str(HERE))
 import app  # noqa: E402
+import settings  # noqa: E402
 import session  # noqa: E402
 
 client = app.app.test_client()
@@ -151,7 +152,7 @@ def test_lists_offer_both():
     # the view can hide the added section
     session.set_view(["A6"])
     try:
-        assert "A6" not in [s["id"] for s in app.visible_sections("architecture")]
+        assert "A6" not in [s["id"] for s in settings.visible_sections("architecture")]
     finally:
         session.set_view([])
 

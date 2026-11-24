@@ -351,7 +351,7 @@ def test_disconnect_all_rejects_a_non_facilitator():
                         content_type="application/json")
     assert resp.status_code == 403
     with session._lifecycle_lock:
-        assert app._shutting_down is False
+        assert session._shutting_down is False
 
 
 def test_disconnect_all_accepts_the_facilitator():
@@ -362,14 +362,14 @@ def test_disconnect_all_accepts_the_facilitator():
     client = app.app.test_client()
     _ping(client, "yoda")
     sent = []
-    real_kill = app.os.kill
-    app.os.kill = lambda pid, sig: sent.append((pid, sig))
+    real_kill = session.os.kill
+    session.os.kill = lambda pid, sig: sent.append((pid, sig))
     try:
         resp = client.post("/disconnect-all", data=json.dumps({"client_id": "yoda"}),
                             content_type="application/json")
         assert resp.status_code == 204
         with session._lifecycle_lock:
-            assert app._shutting_down is True
+            assert session._shutting_down is True
         # No Gunicorn hook has named a master here, so `_terminate` signals
         # this process only, never the parent (the test runner). The case
         # with a master is in tests/test_lifecycle_start.py.
@@ -380,9 +380,9 @@ def test_disconnect_all_accepts_the_facilitator():
         time.sleep(0.2)   # a signal to the parent would follow at once
         assert sent == expected, sent
     finally:
-        app.os.kill = real_kill
+        session.os.kill = real_kill
         # undo, so later tests in this process aren't affected by the shutdown flag
-        app._shutting_down = False
+        session._shutting_down = False
 
 
 def test_a_page_restored_from_the_bfcache_pings_again():

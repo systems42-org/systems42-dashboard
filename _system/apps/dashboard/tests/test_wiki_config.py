@@ -19,6 +19,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import settings  # noqa: E402
 
 CONFIG = Path(os.environ["WIKI_CONFIG"])
 
@@ -26,7 +27,7 @@ CONFIG = Path(os.environ["WIKI_CONFIG"])
 def test_missing_config_falls_back():
     if CONFIG.exists():
         CONFIG.unlink()
-    cfg = app.wiki_config()
+    cfg = settings.wiki_config()
     assert cfg["system_name"] == "Requirements Wiki", cfg
     assert cfg["system_name_set"] is False, cfg
     assert cfg["tagline"] == "", cfg
@@ -34,7 +35,7 @@ def test_missing_config_falls_back():
 
 def test_blank_config_falls_back():
     CONFIG.write_text('system_name: ""\ntagline: ""\n', encoding="utf-8")
-    cfg = app.wiki_config()
+    cfg = settings.wiki_config()
     assert cfg["system_name"] == "Requirements Wiki", cfg
     assert cfg["system_name_set"] is False, cfg
 
@@ -42,7 +43,7 @@ def test_blank_config_falls_back():
 def test_filled_config_is_used():
     CONFIG.write_text('system_name: "Bookshelf"\ntagline: "Lending, tracked"\n',
                       encoding="utf-8")
-    cfg = app.wiki_config()
+    cfg = settings.wiki_config()
     assert cfg["system_name"] == "Bookshelf", cfg
     assert cfg["system_name_set"] is True, cfg
     assert cfg["tagline"] == "Lending, tracked", cfg
@@ -50,15 +51,15 @@ def test_filled_config_is_used():
 
 def test_config_is_read_live_not_cached():
     CONFIG.write_text('system_name: "First"\n', encoding="utf-8")
-    assert app.wiki_config()["system_name"] == "First"
+    assert settings.wiki_config()["system_name"] == "First"
     CONFIG.write_text('system_name: "Second"\n', encoding="utf-8")
-    assert app.wiki_config()["system_name"] == "Second", \
+    assert settings.wiki_config()["system_name"] == "Second", \
         "config must be re-read per call so the workshop can rename live"
 
 
 def test_malformed_config_does_not_crash():
     CONFIG.write_text("system_name: [unclosed\n", encoding="utf-8")
-    cfg = app.wiki_config()
+    cfg = settings.wiki_config()
     assert cfg["system_name"] == "Requirements Wiki", cfg
 
 
@@ -66,13 +67,13 @@ def test_non_dict_yaml_falls_back():
     """`system_name: [a, b]` is valid YAML that parses to a list, not a dict —
     the guard for it existed but was never exercised."""
     CONFIG.write_text("- just\n- a\n- list\n", encoding="utf-8")
-    cfg = app.wiki_config()
+    cfg = settings.wiki_config()
     assert cfg["system_name"] == "Requirements Wiki", cfg
     assert cfg["system_name_set"] is False, cfg
     assert cfg["tagline"] == "", cfg
 
     CONFIG.write_text("just a bare string\n", encoding="utf-8")
-    assert app.wiki_config()["system_name"] == "Requirements Wiki"
+    assert settings.wiki_config()["system_name"] == "Requirements Wiki"
 
 
 if __name__ == "__main__":

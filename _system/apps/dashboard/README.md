@@ -363,10 +363,8 @@ status-strip source count already reads.
 
 ```
 _system/apps/dashboard/
-  app.py             Flask app, the routes, what the views put together (tiles, lists, issue
-                     fields), the two diagrams that read wiki_config() (the context diagram
-                     and the goal tree), the watchdog and the shutdown. May import every
-                     module below
+  app.py             Flask app, the routes and what the views put together
+                     (tiles, lists, issue fields). May import every module below
   catalog.py         the three areas, and the sections from the metamodel with routes and colours
   metamodel.py       reader for _system/metamodel/ (the /metamodel page, ADR-0008)
   inputs.py          reads text and YAML from wiki, wiki.yaml and metamodel, and logs what is invalid
@@ -387,10 +385,11 @@ _system/apps/dashboard/
     common.py        what several projections share: open issues, the maturity bar, provenance,
                      the pages of a section, diagram node ids, labels and links. May import
                      wiki, links and metamodel
-    context.py       the context flows and what they share with the context diagram. May
-                     import wiki, links and project.common
-    goals.py         the vision, the objectives, the requirements that serve them and the goal
-                     coverage matrix. May import wiki, links, render and project.requirements
+    context.py       the context diagram, its flows and what the two share. May import wiki,
+                     links and project.common
+    goals.py         the vision, the objectives, the requirements that serve them, the goal
+                     coverage matrix and the goal tree. May import wiki, links, render,
+                     project.common and project.requirements
     requirements.py  the functional requirements: notation and level, the hierarchy with the
                      story map, its Mermaid trees, and the quality scenarios. May import wiki,
                      links, render and project.common
@@ -398,8 +397,12 @@ _system/apps/dashboard/
                      "Linked from"), a term's fields and the entity diagram. May import wiki,
                      links, render, catalog and project.common
   session.py         the session: the view, the grace periods, the presence of the connected
-                     tabs, their names and the Keyholder role. May import catalog, never Flask
-                     or app
+                     tabs, their names and the Keyholder role, the watchdog and the shutdown.
+                     May import catalog, never Flask or app
+  settings.py        the settings of one dashboard: wiki_config() and its warnings, the about
+                     page and the files under docs/, the brand folders and their files, and
+                     what the view hides. May import wiki, catalog, metamodel, inputs and
+                     session, never Flask or app
   help.md            source of the /help page
   templates/         base, index, _empty (shared empty state), _macros (plural()),
                      _maturity (maturity bar/legend), _mermaid (loader),

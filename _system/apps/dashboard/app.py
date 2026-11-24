@@ -11,11 +11,8 @@ import mimetypes
 import os
 import re
 import secrets
-import signal
 import socket
-import threading
 import time
-import zlib
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import quote, unquote, urlsplit
@@ -24,18 +21,19 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import markdown as md
 from flask import (Flask, abort, g, has_request_context, jsonify, make_response,
                    redirect, render_template, request, send_file, url_for)
-from markupsafe import Markup, escape
+from markupsafe import escape
 
 import catalog  # the section catalog (DR-033)
 import metamodel  # reader for _system/metamodel/ (DR-035)
 import render  # sanitizer, wikilinks and Markdown
 import search  # search records
-import session  # presence, the Keyholder role and the view
+import session  # presence, the Keyholder role, the view and the lifecycle
+import settings  # wiki.yaml, the brand, the about page and what the view hides
 import links as links_module  # link resolver and indexes. "links" is a local name in many functions here
 import wiki  # paths, pages, parse cache and loaders
 import project.architecture  # decisions, building blocks, runtime, deployment, traces
 import project.common  # what several projections share
-import project.context  # the context flows
+import project.context  # the context diagram and its flows
 import project.goals  # vision, objectives and goal coverage
 import project.requirements  # requirement hierarchy, its Mermaid trees, quality scenarios
 import project.terms  # term network, relations and entity diagram
@@ -60,27 +58,6 @@ def _build_cache() -> dict | None:
 wiki.use_request_cache(_build_cache)
 
 
-def dashboard_config() -> dict:
-    """`hidden`: the view's area keys / section IDs, in catalog order."""
-    return {"hidden": list(session._view_hidden)}
-
-
-def is_hidden(key_or_id: str) -> bool:
-    hidden = set(dashboard_config()["hidden"])
-    if key_or_id in hidden:
-        return True
-    s = catalog.SECTION_BY_ID.get(key_or_id)
-    return bool(s and s["area"] in hidden)
-
-
-def visible_areas() -> list[dict]:
-    return [a for a in catalog.AREAS if not is_hidden(a["key"])]
-
-
-def visible_sections(area_key: str) -> list[dict]:
-    return [s for s in catalog.sections_of(area_key) if not is_hidden(s["id"])]
-
-
 @app.context_processor
 def inject_refresh_time():
     """Every render carries the moment its data was (re)parsed — pages parse the
@@ -96,136 +73,11 @@ def inject_refresh_time():
     return {"refreshed_at": now.strftime("%Y-%m-%d %H:%M:%Sh")}
 
 
-DEFAULT_SYSTEM_NAME = "Requirements Wiki"
-
 # The dashboard's own release, shown in the footer.
 try:
     DASHBOARD_VERSION = (Path(__file__).resolve().parent / "VERSION").read_text(encoding="utf-8").strip()
 except OSError:
     DASHBOARD_VERSION = ""
-
-# Brands: marks, favicon and an optional intro (contract: brands/README.md).
-# One brand ships in brands/; a wiki may name its own folder instead.
-BRANDS_DIR = Path(__file__).resolve().parent / "brands"
-EXAMPLE_BRANDS = ("systems42",)
-DEFAULT_BRAND = "systems42"
-BRAND_MARKS = ("mark-dark.svg", "mark-light.svg", "favicon.svg")
-BRAND_INTRO = "intro.html"
-
-
-def _intro_on(value) -> bool:
-    """`intro:` in wiki.yaml. YAML reads a bare `off` as False, a quoted one
-    as a string, so both count. Missing or anything else means on."""
-    if value is False:
-        return False
-    return str(value).strip().lower() not in ("off", "false", "no", "0")
-
-def wiki_config() -> dict:
-    """Project identity from `_system/wiki.yaml`.
-
-    Returns `system_name` (never empty — falls back to DEFAULT_SYSTEM_NAME),
-    `system_name_set` (False while the vault is still unnamed) and `tagline`.
-    A missing, empty or malformed file yields the defaults rather than an
-    error: an unnamed vault is the normal state on day one.
-
-    The vault ships named `Systems42` and that is a real name, not a
-    placeholder — renaming it is bootstrap.md step 1, and the workflow is where
-    that is asked for. The dashboard does not second-guess the configured name.
-    """
-    data = wiki._config_data()
-    name = str(data.get("system_name") or "").strip()
-    about = about_doc(data.get("about"))
-    version = data.get("dashboard_version")
-    if version is not None and not isinstance(version, str):
-        # unquoted, YAML reads 1.10 as the float 1.1
-        _config_warning(f"dashboard_version: {version!r} is not text, quote it, e.g. \"1.10.0\"")
-    brand = data.get("brand")
-    if brand is not None and not isinstance(brand, str):
-        _config_warning(f"brand: {brand!r}: brand must be a name or a folder path, showing {DEFAULT_BRAND}")
-        brand = None
-    return {
-        "brand": (brand or "").strip() or DEFAULT_BRAND,
-        "intro": _intro_on(data.get("intro")),
-        "dashboard_version": "" if version is None else str(version).strip(),
-        "system_name": name or DEFAULT_SYSTEM_NAME,
-        "system_name_set": bool(name),
-        "tagline": str(data.get("tagline") or "").strip(),
-        # /about exists only while `about:` names a readable file under docs/
-        "about_href": "/about" if about else "",
-        "about_label": str(data.get("about_label") or "").strip()
-                       or f"About {name or DEFAULT_SYSTEM_NAME}",
-        # the notation new functional requirements get (FR-004, DR-038); agile when unset
-        "default_notation": str(data.get("default_notation") or "").strip().lower() or "agile",
-    }
-
-
-# Project documentation (`docs/`), mounted read-only. Only `/about` reads it:
-# the page `about:` in wiki.yaml names, plus the files that page links to.
-_env_docs = os.environ.get("DOCS_DIR")
-DOCS_DIR = Path(_env_docs) if _env_docs else wiki.REPO_DIR / "docs"
-
-
-def about_doc(value) -> Path | None:
-    """The markdown file `about:` names (`docs/...`, vault-relative), or None.
-
-    Anything outside docs/, missing, or not markdown yields None, so a wrong
-    entry hides the About link instead of breaking the home page."""
-    rel = str(value or "").strip().lstrip("/")
-    if not rel.startswith("docs/") or not rel.endswith(".md"):
-        return None
-    return docs_file(rel[len("docs/"):])
-
-
-def docs_file(rel: str) -> Path | None:
-    """`rel` (relative to docs/) as a file inside docs/, or None.
-
-    Resolved before the check, so neither `..` nor a symlink pointing out of
-    docs/ gets past it."""
-    root = DOCS_DIR.resolve()
-    path = (root / rel).resolve()
-    return path if root in path.parents and path.is_file() else None
-
-
-_config_warned: set[str] = set()
-
-
-def _config_warning(message: str) -> None:
-    """Log a wiki.yaml problem once per process, not on every request."""
-    if message not in _config_warned:
-        _config_warned.add(message)
-        app.logger.warning(message)
-
-
-def brand_dir(value: str) -> Path:
-    """The folder of the brand `brand:` names, resolved and checked.
-
-    The shipped brand name wins, anything else is a folder relative to the
-    wiki repository root. A folder that leaves the root (`..`, an absolute
-    path, a symlink) or lacks one of the three marks yields the default
-    brand and a log warning. The folder is only ever read (CON-002)."""
-    default = BRANDS_DIR / DEFAULT_BRAND
-    name = str(value or "").strip() or DEFAULT_BRAND
-    if name in EXAMPLE_BRANDS:
-        return BRANDS_DIR / name
-    root = wiki.REPO_DIR.resolve()
-    path = (root / name).resolve()
-    if not wiki._inside(root, path):
-        _config_warning(f"brand: {name!r} is outside the wiki repository, showing {DEFAULT_BRAND}")
-        return default
-    if not path.is_dir():
-        _config_warning(f"brand: {name!r} is no folder in the wiki repository, showing {DEFAULT_BRAND}")
-        return default
-    missing = [f for f in BRAND_MARKS if _brand_file(path, f) is None]
-    if missing:
-        _config_warning(f"brand: {name!r} lacks {', '.join(missing)}, showing {DEFAULT_BRAND}")
-        return default
-    return path
-
-
-def _brand_file(folder: Path, name: str) -> Path | None:
-    """`folder/name` if it is a file that stays inside `folder`, else None."""
-    path = (folder / name).resolve()
-    return path if path.parent == folder.resolve() and path.is_file() else None
 
 
 # A file the dashboard serves as it is (a brand mark, a file under docs/) is
@@ -281,17 +133,10 @@ def _page_policy(resp):
     return resp
 
 
-def _brand_checksum(path: Path | None) -> str:
-    try:
-        return f"{zlib.crc32(path.read_bytes()):08x}"
-    except (OSError, AttributeError):
-        return ""
-
-
 def _brand_url(folder: Path, name: str) -> str:
     """/brand/<name> with a content checksum, so switching brands or editing
     a mark changes the URL and the browser cannot show a cached one."""
-    v = _brand_checksum(_brand_file(folder, name))
+    v = settings._brand_checksum(settings._brand_file(folder, name))
     return f"/brand/{name}?v={v}" if v else f"/brand/{name}"
 
 
@@ -300,14 +145,14 @@ def inject_identity():
     """Make the project identity and the active brand available to every
     template. `active_brand.intro_url` is the address of the brand's intro
     (brand_intro), or "" when there is none or `intro: off`."""
-    cfg = wiki_config()
-    folder = brand_dir(cfg["brand"])
-    intro = _brand_file(folder, BRAND_INTRO) if cfg["intro"] else None
+    cfg = settings.wiki_config()
+    folder = settings.brand_dir(cfg["brand"])
+    intro = settings._brand_file(folder, settings.BRAND_INTRO) if cfg["intro"] else None
     cfg["active_brand"] = {
         "mark_dark": _brand_url(folder, "mark-dark.svg"),
         "mark_light": _brand_url(folder, "mark-light.svg"),
         "favicon": _brand_url(folder, "favicon.svg"),
-        "intro_url": _brand_url(folder, BRAND_INTRO) if intro else "",
+        "intro_url": _brand_url(folder, settings.BRAND_INTRO) if intro else "",
     }
     cfg["dashboard_version_own"] = DASHBOARD_VERSION
     # `local` is the code of this repository, built by the launcher: no release to differ from.
@@ -364,8 +209,8 @@ _INTRO_DONE_SCRIPT = """<script>
 def brand_intro():
     """The active brand's intro as a document of its own, for the frame on the
     home page. 404 when the brand has none or `intro: off`."""
-    cfg = wiki_config()
-    path = _brand_file(brand_dir(cfg["brand"]), BRAND_INTRO) if cfg["intro"] else None
+    cfg = settings.wiki_config()
+    path = settings._brand_file(settings.brand_dir(cfg["brand"]), settings.BRAND_INTRO) if cfg["intro"] else None
     try:
         intro = path.read_text(encoding="utf-8") if path else None
     except (OSError, UnicodeDecodeError):
@@ -388,15 +233,15 @@ def brand_intro():
 @app.route("/brand/<name>")
 def brand_mark(name):
     """The active brand's marks and favicon. Nothing else in the folder."""
-    if name not in BRAND_MARKS:
+    if name not in settings.BRAND_MARKS:
         abort(404)
-    path = _brand_file(brand_dir(wiki_config()["brand"]), name)
+    path = settings._brand_file(settings.brand_dir(settings.wiki_config()["brand"]), name)
     if path is None:
         abort(404)
     # The page links each mark with its checksum. When ?v= matches, the file
     # behind this URL never changes, so the browser may keep it for a year.
     # Any other request revalidates, so a stale ?v= never sticks.
-    fresh = request.args.get("v") == _brand_checksum(path)
+    fresh = request.args.get("v") == settings._brand_checksum(path)
     return _inert_file(send_file(path, mimetype="image/svg+xml", max_age=31536000 if fresh else 0))
 
 
@@ -408,7 +253,7 @@ def inject_area():
     if not has_request_context():
         return {"current_area": None}
     area = catalog.area_for_path(request.path)
-    if area and is_hidden(area["key"]):
+    if area and settings.is_hidden(area["key"]):
         area = None
     return {"current_area": area}
 
@@ -441,7 +286,7 @@ def _nav_current(key: str, href: str, path: str, area: dict | None) -> bool:
     every page of that section, its wiki pages included (FR-014)."""
     here = catalog.section_for_path(path)
     if key in catalog.AREA_BY_KEY:
-        own = bool(here) and any(k == here["id"] and not is_hidden(k) for k, _, _ in _nav_entries())
+        own = bool(here) and any(k == here["id"] and not settings.is_hidden(k) for k, _, _ in _nav_entries())
         return bool(area and area["key"] == key and not own)
     return bool(here and here["id"] == key) or path.startswith(href)
 
@@ -453,7 +298,7 @@ def inject_nav():
         return {"nav_items": [(h, l, False) for _, h, l in _nav_entries()]}
     area = catalog.area_for_path(request.path)
     return {"nav_items": [(h, l, _nav_current(k, h, request.path, area))
-                          for k, h, l in _nav_entries() if not is_hidden(k)]}
+                          for k, h, l in _nav_entries() if not settings.is_hidden(k)]}
 
 
 def static_url(filename: str) -> str:
@@ -540,139 +385,6 @@ def vault_status() -> dict:
             "open_issues": sum(1 for i in issues if project.common.is_open_issue(i.status)),
             "sources": len(wiki.load_sources()),
             "last_change": _relative_when(last) if last else "—"}
-
-
-# --- Systems42 sections (DR-033) ------------------------------------------
-#
-# The section catalog (catalog.py) holds three areas (Requirements,
-# Architecture, Commons) and the sections the repository's metamodel declares
-# (FR-044). Each section maps to zero or more wiki folders; an "entry" is one
-# page in those folders. "href" is where the section's "View all" link points:
-# an existing rich view where one exists (domain terms/stakeholders/issues), a
-# /req42/<slug> list for the other known sections, and /section/<id> for a
-# section the dashboard has no view for.
-
-
-# --- context diagram (req42 block 03) --------------------------------------
-#
-# The system context is NOT stored as a diagram (DR-013, ISS-010): it is
-# projected live from the structured edges — each external interface's `flows`
-# and each stakeholder's `provides:`/`receives:` — into a mermaid flowchart.
-# Center = the system (blueish box); systems/organizations = light-grey boxes;
-# human roles = actor symbol ("Person"). Stakeholders are merged/hidden/shaped per their
-# `context_role`/`nature` fields (DR-014). No node links (not needed yet).
-
-
-def build_context_diagram(center: str | None = None,
-                          links: list[dict] | None = None) -> str | None:
-    """Project a mermaid context diagram from EIF.flows + STK.provides/receives.
-
-    One line per neighbour, not one per direction: an interface with both an
-    inbound and an outbound flow draws a single `<-->` edge carrying a single
-    label, and the two directions are spelled out in the flow table beneath
-    (build_context_flows). Returns None when no edges exist yet. Pure and
-    string-only, so it can be reused outside the request cycle. `links`, when
-    given, receives every page drawn as a node (QR-001)."""
-    center = center or project.common._clean_label(wiki_config()["system_name"], drop_parenthetical=False)
-    drawn: list[dict] = []
-    core = "CORE"
-    bands: dict[str, list[tuple[str, str, str]]] = {}   # tier -> [(nid, label, cls)]
-    loose: list[tuple[str, str, str]] = []
-    edges: list[str] = []
-
-    def add_edge(nid: str, ins: list, outs: list, side: str, ordered: list | None = None) -> None:
-        """`side` decides which end of the edge the neighbour sits on, which is
-        what actually positions it: mermaid ranks the source before the target."""
-        if ins and outs:
-            lab = project.context._flow_edge_label(ordered if ordered is not None else ins + outs)
-            src, arrow, dst = (nid, "<-->", core) if side == "left" else (core, "<-->", nid)
-        elif ins:
-            lab, src, arrow, dst = project.context._flow_edge_label(ins), nid, "-->", core
-        elif outs:
-            lab, src, arrow, dst = project.context._flow_edge_label(outs), core, "-->", nid
-        else:
-            return
-        edges.append(f'  {src} {arrow}|"{lab}"| {dst}' if lab else f"  {src} {arrow} {dst}")
-
-    # real external systems — one node each (DR-013), one line each (DR-026).
-    # A deprecated interface is one the boundary decision moved *inside* the
-    # system (ISS-010), so it is no longer a neighbour and must not be drawn.
-    for p in wiki.load_type("external-interface"):
-        if p.status == "deprecated":
-            continue
-        ins, outs, ordered = project.context._eif_flows(p)
-        if not (ins or outs):
-            continue
-        nid = project.common._diagram_node_id(p.id)
-        tier = str(p.meta.get("tier") or "").strip().lower()
-        side = next((s for k, _, s in project.context._TIER_BANDS if k == tier), "left")
-        (bands.setdefault(tier, []) if tier in project.context._TIER_LABEL else loose).append(
-            (nid, project.context._eif_node_label(p), "system"))
-        add_edge(nid, ins, outs, side, ordered)
-        drawn.append(project.common._node_link(p))
-
-    # user roles — flows live on the stakeholder, not as EIF nodes. DR-014:
-    # several stakeholders sharing a `context_role` merge into ONE node (union of
-    # their flows); `context_role: none` hides the role; `nature: organization`
-    # draws a box instead of the person/actor symbol.
-    def _union(dst: list, src) -> None:
-        for x in (src or []):
-            if x not in dst:
-                dst.append(x)
-
-    groups: dict[str, dict] = {}   # label -> {prov, recv, cls, order}
-    for p in wiki.load_type("stakeholder"):
-        prov, recv = p.as_list("provides"), p.as_list("receives")
-        if not (prov or recv):
-            continue
-        raw_role = p.meta.get("context_role")
-        if isinstance(raw_role, str) and raw_role.strip().lower() == "none":
-            continue
-        label = project.common._clean_label(raw_role) if raw_role else project.common._clean_label(p.title)
-        is_org = str(p.meta.get("nature", "person")).strip().lower() == "organization"
-        g = groups.get(label)
-        if g is None:
-            g = groups[label] = {"prov": [], "recv": [], "cls": "actor", "order": len(groups)}
-        if is_org:
-            g["cls"] = "system"          # organizations/systems share the box style
-        _union(g["prov"], prov)
-        _union(g["recv"], recv)
-        drawn.append(project.common._node_link(p))   # a merged role node links each of its stakeholders
-
-    for label, g in sorted(groups.items(), key=lambda kv: kv[1]["order"]):
-        nid = project.common._diagram_node_id(label)
-        loose.append((nid, label, g["cls"]))
-        ins = [{"data": x} for x in g["prov"]]
-        outs = [{"data": x} for x in g["recv"]]
-        add_edge(nid, ins, outs, "left")
-
-    if not edges:
-        return None
-    if links is not None:
-        links.extend(drawn)
-
-    def node_line(nid: str, label: str, cls: str) -> str:
-        # persons get the actor symbol (stadium + "Person"); systems/orgs are boxes
-        return (f'  {nid}(["Person · {label}"]):::actor' if cls == "actor"
-                else f'  {nid}["{label}"]:::{cls}')
-
-    lines = ["flowchart LR"]
-    for tier, tier_label, _ in project.context._TIER_BANDS:
-        if not bands.get(tier):
-            continue
-        lines.append(f'  subgraph {project.common._diagram_node_id(tier)}["{tier_label}"]')
-        lines.append("    direction TB")
-        lines += ["  " + node_line(*n) for n in bands[tier]]
-        lines.append("  end")
-    lines.append(f'  {core}["{project.common._clean_label(center)}"]:::core')
-    lines += [node_line(*n) for n in loose]
-    lines += edges
-    lines += [
-        "  classDef core fill:#2f6fb3,stroke:#7fc0ff,stroke-width:2px,color:#ffffff,font-weight:bold;",
-        "  classDef system fill:#d7dbe3,stroke:#9aa3b2,color:#15202e;",
-        "  classDef actor fill:#f3f6fb,stroke:#aeb8c9,color:#15202e;",
-    ]
-    return "\n".join(lines)
 
 
 @app.route("/arc42/building-blocks")
@@ -843,7 +555,7 @@ def build_area_tile(area: dict) -> dict:
     """Home-page tile for one cabinet: count, maturity and open-issue flag
     over its visible, captured sections, plus the section list as links, each
     with its section tile's count (FR-018)."""
-    sections = visible_sections(area["key"])
+    sections = settings.visible_sections(area["key"])
     folders = [f for s in sections for f in s["folders"]]
     pages = [p for f in folders for p in wiki.load_folder(f)]
     flags = project.common.open_issue_counts()
@@ -883,7 +595,7 @@ def build_valley() -> dict:
 def index():
     """Home: Requirements and Architecture as two peaks, the valley between
     them showing the agent's work, Commons as the ground both stand on."""
-    areas = {a["key"]: build_area_tile(a) for a in visible_areas()}
+    areas = {a["key"]: build_area_tile(a) for a in settings.visible_areas()}
     join_url = public_url()
     return render_template("index.html", areas=areas, valley=build_valley(),
                            vision_sentence=project.goals.vision_sentence(project.goals.vision_page(), links_module.title_index()),
@@ -1197,7 +909,7 @@ def page_detail(folder, stem):
     body_html = render.render_markdown(body, titles)
     # context pages carry the system-context diagram, projected live (DR-013)
     diagram_links: list[dict] = []
-    context_diagram = build_context_diagram(links=diagram_links) if wiki._is(folder, "context") else None
+    context_diagram = project.context.build_context_diagram(settings.wiki_config()["system_name"], links=diagram_links) if wiki._is(folder, "context") else None
     context_flows = project.context.build_context_flows() if wiki._is(folder, "context") else None
     # domain terms carry a focused ego-graph snippet above the definition (DR-023)
     ego_graph = project.terms.build_glossary_ego_graph(stem) if wiki._is(folder, "domain-term") else None
@@ -1331,30 +1043,6 @@ def _search_filters() -> dict[str, list[dict]]:
     return {"status": opts("status"), "priority": opts("priority", _PRIORITY_ORDER), "tag": opts("tags")}
 
 
-def _mermaid_goal_tree(vision: wiki.Page, objectives: list[wiki.Page]) -> str | None:
-    """Project the Vision→Objectives tree from `parent:` edges (DR-018 style).
-    Top-down, short-name nodes; clicking a goal jumps to its anchor below.
-    Default `useMaxWidth: true` so the SVG fits the container at typical
-    desktop widths (≥1000 px) without horizontal scrolling."""
-    if not vision or not objectives:
-        return None
-    root = project.common._clean_label(wiki_config()["system_name"], drop_parenthetical=False)
-    lines = ["graph TD", f'  V["Vision {root}"]:::vision',
-             f'  click V "/goals#{vision.id}"']
-    for o in objectives:
-        nid = project.common._diagram_node_id(o.id)
-        label = project.common._clean_label(project.common._short_title(o))
-        lines.append(f'  V --> {nid}["{o.id}<br/>{label}"]:::goal')
-        # absolute target so the same diagram works on /goals (in-page anchor)
-        # and on /req42 (cross-page navigation to the matching goal card)
-        lines.append(f'  click {nid} "/goals#{o.id}"')
-    lines += [
-        "  classDef vision fill:#2f6fb3,stroke:#7fc0ff,color:#ffffff,stroke-width:2px,font-weight:bold;",
-        "  classDef goal fill:#d7dbe3,stroke:#9aa3b2,color:#15202e;",
-    ]
-    return "\n".join(lines)
-
-
 @app.route("/goals")
 def goals_view():
     """req42 Block 01 — Vision + Objectives. Three sections top-down:
@@ -1433,7 +1121,7 @@ def goals_view():
                       for p in data["coverage"].get(o.id, [])],
         })
 
-    diagram = _mermaid_goal_tree(vision, objectives)
+    diagram = project.goals._mermaid_goal_tree(settings.wiki_config()["system_name"], vision, objectives)
     return render_template(
         "goals.html",
         diagram=diagram,
@@ -1478,7 +1166,7 @@ def area_view(area_key):
     # Hiding the area hides its sections from the home page; here only a
     # section hidden on its own is dropped.
     tiles = [build_section_tile(s) for s in catalog.sections_of(area_key)
-             if s["id"] not in dashboard_config()["hidden"]]
+             if s["id"] not in settings.dashboard_config()["hidden"]]
     pages = [p for t in tiles for f in t["folders"] for p in wiki.load_folder(f)]
     return render_template("area.html", area=area, tiles=tiles, count=len(pages),
                            maturity=project.common.maturity(p.status for p in pages), needs_mermaid=False)
@@ -1602,7 +1290,7 @@ def _block_list(block: dict, slug: str | None):
     ]
     # the Scope block (03) shows the same live-projected system-context diagram
     diagram_links: list[dict] = []
-    context_diagram = build_context_diagram(links=diagram_links) if slug == "scope" else None
+    context_diagram = project.context.build_context_diagram(settings.wiki_config()["system_name"], links=diagram_links) if slug == "scope" else None
     context_flows = project.context.build_context_flows() if slug == "scope" else None
     entity_diagram = project.terms.build_data_model_full_diagram() if slug == "models" else None
     return render_template(
@@ -1664,135 +1352,6 @@ def join_page():
     return render_template("join.html", join_url=url, join_qr=qr_svg(url, scale=10))
 
 
-# ---------------------------------------------------------------------------
-# Server lifecycle: self-shutdown as soon as no browser is watching anymore.
-# Multiple browsers (workshop clients) may watch at once, so presence is
-# tracked per client (a random id each tab generates once, in base.html)
-# rather than as a single "is anyone home" flag.
-#
-# Every open page sends a lightweight heartbeat (`POST /ping`) every few
-# seconds, tagged with its client_id. As long as any client keeps pinging,
-# the server keeps running; once the last one goes quiet, the watchdog shuts
-# it down after a grace period — a closed browser window leaves no orphaned
-# container behind. A page additionally reports via a pagehide beacon
-# `POST /leaving` that it is going away: if it was just navigation, the next
-# page's `/ping` (same client_id, carried via sessionStorage) immediately
-# clears the signal; if the tab is really closed, that client is dropped
-# after `_LEAVE_GRACE` (~5 s) instead of waiting out the full heartbeat grace
-# period.
-#
-# Deliberately NO long-lived open connection (an earlier iteration used an
-# SSE/events stream): that tied up a worker thread for a tab's entire
-# lifetime, and clicking through subpages piled these up until the thread
-# pool was exhausted and even /stop stopped being served. A /ping is instead
-# an immediate request that holds no thread — the problem disappears
-# entirely. The grace period is generous so a tab throttled in the background
-# (browsers throttle timers to ~1x/min) stays alive; only a genuinely closed
-# tab stops pinging altogether. A single worker keeps the state
-# process-coherent (Dockerfile: --workers 1). See DR-022 and its addendum.
-# ---------------------------------------------------------------------------
-
-_ever_connected = False
-_shutting_down = False
-_watchdog_started = False
-_server_started = time.monotonic()
-# The pid of the Gunicorn master, once gunicorn.conf.py has reported it
-# (`start_lifecycle`). None everywhere else: under the development server, in
-# the site export and in tests the parent is a shell or a test runner.
-_gunicorn_master: int | None = None
-
-
-def _shutdown(reason):
-    """Cleanly shut down the server. Under gunicorn, the master is terminated
-    via SIGTERM, so all workers exit and the container's PID 1 returns — with
-    `restart: no` the container then stays down. The master is the pid that
-    gunicorn.conf.py handed to `start_lifecycle`, never a guess from the
-    parent pid. Everywhere else we only terminate ourselves (NOT the parent —
-    that is a shell or a test runner) via SIGTERM: a SIGINT sent from a
-    background thread to our own process is swallowed by the Werkzeug dev
-    server (Werkzeug 3.x), whereas SIGTERM is reliably handled via the default
-    signal action."""
-    global _shutting_down
-    with session._lifecycle_lock:
-        if _shutting_down:
-            return
-        _shutting_down = True
-    app.logger.info("dashboard shutdown: %s", reason)
-
-    def _terminate():
-        time.sleep(0.4)  # let the HTTP response / beacon flush first
-        if _gunicorn_master is not None:
-            try:
-                os.kill(_gunicorn_master, signal.SIGTERM)
-            except (ProcessLookupError, PermissionError):
-                pass
-        os.kill(os.getpid(), signal.SIGTERM)
-
-    threading.Thread(target=_terminate, daemon=True).start()
-
-
-def _watchdog_pass(auto_stop: bool) -> bool:
-    """One pass of the watchdog: drop the clients that are gone, then stop the
-    server when nobody is left and `auto_stop` is on. Returns True when the
-    watchdog has nothing more to do."""
-    with session._lifecycle_lock:
-        if _shutting_down:
-            return True
-        now = time.monotonic()
-        # A client said goodbye and never pinged again: drop it (fast
-        # path on tab close). A fresher ping after the goodbye cancels it
-        # (was just in-page navigation).
-        for cid, left_at in list(session._leaving.items()):
-            last = session._clients.get(cid)
-            if last is not None and last > left_at:
-                session._leaving.pop(cid, None)
-            elif now - left_at > session._LEAVE_GRACE:
-                session._forget_client(cid)
-        # A client simply went stale (no goodbye, no more pings either).
-        for cid, last in list(session._clients.items()):
-            if now - last > session._HEARTBEAT_GRACE:
-                session._forget_client(cid)
-        anyone_left = bool(session._clients)
-        ever = _ever_connected
-    if not auto_stop:
-        return False
-    if not ever:
-        # Nobody has ever pinged -> startup grace period.
-        if now - _server_started > session._STARTUP_GRACE:
-            _shutdown("no browser heartbeat within the startup grace period")
-            return True
-    elif not anyone_left:
-        _shutdown("no more browser heartbeat (all tabs closed)")
-        return True
-    return False
-
-
-def _watchdog(auto_stop: bool):
-    while not _watchdog_pass(auto_stop):
-        time.sleep(1.0)
-
-
-def start_lifecycle(gunicorn_master: int | None = None) -> None:
-    """Start the watchdog. Only a server entry point calls this: the Gunicorn
-    hook in gunicorn.conf.py, which passes the master's pid, and `python
-    app.py`. Importing this module starts nothing, so the site export and the
-    tests can use the Flask test client for as long as they need (issue #182).
-
-    DASH_NO_SHUTDOWN, set to anything, switches the automatic stop off
-    (FR-050): the watchdog still drops clients that are gone, and "Disconnect
-    all" still stops the server. The Go dashboard reads the same variable."""
-    global _watchdog_started, _gunicorn_master, _server_started
-    with session._lifecycle_lock:
-        if _watchdog_started:
-            return
-        _watchdog_started = True
-        _gunicorn_master = gunicorn_master
-        _server_started = time.monotonic()   # the startup grace starts here
-    auto_stop = not os.environ.get("DASH_NO_SHUTDOWN", "").strip()
-    threading.Thread(target=_watchdog, args=(auto_stop,), daemon=True,
-                     name="dashboard-watchdog").start()
-
-
 def _json_object(req) -> dict:
     """The JSON object in the body of a session request (/ping, /leaving,
     /settings, /disconnect-all). No body, an unreadable body and `null` count
@@ -1830,17 +1389,10 @@ def heartbeat_ping():
     changes once given (`_name_for`). Both are re-sent on every ping, so the
     button follows the role live if it ever transfers (Yoda's tab
     disappearing): the heir gets the button but keeps its own name."""
-    global _ever_connected
     cid = _client_id(request)
     ua = request.headers.get("User-Agent", "")[:200]
     with session._lifecycle_lock:
-        now = time.monotonic()
-        if cid not in session._clients:
-            session._first_seen[cid] = now
-        session._clients[cid] = now
-        session._user_agents[cid] = ua
-        session._leaving.pop(cid, None)
-        _ever_connected = True
+        session._record_ping(cid, ua)
         is_facilitator = cid == session._facilitator_client_id()
         nickname = session._name_for(cid)
     return {"nickname": nickname, "is_facilitator": is_facilitator}
@@ -1949,7 +1501,7 @@ def settings_get():
     """The View dialog's data: the catalog grouped by area plus the
     current hide list. Open to every viewer (it is the same information the
     home page shows); saving is facilitator-only (POST below)."""
-    cfg = dashboard_config()
+    cfg = settings.dashboard_config()
     return {
         "areas": [{"key": a["key"], "label": a["label"], "colors": a["colors"],
                    "sections": [{"id": s["id"], "title": s["title"], "colors": s["colors"],
@@ -1996,14 +1548,14 @@ def settings_post():
 @app.route("/disconnect-all", methods=["POST"])
 def disconnect_all():
     """Facilitator-only: end the session for every connected browser by
-    shutting the server down outright (`_shutdown`, above). Everyone else's
+    shutting the server down outright (`session._shutdown`). Everyone else's
     next /ping then fails, which the footer script turns into a plain
     "session ended" notice (base.html)."""
     cid = _client_id(request)
     with session._lifecycle_lock:
         if cid != session._facilitator_client_id():
             abort(403)
-    _shutdown("disconnect-all requested by facilitator")
+    session._shutdown("disconnect-all requested by facilitator")
     return ("", 204)
 
 
@@ -2276,7 +1828,7 @@ def metamodel_view():
 
     # requirement notations (DR-038): the default one first, then by name.
     # Names compare without case, as an FR's `notation:` does (_fr_notation).
-    default_notation = wiki_config()["default_notation"]
+    default_notation = settings.wiki_config()["default_notation"]
     notations = []
     for n in sorted(mm["notations"], key=lambda n: (n["name"].lower() != default_notation,
                                                     n["name"].lower())):
@@ -2328,7 +1880,7 @@ def metamodel_view():
 
 
 def _about_path() -> Path | None:
-    return about_doc(wiki._config_data().get("about"))
+    return settings.about_doc(wiki._config_data().get("about"))
 
 
 # Relative src/href in the rendered page → /about/files/<path under docs/>, so
@@ -2345,7 +1897,7 @@ def _about_url(page: Path, url: str) -> str:
     target = re.split(r"[?#]", url, maxsplit=1)[0]
     if not target:
         return url
-    root = DOCS_DIR.resolve()
+    root = settings.DOCS_DIR.resolve()
     path = (page.parent / unquote(target)).resolve()
     if root not in path.parents:
         return url
@@ -2362,7 +1914,7 @@ def about_view():
     html = render.sanitize_html(render.wrap_tables(md.markdown(path.read_text(encoding="utf-8", errors="replace"),
                                                  extensions=["extra", "sane_lists"])), about=True)
     html = _REL_URL.sub(lambda m: f'{m.group(1)}{_about_url(path, m.group(2))}"', html)
-    title = wiki_config()["about_label"]
+    title = settings.wiki_config()["about_label"]
     return render_template("about.html", html=html, title=title)
 
 
@@ -2371,12 +1923,12 @@ def about_file(name):
     """Files the about page links to (images, SVGs) — inside docs/ only."""
     if _about_path() is None:
         abort(404)
-    path = docs_file(name)
+    path = settings.docs_file(name)
     if path is None:
         abort(404)
     return _inert_file(send_file(path))
 
 
 if __name__ == "__main__":
-    start_lifecycle()
+    session.start_lifecycle()
     app.run(host="0.0.0.0", port=8000, threaded=True)

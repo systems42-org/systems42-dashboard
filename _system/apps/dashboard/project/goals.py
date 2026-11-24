@@ -1,17 +1,19 @@
 """The goals (req42 section 01): the vision, the objectives and their coverage.
 
 Owns the vision page with its paragraphs and its first sentence, the enabler
-lanes, the goals with the requirements that serve them (load_goals) and the
-goal coverage matrix.
+lanes, the goals with the requirements that serve them (load_goals), the goal
+coverage matrix and the goal tree (_mermaid_goal_tree).
 
-May import `wiki`, `links`, `render` and `project.requirements`. No Flask
-import and no import of `app` here (tests/test_module_imports.py).
+May import `wiki`, `links`, `render`, `project.common` and
+`project.requirements`. No Flask import and no import of `app` here
+(tests/test_module_imports.py).
 """
 from __future__ import annotations
 
 import re
 
 import links as links_module  # link resolver and indexes
+import project.common  # labels shared by the projections
 import project.requirements  # a requirement's notation, level and parent
 import render  # sanitizer, wikilinks and Markdown
 import wiki  # paths, pages, parse cache and loaders
@@ -243,3 +245,27 @@ def _goal_matrix(data: dict) -> tuple[list[dict], list[dict]]:
                                # for "Agreed only": counts accepted pages only
                                "accepted": view([p for p in serving if p.status == "accepted"])}})
     return cols, rows
+
+
+def _mermaid_goal_tree(system_name: str, vision: wiki.Page, objectives: list[wiki.Page]) -> str | None:
+    """Project the Vision→Objectives tree from `parent:` edges (DR-018 style).
+    Top-down, short-name nodes; clicking a goal jumps to its anchor below.
+    Default `useMaxWidth: true` so the SVG fits the container at typical
+    desktop widths (≥1000 px) without horizontal scrolling."""
+    if not vision or not objectives:
+        return None
+    root = project.common._clean_label(system_name, drop_parenthetical=False)
+    lines = ["graph TD", f'  V["Vision {root}"]:::vision',
+             f'  click V "/goals#{vision.id}"']
+    for o in objectives:
+        nid = project.common._diagram_node_id(o.id)
+        label = project.common._clean_label(project.common._short_title(o))
+        lines.append(f'  V --> {nid}["{o.id}<br/>{label}"]:::goal')
+        # absolute target so the same diagram works on /goals (in-page anchor)
+        # and on /req42 (cross-page navigation to the matching goal card)
+        lines.append(f'  click {nid} "/goals#{o.id}"')
+    lines += [
+        "  classDef vision fill:#2f6fb3,stroke:#7fc0ff,color:#ffffff,stroke-width:2px,font-weight:bold;",
+        "  classDef goal fill:#d7dbe3,stroke:#9aa3b2,color:#15202e;",
+    ]
+    return "\n".join(lines)

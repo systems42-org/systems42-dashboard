@@ -105,6 +105,7 @@ _log = _Collect()
 logging.getLogger("systems42.inputs").addHandler(_log)
 
 import app  # noqa: E402
+import settings  # noqa: E402
 import wiki  # noqa: E402
 import inputs  # noqa: E402
 import links  # noqa: E402
@@ -217,21 +218,21 @@ def test_metamodel_survives_and_reports():
 
 def test_configuration_survives_and_reports():
     # an invalid date beside the name: the name still counts
-    assert app.wiki_config()["system_name"] == "Dated"
+    assert settings.wiki_config()["system_name"] == "Dated"
     assert _logged(_config, "2026-13-01", "not a valid date")
     # bytes that are not UTF-8: the defaults, as for a malformed file
     _config.write_bytes(b"system_name: Gr\xfc\xdfe\n")
-    cfg = app.wiki_config()
-    assert cfg["system_name"] == app.DEFAULT_SYSTEM_NAME and cfg["system_name_set"] is False
+    cfg = settings.wiki_config()
+    assert cfg["system_name"] == settings.DEFAULT_SYSTEM_NAME and cfg["system_name_set"] is False
     assert _logged(_config, "not valid UTF-8", "file ignored")
     _assert_every_route_answers("wiki.yaml that is not UTF-8")
     # a value no constructor can build
     _config.write_text("system_name: Typed\ndashboard_version: !!float x\n", encoding="utf-8")
-    assert app.wiki_config()["system_name"] == app.DEFAULT_SYSTEM_NAME
+    assert settings.wiki_config()["system_name"] == settings.DEFAULT_SYSTEM_NAME
     assert _logged(_config, "fields ignored")
     _assert_every_route_answers("wiki.yaml with a value no type accepts")
     _config.write_text("system_name: Dated\n", encoding="utf-8")
-    assert app.wiki_config()["system_name"] == "Dated"
+    assert settings.wiki_config()["system_name"] == "Dated"
 
 
 if __name__ == "__main__":

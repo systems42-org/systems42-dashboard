@@ -33,6 +33,7 @@ os.environ["DASH_HEARTBEAT_GRACE"] = "3600"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # import app.py
 
 import app  # noqa: E402
+import settings  # noqa: E402
 import session  # noqa: E402
 
 ROUTES = ["/ping", "/leaving", "/settings", "/disconnect-all"]
@@ -42,7 +43,7 @@ NOT_OBJECTS = ['["x"]', "[]", '"x"', '""', "7", "0", "1.5", "true", "false"]
 NOT_AN_OBJECT = {"error": "not-an-object"}
 
 _shutdowns = []
-app._shutdown = _shutdowns.append  # never signal the test process
+session._shutdown = _shutdowns.append  # never signal the test process
 
 
 def _reset():
@@ -53,7 +54,7 @@ def _reset():
         session._user_agents.clear()
         session._names.clear()
         session._facilitator = None
-        app._ever_connected = False
+        session._ever_connected = False
     session.set_view([])
     del _shutdowns[:]
 
@@ -62,7 +63,7 @@ def _state():
     with session._lifecycle_lock:
         return (dict(session._clients), dict(session._leaving), dict(session._first_seen),
                 dict(session._user_agents), dict(session._names), session._facilitator,
-                app._ever_connected, list(app.dashboard_config()["hidden"]), list(_shutdowns))
+                session._ever_connected, list(settings.dashboard_config()["hidden"]), list(_shutdowns))
 
 
 def _post(client, route, body):
@@ -91,7 +92,7 @@ def test_a_rejected_body_changes_no_session_state():
         for body in NOT_OBJECTS:
             assert _post(client, route, body).status_code == 400
             assert _state() == before, (route, body)
-    assert app.dashboard_config()["hidden"] == ["C6"]   # /settings saved nothing
+    assert settings.dashboard_config()["hidden"] == ["C6"]   # /settings saved nothing
     assert _shutdowns == []              # /disconnect-all stopped nothing
 
 
@@ -101,7 +102,7 @@ def test_a_rejected_first_request_does_not_count_as_a_connected_page():
     for body in NOT_OBJECTS:
         _post(client, "/ping", body)
     with session._lifecycle_lock:
-        assert session._clients == {} and app._ever_connected is False
+        assert session._clients == {} and session._ever_connected is False
 
 
 def test_no_body_an_unreadable_body_and_null_still_mean_an_empty_object():
@@ -142,12 +143,12 @@ def test_valid_objects_still_work():
 
     body = json.dumps({"client_id": "luke", "hidden": ["C6"]})
     assert _post(client, "/settings", body).status_code == 403
-    assert app.dashboard_config()["hidden"] == []
+    assert settings.dashboard_config()["hidden"] == []
     body = json.dumps({"client_id": "yoda", "hidden": ["C6"]})
     resp = _post(client, "/settings", body)
     assert resp.status_code == 200
     assert resp.get_json() == {"ok": True, "hidden": ["C6"]}
-    assert app.dashboard_config()["hidden"] == ["C6"]
+    assert settings.dashboard_config()["hidden"] == ["C6"]
 
     assert _post(client, "/disconnect-all", luke).status_code == 403
     assert _shutdowns == []
