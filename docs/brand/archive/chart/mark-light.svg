@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- Chart mark, 48 x 48 grid: axis 3 wide, six columns 4.5 wide with gap 1.5, blocks split by 1.5. Light theme colours. -->
+  <rect x="3.5" y="3.5" width="3" height="41" rx="1.5" fill="#14213c"/>
+  <rect x="3.5" y="41.5" width="41" height="3" rx="1.5" fill="#14213c"/>
+  <rect x="9.5" y="32.5" width="4.5" height="7" fill="#1d5fb0"/>
+  <rect x="9.5" y="24" width="4.5" height="7" fill="#1f7a46"/>
+  <rect x="15.5" y="24.5" width="4.5" height="15" fill="#1d5fb0"/>
+  <rect x="15.5" y="8" width="4.5" height="15" fill="#1f7a46"/>
+  <rect x="21.5" y="32.5" width="4.5" height="7" fill="#1d5fb0"/>
+  <rect x="21.5" y="24" width="4.5" height="7" fill="#1f7a46"/>
+  <rect x="27.5" y="32.5" width="4.5" height="7" fill="#1f7a46"/>
+  <rect x="27.5" y="24" width="4.5" height="7" fill="#1d5fb0"/>
+  <rect x="33.5" y="24.5" width="4.5" height="15" fill="#1f7a46"/>
+  <rect x="33.5" y="8" width="4.5" height="15" fill="#1d5fb0"/>
+  <rect x="39.5" y="32.5" width="4.5" height="7" fill="#1f7a46"/>
+  <rect x="39.5" y="24" width="4.5" height="7" fill="#1d5fb0"/>
+</svg>

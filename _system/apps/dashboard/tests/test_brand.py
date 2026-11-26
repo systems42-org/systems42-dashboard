@@ -29,6 +29,7 @@ client = app.app.test_client()
 BRANDS = _HERE / "brands"
 SHIPPED = ("systems42",)
 MARKS = ("mark-dark.svg", "mark-light.svg", "favicon.svg")
+ARCHIVE = _HERE.parents[2] / "docs" / "brand" / "archive" / "chart"
 
 
 def intro(brand: str) -> str:
@@ -87,19 +88,23 @@ def test_intro_ends_on_click_or_key_and_removes_itself():
         assert "el.remove()" in text, brand
 
 
-def test_systems42_intro_ends_within_two_seconds():
-    assert "setTimeout(done, 2000)" in intro("systems42")
-
-
-def test_the_shipped_intro_is_the_chart_mark():
-    """FR-032: the dashboard ships the Chart mark and its intro. It is the
-    default of every wiki without a brand of its own, so the look of one wiki
-    (the Systems42 logo of meta, the atrium mark) never goes in here. Such a
-    wiki names its own folder in `brand:` (FR-031)."""
+def test_systems42_intro_ends_within_two_and_a_half_seconds():
     text = intro("systems42")
-    assert text.count('class="bi-axis') == 2, "the axis: up, then the base"
-    assert text.count('class="bi-block') == 12, "six columns of two blocks"
-    assert "systems42-logo" not in text and "bi-word" not in text
+    assert "setTimeout(done, 2400)" in text
+    assert "classList.add('bi-out'); }, 2150)" in text
+
+
+def test_the_shipped_intro_is_the_helix_with_a_dashboard_line():
+    """FR-032: the dashboard ships the helix of the systems42 logo. The helix
+    winds up, "systems42" rises in, then "dashboard". It is the default of
+    every wiki without a brand of its own, so the look of one wiki never goes
+    in here. Such a wiki names its own folder in `brand:` (FR-031)."""
+    text = intro("systems42")
+    assert text.count('class="bi-strand') == 2, "green and blue strand"
+    assert text.count('class="bi-word"') == 1
+    sub = re.search(r'<svg class="bi-sub"[^>]*>(.*?)</svg>', text, re.S)
+    assert sub and sub.group(1).count("<path") == 9, "d a s h b o a r d"
+    assert "bi-block" not in text and "bi-axis" not in text
     assert sorted(p.name for p in (BRANDS / "systems42").iterdir()) == \
         ["favicon.svg", "intro.html", "mark-dark.svg", "mark-light.svg"]
 
@@ -134,6 +139,24 @@ def test_the_dashboard_holds_no_atrium_branding():
             assert "atrium" not in path.read_text(encoding="utf-8").lower(), path.name
 
 
+def test_the_shipped_marks_are_the_helix():
+    """FR-032: the shipped brand is the helix of the systems42 logo."""
+    light = (BRANDS / "systems42" / "mark-light.svg").read_text(encoding="utf-8")
+    dark = (BRANDS / "systems42" / "mark-dark.svg").read_text(encoding="utf-8")
+    assert 'viewBox="5.36 13.97 32.03 32.03"' in light and 'viewBox="5.36 13.97 32.03 32.03"' in dark
+    assert "#0f7f66" in light and "#1667c4" in light
+    assert "#199c7e" in dark and "#3a86e6" in dark
+    for name in MARKS:
+        assert "Chart" not in (BRANDS / "systems42" / name).read_text(encoding="utf-8"), name
+
+
+def test_the_chart_mark_is_archived_as_a_brand_folder():
+    """The Chart mark stays usable: a wiki copies the folder into its brand/."""
+    names = {p.name for p in ARCHIVE.iterdir()}
+    assert {"mark-dark.svg", "mark-light.svg", "favicon.svg", "intro.html", "README.md"} <= names
+    assert 'class="bi-block' in (ARCHIVE / "intro.html").read_text(encoding="utf-8")
+
+
 if __name__ == "__main__":
     test_the_example_brands_are_the_ones_shipped()
     test_marks_are_square_and_text_free()
@@ -141,9 +164,11 @@ if __name__ == "__main__":
     test_intro_is_hidden_until_the_script_shows_it()
     test_intro_shows_once_per_tab_and_not_under_reduced_motion()
     test_intro_ends_on_click_or_key_and_removes_itself()
-    test_systems42_intro_ends_within_two_seconds()
-    test_the_shipped_intro_is_the_chart_mark()
+    test_systems42_intro_ends_within_two_and_a_half_seconds()
+    test_the_shipped_intro_is_the_helix_with_a_dashboard_line()
     test_intro_covers_the_page_with_bg_uses_tokens_and_stays_offline()
     test_intro_is_placed_before_the_hero_on_the_home_page_only()
     test_the_dashboard_holds_no_atrium_branding()
+    test_the_shipped_marks_are_the_helix()
+    test_the_chart_mark_is_archived_as_a_brand_folder()
     print("OK: shipped brand")
