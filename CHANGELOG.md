@@ -12,6 +12,10 @@ Unreleased changes sit at the top until the next Starter Kit release.
 
 ## [Unreleased]
 
+### Changed
+- Dashboard brand: the helix of the systems42 logo replaces the Chart mark (FR-032). Marks and favicon come unchanged from the Systems42 meta repository (meta#73). The intro winds the helix up, lets "systems42" rise in letter by letter and then "dashboard" below it, about 2.4 s. The brand contract and the website's docs now ask an intro to end within about 2.5 seconds instead of two. `docs/brand/` describes the helix and holds new lockups with "systems42" over "dashboard". Every wiki without a brand of its own shows the helix after its next update. The Chart mark is kept as a complete brand folder in `docs/brand/archive/chart/`: copy it to a wiki's `brand/` and set `brand: brand/` to keep it. Still open: the Mac app icon shows the peaks ([#172](https://github.com/systems42-org/systems42-dashboard/issues/172)).
+- Website: the hero and the page headers of dashboard.systems42.org show the helix instead of the Chart columns. On the home page it winds itself up as in the dashboard's intro, not under reduced motion. Header mark and favicon come from the shipped brand as before.
+
 ### Fixed
 - Dashboard: the specialized views read each type's folder, ID prefix and label from the type pages of the repository's metamodel. A repository that declares `folder: wiki/terms` for domain terms gets the same pages in the tile count, the term list, the search, the detail pages and the term network, and a page's address names the folder it lives in (`/page/terms/<stem>`). Before, only the tile followed the declaration, so it counted pages the list behind it did not show (#180).
 - Dashboard: a framework block without `title:` shows its ID wherever a block's name shows, in the section navigation and on `/metamodel`. Before, the navigation showed the ID and `/metamodel` answered with a server error. A block without an ID and a block entry that is no mapping are left out of `/metamodel` as they are left out of the navigation (#205).

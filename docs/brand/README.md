@@ -1,55 +1,48 @@
-# Systems42 Dashboard: the Chart mark
+# Systems42 Dashboard: the helix
 
 <div style="display:flex;gap:1rem">
-<div style="background:#0e1726;padding:1.5rem;border-radius:8px"><img src="mark-dark.png" width="128" alt="Chart mark, dark theme"></div>
-<div style="background:#f5f8fd;padding:1.5rem;border-radius:8px;border:1px solid #d2ddec"><img src="mark-light.png" width="128" alt="Chart mark, light theme"></div>
+<div style="background:#0e1726;padding:1.5rem;border-radius:8px"><img src="mark-dark.png" width="128" alt="Helix, dark theme"></div>
+<div style="background:#f5f8fd;padding:1.5rem;border-radius:8px;border:1px solid #d2ddec"><img src="mark-light.png" width="128" alt="Helix, light theme"></div>
 </div>
 
-**The idea:** the dashboard as a chart. Requirements (green) and Architecture
-(blue) are filled in side by side, column by column, on one axis.
+**The idea:** Requirements (the green req42 strand) and Architecture (the blue
+arc42 strand) wound into one helix. It is the systems42 logo. The drawing
+comes unchanged from the Systems42 meta repository (`brand/`,
+[meta#73](https://github.com/systems42-org/meta/pull/73)).
 
-**Grid:** 48 × 48. Axis 3 wide with round ends, vertical x 3.5 y 3.5 to 44.5,
-base y 41.5 x 3.5 to 44.5. Six columns 4.5 wide with a gap of 1.5, starting at
-x 9.5, standing on y 39.5. Each column is two blocks split by a gap of 1.5.
+| Part | Dark | Light |
+|------|------|-------|
+| Requirements strand, "42" | `#199c7e` | `#0f7f66` |
+| Architecture strand | `#3a86e6` | `#1667c4` |
+| Wordmark | `#e8eef9` | `#14213c` |
 
-| Part | Token | Dark | Light |
-|------|-------|------|-------|
-| Axis | `--ink` | `#e8eef9` | `#14213c` |
-| Requirements blocks | `--area-req` | `#7fd4a0` | `#1f7a46` |
-| Architecture blocks | `--area-arc` | `#7fb3f0` | `#1d5fb0` |
+No theme token holds the strand colours, so the intro declares them once per
+theme as `--brand-req` and `--brand-arc`.
 
-| Column | 1 | 2 | 3 | 4 | 5 | 6 |
-|--------|---|---|---|---|---|---|
-| Height | short | tall | short | short | tall | short |
-| Lower block | arc | arc | arc | req | req | req |
-| Upper block | req | req | req | arc | arc | arc |
+**Favicon:** a shorter helix with fewer turns, so it still reads at 16 px.
 
-Short columns are two blocks of 7, tall columns two blocks of 15.
+**Rules:** no text in the mark, transparent background. Do not recolour,
+stretch or rotate it.
 
-**Favicon:** below 32 px the mark is reduced to the axis and three solid
-columns (green, blue, green) without the split, on a 3-unit grid so every edge
-falls on a pixel at 16 px. The axis follows the tab bar's colour scheme.
+**Intro:** the helix winds itself up, "systems42" rises in letter by letter,
+then "dashboard" below it. It takes about 2.4 s and runs once per tab.
+Reduced motion skips it, and any click or key ends it.
 
-**Rules:** smallest size 32 px for the full mark, 16 px for the favicon; keep
-about 5 units of clear space; no text, outlines, gradients or shadows; the
-background stays transparent; do not recolour, reorder, stretch or rotate.
-
-**Intro:** the axis draws itself (up, then along the base), then the columns
-grow from left to right, each lower block before its upper one, then a fade;
-about 2 s, once per tab, skipped under reduced motion, any click or key ends it.
-
-**Lockup:** for use outside the dashboard (website, README, slides), the mark
-with "systems42" over "DASHBOARD" in Bricolage Grotesque, text as outlines. The
-dashboard itself never shows it; its header writes `system_name` from
-`_system/wiki.yaml`.
+**Lockup:** for use outside the dashboard (website, README, slides), the helix
+with "systems42" over "dashboard" in Bricolage Grotesque 700, text as
+outlines. The dashboard itself never shows it. Its header writes
+`system_name` from `_system/wiki.yaml`.
 
 <div style="display:flex;gap:1rem;flex-wrap:wrap">
 <div style="background:#0e1726;padding:1rem;border-radius:8px"><img src="lockup-dark.png" height="48" alt="Lockup, dark theme"></div>
 <div style="background:#f5f8fd;padding:1rem;border-radius:8px;border:1px solid #d2ddec"><img src="lockup-light.png" height="48" alt="Lockup, light theme"></div>
 </div>
 
-**Files:** the dashboard's example brand `systems42`,
+**Files:** the dashboard's shipped brand `systems42`,
 `_system/apps/dashboard/brands/systems42/`, holds `mark-dark.svg`,
 `mark-light.svg`, `favicon.svg` and the intro, `intro.html`. This folder holds
 the PNGs (`mark-dark.png`, `mark-light.png`, `favicon.png`) and the lockups
 (`lockup-dark.svg`, `lockup-light.svg` and their PNGs).
+
+**Earlier marks:** the Chart mark, shipped until 2026-11-26, is kept as a
+complete brand folder in [archive/](archive/README.md).

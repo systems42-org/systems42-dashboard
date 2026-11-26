@@ -1,0 +1,68 @@
+<!-- Brand intro (systems42): the Chart mark builds itself. The axis draws
+     first (up, then along the base), then the six columns grow from left to
+     right, the lower block before the upper one, then a fade. About 2 s in all.
+     Contract: brands/README.md. -->
+<div id="brand-intro" hidden aria-hidden="true">
+  <svg viewBox="0 0 48 48" width="160" height="160" focusable="false">
+    <rect class="bi-axis bi-axis-y" x="3.5" y="3.5" width="3" height="41" rx="1.5"/>
+    <rect class="bi-axis bi-axis-x" x="3.5" y="41.5" width="41" height="3" rx="1.5"/>
+    <rect class="bi-block bi-arc bi-c1" x="9.5" y="32.5" width="4.5" height="7"/>
+    <rect class="bi-block bi-req bi-c1 bi-up" x="9.5" y="24" width="4.5" height="7"/>
+    <rect class="bi-block bi-arc bi-c2" x="15.5" y="24.5" width="4.5" height="15"/>
+    <rect class="bi-block bi-req bi-c2 bi-up" x="15.5" y="8" width="4.5" height="15"/>
+    <rect class="bi-block bi-arc bi-c3" x="21.5" y="32.5" width="4.5" height="7"/>
+    <rect class="bi-block bi-req bi-c3 bi-up" x="21.5" y="24" width="4.5" height="7"/>
+    <rect class="bi-block bi-req bi-c4" x="27.5" y="32.5" width="4.5" height="7"/>
+    <rect class="bi-block bi-arc bi-c4 bi-up" x="27.5" y="24" width="4.5" height="7"/>
+    <rect class="bi-block bi-req bi-c5" x="33.5" y="24.5" width="4.5" height="15"/>
+    <rect class="bi-block bi-arc bi-c5 bi-up" x="33.5" y="8" width="4.5" height="15"/>
+    <rect class="bi-block bi-req bi-c6" x="39.5" y="32.5" width="4.5" height="7"/>
+    <rect class="bi-block bi-arc bi-c6 bi-up" x="39.5" y="24" width="4.5" height="7"/>
+  </svg>
+</div>
+<style>
+  #brand-intro { position: fixed; inset: 0; z-index: 10000; background: var(--bg);
+    place-items: center; opacity: 1; transition: opacity .3s ease; }
+  #brand-intro:not([hidden]) { display: grid; }
+  #brand-intro.bi-out { opacity: 0; }
+  #brand-intro svg { width: min(160px, 40vw); height: auto; overflow: visible; }
+  #brand-intro rect { transform-box: fill-box; animation: .25s cubic-bezier(.2,.8,.2,1) both; }
+  #brand-intro .bi-axis { fill: var(--ink); animation-duration: .15s; animation-timing-function: linear; }
+  #brand-intro .bi-axis-y { transform-origin: 50% 100%; animation-name: bi-grow-y; }
+  #brand-intro .bi-axis-x { transform-origin: 0% 50%; animation-name: bi-grow-x; animation-delay: .15s; }
+  #brand-intro .bi-block { transform-origin: 50% 100%; animation-name: bi-grow-y; }
+  #brand-intro .bi-req { fill: var(--area-req); }
+  #brand-intro .bi-arc { fill: var(--area-arc); }
+  /* Column n starts at .30s + (n-1) x .13s; its upper block follows .12s later. */
+  #brand-intro .bi-c1 { animation-delay: .30s; } #brand-intro .bi-c1.bi-up { animation-delay: .42s; }
+  #brand-intro .bi-c2 { animation-delay: .43s; } #brand-intro .bi-c2.bi-up { animation-delay: .55s; }
+  #brand-intro .bi-c3 { animation-delay: .56s; } #brand-intro .bi-c3.bi-up { animation-delay: .68s; }
+  #brand-intro .bi-c4 { animation-delay: .69s; } #brand-intro .bi-c4.bi-up { animation-delay: .81s; }
+  #brand-intro .bi-c5 { animation-delay: .82s; } #brand-intro .bi-c5.bi-up { animation-delay: .94s; }
+  #brand-intro .bi-c6 { animation-delay: .95s; } #brand-intro .bi-c6.bi-up { animation-delay: 1.07s; }
+  @keyframes bi-grow-y { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+  @keyframes bi-grow-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  @media (prefers-reduced-motion: reduce) { #brand-intro { display: none !important; } }
+</style>
+<script>
+(function () {
+  var el = document.getElementById('brand-intro');
+  if (!el) return;
+  var KEY = 'brand-intro-seen';
+  function done() {
+    if (!el) return;
+    document.removeEventListener('click', done, true);
+    document.removeEventListener('keydown', done, true);
+    clearTimeout(t1); clearTimeout(t2);
+    el.remove(); el = null;
+  }
+  var t1, t2;
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) { el.remove(); return; }
+  try { if (sessionStorage.getItem(KEY)) { el.remove(); return; } sessionStorage.setItem(KEY, '1'); } catch (e) { /* storage blocked: show every time */ }
+  el.hidden = false;
+  document.addEventListener('click', done, true);
+  document.addEventListener('keydown', done, true);
+  t1 = setTimeout(function () { if (el) el.classList.add('bi-out'); }, 1700);
+  t2 = setTimeout(done, 2000);
+})();
+</script>
