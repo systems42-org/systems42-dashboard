@@ -6,7 +6,7 @@
 </div>
 
 **The idea:** Requirements (the green req42 strand) and Architecture (the blue
-arc42 strand) wound into one helix. It is the systems42 logo; the drawing
+arc42 strand) wound into one helix. It is the systems42 logo. The drawing
 comes unchanged from the Systems42 meta repository (`brand/`,
 [meta#73](https://github.com/systems42-org/meta/pull/73)).
 
@@ -21,16 +21,16 @@ theme as `--brand-req` and `--brand-arc`.
 
 **Favicon:** a shorter helix with fewer turns, so it still reads at 16 px.
 
-**Rules:** no text in the mark, transparent background; do not recolour,
+**Rules:** no text in the mark, transparent background. Do not recolour,
 stretch or rotate it.
 
 **Intro:** the helix winds itself up, "systems42" rises in letter by letter,
-then "dashboard" below it; about 2.4 s, once per tab, skipped under reduced
-motion, any click or key ends it.
+then "dashboard" below it. It takes about 2.4 s and runs once per tab.
+Reduced motion skips it, and any click or key ends it.
 
 **Lockup:** for use outside the dashboard (website, README, slides), the helix
 with "systems42" over "dashboard" in Bricolage Grotesque 700, text as
-outlines. The dashboard itself never shows it; its header writes
+outlines. The dashboard itself never shows it. Its header writes
 `system_name` from `_system/wiki.yaml`.
 
 <div style="display:flex;gap:1rem;flex-wrap:wrap">

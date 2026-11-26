@@ -60,7 +60,7 @@ The home page does this for every intro:
 
 The intro must:
 
-- end by itself within about two seconds, and end at once on any click;
+- end by itself within about 2.5 seconds, and end at once on any click;
 - start hidden (`hidden` attribute) and remove its element when done. That
   removal is the sign that the intro is over. An intro that never shows its
   element counts as over too;

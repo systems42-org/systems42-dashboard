@@ -167,6 +167,39 @@ def test_the_brand_page_shows_only_files_that_exist():
     assert "helix" in (docs / "README.md").read_text(encoding="utf-8").lower()
 
 
+def test_the_contract_states_the_time_the_shipped_intro_takes():
+    """The shipped intro is the worked example of the contract, so the
+    contract and the website's docs state a limit the example keeps."""
+    ms = int(re.search(r"setTimeout\(done, (\d+)\)", intro("systems42")).group(1))
+    assert ms <= 2500
+    site_docs = _HERE.parents[2] / "site" / "templates" / "docs.html"
+    for path in (BRANDS / "README.md", site_docs):
+        text = path.read_text(encoding="utf-8")
+        assert "two seconds" not in text and "2.5 seconds" in text, path.name
+
+
+def test_the_archived_chart_page_points_to_its_own_folder():
+    text = (ARCHIVE / "README.md").read_text(encoding="utf-8")
+    assert "brands/systems42" not in text
+
+
+def test_the_brand_texts_use_no_semicolons():
+    """_system/writing-style.md: no semicolons as sentence punctuation."""
+    page = (_HERE.parents[2] / "docs" / "brand" / "README.md").read_text(encoding="utf-8")
+    prose = "\n".join(l for l in page.splitlines() if not l.startswith("<"))
+    assert ";" not in prose
+    head = intro("systems42").split("-->", 1)[0]
+    assert ";" not in head
+
+
+def test_the_intro_comment_says_when_dashboard_rises():
+    text = intro("systems42")
+    comment = text[text.index('/* the second line "dashboard"'):]
+    comment = comment[:comment.index("*/")]
+    assert "1.35s" in comment and "landed" not in comment
+    assert "calc(1.35s + var(--i) * .03s)" in text
+
+
 if __name__ == "__main__":
     test_the_example_brands_are_the_ones_shipped()
     test_marks_are_square_and_text_free()
@@ -182,4 +215,8 @@ if __name__ == "__main__":
     test_the_shipped_marks_are_the_helix()
     test_the_chart_mark_is_archived_as_a_brand_folder()
     test_the_brand_page_shows_only_files_that_exist()
+    test_the_contract_states_the_time_the_shipped_intro_takes()
+    test_the_archived_chart_page_points_to_its_own_folder()
+    test_the_brand_texts_use_no_semicolons()
+    test_the_intro_comment_says_when_dashboard_rises()
     print("OK: shipped brand")

@@ -48,8 +48,6 @@ dashboard itself never shows it; its header writes `system_name` from
 <div style="background:#f5f8fd;padding:1rem;border-radius:8px;border:1px solid #d2ddec"><img src="lockup-light.png" height="48" alt="Lockup, light theme"></div>
 </div>
 
-**Files:** the dashboard's example brand `systems42`,
-`_system/apps/dashboard/brands/systems42/`, holds `mark-dark.svg`,
-`mark-light.svg`, `favicon.svg` and the intro, `intro.html`. This folder holds
-the PNGs (`mark-dark.png`, `mark-light.png`, `favicon.png`) and the lockups
+**Files:** this folder holds the brand itself (`mark-dark.svg`,
+`mark-light.svg`, `favicon.svg` and the intro, `intro.html`), the PNGs (`mark-dark.png`, `mark-light.png`, `favicon.png`) and the lockups
 (`lockup-dark.svg`, `lockup-light.svg` and their PNGs).
