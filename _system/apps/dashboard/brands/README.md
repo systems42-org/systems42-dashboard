@@ -12,8 +12,9 @@ intro: on          # off: the home page shows no intro, whatever the brand has
 
 ## Choosing a brand
 
-- `brand: systems42` is the Chart mark and its intro (the default, also when
-  `brand:` is missing). The mark is described in `docs/brand/README.md`.
+- `brand: systems42` is the helix of the systems42 logo and its intro (the
+  default, also when `brand:` is missing). The mark is described in
+  `docs/brand/README.md`.
 - `brand: brand/` is a folder of your own, relative to the wiki repository
   root. The dashboard only reads it and serves its marks at `/brand/<file>`.
 

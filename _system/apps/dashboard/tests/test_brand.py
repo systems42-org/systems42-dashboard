@@ -157,6 +157,16 @@ def test_the_chart_mark_is_archived_as_a_brand_folder():
     assert 'class="bi-block' in (ARCHIVE / "intro.html").read_text(encoding="utf-8")
 
 
+def test_the_brand_page_shows_only_files_that_exist():
+    """docs/brand/README.md is this wiki's /about page."""
+    docs = _HERE.parents[2] / "docs" / "brand"
+    for folder in (docs, ARCHIVE):
+        text = (folder / "README.md").read_text(encoding="utf-8")
+        for src in re.findall(r'src="([^"]+)"', text):
+            assert (folder / src).is_file(), (folder, src)
+    assert "helix" in (docs / "README.md").read_text(encoding="utf-8").lower()
+
+
 if __name__ == "__main__":
     test_the_example_brands_are_the_ones_shipped()
     test_marks_are_square_and_text_free()
@@ -171,4 +181,5 @@ if __name__ == "__main__":
     test_the_dashboard_holds_no_atrium_branding()
     test_the_shipped_marks_are_the_helix()
     test_the_chart_mark_is_archived_as_a_brand_folder()
+    test_the_brand_page_shows_only_files_that_exist()
     print("OK: shipped brand")
