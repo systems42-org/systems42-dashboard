@@ -12,6 +12,9 @@ Unreleased changes sit at the top until the next Starter Kit release.
 
 ## [Unreleased]
 
+### Changed
+- Dashboard brand: the helix of the systems42 logo replaces the Chart mark (FR-032). Marks and favicon come unchanged from the Systems42 meta repository (meta#73). The intro winds the helix up, lets "systems42" rise in letter by letter and then "dashboard" below it, about 2.4 s. `docs/brand/` describes the helix and holds new lockups with "systems42" over "dashboard". Every wiki without a brand of its own shows the helix after its next update. The Chart mark is kept as a complete brand folder in `docs/brand/archive/chart/`: copy it to a wiki's `brand/` and set `brand: brand/` to keep it. Still open: the website's hero shows the Chart columns, the Mac app icon the peaks ([#172](https://github.com/systems42-org/systems42-dashboard/issues/172)).
+
 ### Fixed
 - Dashboard: the term network lists the page types behind its "More" button in alphabetical order, as the Go dashboard does. Before, the order followed the links of the terms, so the two dashboards differed.
 - Dashboard: `search_plain()` in `app.py` now strips Markdown emphasis and backticks as intended instead of matching the later `_emphasis()` regex of the same name.
